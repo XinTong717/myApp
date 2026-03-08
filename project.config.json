@@ -1,5 +1,6 @@
 {
   "miniprogramRoot": "dist/",
+  "cloudfunctionRoot": "cloudfunctions/",
   "projectname": "myApp",
   "description": "教育探索的青少年与家长的线上社区",
   "appid": "wx141f4437f2d90a76",
