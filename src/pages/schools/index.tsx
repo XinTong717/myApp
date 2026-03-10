@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { View, Text } from '@tarojs/components'
+import { useMemo, useState } from 'react'
+import { View, Text, Input } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { fetchSchools } from '@/services/api'
+import { fetchSchools } from '../../services/api'
 
 type School = {
   id: number
@@ -12,12 +12,18 @@ type School = {
   school_type?: string
   has_xuji?: boolean
   fee?: string
+  xuji_note?: string
+  residency_req?: string
+  admission_req?: string
+  output_direction?: string
+  official_url?: string
 }
 
 export default function SchoolsPage() {
   const [schools, setSchools] = useState<School[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [keyword, setKeyword] = useState('')
 
   const loadSchools = async () => {
     try {
@@ -48,15 +54,58 @@ export default function SchoolsPage() {
     loadSchools()
   })
 
+  const filteredSchools = useMemo(() => {
+    const q = keyword.trim().toLowerCase()
+    if (!q) return schools
+
+    return schools.filter((item) => {
+      const haystack = [
+        item.name,
+        item.province,
+        item.city,
+        item.school_type,
+        item.age_range,
+        item.fee,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+
+      return haystack.includes(q)
+    })
+  }, [schools, keyword])
+
+  const goToDetail = (item: School) => {
+    Taro.navigateTo({
+      url: `/pages/school-detail/index?id=${item.id}`,
+    })
+  }
+
   return (
     <View style={{ padding: '16px', backgroundColor: '#f7f7f7', minHeight: '100vh' }}>
       <View style={{ marginBottom: '12px' }}>
         <Text style={{ fontSize: '20px', fontWeight: 'bold' }}>学校库</Text>
       </View>
 
+      <View
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          padding: '12px',
+          marginBottom: '16px',
+        }}
+      >
+        <Input
+          type='text'
+          value={keyword}
+          placeholder='搜索学校名 / 城市 / 类型'
+          onInput={(e) => setKeyword(e.detail.value)}
+        />
+      </View>
+
       <View style={{ marginBottom: '16px' }}>
-        <Text style={{ color: '#666' }}>
-          {loading ? '加载中...' : `共 ${schools.length} 所学校`}
+        <Text style={{ color: '#666666' }}>
+          {loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 所学校`}
         </Text>
       </View>
 
@@ -73,7 +122,7 @@ export default function SchoolsPage() {
         </View>
       ) : null}
 
-      {!loading && schools.length === 0 ? (
+      {!loading && filteredSchools.length === 0 ? (
         <View
           style={{
             padding: '16px',
@@ -81,13 +130,14 @@ export default function SchoolsPage() {
             borderRadius: '12px',
           }}
         >
-          <Text>暂无学校数据</Text>
+          <Text>没有匹配结果</Text>
         </View>
       ) : null}
 
-      {schools.map((item) => (
+      {filteredSchools.map((item) => (
         <View
           key={item.id}
+          onClick={() => goToDetail(item)}
           style={{
             backgroundColor: '#ffffff',
             borderRadius: '14px',
@@ -126,10 +176,14 @@ export default function SchoolsPage() {
             </Text>
           </View>
 
-          <View>
+          <View style={{ marginBottom: '8px' }}>
             <Text style={{ color: '#444444' }}>
               费用：{item.fee || '未填写'}
             </Text>
+          </View>
+
+          <View>
+            <Text style={{ color: '#2f6bff' }}>点击查看详情</Text>
           </View>
         </View>
       ))}

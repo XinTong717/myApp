@@ -3,6 +3,7 @@ export default defineAppConfig({
       'pages/index/index',
       'pages/schools/index',
       'pages/events/index',
+      'pages/school-detail/index',
     ],
   
     window: {
