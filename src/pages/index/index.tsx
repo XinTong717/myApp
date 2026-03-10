@@ -1,21 +1,24 @@
 import { useState } from 'react'
 import { View, Text, Button } from '@tarojs/components'
 import Taro, { useLoad } from '@tarojs/taro'
-import './index.scss'
+import { fetchSchools, fetchEvents } from '@/services/api'
+//import './index.scss'
 
 export default function Index() {
   const [openid, setOpenid] = useState('')
+  const [schools, setSchools] = useState<any[]>([])
+  const [events, setEvents] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const fetchOpenId = async () => {
     try {
-      // 调用云函数：name 必填，data 可选
       const res = await Taro.cloud.callFunction({
         name: 'getOpenId',
         data: {},
       })
       console.log('getOpenId result:', res.result)
 
-      // 兼容你当前云函数返回结构
       const id = (res.result as any)?.openid || ''
       setOpenid(id)
 
@@ -26,10 +29,42 @@ export default function Index() {
     }
   }
 
+  const testSchools = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const data = await fetchSchools()
+      console.log('schools data:', data)
+      setSchools(Array.isArray(data) ? data : [])
+      Taro.showToast({ title: 'schools 请求成功', icon: 'none' })
+    } catch (err: any) {
+      console.error('testSchools error:', err)
+      setError(err?.message || 'schools 请求失败')
+      Taro.showToast({ title: 'schools 请求失败', icon: 'none' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const testEvents = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const data = await fetchEvents()
+      console.log('events data:', data)
+      setEvents(Array.isArray(data) ? data : [])
+      Taro.showToast({ title: 'events 请求成功', icon: 'none' })
+    } catch (err: any) {
+      console.error('testEvents error:', err)
+      setError(err?.message || 'events 请求失败')
+      Taro.showToast({ title: 'events 请求失败', icon: 'none' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useLoad(() => {
     console.log('Page loaded.')
-    // 你也可以取消注释让它自动调用一次
-    // fetchOpenId()
   })
 
   return (
@@ -45,6 +80,46 @@ export default function Index() {
           {openid ? `openid: ${openid}` : '还没获取 openid（点按钮）'}
         </Text>
       </View>
+
+      <View style={{ marginTop: '24px' }}>
+        <Button onClick={testSchools} loading={loading}>
+          测试：读取 schools
+        </Button>
+      </View>
+
+      <View style={{ marginTop: '12px' }}>
+        <Button onClick={testEvents} loading={loading}>
+          测试：读取 events
+        </Button>
+      </View>
+
+      <View style={{ marginTop: '16px' }}>
+        <Text>{error ? `错误：${error}` : '暂无错误'}</Text>
+      </View>
+
+      <View style={{ marginTop: '24px' }}>
+        <Text>Schools count: {schools.length}</Text>
+      </View>
+
+      {schools.map((item) => (
+        <View key={item.id} style={{ marginTop: '8px' }}>
+          <Text>
+            {item.name} | {item.province} {item.city}
+          </Text>
+        </View>
+      ))}
+
+      <View style={{ marginTop: '24px' }}>
+        <Text>Events count: {events.length}</Text>
+      </View>
+
+      {events.map((item) => (
+        <View key={item.id} style={{ marginTop: '8px' }}>
+          <Text>
+            {item.title} | {item.event_type}
+          </Text>
+        </View>
+      ))}
     </View>
   )
 }
