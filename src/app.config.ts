@@ -5,6 +5,7 @@ export default defineAppConfig({
       'pages/events/index',
       'pages/school-detail/index',
       'pages/event-detail/index',
+      'pages/profile/index',
     ],
   
     window: {
@@ -24,6 +25,7 @@ export default defineAppConfig({
         { pagePath: 'pages/index/index', text: '首页' },
         { pagePath: 'pages/schools/index', text: '学校' },
         { pagePath: 'pages/events/index', text: '活动' },
+        { pagePath: 'pages/profile/index', text: '我的' },
       ],
     },
   })
