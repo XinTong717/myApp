@@ -1,3 +1,4 @@
 export default {
-    navigationBarTitleText: '活动详情',
+    navigationBarTitleText: '活动',
+    enablePullDownRefresh: true,
   }

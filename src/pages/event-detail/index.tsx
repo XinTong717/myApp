@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { useDidShow, getCurrentInstance } from '@tarojs/taro'
-import { fetchEvents } from '../../services/api'
+import { fetchEventById } from '../../services/api'
 
 type EventItem = {
   id: number
@@ -45,10 +45,7 @@ export default function EventDetailPage() {
       const id = Number(getCurrentInstance().router?.params?.id || 0)
       console.log('event detail id:', id)
 
-      const data = await fetchEvents()
-      const list = Array.isArray(data) ? data : []
-      const found = list.find((item) => item.id === id) || null
-
+      const found = await fetchEventById(id)
       setEvent(found)
     } catch (err: any) {
       console.error('loadDetail error:', err)

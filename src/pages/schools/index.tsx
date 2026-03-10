@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { View, Text, Input } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { fetchSchools } from '../../services/api'
 
 type School = {
@@ -52,6 +52,11 @@ export default function SchoolsPage() {
 
   useDidShow(() => {
     loadSchools()
+  })
+  
+  usePullDownRefresh(async () => {
+    await loadSchools()
+    Taro.stopPullDownRefresh()
   })
 
   const filteredSchools = useMemo(() => {

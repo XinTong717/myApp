@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
-import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
-import { fetchSchools } from '../../services/api'
+import { useDidShow, getCurrentInstance } from '@tarojs/taro'
+import { fetchSchoolById } from '../../services/api'
 
 type School = {
   id: number
@@ -32,10 +32,7 @@ export default function SchoolDetailPage() {
       const id = Number(getCurrentInstance().router?.params?.id || 0)
       console.log('school detail id:', id)
 
-      const data = await fetchSchools()
-      const list = Array.isArray(data) ? data : []
-      const found = list.find((item) => item.id === id) || null
-
+      const found = await fetchSchoolById(id)
       setSchool(found)
     } catch (err: any) {
       console.error('loadDetail error:', err)
@@ -51,9 +48,7 @@ export default function SchoolDetailPage() {
 
   return (
     <View style={{ padding: '16px', backgroundColor: '#f7f7f7', minHeight: '100vh' }}>
-      {loading ? (
-        <Text>加载中...</Text>
-      ) : null}
+      {loading ? <Text>加载中...</Text> : null}
 
       {error ? (
         <View
@@ -68,9 +63,7 @@ export default function SchoolDetailPage() {
         </View>
       ) : null}
 
-      {!loading && !error && !school ? (
-        <Text>未找到该学校</Text>
-      ) : null}
+      {!loading && !error && !school ? <Text>未找到该学校</Text> : null}
 
       {!loading && school ? (
         <View

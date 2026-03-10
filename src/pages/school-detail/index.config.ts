@@ -1,3 +1,4 @@
 export default {
-    navigationBarTitleText: '学校详情',
+    navigationBarTitleText: '学校',
+    enablePullDownRefresh: true,
   }

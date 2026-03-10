@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { fetchEvents } from '../../services/api'
 
 type EventItem = {
@@ -64,6 +64,11 @@ export default function EventsPage() {
 
   useDidShow(() => {
     loadEvents()
+  })
+  
+  usePullDownRefresh(async () => {
+    await loadEvents()
+    Taro.stopPullDownRefresh()
   })
 
   const goToDetail = (item: EventItem) => {
