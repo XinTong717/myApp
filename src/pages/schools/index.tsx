@@ -31,6 +31,31 @@ type School = {
   admission_req?: string
   output_direction?: string
   official_url?: string
+  lat?: number | string | null
+  lng?: number | string | null
+}
+
+const toCoordinateNumber = (value: unknown): number | null => {
+  if (value === '' || value === null || value === undefined) {
+    return null
+  }
+
+  const numeric = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+const hasValidCoordinates = (lat: unknown, lng: unknown) => {
+  const latitude = toCoordinateNumber(lat)
+  const longitude = toCoordinateNumber(lng)
+
+  return (
+    latitude !== null &&
+    longitude !== null &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  )
 }
 
 export default function SchoolsPage() {
@@ -91,9 +116,20 @@ export default function SchoolsPage() {
     })
   }, [schools, keyword])
 
+  const mapReadySchoolsCount = useMemo(
+    () => schools.filter((item) => hasValidCoordinates(item.lat, item.lng)).length,
+    [schools]
+  )
+
   const goToDetail = (item: School) => {
     Taro.navigateTo({
       url: `/pages/school-detail/index?id=${item.id}`,
+    })
+  }
+
+  const goToMap = () => {
+    Taro.navigateTo({
+      url: '/pages/school-map/index',
     })
   }
 
@@ -139,6 +175,63 @@ export default function SchoolsPage() {
             placeholder='搜索学校名 / 城市 / 类型'
             onInput={(e) => setKeyword(e.detail.value)}
           />
+        </View>
+      </View>
+
+      <View
+        onClick={goToMap}
+        style={{
+          backgroundColor: palette.card,
+          borderRadius: '20px',
+          padding: '16px',
+          marginBottom: '14px',
+          border: `1px solid ${palette.line}`,
+        }}
+      >
+        <View
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+          }}
+        >
+          <View
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '14px',
+              backgroundColor: palette.accentSoft,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: '12px',
+            }}
+          >
+            <Text style={{ fontSize: '18px' }}>🗺️</Text>
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: '17px', fontWeight: 'bold', color: palette.text }}>
+              查看地图
+            </Text>
+            <View style={{ marginTop: '4px' }}>
+              <Text style={{ fontSize: '13px', color: palette.subtext }}>
+                {loading
+                  ? '按地理位置浏览学校，点击标记查看详情。'
+                  : `目前有 ${mapReadySchoolsCount} 所学校支持地图查看。`}
+              </Text>
+            </View>
+          </View>
+
+          <View
+            style={{
+              padding: '6px 10px',
+              borderRadius: '999px',
+              backgroundColor: '#FFF8EF',
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: palette.accentDeep }}>进入</Text>
+          </View>
         </View>
       </View>
 
