@@ -4,6 +4,7 @@ export default defineAppConfig({
       'pages/schools/index',
       'pages/events/index',
       'pages/school-detail/index',
+      'pages/event-detail/index',
     ],
   
     window: {
@@ -20,18 +21,9 @@ export default defineAppConfig({
       backgroundColor: '#ffffff',
       borderStyle: 'black',
       list: [
-        {
-          pagePath: 'pages/index/index',
-          text: '首页',
-        },
-        {
-          pagePath: 'pages/schools/index',
-          text: '学校',
-        },
-        {
-          pagePath: 'pages/events/index',
-          text: '活动',
-        },
+        { pagePath: 'pages/index/index', text: '首页' },
+        { pagePath: 'pages/schools/index', text: '学校' },
+        { pagePath: 'pages/events/index', text: '活动' },
       ],
     },
   })

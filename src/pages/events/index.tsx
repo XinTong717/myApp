@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { fetchEvents } from '@/services/api'
+import { fetchEvents } from '../../services/api'
 
 type EventItem = {
   id: number
@@ -15,6 +15,7 @@ type EventItem = {
   status?: string
   organizer?: string
   is_online?: boolean
+  contact_info?: string
 }
 
 function formatTime(value?: string) {
@@ -65,6 +66,12 @@ export default function EventsPage() {
     loadEvents()
   })
 
+  const goToDetail = (item: EventItem) => {
+    Taro.navigateTo({
+      url: `/pages/event-detail/index?id=${item.id}`,
+    })
+  }
+
   return (
     <View style={{ padding: '16px', backgroundColor: '#f7f7f7', minHeight: '100vh' }}>
       <View style={{ marginBottom: '12px' }}>
@@ -72,7 +79,7 @@ export default function EventsPage() {
       </View>
 
       <View style={{ marginBottom: '16px' }}>
-        <Text style={{ color: '#666' }}>
+        <Text style={{ color: '#666666' }}>
           {loading ? '加载中...' : `共 ${events.length} 场活动`}
         </Text>
       </View>
@@ -105,6 +112,7 @@ export default function EventsPage() {
       {events.map((item) => (
         <View
           key={item.id}
+          onClick={() => goToDetail(item)}
           style={{
             backgroundColor: '#ffffff',
             borderRadius: '14px',
@@ -143,23 +151,15 @@ export default function EventsPage() {
             </Text>
           </View>
 
-          <View style={{ marginBottom: '6px' }}>
-            <Text style={{ color: '#444444' }}>
-              组织者：{item.organizer || '未填写'}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: item.description ? '6px' : '0' }}>
+          <View style={{ marginBottom: '8px' }}>
             <Text style={{ color: '#444444' }}>
               费用：{item.fee || '免费/未填写'}
             </Text>
           </View>
 
-          {item.description ? (
-            <View style={{ marginTop: '8px' }}>
-              <Text style={{ color: '#666666' }}>{item.description}</Text>
-            </View>
-          ) : null}
+          <View>
+            <Text style={{ color: '#2f6bff' }}>点击查看详情</Text>
+          </View>
         </View>
       ))}
     </View>
