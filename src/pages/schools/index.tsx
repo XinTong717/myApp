@@ -3,6 +3,20 @@ import { View, Text, Input } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { fetchSchools } from '../../services/api'
 
+const palette = {
+  bg: '#FFF9F2',
+  card: '#FFFFFF',
+  cardSoft: '#FFF3E6',
+  text: '#2F241B',
+  subtext: '#7A6756',
+  accent: '#F4A261',
+  accentDeep: '#E76F51',
+  accentSoft: '#FCE6D6',
+  line: '#F1DFCF',
+  green: '#7BAE7F',
+  greenSoft: '#EEF7EE',
+}
+
 type School = {
   id: number
   name: string
@@ -27,7 +41,6 @@ export default function SchoolsPage() {
 
   const loadSchools = async () => {
     try {
-      console.log('loadSchools start')
       setLoading(true)
       setError('')
 
@@ -35,8 +48,6 @@ export default function SchoolsPage() {
       const list = Array.isArray(data) ? data : []
 
       console.log('schools length:', list.length)
-      console.log('schools first item:', list[0])
-
       setSchools(list)
     } catch (err: any) {
       console.error('loadSchools error:', err)
@@ -53,7 +64,7 @@ export default function SchoolsPage() {
   useDidShow(() => {
     loadSchools()
   })
-  
+
   usePullDownRefresh(async () => {
     await loadSchools()
     Taro.stopPullDownRefresh()
@@ -87,29 +98,52 @@ export default function SchoolsPage() {
   }
 
   return (
-    <View style={{ padding: '16px', backgroundColor: '#f7f7f7', minHeight: '100vh' }}>
-      <View style={{ marginBottom: '12px' }}>
-        <Text style={{ fontSize: '20px', fontWeight: 'bold' }}>学校库</Text>
-      </View>
-
+    <View
+      style={{
+        padding: '16px',
+        backgroundColor: palette.bg,
+        minHeight: '100vh',
+        boxSizing: 'border-box',
+      }}
+    >
       <View
         style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '12px',
-          marginBottom: '16px',
+          backgroundColor: palette.card,
+          borderRadius: '20px',
+          padding: '16px',
+          marginBottom: '14px',
+          border: `1px solid ${palette.line}`,
         }}
       >
-        <Input
-          type='text'
-          value={keyword}
-          placeholder='搜索学校名 / 城市 / 类型'
-          onInput={(e) => setKeyword(e.detail.value)}
-        />
+        <View style={{ marginBottom: '8px' }}>
+          <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>
+            学校库
+          </Text>
+        </View>
+
+        <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
+          搜索、筛选、查看学校详情。
+        </Text>
+
+        <View
+          style={{
+            backgroundColor: palette.cardSoft,
+            borderRadius: '14px',
+            padding: '10px 12px',
+            marginTop: '14px',
+          }}
+        >
+          <Input
+            type='text'
+            value={keyword}
+            placeholder='搜索学校名 / 城市 / 类型'
+            onInput={(e) => setKeyword(e.detail.value)}
+          />
+        </View>
       </View>
 
-      <View style={{ marginBottom: '16px' }}>
-        <Text style={{ color: '#666666' }}>
+      <View style={{ marginBottom: '14px' }}>
+        <Text style={{ color: palette.subtext, fontSize: '13px' }}>
           {loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 所学校`}
         </Text>
       </View>
@@ -119,11 +153,12 @@ export default function SchoolsPage() {
           style={{
             padding: '12px',
             marginBottom: '16px',
-            backgroundColor: '#fff1f0',
-            borderRadius: '10px',
+            backgroundColor: '#FFF1F0',
+            borderRadius: '14px',
+            border: '1px solid #FFD8D2',
           }}
         >
-          <Text style={{ color: '#cf1322' }}>{error}</Text>
+          <Text style={{ color: '#CF1322' }}>{error}</Text>
         </View>
       ) : null}
 
@@ -131,11 +166,12 @@ export default function SchoolsPage() {
         <View
           style={{
             padding: '16px',
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
+            backgroundColor: palette.card,
+            borderRadius: '16px',
+            border: `1px solid ${palette.line}`,
           }}
         >
-          <Text>没有匹配结果</Text>
+          <Text style={{ color: palette.subtext }}>没有匹配结果</Text>
         </View>
       ) : null}
 
@@ -144,52 +180,104 @@ export default function SchoolsPage() {
           key={item.id}
           onClick={() => goToDetail(item)}
           style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '14px',
-            padding: '14px',
-            marginBottom: '12px',
+            backgroundColor: palette.card,
+            borderRadius: '20px',
+            padding: '16px',
+            marginBottom: '14px',
             boxSizing: 'border-box',
+            border: `1px solid ${palette.line}`,
           }}
         >
-          <View style={{ marginBottom: '8px' }}>
-            <Text style={{ fontSize: '16px', fontWeight: 'bold', color: '#111111' }}>
-              {item.name}
-            </Text>
+          <View
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: '10px',
+            }}
+          >
+            <View
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
+                backgroundColor: '#FFE8D6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: '10px',
+              }}
+            >
+              <Text style={{ fontSize: '18px' }}>🏫</Text>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: '17px', fontWeight: 'bold', color: palette.text }}>
+                {item.name}
+              </Text>
+            </View>
           </View>
 
-          <View style={{ marginBottom: '6px' }}>
-            <Text style={{ color: '#444444' }}>
-              地区：{item.province || '未知'} {item.city || ''}
-            </Text>
+          <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
+            <View
+              style={{
+                padding: '5px 10px',
+                borderRadius: '999px',
+                backgroundColor: palette.accentSoft,
+                marginRight: '8px',
+                marginBottom: '8px',
+              }}
+            >
+              <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
+                {item.province || '未知'} {item.city || ''}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                padding: '5px 10px',
+                borderRadius: '999px',
+                backgroundColor: palette.greenSoft,
+                marginRight: '8px',
+                marginBottom: '8px',
+              }}
+            >
+              <Text style={{ fontSize: '12px', color: palette.green }}>
+                {item.school_type || '未填写'}
+              </Text>
+            </View>
           </View>
 
-          <View style={{ marginBottom: '6px' }}>
-            <Text style={{ color: '#444444' }}>
-              类型：{item.school_type || '未填写'}
-            </Text>
+          <View
+            style={{
+              backgroundColor: '#FFFDF9',
+              borderRadius: '14px',
+              padding: '12px',
+              marginBottom: '10px',
+            }}
+          >
+            <View style={{ marginBottom: '6px' }}>
+              <Text style={{ color: palette.subtext, fontSize: '13px' }}>
+                年龄段：{item.age_range || '未填写'}
+              </Text>
+            </View>
+
+            <View style={{ marginBottom: '6px' }}>
+              <Text style={{ color: palette.subtext, fontSize: '13px' }}>
+                学籍：{item.has_xuji ? '有/可处理' : '未填写或无'}
+              </Text>
+            </View>
+
+            <View>
+              <Text style={{ color: palette.subtext, fontSize: '13px' }}>
+                费用：{item.fee || '未填写'}
+              </Text>
+            </View>
           </View>
 
-          <View style={{ marginBottom: '6px' }}>
-            <Text style={{ color: '#444444' }}>
-              年龄段：{item.age_range || '未填写'}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: '6px' }}>
-            <Text style={{ color: '#444444' }}>
-              学籍：{item.has_xuji ? '有/可处理' : '未填写或无'}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: '8px' }}>
-            <Text style={{ color: '#444444' }}>
-              费用：{item.fee || '未填写'}
-            </Text>
-          </View>
-
-          <View>
-            <Text style={{ color: '#2f6bff' }}>点击查看详情</Text>
-          </View>
+          <Text style={{ color: palette.accentDeep, fontSize: '13px', fontWeight: 'bold' }}>
+            点击查看详情
+          </Text>
         </View>
       ))}
     </View>

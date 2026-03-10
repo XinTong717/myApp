@@ -3,6 +3,19 @@ import { View, Text } from '@tarojs/components'
 import { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { fetchEventById } from '../../services/api'
 
+const palette = {
+  bg: '#FFF9F2',
+  card: '#FFFFFF',
+  cardSoft: '#FFF3E6',
+  text: '#2F241B',
+  subtext: '#7A6756',
+  accentDeep: '#E76F51',
+  accentSoft: '#FCE6D6',
+  line: '#F1DFCF',
+  green: '#7BAE7F',
+  greenSoft: '#EEF7EE',
+}
+
 type EventItem = {
   id: number
   title: string
@@ -30,6 +43,26 @@ function formatTime(value?: string) {
   const mm = String(date.getMinutes()).padStart(2, '0')
 
   return `${y}-${m}-${d} ${hh}:${mm}`
+}
+
+function InfoRow(props: { label: string; value?: string }) {
+  return (
+    <View
+      style={{
+        backgroundColor: '#FFFDF9',
+        borderRadius: '14px',
+        padding: '12px',
+        marginBottom: '10px',
+      }}
+    >
+      <View style={{ marginBottom: '4px' }}>
+        <Text style={{ fontSize: '12px', color: palette.accentDeep }}>{props.label}</Text>
+      </View>
+      <Text style={{ fontSize: '14px', color: palette.text, lineHeight: '21px' }}>
+        {props.value || '未填写'}
+      </Text>
+    </View>
+  )
 }
 
 export default function EventDetailPage() {
@@ -60,92 +93,137 @@ export default function EventDetailPage() {
   })
 
   return (
-    <View style={{ padding: '16px', backgroundColor: '#f7f7f7', minHeight: '100vh' }}>
-      {loading ? <Text>加载中...</Text> : null}
+    <View
+      style={{
+        padding: '16px',
+        backgroundColor: palette.bg,
+        minHeight: '100vh',
+        boxSizing: 'border-box',
+      }}
+    >
+      {loading ? (
+        <Text style={{ color: palette.subtext }}>加载中...</Text>
+      ) : null}
 
       {error ? (
         <View
           style={{
             padding: '12px',
             marginBottom: '16px',
-            backgroundColor: '#fff1f0',
-            borderRadius: '10px',
+            backgroundColor: '#FFF1F0',
+            borderRadius: '14px',
+            border: '1px solid #FFD8D2',
           }}
         >
-          <Text style={{ color: '#cf1322' }}>{error}</Text>
+          <Text style={{ color: '#CF1322' }}>{error}</Text>
         </View>
       ) : null}
 
-      {!loading && !error && !event ? <Text>未找到该活动</Text> : null}
+      {!loading && !error && !event ? (
+        <Text style={{ color: palette.subtext }}>未找到该活动</Text>
+      ) : null}
 
       {!loading && event ? (
-        <View
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '14px',
-            padding: '16px',
-          }}
-        >
-          <View style={{ marginBottom: '12px' }}>
-            <Text style={{ fontSize: '20px', fontWeight: 'bold', color: '#111111' }}>
-              {event.title}
-            </Text>
+        <>
+          <View
+            style={{
+              backgroundColor: palette.card,
+              borderRadius: '20px',
+              padding: '18px 16px',
+              marginBottom: '14px',
+              border: `1px solid ${palette.line}`,
+            }}
+          >
+            <View
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: '12px',
+              }}
+            >
+              <View
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '14px',
+                  backgroundColor: '#FFEFD8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '10px',
+                }}
+              >
+                <Text style={{ fontSize: '20px' }}>🌙</Text>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: '22px',
+                    fontWeight: 'bold',
+                    color: palette.text,
+                    lineHeight: '30px',
+                  }}
+                >
+                  {event.title}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
+              <View
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '999px',
+                  backgroundColor: palette.accentSoft,
+                  marginRight: '8px',
+                  marginBottom: '8px',
+                }}
+              >
+                <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
+                  {event.event_type || '未填写'}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '999px',
+                  backgroundColor: palette.greenSoft,
+                  marginRight: '8px',
+                  marginBottom: '8px',
+                }}
+              >
+                <Text style={{ fontSize: '12px', color: palette.green }}>
+                  {event.is_online ? '线上' : event.location || '线下'}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '999px',
+                  backgroundColor: '#FFF3E6',
+                  marginRight: '8px',
+                  marginBottom: '8px',
+                }}
+              >
+                <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
+                  {event.status || '未填写'}
+                </Text>
+              </View>
+            </View>
           </View>
 
-          <View style={{ marginBottom: '10px' }}>
-            <Text style={{ color: '#444444' }}>
-              类型：{event.event_type || '未填写'}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: '10px' }}>
-            <Text style={{ color: '#444444' }}>
-              开始时间：{formatTime(event.start_time)}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: '10px' }}>
-            <Text style={{ color: '#444444' }}>
-              结束时间：{formatTime(event.end_time)}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: '10px' }}>
-            <Text style={{ color: '#444444' }}>
-              地点：{event.is_online ? '线上' : event.location || '待定'}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: '10px' }}>
-            <Text style={{ color: '#444444' }}>
-              状态：{event.status || '未填写'}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: '10px' }}>
-            <Text style={{ color: '#444444' }}>
-              组织者：{event.organizer || '未填写'}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: '10px' }}>
-            <Text style={{ color: '#444444' }}>
-              联系方式：{event.contact_info || '未填写'}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: '10px' }}>
-            <Text style={{ color: '#444444' }}>
-              费用：{event.fee || '免费/未填写'}
-            </Text>
-          </View>
-
-          <View>
-            <Text style={{ color: '#444444' }}>
-              简介：{event.description || '未填写'}
-            </Text>
-          </View>
-        </View>
+          <InfoRow label='开始时间' value={formatTime(event.start_time)} />
+          <InfoRow label='结束时间' value={formatTime(event.end_time)} />
+          <InfoRow label='地点' value={event.is_online ? '线上' : event.location || '待定'} />
+          <InfoRow label='组织者' value={event.organizer} />
+          <InfoRow label='联系方式' value={event.contact_info} />
+          <InfoRow label='费用' value={event.fee || '免费/未填写'} />
+          <InfoRow label='简介' value={event.description} />
+        </>
       ) : null}
     </View>
   )
