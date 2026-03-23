@@ -365,7 +365,7 @@ export default function SchoolMapPage() {
             </View>
           </View>
 
-          <Map
+          <TaroMap
             latitude={mapData.center.latitude}
             longitude={mapData.center.longitude}
             scale={mapData.scale}

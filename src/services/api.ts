@@ -15,12 +15,10 @@ export async function fetchSchools() {
     method: 'GET',
     header: COMMON_HEADER,
   })
-
   if (res.statusCode !== 200) {
     console.error('fetchSchools failed:', res.statusCode, res.data)
     throw new Error(`fetchSchools failed: ${res.statusCode}`)
   }
-
   return res.data
 }
 
@@ -30,12 +28,10 @@ export async function fetchEvents() {
     method: 'GET',
     header: COMMON_HEADER,
   })
-
   if (res.statusCode !== 200) {
     console.error('fetchEvents failed:', res.statusCode, res.data)
     throw new Error(`fetchEvents failed: ${res.statusCode}`)
   }
-
   return res.data
 }
 
@@ -45,12 +41,10 @@ export async function fetchSchoolById(id: number) {
     method: 'GET',
     header: COMMON_HEADER,
   })
-
   if (res.statusCode !== 200) {
     console.error('fetchSchoolById failed:', res.statusCode, res.data)
     throw new Error(`fetchSchoolById failed: ${res.statusCode}`)
   }
-
   const list = Array.isArray(res.data) ? res.data : []
   return list[0] || null
 }
@@ -61,12 +55,27 @@ export async function fetchEventById(id: number) {
     method: 'GET',
     header: COMMON_HEADER,
   })
-
   if (res.statusCode !== 200) {
     console.error('fetchEventById failed:', res.statusCode, res.data)
     throw new Error(`fetchEventById failed: ${res.statusCode}`)
   }
-
   const list = Array.isArray(res.data) ? res.data : []
   return list[0] || null
+}
+
+/**
+ * 读取网站端 profiles 表（用于地图展示用户分布）
+ * 不读取 wechat / parent_contact / educator_contact 等隐私字段
+ */
+export async function fetchProfiles() {
+  const res = await Taro.request({
+    url: `${API_BASE_URL}/profiles?select=id,username,display_name,country,province,city,bio,age,gender,lat,lng&order=id.asc`,
+    method: 'GET',
+    header: COMMON_HEADER,
+  })
+  if (res.statusCode !== 200) {
+    console.error('fetchProfiles failed:', res.statusCode, res.data)
+    throw new Error(`fetchProfiles failed: ${res.statusCode}`)
+  }
+  return res.data
 }
