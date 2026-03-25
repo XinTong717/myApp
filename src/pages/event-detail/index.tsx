@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
-import { useDidShow, getCurrentInstance } from '@tarojs/taro'
+import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { fetchEventById } from '../../services/api'
 
 const palette = {
@@ -31,32 +31,48 @@ type EventItem = {
   contact_info?: string
 }
 
-function formatTime(value?: string) {
-  if (!value) return '待定'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  const hh = String(date.getHours()).padStart(2, '0')
-  const mm = String(date.getMinutes()).padStart(2, '0')
-
-  return `${y}-${m}-${d} ${hh}:${mm}`
+const TYPE_LABELS: Record<string, string> = {
+  night_chat: '夜聊',
+  parent_observer: '家长观察',
+  community_program: '社区计划',
+  workshop: '工作坊',
+  meetup: '线下聚会',
 }
 
-function InfoRow(props: { label: string; value?: string }) {
+const STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
+  recurring: { text: '每周进行', color: '#7BAE7F', bg: '#EEF7EE' },
+  recruiting: { text: '招募中', color: '#E76F51', bg: '#FCE6D6' },
+  upcoming: { text: '即将开始', color: '#5B8EBF', bg: '#E8F0F8' },
+  ongoing: { text: '进行中', color: '#7BAE7F', bg: '#EEF7EE' },
+  ended: { text: '已结束', color: '#999', bg: '#F0F0F0' },
+}
+
+const ICONS: Record<string, string> = {
+  night_chat: '🌙',
+  parent_observer: '👀',
+  community_program: '🚀',
+}
+
+function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
+  const handleCopy = () => {
+    if (props.value && props.copyable) {
+      Taro.setClipboardData({ data: props.value })
+    }
+  }
+
   return (
     <View
+      onClick={props.copyable ? handleCopy : undefined}
       style={{
-        backgroundColor: '#FFFDF9',
-        borderRadius: '14px',
-        padding: '12px',
-        marginBottom: '10px',
+        backgroundColor: '#FFFDF9', borderRadius: '14px',
+        padding: '12px', marginBottom: '10px',
       }}
     >
-      <View style={{ marginBottom: '4px' }}>
-        <Text style={{ fontSize: '12px', color: palette.accentDeep }}>{props.label}</Text>
+      <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '4px' }}>
+        <Text style={{ fontSize: '12px', color: palette.accentDeep, flex: 1 }}>{props.label}</Text>
+        {props.copyable && props.value && (
+          <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text>
+        )}
       </View>
       <Text style={{ fontSize: '14px', color: palette.text, lineHeight: '21px' }}>
         {props.value || '未填写'}
@@ -74,10 +90,7 @@ export default function EventDetailPage() {
     try {
       setLoading(true)
       setError('')
-
       const id = Number(getCurrentInstance().router?.params?.id || 0)
-      console.log('event detail id:', id)
-
       const found = await fetchEventById(id)
       setEvent(found)
     } catch (err: any) {
@@ -88,143 +101,121 @@ export default function EventDetailPage() {
     }
   }
 
-  useDidShow(() => {
-    loadDetail()
-  })
+  useDidShow(() => { loadDetail() })
 
   return (
-    <View
-      style={{
-        padding: '16px',
-        backgroundColor: palette.bg,
-        minHeight: '100vh',
-        boxSizing: 'border-box',
-      }}
-    >
-      {loading ? (
-        <Text style={{ color: palette.subtext }}>加载中...</Text>
-      ) : null}
+    <View style={{
+      padding: '16px', backgroundColor: palette.bg,
+      minHeight: '100vh', boxSizing: 'border-box',
+    }}>
+      {loading && <Text style={{ color: palette.subtext }}>加载中...</Text>}
 
-      {error ? (
-        <View
-          style={{
-            padding: '12px',
-            marginBottom: '16px',
-            backgroundColor: '#FFF1F0',
-            borderRadius: '14px',
-            border: '1px solid #FFD8D2',
-          }}
-        >
+      {error && (
+        <View style={{
+          padding: '12px', marginBottom: '16px',
+          backgroundColor: '#FFF1F0', borderRadius: '14px', border: '1px solid #FFD8D2',
+        }}>
           <Text style={{ color: '#CF1322' }}>{error}</Text>
         </View>
-      ) : null}
+      )}
 
-      {!loading && !error && !event ? (
+      {!loading && !error && !event && (
         <Text style={{ color: palette.subtext }}>未找到该活动</Text>
-      ) : null}
+      )}
 
-      {!loading && event ? (
+      {!loading && event && (
         <>
-          <View
-            style={{
-              backgroundColor: palette.card,
-              borderRadius: '20px',
-              padding: '18px 16px',
-              marginBottom: '14px',
-              border: `1px solid ${palette.line}`,
-            }}
-          >
-            <View
-              style={{
-                display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginBottom: '12px',
-              }}
-            >
-              <View
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '14px',
-                  backgroundColor: '#FFEFD8',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '10px',
-                }}
-              >
-                <Text style={{ fontSize: '20px' }}>🌙</Text>
+          {/* 标题区 */}
+          <View style={{
+            backgroundColor: palette.card, borderRadius: '20px',
+            padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
+          }}>
+            <View style={{
+              display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px',
+            }}>
+              <View style={{
+                width: '42px', height: '42px', borderRadius: '14px',
+                backgroundColor: '#FFEFD8', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', marginRight: '10px',
+              }}>
+                <Text style={{ fontSize: '20px' }}>
+                  {ICONS[event.event_type] || '📌'}
+                </Text>
               </View>
-
               <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: '22px',
-                    fontWeight: 'bold',
-                    color: palette.text,
-                    lineHeight: '30px',
-                  }}
-                >
+                <Text style={{
+                  fontSize: '22px', fontWeight: 'bold', color: palette.text, lineHeight: '30px',
+                }}>
                   {event.title}
                 </Text>
               </View>
             </View>
 
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
-              <View
-                style={{
-                  padding: '5px 10px',
-                  borderRadius: '999px',
-                  backgroundColor: palette.accentSoft,
-                  marginRight: '8px',
-                  marginBottom: '8px',
-                }}
-              >
+              <View style={{
+                padding: '5px 10px', borderRadius: '999px',
+                backgroundColor: palette.accentSoft, marginRight: '8px', marginBottom: '8px',
+              }}>
                 <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
-                  {event.event_type || '未填写'}
+                  {TYPE_LABELS[event.event_type] || event.event_type}
                 </Text>
               </View>
 
-              <View
-                style={{
-                  padding: '5px 10px',
-                  borderRadius: '999px',
-                  backgroundColor: palette.greenSoft,
-                  marginRight: '8px',
-                  marginBottom: '8px',
-                }}
-              >
+              {(() => {
+                const s = STATUS_LABELS[event.status || '']
+                return s ? (
+                  <View style={{
+                    padding: '5px 10px', borderRadius: '999px',
+                    backgroundColor: s.bg, marginRight: '8px', marginBottom: '8px',
+                  }}>
+                    <Text style={{ fontSize: '12px', color: s.color }}>{s.text}</Text>
+                  </View>
+                ) : null
+              })()}
+
+              <View style={{
+                padding: '5px 10px', borderRadius: '999px',
+                backgroundColor: palette.greenSoft, marginRight: '8px', marginBottom: '8px',
+              }}>
                 <Text style={{ fontSize: '12px', color: palette.green }}>
-                  {event.is_online ? '线上' : event.location || '线下'}
-                </Text>
-              </View>
-
-              <View
-                style={{
-                  padding: '5px 10px',
-                  borderRadius: '999px',
-                  backgroundColor: '#FFF3E6',
-                  marginRight: '8px',
-                  marginBottom: '8px',
-                }}
-              >
-                <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
-                  {event.status || '未填写'}
+                  {event.is_online ? '线上' : '线下'}
                 </Text>
               </View>
             </View>
           </View>
 
-          <InfoRow label='开始时间' value={formatTime(event.start_time)} />
-          <InfoRow label='结束时间' value={formatTime(event.end_time)} />
-          <InfoRow label='地点' value={event.is_online ? '线上' : event.location || '待定'} />
+          {/* 关键信息 */}
+          <InfoRow label='时间' value={
+            event.event_type === 'night_chat' || event.event_type === 'parent_observer'
+            ? '每周六 20:30 - 21:30'
+            : event.event_type === 'community_program'
+                ? '持续进行'
+                : (event.start_time ? new Date(event.start_time).toLocaleString('zh-CN') : '待定')
+        } />
+          <InfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />
+          <InfoRow label='费用' value={event.fee || '免费'} />
           <InfoRow label='组织者' value={event.organizer} />
-          <InfoRow label='联系方式' value={event.contact_info} />
-          <InfoRow label='费用' value={event.fee || '免费/未填写'} />
-          <InfoRow label='简介' value={event.description} />
+          <InfoRow label='咨询报名' value={event.contact_info} copyable />
+
+          {/* 详细介绍 */}
+          <View style={{
+            backgroundColor: palette.card, borderRadius: '20px',
+            padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
+          }}>
+            <View style={{ marginBottom: '10px' }}>
+              <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>
+                详细介绍
+              </Text>
+            </View>
+            <Text style={{
+              fontSize: '14px', color: palette.text, lineHeight: '24px',
+              whiteSpace: 'pre-wrap',
+            }}>
+              {event.description || '暂无详细介绍'}
+            </Text>
+          </View>
         </>
-      ) : null}
+      )}
     </View>
   )
 }

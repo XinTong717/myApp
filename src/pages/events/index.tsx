@@ -9,7 +9,6 @@ const palette = {
   cardSoft: '#FFF3E6',
   text: '#2F241B',
   subtext: '#7A6756',
-  accent: '#F4A261',
   accentDeep: '#E76F51',
   accentSoft: '#FCE6D6',
   line: '#F1DFCF',
@@ -23,7 +22,6 @@ type EventItem = {
   event_type: string
   description?: string
   start_time?: string
-  end_time?: string
   location?: string
   fee?: string
   status?: string
@@ -32,18 +30,28 @@ type EventItem = {
   contact_info?: string
 }
 
-function formatTime(value?: string) {
-  if (!value) return '待定'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
+const TYPE_LABELS: Record<string, string> = {
+  night_chat: '夜聊',
+  parent_observer: '家长观察',
+  community_program: '社区计划',
+  workshop: '工作坊',
+  meetup: '线下聚会',
+}
 
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  const hh = String(date.getHours()).padStart(2, '0')
-  const mm = String(date.getMinutes()).padStart(2, '0')
+const STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
+  recurring: { text: '每周进行', color: '#7BAE7F', bg: '#EEF7EE' },
+  recruiting: { text: '招募中', color: '#E76F51', bg: '#FCE6D6' },
+  upcoming: { text: '即将开始', color: '#5B8EBF', bg: '#E8F0F8' },
+  ongoing: { text: '进行中', color: '#7BAE7F', bg: '#EEF7EE' },
+  ended: { text: '已结束', color: '#999', bg: '#F0F0F0' },
+}
 
-  return `${y}-${m}-${d} ${hh}:${mm}`
+const ICONS: Record<string, string> = {
+  night_chat: '🌙',
+  parent_observer: '👀',
+  community_program: '🚀',
+  workshop: '🛠️',
+  meetup: '☕',
 }
 
 export default function EventsPage() {
@@ -55,27 +63,18 @@ export default function EventsPage() {
     try {
       setLoading(true)
       setError('')
-
       const data = await fetchEvents()
-      const list = Array.isArray(data) ? data : []
-
-      console.log('events length:', list.length)
-      setEvents(list)
+      setEvents(Array.isArray(data) ? data : [])
     } catch (err: any) {
       console.error('loadEvents error:', err)
       setError(err?.message || '读取活动数据失败')
-      Taro.showToast({
-        title: '活动数据读取失败',
-        icon: 'none',
-      })
+      Taro.showToast({ title: '活动数据读取失败', icon: 'none' })
     } finally {
       setLoading(false)
     }
   }
 
-  useDidShow(() => {
-    loadEvents()
-  })
+  useDidShow(() => { loadEvents() })
 
   usePullDownRefresh(async () => {
     await loadEvents()
@@ -83,178 +82,126 @@ export default function EventsPage() {
   })
 
   const goToDetail = (item: EventItem) => {
-    Taro.navigateTo({
-      url: `/pages/event-detail/index?id=${item.id}`,
-    })
+    Taro.navigateTo({ url: `/pages/event-detail/index?id=${item.id}` })
   }
 
   return (
-    <View
-      style={{
-        padding: '16px',
-        backgroundColor: palette.bg,
-        minHeight: '100vh',
-        boxSizing: 'border-box',
-      }}
-    >
-      <View
-        style={{
-          backgroundColor: palette.card,
-          borderRadius: '20px',
-          padding: '16px',
-          marginBottom: '14px',
-          border: `1px solid ${palette.line}`,
-        }}
-      >
-        <View style={{ marginBottom: '8px' }}>
-          <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>
-            活动
+    <View style={{
+      padding: '16px', backgroundColor: palette.bg,
+      minHeight: '100vh', boxSizing: 'border-box',
+    }}>
+      <View style={{
+        backgroundColor: palette.card, borderRadius: '20px',
+        padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
+      }}>
+        <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>活动</Text>
+        <View style={{ marginTop: '6px' }}>
+          <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
+            自由学社的活动和社区计划。点进详情了解更多。
           </Text>
         </View>
-
-        <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-          查看最近活动，点进详情再决定是否参加。
-        </Text>
       </View>
 
       <View style={{ marginBottom: '14px' }}>
         <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-          {loading ? '加载中...' : `共 ${events.length} 场活动`}
+          {loading ? '加载中...' : `共 ${events.length} 个活动`}
         </Text>
       </View>
 
       {error ? (
-        <View
-          style={{
-            padding: '12px',
-            marginBottom: '16px',
-            backgroundColor: '#FFF1F0',
-            borderRadius: '14px',
-            border: '1px solid #FFD8D2',
-          }}
-        >
+        <View style={{
+          padding: '12px', marginBottom: '16px', backgroundColor: '#FFF1F0',
+          borderRadius: '14px', border: '1px solid #FFD8D2',
+        }}>
           <Text style={{ color: '#CF1322' }}>{error}</Text>
         </View>
       ) : null}
 
-      {!loading && events.length === 0 ? (
-        <View
-          style={{
-            padding: '16px',
-            backgroundColor: palette.card,
-            borderRadius: '16px',
-            border: `1px solid ${palette.line}`,
-          }}
-        >
-          <Text style={{ color: palette.subtext }}>暂无活动数据</Text>
-        </View>
-      ) : null}
+      {events.map((item) => {
+        const typeLabel = TYPE_LABELS[item.event_type] || item.event_type
+        const statusInfo = STATUS_LABELS[item.status || ''] || { text: item.status || '', color: palette.subtext, bg: '#F5F5F5' }
+        const icon = ICONS[item.event_type] || '📌'
 
-      {events.map((item) => (
-        <View
-          key={item.id}
-          onClick={() => goToDetail(item)}
-          style={{
-            backgroundColor: palette.card,
-            borderRadius: '20px',
-            padding: '16px',
-            marginBottom: '14px',
-            boxSizing: 'border-box',
-            border: `1px solid ${palette.line}`,
-          }}
-        >
+        // 从 description 中取第一行作为摘要
+        const firstLine = (item.description || '').split('\n').find((l) => l.trim()) || ''
+        const summary = firstLine.length > 40 ? firstLine.slice(0, 40) + '…' : firstLine
+
+        return (
           <View
+            key={item.id}
+            onClick={() => goToDetail(item)}
             style={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: '10px',
+              backgroundColor: palette.card, borderRadius: '20px',
+              padding: '16px', marginBottom: '14px',
+              boxSizing: 'border-box', border: `1px solid ${palette.line}`,
             }}
           >
-            <View
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '12px',
-                backgroundColor: '#FFEFD8',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: '10px',
-              }}
-            >
-              <Text style={{ fontSize: '18px' }}>🌙</Text>
+            <View style={{
+              display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
+            }}>
+              <View style={{
+                width: '42px', height: '42px', borderRadius: '14px',
+                backgroundColor: '#FFEFD8', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', marginRight: '10px',
+              }}>
+                <Text style={{ fontSize: '20px' }}>{icon}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: '17px', fontWeight: 'bold', color: palette.text, lineHeight: '24px' }}>
+                  {item.title}
+                </Text>
+              </View>
             </View>
 
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: '17px', fontWeight: 'bold', color: palette.text }}>
-                {item.title}
-              </Text>
-            </View>
-          </View>
+            {/* 标签 */}
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
+              <View style={{
+                padding: '4px 10px', borderRadius: '999px',
+                backgroundColor: palette.accentSoft, marginRight: '8px', marginBottom: '6px',
+              }}>
+                <Text style={{ fontSize: '12px', color: palette.accentDeep }}>{typeLabel}</Text>
+              </View>
 
-          <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
-            <View
-              style={{
-                padding: '5px 10px',
-                borderRadius: '999px',
-                backgroundColor: palette.accentSoft,
-                marginRight: '8px',
-                marginBottom: '8px',
-              }}
-            >
-              <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
-                {item.event_type || '未填写'}
-              </Text>
+              <View style={{
+                padding: '4px 10px', borderRadius: '999px',
+                backgroundColor: statusInfo.bg, marginRight: '8px', marginBottom: '6px',
+              }}>
+                <Text style={{ fontSize: '12px', color: statusInfo.color }}>{statusInfo.text}</Text>
+              </View>
+
+              <View style={{
+                padding: '4px 10px', borderRadius: '999px',
+                backgroundColor: palette.greenSoft, marginRight: '8px', marginBottom: '6px',
+              }}>
+                <Text style={{ fontSize: '12px', color: palette.green }}>
+                  {item.is_online ? '线上' : '线下'}
+                </Text>
+              </View>
             </View>
 
-            <View
-              style={{
-                padding: '5px 10px',
-                borderRadius: '999px',
-                backgroundColor: palette.greenSoft,
-                marginRight: '8px',
-                marginBottom: '8px',
-              }}
-            >
-              <Text style={{ fontSize: '12px', color: palette.green }}>
-                {item.is_online ? '线上' : item.location || '线下'}
-              </Text>
-            </View>
-          </View>
-
-          <View
-            style={{
-              backgroundColor: '#FFFDF9',
-              borderRadius: '14px',
-              padding: '12px',
-              marginBottom: '10px',
-            }}
-          >
-            <View style={{ marginBottom: '6px' }}>
+            {/* 摘要 + 费用 */}
+            <View style={{
+              backgroundColor: '#FFFDF9', borderRadius: '14px',
+              padding: '12px', marginBottom: '10px',
+            }}>
+              {summary ? (
+                <View style={{ marginBottom: '6px' }}>
+                  <Text style={{ color: palette.subtext, fontSize: '13px', lineHeight: '20px' }}>
+                    {summary}
+                  </Text>
+                </View>
+              ) : null}
               <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-                时间：{formatTime(item.start_time)}
+                费用：{item.fee || '免费'}
               </Text>
             </View>
 
-            <View style={{ marginBottom: '6px' }}>
-              <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-                状态：{item.status || '未填写'}
-              </Text>
-            </View>
-
-            <View>
-              <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-                费用：{item.fee || '免费/未填写'}
-              </Text>
-            </View>
+            <Text style={{ color: palette.accentDeep, fontSize: '13px', fontWeight: 'bold' }}>
+              点击查看详情
+            </Text>
           </View>
-
-          <Text style={{ color: palette.accentDeep, fontSize: '13px', fontWeight: 'bold' }}>
-            点击查看详情
-          </Text>
-        </View>
-      ))}
+        )
+      })}
     </View>
   )
 }
