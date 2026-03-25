@@ -10,7 +10,7 @@
     "es6": true,
     "enhance": false,
     "compileHotReLoad": false,
-    "postcss": false,
+    "postcss": true,
     "minified": false,
     "compileWorklet": false,
     "uglifyFileName": false,

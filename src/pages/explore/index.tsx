@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Map as TaroMap, type MapProps, Text, View, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import markerSchoolIcon from '../../assets/marker-school.png'
-import markerUserIcon from '../../assets/marker-user.png'
+// 橙色圆点 20x20
+const markerSchoolIcon = '/assets/marker-school.png'
+// 绿色圆点 16x16
+const markerUserIcon = '/assets/marker-user.png'
 import { fetchSchools, fetchProfiles } from '../../services/api'
 
 const CITIES: Record<string, { lat: number; lng: number; prov: string }> = {
