@@ -169,8 +169,8 @@ export default function ProfilePage() {
   const loadProfile = async () => {
     try {
       setLoading(true)
-      await Taro.cloud.init({ env: 'cloud1-9g8njw4c79fb1322' })
       const res: any = await Taro.cloud.callFunction({ name: 'getMe', data: {} })
+      console.log('getMe result:', JSON.stringify(res.result))
       const p = res.result?.profile
       if (p) {
         setDisplayName(p.displayName || '')

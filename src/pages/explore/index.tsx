@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Map as TaroMap, type MapProps, Text, View, ScrollView } from '@tarojs/components'
+import { Map as TaroMap, Text, View, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-// 橙色圆点 20x20
-const markerSchoolIcon = '/assets/marker-school.png'
-// 绿色圆点 16x16
-const markerUserIcon = '/assets/marker-user.png'
 import { fetchSchools, fetchProfiles } from '../../services/api'
+
+const markerSchoolIcon = '/assets/marker-school.png'
+const markerUserIcon = '/assets/marker-user.png'
 
 const CITIES: Record<string, { lat: number; lng: number; prov: string }> = {
   上海: { lat: 31.2304, lng: 121.4737, prov: '上海' },
@@ -49,15 +48,26 @@ const CITIES: Record<string, { lat: number; lng: number; prov: string }> = {
   南宁: { lat: 22.8170, lng: 108.3665, prov: '广西' },
   太原: { lat: 37.8706, lng: 112.5489, prov: '山西' },
   宣城: { lat: 30.9408, lng: 118.7588, prov: '安徽' },
+  合肥: { lat: 31.8206, lng: 117.2272, prov: '安徽' },
   大连: { lat: 38.9140, lng: 121.6147, prov: '辽宁' },
   沈阳: { lat: 41.8057, lng: 123.4315, prov: '辽宁' },
   通化: { lat: 41.7280, lng: 125.9400, prov: '吉林' },
+  长春: { lat: 43.8171, lng: 125.3235, prov: '吉林' },
+  哈尔滨: { lat: 45.8038, lng: 126.5350, prov: '黑龙江' },
   黑河: { lat: 50.2455, lng: 127.5285, prov: '黑龙江' },
   海口: { lat: 20.0174, lng: 110.3493, prov: '海南' },
+  三亚: { lat: 18.2528, lng: 109.5120, prov: '海南' },
   澄迈: { lat: 19.7383, lng: 110.0075, prov: '海南' },
   兰州: { lat: 36.0611, lng: 103.8343, prov: '甘肃' },
   银川: { lat: 38.4872, lng: 106.2309, prov: '宁夏' },
   南昌: { lat: 28.6820, lng: 115.8579, prov: '江西' },
+  呼和浩特: { lat: 40.8424, lng: 111.7490, prov: '内蒙古' },
+  乌鲁木齐: { lat: 43.8256, lng: 87.6168, prov: '新疆' },
+  拉萨: { lat: 29.6500, lng: 91.1409, prov: '西藏' },
+  西宁: { lat: 36.6171, lng: 101.7782, prov: '青海' },
+  香港: { lat: 22.3193, lng: 114.1694, prov: '香港' },
+  澳门: { lat: 22.1987, lng: 113.5439, prov: '澳门' },
+  台北: { lat: 25.0330, lng: 121.5654, prov: '台湾' },
 }
 
 const PROV_FALLBACK: Record<string, { lat: number; lng: number }> = {
@@ -74,19 +84,25 @@ const PROV_FALLBACK: Record<string, { lat: number; lng: number }> = {
   山西: { lat: 37.8706, lng: 112.5489 }, 辽宁: { lat: 41.8057, lng: 123.4315 },
   吉林: { lat: 43.8171, lng: 125.3235 }, 黑龙江: { lat: 45.8038, lng: 126.5350 },
   甘肃: { lat: 36.0611, lng: 103.8343 }, 宁夏: { lat: 38.4872, lng: 106.2309 },
-  海南: { lat: 20.0174, lng: 110.3493 },
+  海南: { lat: 20.0174, lng: 110.3493 }, 内蒙古: { lat: 40.8424, lng: 111.7490 },
+  新疆: { lat: 43.8256, lng: 87.6168 }, 西藏: { lat: 29.6500, lng: 91.1409 },
+  青海: { lat: 36.6171, lng: 101.7782 },
 }
 
 type School = {
   id: number | string; name?: string; province?: string; city?: string; school_type?: string
 }
-type Profile = {
+type WebProfile = {
   id: string; username?: string; display_name?: string; province?: string; city?: string
-  lat?: number | string | null; lng?: number | string | null
+  bio?: string; lat?: number | string | null; lng?: number | string | null
+}
+type AppUser = {
+  _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string
 }
 type MarkerItem = {
   id: number; latitude: number; longitude: number; name: string
-  type: 'school' | 'user'; markerProv: string; city?: string; originalId: number | string
+  type: 'school' | 'user'; markerProv: string; city?: string
+  originalId: number | string; bio?: string; roles?: string[]
 }
 
 const toNum = (v: unknown): number | null => {
@@ -98,21 +114,19 @@ const isValidCoord = (lat: number, lng: number) =>
   lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
 function parseCities(f?: string): string[] {
   if (!f) return []
-  return f.split(',').map((s) => s.trim()).filter((s) => s && !s.startsWith('(') && !s.startsWith('（'))
+  return f.split(',').map((s) => s.trim()).filter((s) => s && !s.startsWith('(') && !s.startsWith('('))
 }
 function firstProvince(f?: string): string {
   if (!f) return ''
   return f.split(',')[0].trim()
     .replace(/(省|市|壮族自治区|回族自治区|维吾尔自治区|自治区|特别行政区)$/, '')
-    .replace(/\(.*\)/, '').replace(/（.*）/, '').trim()
+    .replace(/\(.*\)/, '').replace(/(.*)/, '').trim()
 }
-
 function nameHash(name: string): number {
   let h = 0
   for (let i = 0; i < name.length; i++) { h = ((h << 5) - h + name.charCodeAt(i)) | 0 }
   return Math.abs(h % 10000) / 10000
 }
-
 function jitter(baseLat: number, baseLng: number, index: number, total: number, name: string): { lat: number; lng: number } {
   if (total <= 1) return { lat: baseLat, lng: baseLng }
   const cols = Math.ceil(Math.sqrt(total))
@@ -124,45 +138,69 @@ function jitter(baseLat: number, baseLng: number, index: number, total: number, 
   const gridH = (rows - 1) * spacing
   const gridLat = baseLat - gridH / 2 + row * spacing
   const gridLng = baseLng - gridW / 2 + col * spacing
-  const h = nameHash(name)
-  const h2 = nameHash(name + 'x')
+  const h = nameHash(name); const h2 = nameHash(name + 'x')
   return {
     lat: gridLat + (h - 0.5) * 0.016,
     lng: gridLng + (h2 - 0.5) * 0.016 / Math.cos(baseLat * Math.PI / 180),
   }
 }
-
 function shortName(name: string, max = 10): string {
-  return name.length > max ? name.slice(0, max) + '…' : name
+  return name.length > max ? name.slice(0, max) + '...' : name
 }
 
 export default function ExplorePage() {
   const [schools, setSchools] = useState<School[]>([])
-  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [webProfiles, setWebProfiles] = useState<WebProfile[]>([])
+  const [appUsers, setAppUsers] = useState<AppUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showSchools, setShowSchools] = useState(true)
   const [showUsers, setShowUsers] = useState(true)
   const [selectedProvince, setSelectedProvince] = useState('')
+  const [hasProfile, setHasProfile] = useState(true) // assume true until checked
 
   const loadData = async () => {
     try {
       setLoading(true); setError('')
-      const [sd, pd] = await Promise.all([fetchSchools(), fetchProfiles().catch(() => [])])
-      setSchools(Array.isArray(sd) ? sd : [])
-      setProfiles(Array.isArray(pd) ? pd : [])
-    } catch (err: any) { setError(err?.message || '读取数据失败') }
-    finally { setLoading(false) }
+
+      // 并行加载：学校 + 网站用户 + 小程序用户 + 当前用户资料检查
+      const [schoolData, profileData, mapUsersRes, myRes] = await Promise.all([
+        fetchSchools(),
+        fetchProfiles().catch(() => []),
+        Taro.cloud.callFunction({ name: 'getMapUsers', data: {} }).catch(() => ({ result: { users: [] } })),
+        Taro.cloud.callFunction({ name: 'getMe', data: {} }).catch(() => ({ result: { profile: null } })),
+      ])
+
+      setSchools(Array.isArray(schoolData) ? schoolData : [])
+      setWebProfiles(Array.isArray(profileData) ? profileData : [])
+
+      const mapResult = (mapUsersRes as any)?.result
+      setAppUsers(Array.isArray(mapResult?.users) ? mapResult.users : [])
+
+      // 检查当前用户是否已填资料
+      const myProfile = (myRes as any)?.result?.profile
+      setHasProfile(!!(myProfile && myProfile.displayName && myProfile.province && myProfile.city))
+    } catch (err: any) {
+      setError(err?.message || '读取数据失败')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useDidShow(() => { loadData() })
 
+  const goToProfile = () => {
+    Taro.switchTab({ url: '/pages/profile/index' })
+  }
+
+  // ===== 构建 markers =====
   const allMarkers = useMemo(() => {
     const items: MarkerItem[] = []
     let nextId = 1
     const cityCount: Record<string, number> = {}
     const cityIndex: Record<string, number> = {}
 
+    // === 学校 ===
     if (showSchools) {
       schools.forEach((s) => {
         parseCities(s.city).forEach((c) => { cityCount[c] = (cityCount[c] || 0) + 1 })
@@ -195,19 +233,44 @@ export default function ExplorePage() {
       })
     }
 
+    // === 用户（网站 profiles + 小程序 users 合并）===
     if (showUsers) {
-      profiles.forEach((p) => {
+      // 网站 profiles：用数据库 lat/lng
+      webProfiles.forEach((p) => {
         const lat = toNum(p.lat); const lng = toNum(p.lng)
         if (lat === null || lng === null || !isValidCoord(lat, lng)) return
+        const name = p.display_name?.trim() || p.username?.trim() || '同路人'
         items.push({
           id: nextId++, latitude: lat, longitude: lng,
-          name: p.display_name?.trim() || p.username?.trim() || '同路人',
-          type: 'user', markerProv: firstProvince(p.province), city: p.city, originalId: p.id,
+          name, type: 'user', markerProv: firstProvince(p.province),
+          city: p.city, originalId: p.id, bio: p.bio,
+        })
+      })
+
+      // 小程序 users：用 CITIES 映射
+      appUsers.forEach((u) => {
+        if (!u.city || !u.province) return
+        const cityInfo = CITIES[u.city]
+        const coord = cityInfo || PROV_FALLBACK[u.province]
+        if (!coord) return
+        const prov = cityInfo ? cityInfo.prov : u.province
+        const name = u.displayName?.trim() || '同路人'
+        // 加微小偏移避免和网站用户完全重叠
+        const h = nameHash(name + u._id)
+        const offsetLat = (h - 0.5) * 0.02
+        const offsetLng = (nameHash(u._id) - 0.5) * 0.02
+        items.push({
+          id: nextId++,
+          latitude: (cityInfo ? cityInfo.lat : (coord as any).lat) + offsetLat,
+          longitude: (cityInfo ? cityInfo.lng : (coord as any).lng) + offsetLng,
+          name, type: 'user', markerProv: prov,
+          city: u.city, originalId: u._id,
+          bio: u.bio, roles: u.roles,
         })
       })
     }
     return items
-  }, [schools, profiles, showSchools, showUsers])
+  }, [schools, webProfiles, appUsers, showSchools, showUsers])
 
   const filteredMarkers = useMemo(() => {
     if (!selectedProvince) return allMarkers
@@ -220,32 +283,39 @@ export default function ExplorePage() {
     return Array.from(set).sort()
   }, [allMarkers])
 
-  // ===== 关键改动：用 callout + display ALWAYS 替代 label =====
-  // callout 支持 onCalloutTap，label 不支持点击
-  const mapMarkers: MapProps.marker[] = useMemo(() => {
-    return filteredMarkers.map((item) => ({
-      id: item.id,
-      latitude: item.latitude,
-      longitude: item.longitude,
-      title: item.name,
-      iconPath: item.type === 'school' ? markerSchoolIcon : markerUserIcon,
-      width: item.type === 'school' ? 22 : 16,
-      height: item.type === 'school' ? 22 : 16,
-      anchor: { x: 0.5, y: 0.5 },
-      callout: {
-        content: item.type === 'school' ? shortName(item.name) : '',
-        color: '#2F241B',
-        fontSize: 11,
-        anchorX: 0,
-        anchorY: -2,
-        borderRadius: 6,
-        borderWidth: 0,
-        bgColor: 'rgba(255,255,255,0.9)',
-        padding: 4,
-        display: 'ALWAYS',
-        textAlign: 'center',
-      },
-    }))
+  // ===== 地图 markers =====
+  const mapMarkers: any[] = useMemo(() => {
+    return filteredMarkers.map((item) => {
+      // 学校：始终显示名字
+      // 用户：始终显示名字 + 城市
+      const calloutContent = item.type === 'school'
+        ? shortName(item.name)
+        : (item.name + (item.city ? ' · ' + item.city : ''))
+
+      return {
+        id: item.id,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        title: item.name,
+        iconPath: item.type === 'school' ? markerSchoolIcon : markerUserIcon,
+        width: item.type === 'school' ? 22 : 18,
+        height: item.type === 'school' ? 22 : 18,
+        anchor: { x: 0.5, y: 0.5 },
+        callout: {
+          content: calloutContent,
+          color: '#2F241B',
+          fontSize: 11,
+          anchorX: 0,
+          anchorY: -2,
+          borderRadius: 6,
+          borderWidth: 0,
+          bgColor: item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,247,238,0.92)',
+          padding: 4,
+          display: 'ALWAYS',
+          textAlign: 'center',
+        },
+      }
+    })
   }, [filteredMarkers])
 
   const { center, scale } = useMemo(() => {
@@ -276,22 +346,66 @@ export default function ExplorePage() {
     return m
   }, [filteredMarkers])
 
-  const goToSchool = (markerId: number) => {
+  const handleTap = (markerId: number) => {
     const item = idToMarker[markerId]
-    if (item?.type === 'school') {
-      Taro.navigateTo({ url: `/pages/school-detail/index?id=${item.originalId}` })
+    if (!item) return
+
+    if (item.type === 'school') {
+      Taro.navigateTo({ url: '/pages/school-detail/index?id=' + item.originalId })
+    } else {
+      // 用户：显示简介弹窗
+      const roleStr = item.roles && item.roles.length > 0 ? item.roles.join(' / ') : ''
+      const lines = [item.name]
+      if (item.city) lines.push('📍 ' + item.city)
+      if (roleStr) lines.push('身份: ' + roleStr)
+      if (item.bio) lines.push(item.bio)
+
+      Taro.showModal({
+        title: item.name,
+        content: lines.slice(1).join('\n') || '这位同路人还没有填写简介',
+        showCancel: false,
+        confirmText: '关闭',
+      })
     }
   }
 
-  // marker 点击和 callout 点击都跳转
-  const handleMarkerTap: MapProps['onMarkerTap'] = (e) => goToSchool(Number(e.detail?.markerId))
-  const handleCalloutTap: MapProps['onCalloutTap'] = (e) => goToSchool(Number(e.detail?.markerId))
+  const handleMarkerTap = (e: any) => handleTap(Number(e.detail?.markerId))
+  const handleCalloutTap = (e: any) => handleTap(Number(e.detail?.markerId))
 
   const schoolCount = filteredMarkers.filter((m) => m.type === 'school').length
   const userCount = filteredMarkers.filter((m) => m.type === 'user').length
 
   return (
     <View style={{ minHeight: '100vh', backgroundColor: '#FFF9F2' }}>
+      {/* 未填资料引导 */}
+      {!loading && !hasProfile && (
+        <View
+          onClick={goToProfile}
+          style={{
+            backgroundColor: '#FFF', padding: '12px 14px',
+            borderBottom: '1px solid #F1DFCF',
+            display: 'flex', flexDirection: 'row', alignItems: 'center',
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>
+              填写资料，出现在地图上
+            </Text>
+            <View style={{ marginTop: '2px' }}>
+              <Text style={{ fontSize: '12px', color: '#7A6756' }}>
+                让同城的家庭和教育者发现你
+              </Text>
+            </View>
+          </View>
+          <View style={{
+            padding: '6px 14px', borderRadius: '999px', backgroundColor: '#E76F51',
+          }}>
+            <Text style={{ fontSize: '12px', color: '#FFF', fontWeight: 'bold' }}>去填写</Text>
+          </View>
+        </View>
+      )}
+
+      {/* 筛选栏 */}
       <View style={{ backgroundColor: '#FFF', padding: '10px 14px 6px', borderBottom: '1px solid #F1DFCF' }}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '6px' }}>
           <View
@@ -349,6 +463,7 @@ export default function ExplorePage() {
         )}
       </View>
 
+      {/* 地图 */}
       {loading && (
         <View style={{ padding: '80px 20px', textAlign: 'center' }}>
           <Text style={{ fontSize: '14px', color: '#7A6756' }}>加载中...</Text>
@@ -368,7 +483,7 @@ export default function ExplorePage() {
         <View style={{ padding: '40px 20px' }}>
           <View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}>
             <Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>
-              {selectedProvince ? `${selectedProvince}暂无数据` : '暂无点位'}
+              {selectedProvince ? selectedProvince + '暂无数据' : '暂无点位'}
             </Text>
           </View>
         </View>
@@ -386,6 +501,7 @@ export default function ExplorePage() {
           enableOverlooking={false}
           onMarkerTap={handleMarkerTap}
           onCalloutTap={handleCalloutTap}
+          onError={() => {}}
           style={{ width: '100%', height: 'calc(100vh - 120px)' }}
         />
       )}
