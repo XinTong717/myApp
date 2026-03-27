@@ -1,5 +1,4 @@
 const cloud = require('wx-server-sdk')
-
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
@@ -9,7 +8,7 @@ exports.main = async (event, context) => {
   const openid = wxContext.OPENID
 
   const res = await db.collection('users')
-    .where({ _openid: openid })
+    .where({ openid: openid })
     .limit(1)
     .get()
 

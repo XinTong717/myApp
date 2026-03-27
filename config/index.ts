@@ -24,6 +24,7 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
     },
     copy: {
       patterns: [
+        { from: 'src/assets/', to: 'dist/assets/', ignore: ['*.ts'] },
       ],
       options: {
       }

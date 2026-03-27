@@ -1,25 +1,21 @@
 const cloud = require('wx-server-sdk')
-
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+const _ = db.command
 
-// 允许保存的字段白名单
 const ALLOWED_FIELDS = [
   'displayName',
   'gender',
   'ageRange',
-  'roles',          // array: ['家长', '教育者', ...]
+  'roles',
   'province',
   'city',
-  // 家长相关
   'childGender',
   'childAgeRange',
   'childDropoutStatus',
   'childInterests',
-  // 教育者相关
   'eduServices',
-  // 通用
   'bio',
 ]
 
@@ -27,7 +23,7 @@ exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
-  // 只保留白名单字段，防止注入
+  // 只保留白名单字段
   const cleanData = { updatedAt: new Date() }
   for (const key of ALLOWED_FIELDS) {
     if (event[key] !== undefined) {
@@ -44,8 +40,22 @@ exports.main = async (event, context) => {
     return { ok: false, message: '显示名不能为空' }
   }
 
+  // 显示名查重：不能和其他用户重复
+  const dupCheck = await db.collection('users')
+    .where({
+      displayName: cleanData.displayName,
+      openid: _.neq(openid),
+    })
+    .limit(1)
+    .get()
+
+  if (dupCheck.data.length > 0) {
+    return { ok: false, message: '这个显示名已被使用，请换一个' }
+  }
+
+  // 查找当前用户
   const existing = await db.collection('users')
-    .where({ _openid: openid })
+    .where({ openid: openid })
     .limit(1)
     .get()
 
@@ -57,7 +67,7 @@ exports.main = async (event, context) => {
   }
 
   await db.collection('users').add({
-    data: { ...cleanData, createdAt: new Date() },
+    data: { ...cleanData, openid: openid, createdAt: new Date() },
   })
   return { ok: true, mode: 'create', openid }
 }

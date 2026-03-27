@@ -226,6 +226,7 @@ export default function ProfilePage() {
         },
       })
       Taro.showToast({ title: '保存成功', icon: 'success' })
+      setTimeout(() => { loadProfile() }, 500)
     } catch (err: any) {
       console.error('saveProfile error:', err)
       Taro.showToast({ title: '保存失败', icon: 'none' })
