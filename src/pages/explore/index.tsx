@@ -90,7 +90,7 @@ const PROV_FALLBACK: Record<string, { lat: number; lng: number }> = {
 }
 
 type School = {
-  id: number | string; name?: string; province?: string; city?: string; school_type?: string
+  id: number | string; name?: string; province?: string; city?: string
 }
 type AppUser = {
   _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string
@@ -150,18 +150,14 @@ export default function ExplorePage() {
   const loadData = async () => {
     try {
       setLoading(true); setError('')
-
       const [schoolData, mapUsersRes, myRes] = await Promise.all([
         fetchSchools().catch(() => []),
         Taro.cloud.callFunction({ name: 'getMapUsers', data: {} }).catch(() => ({ result: { users: [] } })),
         Taro.cloud.callFunction({ name: 'getMe', data: {} }).catch(() => ({ result: { profile: null } })),
       ])
-
       setSchools(Array.isArray(schoolData) ? schoolData : [])
-
       const mapResult = (mapUsersRes as any)?.result
       setAppUsers(Array.isArray(mapResult?.users) ? mapResult.users : [])
-
       const myProfile = (myRes as any)?.result?.profile
       setHasProfile(!!(myProfile && myProfile.displayName && myProfile.province && myProfile.city))
     } catch (err: any) {
@@ -189,7 +185,7 @@ export default function ExplorePage() {
       })
       schools.forEach((s) => {
         const cities = parseCities(s.city)
-        const schoolName = s.name?.trim() || '未知学校'
+        const schoolName = s.name?.trim() || '未知学习社区'
         if (cities.length > 0) {
           cities.forEach((cityName) => {
             const info = CITIES[cityName]
@@ -255,7 +251,6 @@ export default function ExplorePage() {
       const calloutContent = item.type === 'school'
         ? shortName(item.name)
         : (item.name + (item.city ? ' \u00b7 ' + item.city : ''))
-
       return {
         id: item.id,
         latitude: item.latitude,
@@ -269,15 +264,10 @@ export default function ExplorePage() {
           content: calloutContent,
           color: '#2F241B',
           fontSize: 11,
-          anchorX: 0,
-          anchorY: -2,
-          borderRadius: 6,
-          borderWidth: 0,
-          borderColor: '#FFFFFF',
+          anchorX: 0, anchorY: -2,
+          borderRadius: 6, borderWidth: 0, borderColor: '#FFFFFF',
           bgColor: item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,247,238,0.92)',
-          padding: 4,
-          display: 'ALWAYS',
-          textAlign: 'center',
+          padding: 4, display: 'ALWAYS', textAlign: 'center',
         },
       }
     })
@@ -311,25 +301,59 @@ export default function ExplorePage() {
     return m
   }, [filteredMarkers])
 
-  const handleTap = (markerId: number) => {
+  // ===== 点击 marker =====
+  const handleTap = async (markerId: number) => {
     const item = idToMarker[markerId]
     if (!item) return
 
     if (item.type === 'school') {
       Taro.navigateTo({ url: '/pages/school-detail/index?id=' + item.originalId })
-    } else {
-      const roleStr = item.roles && item.roles.length > 0 ? item.roles.join(' / ') : ''
-      const lines = [item.name]
-      if (item.city) lines.push('\ud83d\udccd ' + item.city)
-      if (roleStr) lines.push('\u8eab\u4efd: ' + roleStr)
-      if (item.bio) lines.push(item.bio)
+      return
+    }
 
-      Taro.showModal({
-        title: item.name,
-        content: lines.slice(1).join('\n') || '这位同路人还没有填写简介',
-        showCancel: false,
-        confirmText: '关闭',
+    // 用户 marker
+    if (!hasProfile) {
+      const res = await Taro.showModal({
+        title: '请先填写资料',
+        content: '填写个人资料后才能发起联络请求',
+        confirmText: '去填写',
+        cancelText: '取消',
       })
+      if (res.confirm) goToProfile()
+      return
+    }
+
+    const roleStr = item.roles && item.roles.length > 0 ? item.roles.join(' / ') : ''
+    const lines: string[] = []
+    if (item.city) lines.push('城市: ' + item.city)
+    if (roleStr) lines.push('身份: ' + roleStr)
+    if (item.bio) lines.push(item.bio)
+    if (lines.length === 0) lines.push('这位同路人还没有填写简介')
+
+    const result = await Taro.showModal({
+      title: item.name,
+      content: lines.join('\n'),
+      confirmText: '想认识TA',
+      cancelText: '关闭',
+    })
+
+    if (result.confirm) {
+      try {
+        Taro.showLoading({ title: '发送中...' })
+        const res: any = await Taro.cloud.callFunction({
+          name: 'sendRequest',
+          data: { targetUserId: String(item.originalId) },
+        })
+        Taro.hideLoading()
+        const r = res.result
+        Taro.showToast({
+          title: r?.ok ? '请求已发送' : (r?.message || '发送失败'),
+          icon: r?.ok ? 'success' : 'none',
+        })
+      } catch (err) {
+        Taro.hideLoading()
+        Taro.showToast({ title: '发送失败，请稍后重试', icon: 'none' })
+      }
     }
   }
 
@@ -355,14 +379,10 @@ export default function ExplorePage() {
               填写资料，出现在地图上
             </Text>
             <View style={{ marginTop: '2px' }}>
-              <Text style={{ fontSize: '12px', color: '#7A6756' }}>
-                让同城的家庭和教育者发现你
-              </Text>
+              <Text style={{ fontSize: '12px', color: '#7A6756' }}>让同城的家庭和教育者发现你</Text>
             </View>
           </View>
-          <View style={{
-            padding: '6px 14px', borderRadius: '999px', backgroundColor: '#E76F51',
-          }}>
+          <View style={{ padding: '6px 14px', borderRadius: '999px', backgroundColor: '#E76F51' }}>
             <Text style={{ fontSize: '12px', color: '#FFF', fontWeight: 'bold' }}>去填写</Text>
           </View>
         </View>
@@ -370,24 +390,18 @@ export default function ExplorePage() {
 
       <View style={{ backgroundColor: '#FFF', padding: '10px 14px 6px', borderBottom: '1px solid #F1DFCF' }}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '6px' }}>
-          <View
-            onClick={() => setShowSchools(!showSchools)}
-            style={{
-              padding: '4px 10px', borderRadius: '999px', marginRight: '8px',
-              backgroundColor: showSchools ? '#FCE6D6' : '#F5F5F5',
-            }}
-          >
+          <View onClick={() => setShowSchools(!showSchools)} style={{
+            padding: '4px 10px', borderRadius: '999px', marginRight: '8px',
+            backgroundColor: showSchools ? '#FCE6D6' : '#F5F5F5',
+          }}>
             <Text style={{ fontSize: '12px', fontWeight: 'bold', color: showSchools ? '#E76F51' : '#BBB' }}>
-              学校 {showSchools ? schoolCount : '\u2014'}
+              学习社区 {showSchools ? schoolCount : '\u2014'}
             </Text>
           </View>
-          <View
-            onClick={() => setShowUsers(!showUsers)}
-            style={{
-              padding: '4px 10px', borderRadius: '999px', marginRight: '8px',
-              backgroundColor: showUsers ? '#EEF7EE' : '#F5F5F5',
-            }}
-          >
+          <View onClick={() => setShowUsers(!showUsers)} style={{
+            padding: '4px 10px', borderRadius: '999px', marginRight: '8px',
+            backgroundColor: showUsers ? '#EEF7EE' : '#F5F5F5',
+          }}>
             <Text style={{ fontSize: '12px', fontWeight: 'bold', color: showUsers ? '#7BAE7F' : '#BBB' }}>
               同路人 {showUsers ? userCount : '\u2014'}
             </Text>
@@ -399,24 +413,17 @@ export default function ExplorePage() {
         {availableProvinces.length > 0 && (
           <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: '26px' }}>
             <View style={{ display: 'inline-flex', flexDirection: 'row' }}>
-              <View
-                onClick={() => setSelectedProvince('')}
-                style={{
-                  padding: '3px 10px', borderRadius: '999px', marginRight: '6px',
-                  backgroundColor: !selectedProvince ? '#E76F51' : '#FFF3E6',
-                }}
-              >
+              <View onClick={() => setSelectedProvince('')} style={{
+                padding: '3px 10px', borderRadius: '999px', marginRight: '6px',
+                backgroundColor: !selectedProvince ? '#E76F51' : '#FFF3E6',
+              }}>
                 <Text style={{ fontSize: '11px', color: !selectedProvince ? '#FFF' : '#7A6756' }}>全国</Text>
               </View>
               {availableProvinces.map((prov) => (
-                <View
-                  key={prov}
-                  onClick={() => setSelectedProvince(prov === selectedProvince ? '' : prov)}
-                  style={{
-                    padding: '3px 10px', borderRadius: '999px', marginRight: '6px',
-                    backgroundColor: prov === selectedProvince ? '#E76F51' : '#FFF3E6',
-                  }}
-                >
+                <View key={prov} onClick={() => setSelectedProvince(prov === selectedProvince ? '' : prov)} style={{
+                  padding: '3px 10px', borderRadius: '999px', marginRight: '6px',
+                  backgroundColor: prov === selectedProvince ? '#E76F51' : '#FFF3E6',
+                }}>
                   <Text style={{ fontSize: '11px', color: prov === selectedProvince ? '#FFF' : '#7A6756' }}>{prov}</Text>
                 </View>
               ))}

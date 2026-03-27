@@ -42,8 +42,8 @@ export default function SchoolsPage() {
       setSchools(Array.isArray(data) ? data : [])
     } catch (err: any) {
       console.error('loadSchools error:', err)
-      setError(err?.message || '读取学校数据失败')
-      Taro.showToast({ title: '学校数据读取失败', icon: 'none' })
+      setError(err?.message || '读取学习社区数据失败')
+      Taro.showToast({ title: '学习社区数据读取失败', icon: 'none' })
     } finally {
       setLoading(false)
     }
@@ -81,10 +81,10 @@ export default function SchoolsPage() {
         padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
       }}>
         <View style={{ marginBottom: '8px' }}>
-          <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>学校库</Text>
+          <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>学习社区库</Text>
         </View>
         <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-          搜索、筛选、查看学校详情。
+          搜索、筛选、查看学习社区详情。
         </Text>
         <View style={{
           backgroundColor: palette.cardSoft, borderRadius: '14px',
@@ -93,7 +93,7 @@ export default function SchoolsPage() {
           <Input
             type='text'
             value={keyword}
-            placeholder='搜索学校名 / 城市 / 类型'
+            placeholder='搜索学习社区名 / 城市 / 类型'
             onInput={(e) => setKeyword(e.detail.value)}
           />
         </View>
@@ -102,7 +102,7 @@ export default function SchoolsPage() {
       {/* 计数 */}
       <View style={{ marginBottom: '14px' }}>
         <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-          {loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 所学校`}
+          {loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 个学习社区`}
         </Text>
       </View>
 
@@ -126,7 +126,7 @@ export default function SchoolsPage() {
         </View>
       ) : null}
 
-      {/* 学校列表 */}
+      {/* 学习社区列表 */}
       {filteredSchools.map((item) => (
         <View
           key={item.id}

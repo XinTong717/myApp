@@ -1,3 +1,3 @@
 export default {
-  navigationBarTitleText: '学校地图',
+  navigationBarTitleText: '学习社区地图',
 }

@@ -77,7 +77,7 @@ export default function SchoolMapPage() {
       setSchools(Array.isArray(data) ? (data as School[]) : [])
     } catch (err: any) {
       console.error('loadSchoolMap error:', err)
-      setError(err?.message || '读取学校地图数据失败')
+      setError(err?.message || '读取学习社区地图数据失败')
     } finally {
       setLoading(false)
     }
@@ -106,7 +106,7 @@ export default function SchoolMapPage() {
 
       markerSchools.push({
         id,
-        name: school.name?.trim() || `学校 ${id}`,
+        name: school.name?.trim() || `学习社区 ${id}`,
         latitude,
         longitude,
       })
@@ -167,7 +167,7 @@ export default function SchoolMapPage() {
 
     if (!Number.isFinite(markerId)) {
       Taro.showToast({
-        title: '学校信息异常',
+        title: '学习社区信息异常',
         icon: 'none',
       })
       return
@@ -213,17 +213,17 @@ export default function SchoolMapPage() {
             marginBottom: '10px',
           }}
         >
-          <Text style={{ fontSize: '12px', color: palette.accentDeep }}>学校位置总览</Text>
+          <Text style={{ fontSize: '12px', color: palette.accentDeep }}>学习社区位置总览</Text>
         </View>
 
         <View style={{ marginBottom: '8px' }}>
           <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>
-            学校地图
+           学习社区地图
           </Text>
         </View>
 
         <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-          在地图上浏览已补全坐标的学校，点击标记即可进入学校详情。
+          在地图上浏览已补全坐标的学习社区，点击标记即可进入学习社区详情。
         </Text>
 
         <View
@@ -282,7 +282,7 @@ export default function SchoolMapPage() {
           </Text>
           <View style={{ marginTop: '8px' }}>
             <Text style={{ fontSize: '13px', color: palette.subtext }}>
-              正在读取学校坐标并生成标记点...
+              正在读取学习社区坐标并生成标记点...
             </Text>
           </View>
         </View>
@@ -329,11 +329,11 @@ export default function SchoolMapPage() {
           }}
         >
           <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>
-            暂无可显示的学校坐标
+            暂无可显示的学习社区坐标
           </Text>
           <View style={{ marginTop: '8px' }}>
             <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-              当前学校数据里还没有可用的经纬度，后续补全坐标后就会显示在这里。
+              当前学习社区数据里还没有可用的经纬度，后续补全坐标后就会显示在这里。
             </Text>
           </View>
         </View>
@@ -360,7 +360,7 @@ export default function SchoolMapPage() {
             </Text>
             <View style={{ marginTop: '6px' }}>
               <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-                当前展示 {mapData.markers.length} 所学校，点击标记即可跳转到详情页。
+                当前展示 {mapData.markers.length} 所学习社区，点击标记即可跳转到详情页。
               </Text>
             </View>
           </View>

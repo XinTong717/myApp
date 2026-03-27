@@ -11,6 +11,7 @@ const ALLOWED_FIELDS = [
   'roles',
   'province',
   'city',
+  'wechatId',
   'childGender',
   'childAgeRange',
   'childDropoutStatus',
@@ -23,7 +24,6 @@ exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
-  // 只保留白名单字段
   const cleanData = { updatedAt: new Date() }
   for (const key of ALLOWED_FIELDS) {
     if (event[key] !== undefined) {
@@ -40,7 +40,7 @@ exports.main = async (event, context) => {
     return { ok: false, message: '显示名不能为空' }
   }
 
-  // 显示名查重：不能和其他用户重复
+  // 显示名查重
   const dupCheck = await db.collection('users')
     .where({
       displayName: cleanData.displayName,
@@ -53,7 +53,6 @@ exports.main = async (event, context) => {
     return { ok: false, message: '这个显示名已被使用，请换一个' }
   }
 
-  // 查找当前用户
   const existing = await db.collection('users')
     .where({ openid: openid })
     .limit(1)

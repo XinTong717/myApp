@@ -70,7 +70,7 @@ export default function SchoolDetailPage() {
       setSchool(found)
     } catch (err: any) {
       console.error('loadDetail error:', err)
-      setError(err?.message || '读取学校详情失败')
+      setError(err?.message || '读取学习社区详情失败')
     } finally {
       setLoading(false)
     }
@@ -145,12 +145,12 @@ export default function SchoolDetailPage() {
       )}
 
       {!loading && !error && !school && (
-        <Text style={{ color: palette.subtext }}>未找到该学校</Text>
+        <Text style={{ color: palette.subtext }}>未找到该学习社区</Text>
       )}
 
       {!loading && school && (
         <>
-          {/* 学校基本信息 */}
+          {/* 学习社区基本信息 */}
           <View style={{
             backgroundColor: palette.card, borderRadius: '20px',
             padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
@@ -231,7 +231,7 @@ export default function SchoolDetailPage() {
                   </Text>
                   <View style={{ marginTop: '2px' }}>
                     <Text style={{ fontSize: '12px', color: palette.subtext }}>
-                      补充、修正或更新这所学校的信息
+                      补充、修正或更新这个学习社区的信息
                     </Text>
                   </View>
                 </View>
@@ -252,7 +252,7 @@ export default function SchoolDetailPage() {
                 </View>
                 <View style={{ marginBottom: '8px' }}>
                   <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
-                    请描述需要修正的内容，例如：费用已涨价到 XX 万/年、学校已更名、官网地址有误等。提交后我们会核实更新。
+                    请描述需要修正的内容，例如：费用已涨价到 XX 万/年、学习社区已更名、官网地址有误等。提交后我们会核实更新。
                   </Text>
                 </View>
                 <Textarea

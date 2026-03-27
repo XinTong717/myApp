@@ -32,7 +32,7 @@ export default defineAppConfig({
         },
         {
           pagePath: 'pages/schools/index',
-          text: '学校',
+          text: '学习社区',
           iconPath: 'assets/tab-school.png',
           selectedIconPath: 'assets/tab-school-active.png',
         },
