@@ -77,7 +77,7 @@ export default function Index() {
               lineHeight: '22px',
             }}
           >
-            先看学习社区，再看活动。少一点信息迷路，多一点真实线索与连接。
+            先看学校，再看活动。少一点信息迷路，多一点真实线索与连接。
           </Text>
         </View>
 
@@ -98,7 +98,7 @@ export default function Index() {
 
           <View style={{ marginBottom: '6px' }}>
             <Text style={{ fontSize: '13px', color: palette.subtext }}>
-              1. 浏览全国学习社区信息
+              1. 浏览全国学校信息
             </Text>
           </View>
           <View style={{ marginBottom: '6px' }}>
@@ -142,13 +142,13 @@ export default function Index() {
 
         <View style={{ marginBottom: '6px' }}>
           <Text style={{ fontSize: '18px', fontWeight: 'bold', color: palette.text }}>
-            进入学习社区库
+            进入学校库
           </Text>
         </View>
 
         <View style={{ marginBottom: '10px' }}>
           <Text style={{ fontSize: '14px', color: palette.subtext, lineHeight: '21px' }}>
-            查看全国学习社区信息，按名字、城市、类型快速搜索，再点进详情页深入看。
+            查看全国学校信息，按名字、城市、类型快速搜索，再点进详情页深入看。
           </Text>
         </View>
 

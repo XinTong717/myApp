@@ -185,7 +185,7 @@ export default function ExplorePage() {
       })
       schools.forEach((s) => {
         const cities = parseCities(s.city)
-        const schoolName = s.name?.trim() || '未知学习社区'
+        const schoolName = s.name?.trim() || '未知学校'
         if (cities.length > 0) {
           cities.forEach((cityName) => {
             const info = CITIES[cityName]

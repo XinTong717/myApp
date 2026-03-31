@@ -13,7 +13,7 @@ exports.main = async (event, context) => {
   }
 
   if (!schoolId) {
-    return { ok: false, message: '缺少学习社区信息' }
+    return { ok: false, message: '缺少学校信息' }
   }
 
   try {
