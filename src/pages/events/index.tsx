@@ -97,7 +97,7 @@ export default function EventsPage() {
         <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>活动</Text>
         <View style={{ marginTop: '6px' }}>
           <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-            自由学社的活动和社区计划。点进详情了解更多。
+            可雀与自由学社的活动与社区计划。点进详情了解更多。
           </Text>
         </View>
       </View>
