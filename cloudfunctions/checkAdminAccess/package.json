@@ -1,0 +1,9 @@
+{
+  "name": "checkAdminAccess",
+  "version": "1.0.0",
+  "description": "Check whether current user is allowed to access admin-only review pages",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
