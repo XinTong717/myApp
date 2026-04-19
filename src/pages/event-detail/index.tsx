@@ -55,6 +55,53 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<EventItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [interestCount, setInterestCount] = useState(0)
+  const [hasInterested, setHasInterested] = useState(false)
+  const [interestLoading, setInterestLoading] = useState(false)
+
+  const loadInterestInfo = async (eventId: number) => {
+    try {
+      const res: any = await Taro.cloud.callFunction({
+        name: 'getEventInterestInfo',
+        data: { eventId },
+      })
+      if (res.result?.ok) {
+        setInterestCount(res.result.count || 0)
+        setHasInterested(!!res.result.hasInterested)
+      }
+    } catch (err) {
+      console.error('loadInterestInfo error:', err)
+    }
+  }
+
+  const handleToggleInterest = async () => {
+    if (!event || interestLoading) return
+
+    try {
+      setInterestLoading(true)
+      const res: any = await Taro.cloud.callFunction({
+        name: 'toggleEventInterest',
+        data: { eventId: event.id },
+      })
+      const result = res.result
+      if (result?.ok) {
+        const nextHasInterested = !!result.hasInterested
+        setHasInterested(nextHasInterested)
+        setInterestCount((count) => {
+          if (nextHasInterested) return count + 1
+          return Math.max(0, count - 1)
+        })
+        Taro.showToast({ title: result.message || '已更新', icon: 'success' })
+      } else {
+        Taro.showToast({ title: result?.message || '操作失败', icon: 'none' })
+      }
+    } catch (err) {
+      console.error('toggleEventInterest error:', err)
+      Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
+    } finally {
+      setInterestLoading(false)
+    }
+  }
 
   const loadDetail = async () => {
     try {
@@ -63,6 +110,9 @@ export default function EventDetailPage() {
       const id = Number(getCurrentInstance().router?.params?.id || 0)
       const found = await fetchEventById(id)
       setEvent(found)
+      if (found?.id) {
+        loadInterestInfo(found.id)
+      }
     } catch (err: any) {
       console.error('loadDetail error:', err)
       setError(err?.message || '读取活动详情失败')
@@ -150,7 +200,25 @@ export default function EventDetailPage() {
                   {event.is_online ? '线上' : '线下'}
                 </Text>
               </View>
+
+              {interestCount > 0 ? (
+                <View style={{
+                  padding: '5px 10px', borderRadius: '999px',
+                  backgroundColor: '#FFF3E6', marginRight: '8px', marginBottom: '8px',
+                }}>
+                  <Text style={{ fontSize: '12px', color: palette.accentDeep }}>{interestCount} 人感兴趣</Text>
+                </View>
+              ) : null}
             </View>
+          </View>
+
+          <View onClick={handleToggleInterest} style={{
+            backgroundColor: hasInterested ? '#F5F0EB' : palette.accentDeep,
+            borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '14px',
+          }}>
+            <Text style={{ fontSize: '15px', color: hasInterested ? palette.subtext : '#FFF', fontWeight: 'bold' }}>
+              {interestLoading ? '处理中...' : hasInterested ? '已感兴趣，再点一次取消' : '我感兴趣'}
+            </Text>
           </View>
 
           <InfoRow label='时间' value={formatEventTime(event)} />
