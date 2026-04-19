@@ -126,6 +126,16 @@ export default function SubmitCommunityPage() {
       return
     }
 
+    const confirm = await Taro.showModal({
+      title: '提交推荐',
+      content: '提交后将进入人工审核队列，审核通过后才会出现在学习社区列表中。',
+      confirmText: '确认提交',
+      cancelText: '再看看',
+    })
+    if (!confirm.confirm) {
+      return
+    }
+
     try {
       setSubmitting(true)
       const res: any = await Taro.cloud.callFunction({
