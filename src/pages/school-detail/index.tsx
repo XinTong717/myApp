@@ -78,7 +78,6 @@ export default function SchoolDetailPage() {
 
   useDidShow(() => {
     loadDetail()
-    // 重置纠错状态
     setShowCorrectionForm(false)
     setCorrectionText('')
     setCorrectionDone(false)
@@ -94,8 +93,6 @@ export default function SchoolDetailPage() {
 
     try {
       setCorrectionSubmitting(true)
-
-      // 通过 CloudBase 云函数提交
       await Taro.cloud.callFunction({
         name: 'submitCorrection',
         data: {
@@ -140,7 +137,6 @@ export default function SchoolDetailPage() {
 
       {!loading && school && (
         <>
-          {/* 学习社区基本信息 */}
           <View style={{
             backgroundColor: palette.card, borderRadius: '20px',
             padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
@@ -186,22 +182,20 @@ export default function SchoolDetailPage() {
                 backgroundColor: '#FFF3E6', marginRight: '8px', marginBottom: '8px',
               }}>
                 <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
-                  {school.has_xuji ? '可衔接主流教育体系' : '独立教育路径'}
+                  {school.has_xuji ? '公开说明较完整' : '公开说明待补充'}
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* 详细字段 */}
-          <InfoRow label='适合年龄' value={school.age_range} />
-          <InfoRow label='参与说明' value={school.xuji_note} />
-          <InfoRow label='参与门槛' value={school.residency_req} />
-          <InfoRow label='加入条件' value={school.admission_req} />
-          <InfoRow label='费用' value={school.fee} />
-          <InfoRow label='后续衔接' value={school.output_direction} />
-          <InfoRow label='官网' value={school.official_url} />
+          <InfoRow label='适合阶段' value={school.age_range} />
+          <InfoRow label='公开说明' value={school.xuji_note} />
+          <InfoRow label='参与前了解' value={school.residency_req} />
+          <InfoRow label='参与方式参考' value={school.admission_req} />
+          <InfoRow label='参考费用' value={school.fee} />
+          <InfoRow label='相关说明' value={school.output_direction} />
+          <InfoRow label='官方/说明链接' value={school.official_url} />
 
-          {/* ===== 信息纠错区 ===== */}
           <View style={{
             backgroundColor: palette.card, borderRadius: '20px',
             padding: '16px', marginTop: '6px', marginBottom: '14px',
@@ -210,9 +204,7 @@ export default function SchoolDetailPage() {
             {!showCorrectionForm && !correctionDone && (
               <View
                 onClick={() => setShowCorrectionForm(true)}
-                style={{
-                  display: 'flex', flexDirection: 'row', alignItems: 'center',
-                }}
+                style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}
               >
                 <Text style={{ fontSize: '16px', marginRight: '8px' }}>✏️</Text>
                 <View style={{ flex: 1 }}>
@@ -251,30 +243,19 @@ export default function SchoolDetailPage() {
                   placeholder='请输入需要修正或补充的信息...'
                   maxlength={500}
                   style={{
-                    width: '100%',
-                    minHeight: '100px',
-                    padding: '12px',
-                    backgroundColor: '#FFFDF9',
-                    borderRadius: '14px',
+                    width: '100%', minHeight: '100px', padding: '12px',
+                    backgroundColor: '#FFFDF9', borderRadius: '14px',
                     border: `1px solid ${palette.line}`,
-                    fontSize: '14px',
-                    color: palette.text,
-                    lineHeight: '21px',
-                    boxSizing: 'border-box',
+                    fontSize: '14px', color: palette.text, lineHeight: '21px', boxSizing: 'border-box',
                   }}
                 />
                 <View style={{ marginTop: '4px', marginBottom: '12px' }}>
-                  <Text style={{ fontSize: '11px', color: '#C5B5A5' }}>
-                    {correctionText.length}/500
-                  </Text>
+                  <Text style={{ fontSize: '11px', color: '#C5B5A5' }}>{correctionText.length}/500</Text>
                 </View>
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                   <View
                     onClick={() => { setShowCorrectionForm(false); setCorrectionText('') }}
-                    style={{
-                      padding: '8px 16px', borderRadius: '999px',
-                      backgroundColor: '#F5F5F5', marginRight: '10px',
-                    }}
+                    style={{ padding: '8px 16px', borderRadius: '999px', backgroundColor: '#F5F5F5', marginRight: '10px' }}
                   >
                     <Text style={{ fontSize: '13px', color: palette.subtext }}>取消</Text>
                   </View>
