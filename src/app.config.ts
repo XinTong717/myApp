@@ -2,6 +2,7 @@ export default defineAppConfig({
   pages: [
     'pages/explore/index',
     'pages/schools/index',
+    'pages/schools/submit',
     'pages/events/index',
     'pages/profile/index',
     'pages/privacy-policy/index',
