@@ -86,28 +86,6 @@ export default function AdminEventReviewsPage() {
     [payloadResponse]
   )
 
-  const checkAdmin = async () => {
-    try {
-      setChecking(true)
-      setError('')
-      const res: any = await Taro.cloud.callFunction({ name: 'checkAdminAccess', data: {} })
-      const result = res.result
-      if (result?.ok && result?.isAdmin) {
-        setIsAdmin(true)
-        setAdminName(result.admin?.name || 'admin')
-      } else {
-        setIsAdmin(false)
-        setError(result?.message || '你当前不是管理员，无法访问此页面')
-      }
-    } catch (err) {
-      console.error('checkAdminAccess error:', err)
-      setIsAdmin(false)
-      setError('管理员权限检查失败，请确认 admin_users 集合已创建')
-    } finally {
-      setChecking(false)
-    }
-  }
-
   const loadSubmissions = async (status = statusFilter) => {
     try {
       setError('')
@@ -120,10 +98,14 @@ export default function AdminEventReviewsPage() {
         const nextList = result.submissions || []
         setSubmissions(nextList)
         if (!nextList.find((item: SubmissionItem) => item._id === selectedId)) {
-          setSelectedId(nextList[0]?._id || '')
+          const first = nextList[0]
+          setSelectedId(first?._id || '')
           setPayloadResponse({})
-          setPublishedEventId(nextList[0]?.publishedEventId ? String(nextList[0].publishedEventId) : '')
-          setAdminNote(nextList[0]?.adminNote || '')
+          setPublishedEventId(first?.publishedEventId ? String(first.publishedEventId) : '')
+          setAdminNote(first?.adminNote || '')
+          if (first?._id) {
+            await loadPublishPayload(first._id)
+          }
         }
       } else {
         setError(result?.message || '读取审核列表失败')
@@ -131,6 +113,29 @@ export default function AdminEventReviewsPage() {
     } catch (err) {
       console.error('listEventSubmissions error:', err)
       setError('读取审核列表失败')
+    }
+  }
+
+  const checkAdminAndInit = async () => {
+    try {
+      setChecking(true)
+      setError('')
+      const res: any = await Taro.cloud.callFunction({ name: 'checkAdminAccess', data: {} })
+      const result = res.result
+      if (result?.ok && result?.isAdmin) {
+        setIsAdmin(true)
+        setAdminName(result.admin?.name || 'admin')
+        await loadSubmissions(statusFilter)
+      } else {
+        setIsAdmin(false)
+        setError(result?.message || '你当前不是管理员，无法访问此页面')
+      }
+    } catch (err) {
+      console.error('checkAdminAccess error:', err)
+      setIsAdmin(false)
+      setError('管理员权限检查失败，请确认 admin_users 集合已创建')
+    } finally {
+      setChecking(false)
     }
   }
 
@@ -209,14 +214,8 @@ export default function AdminEventReviewsPage() {
     Taro.setClipboardData({ data: payloadText })
   }
 
-  useDidShow(async () => {
-    await checkAdmin()
-  })
-
   useDidShow(() => {
-    if (isAdmin) {
-      loadSubmissions(statusFilter)
-    }
+    checkAdminAndInit()
   })
 
   if (checking) {
