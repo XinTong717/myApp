@@ -13,6 +13,18 @@ const EVENT_TYPE_MAP = {
   '其他': 'meetup',
 }
 
+async function getActiveAdmin(openid) {
+  const res = await db.collection('admin_users')
+    .where({
+      openid,
+      isActive: true,
+    })
+    .limit(1)
+    .get()
+
+  return res.data[0] || null
+}
+
 function parseDate(value) {
   if (!value) return null
   const date = new Date(value)
@@ -135,6 +147,7 @@ function buildWarnings(submission, payload) {
 }
 
 exports.main = async (event) => {
+  const { OPENID } = cloud.getWXContext()
   const submissionId = String(event.submissionId || '').trim()
 
   if (!submissionId) {
@@ -142,6 +155,11 @@ exports.main = async (event) => {
   }
 
   try {
+    const admin = await getActiveAdmin(OPENID)
+    if (!admin) {
+      return { ok: false, message: '无权限访问管理员发布辅助工具' }
+    }
+
     const res = await db.collection('event_submissions').doc(submissionId).get()
     const submission = res.data
 
@@ -167,6 +185,10 @@ exports.main = async (event) => {
 
     return {
       ok: true,
+      admin: {
+        name: admin.name || '',
+        role: admin.role || 'admin',
+      },
       submission: {
         _id: submission._id,
         status: submission.status || 'pending',
