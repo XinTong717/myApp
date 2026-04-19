@@ -5,6 +5,7 @@ import { fetchSchools } from '../../services/api'
 
 const markerSchoolIcon = '/assets/marker-school.png'
 const markerUserIcon = '/assets/marker-user.png'
+const REPORT_REASON_OPTIONS = ['垃圾广告', '骚扰不适', '未成年人敏感信息', '其他']
 
 const CITIES: Record<string, { lat: number; lng: number; prov: string }> = {
   上海: { lat: 31.2304, lng: 121.4737, prov: '上海' },
@@ -89,12 +90,8 @@ const PROV_FALLBACK: Record<string, { lat: number; lng: number }> = {
   青海: { lat: 36.6171, lng: 101.7782 },
 }
 
-type School = {
-  id: number | string; name?: string; province?: string; city?: string
-}
-type AppUser = {
-  _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string
-}
+type School = { id: number | string; name?: string; province?: string; city?: string }
+type AppUser = { _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string }
 type MarkerItem = {
   id: number; latitude: number; longitude: number; name: string
   type: 'school' | 'user'; markerProv: string; city?: string
@@ -169,9 +166,7 @@ export default function ExplorePage() {
 
   useDidShow(() => { loadData() })
 
-  const goToProfile = () => {
-    Taro.switchTab({ url: '/pages/profile/index' })
-  }
+  const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
 
   const allMarkers = useMemo(() => {
     const items: MarkerItem[] = []
@@ -180,9 +175,7 @@ export default function ExplorePage() {
     const cityIndex: Record<string, number> = {}
 
     if (showSchools) {
-      schools.forEach((s) => {
-        parseCities(s.city).forEach((c) => { cityCount[c] = (cityCount[c] || 0) + 1 })
-      })
+      schools.forEach((s) => { parseCities(s.city).forEach((c) => { cityCount[c] = (cityCount[c] || 0) + 1 }) })
       schools.forEach((s) => {
         const cities = parseCities(s.city)
         const schoolName = s.name?.trim() || '未知学习社区'
@@ -193,20 +186,13 @@ export default function ExplorePage() {
             const idx = cityIndex[cityName] || 0
             cityIndex[cityName] = idx + 1
             const jittered = jitter(info.lat, info.lng, idx, cityCount[cityName] || 1, schoolName)
-            items.push({
-              id: nextId++, latitude: jittered.lat, longitude: jittered.lng,
-              name: schoolName, type: 'school', markerProv: info.prov,
-              city: cityName, originalId: s.id,
-            })
+            items.push({ id: nextId++, latitude: jittered.lat, longitude: jittered.lng, name: schoolName, type: 'school', markerProv: info.prov, city: cityName, originalId: s.id })
           })
         } else {
           const prov = firstProvince(s.province)
           const coord = PROV_FALLBACK[prov]
           if (!coord) return
-          items.push({
-            id: nextId++, latitude: coord.lat, longitude: coord.lng,
-            name: schoolName, type: 'school', markerProv: prov, city: '', originalId: s.id,
-          })
+          items.push({ id: nextId++, latitude: coord.lat, longitude: coord.lng, name: schoolName, type: 'school', markerProv: prov, city: '', originalId: s.id })
         }
       })
     }
@@ -246,32 +232,28 @@ export default function ExplorePage() {
     return Array.from(set).sort()
   }, [allMarkers])
 
-  const mapMarkers: any[] = useMemo(() => {
-    return filteredMarkers.map((item) => {
-      const calloutContent = item.type === 'school'
-        ? shortName(item.name)
-        : (item.name + (item.city ? ' · ' + item.city : ''))
-      return {
-        id: item.id,
-        latitude: item.latitude,
-        longitude: item.longitude,
-        title: item.name,
-        iconPath: item.type === 'school' ? markerSchoolIcon : markerUserIcon,
-        width: item.type === 'school' ? 22 : 18,
-        height: item.type === 'school' ? 22 : 18,
-        anchor: { x: 0.5, y: 0.5 },
-        callout: {
-          content: calloutContent,
-          color: '#2F241B',
-          fontSize: 11,
-          anchorX: 0, anchorY: -2,
-          borderRadius: 6, borderWidth: 0, borderColor: '#FFFFFF',
-          bgColor: item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,247,238,0.92)',
-          padding: 4, display: 'ALWAYS', textAlign: 'center',
-        },
-      }
-    })
-  }, [filteredMarkers])
+  const mapMarkers: any[] = useMemo(() => filteredMarkers.map((item) => {
+    const calloutContent = item.type === 'school' ? shortName(item.name) : (item.name + (item.city ? ' · ' + item.city : ''))
+    return {
+      id: item.id,
+      latitude: item.latitude,
+      longitude: item.longitude,
+      title: item.name,
+      iconPath: item.type === 'school' ? markerSchoolIcon : markerUserIcon,
+      width: item.type === 'school' ? 22 : 18,
+      height: item.type === 'school' ? 22 : 18,
+      anchor: { x: 0.5, y: 0.5 },
+      callout: {
+        content: calloutContent,
+        color: '#2F241B',
+        fontSize: 11,
+        anchorX: 0, anchorY: -2,
+        borderRadius: 6, borderWidth: 0, borderColor: '#FFFFFF',
+        bgColor: item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,247,238,0.92)',
+        padding: 4, display: 'ALWAYS', textAlign: 'center',
+      },
+    }
+  }), [filteredMarkers])
 
   const { center, scale } = useMemo(() => {
     if (filteredMarkers.length === 0) {
@@ -289,10 +271,7 @@ export default function ExplorePage() {
     else if (span < 4) s = 7
     else if (span < 10) s = 6
     else s = 5
-    return {
-      center: { latitude: (minLat + maxLat) / 2, longitude: (minLng + maxLng) / 2 },
-      scale: s,
-    }
+    return { center: { latitude: (minLat + maxLat) / 2, longitude: (minLng + maxLng) / 2 }, scale: s }
   }, [filteredMarkers])
 
   const idToMarker = useMemo(() => {
@@ -301,7 +280,58 @@ export default function ExplorePage() {
     return m
   }, [filteredMarkers])
 
-  // ===== 点击 marker =====
+  const handleReportUser = async (targetUserId: string) => {
+    try {
+      const reasonRes = await Taro.showActionSheet({ itemList: REPORT_REASON_OPTIONS })
+      const reason = REPORT_REASON_OPTIONS[reasonRes.tapIndex] || '其他'
+      const res: any = await Taro.cloud.callFunction({ name: 'reportUser', data: { targetUserId, reason } })
+      Taro.showToast({ title: res.result?.message || '举报已提交', icon: res.result?.ok ? 'success' : 'none' })
+    } catch (err: any) {
+      if (err?.errMsg?.includes('cancel')) return
+      Taro.showToast({ title: '举报失败', icon: 'none' })
+    }
+  }
+
+  const handleSafetyAction = async (targetUserId: string, action: 'block' | 'mute') => {
+    try {
+      const res: any = await Taro.cloud.callFunction({ name: 'manageSafetyRelation', data: { targetUserId, action } })
+      Taro.showToast({ title: res.result?.message || '已更新', icon: res.result?.ok ? 'success' : 'none' })
+      if (res.result?.ok) loadData()
+    } catch (err) {
+      Taro.showToast({ title: '操作失败', icon: 'none' })
+    }
+  }
+
+  const openUserActionSheet = async (item: MarkerItem) => {
+    try {
+      const sheetRes = await Taro.showActionSheet({ itemList: ['想认识TA', '拉黑TA', '静音TA', '举报TA'] })
+      const idx = sheetRes.tapIndex
+      if (idx === 0) {
+        Taro.showLoading({ title: '发送中...' })
+        const res: any = await Taro.cloud.callFunction({ name: 'sendRequest', data: { targetUserId: String(item.originalId) } })
+        Taro.hideLoading()
+        const r = res.result
+        Taro.showToast({ title: r?.ok ? '请求已发送' : (r?.message || '发送失败'), icon: r?.ok ? 'success' : 'none' })
+        return
+      }
+      if (idx === 1) {
+        await handleSafetyAction(String(item.originalId), 'block')
+        return
+      }
+      if (idx === 2) {
+        await handleSafetyAction(String(item.originalId), 'mute')
+        return
+      }
+      if (idx === 3) {
+        await handleReportUser(String(item.originalId))
+      }
+    } catch (err: any) {
+      Taro.hideLoading()
+      if (err?.errMsg?.includes('cancel')) return
+      Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
+    }
+  }
+
   const handleTap = async (markerId: number) => {
     const item = idToMarker[markerId]
     if (!item) return
@@ -311,7 +341,6 @@ export default function ExplorePage() {
       return
     }
 
-    // 用户 marker
     if (!hasProfile) {
       const res = await Taro.showModal({
         title: '请先填写资料',
@@ -334,27 +363,24 @@ export default function ExplorePage() {
       title: item.name,
       content: lines.join('\n'),
       confirmText: '想认识TA',
-      cancelText: '关闭',
+      cancelText: '更多',
     })
 
     if (result.confirm) {
       try {
         Taro.showLoading({ title: '发送中...' })
-        const res: any = await Taro.cloud.callFunction({
-          name: 'sendRequest',
-          data: { targetUserId: String(item.originalId) },
-        })
+        const res: any = await Taro.cloud.callFunction({ name: 'sendRequest', data: { targetUserId: String(item.originalId) } })
         Taro.hideLoading()
         const r = res.result
-        Taro.showToast({
-          title: r?.ok ? '请求已发送' : (r?.message || '发送失败'),
-          icon: r?.ok ? 'success' : 'none',
-        })
+        Taro.showToast({ title: r?.ok ? '请求已发送' : (r?.message || '发送失败'), icon: r?.ok ? 'success' : 'none' })
       } catch (err) {
         Taro.hideLoading()
         Taro.showToast({ title: '发送失败，请稍后重试', icon: 'none' })
       }
+      return
     }
+
+    await openUserActionSheet(item)
   }
 
   const handleMarkerTap = (e: any) => handleTap(Number(e.detail?.markerId))
@@ -366,45 +392,19 @@ export default function ExplorePage() {
   return (
     <View style={{ minHeight: '100vh', backgroundColor: '#FFF9F2' }}>
       {!loading && !hasProfile && (
-        <View
-          onClick={goToProfile}
-          style={{
-            backgroundColor: '#FFF', padding: '12px 14px',
-            borderBottom: '1px solid #F1DFCF',
-            display: 'flex', flexDirection: 'row', alignItems: 'center',
-          }}>
+        <View onClick={goToProfile} style={{ backgroundColor: '#FFF', padding: '12px 14px', borderBottom: '1px solid #F1DFCF', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>
-              填写资料，出现在地图上
-            </Text>
-            <View style={{ marginTop: '2px' }}>
-              <Text style={{ fontSize: '12px', color: '#7A6756' }}>让同城的家庭和教育者发现你</Text>
-            </View>
+            <Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>填写资料，出现在地图上</Text>
+            <View style={{ marginTop: '2px' }}><Text style={{ fontSize: '12px', color: '#7A6756' }}>让同城的家庭和教育者发现你</Text></View>
           </View>
-          <View style={{ padding: '6px 14px', borderRadius: '999px', backgroundColor: '#E76F51' }}>
-            <Text style={{ fontSize: '12px', color: '#FFF', fontWeight: 'bold' }}>去填写</Text>
-          </View>
+          <View style={{ padding: '6px 14px', borderRadius: '999px', backgroundColor: '#E76F51' }}><Text style={{ fontSize: '12px', color: '#FFF', fontWeight: 'bold' }}>去填写</Text></View>
         </View>
       )}
 
       <View style={{ backgroundColor: '#FFF', padding: '10px 14px 6px', borderBottom: '1px solid #F1DFCF' }}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '6px' }}>
-          <View onClick={() => setShowSchools(!showSchools)} style={{
-            padding: '4px 10px', borderRadius: '999px', marginRight: '8px',
-            backgroundColor: showSchools ? '#FCE6D6' : '#F5F5F5',
-          }}>
-            <Text style={{ fontSize: '12px', fontWeight: 'bold', color: showSchools ? '#E76F51' : '#BBB' }}>
-              学习社区 {showSchools ? schoolCount : '—'}
-            </Text>
-          </View>
-          <View onClick={() => setShowUsers(!showUsers)} style={{
-            padding: '4px 10px', borderRadius: '999px', marginRight: '8px',
-            backgroundColor: showUsers ? '#EEF7EE' : '#F5F5F5',
-          }}>
-            <Text style={{ fontSize: '12px', fontWeight: 'bold', color: showUsers ? '#7BAE7F' : '#BBB' }}>
-              同路人 {showUsers ? userCount : '—'}
-            </Text>
-          </View>
+          <View onClick={() => setShowSchools(!showSchools)} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', backgroundColor: showSchools ? '#FCE6D6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showSchools ? '#E76F51' : '#BBB' }}>学习社区 {showSchools ? schoolCount : '—'}</Text></View>
+          <View onClick={() => setShowUsers(!showUsers)} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', backgroundColor: showUsers ? '#EEF7EE' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showUsers ? '#7BAE7F' : '#BBB' }}>同路人 {showUsers ? userCount : '—'}</Text></View>
           <View style={{ flex: 1 }} />
           <Text style={{ fontSize: '11px', color: '#B5A08E' }}>{filteredMarkers.length} 个点位</Text>
         </View>
@@ -412,72 +412,32 @@ export default function ExplorePage() {
         {availableProvinces.length > 0 && (
           <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: '26px' }}>
             <View style={{ display: 'inline-flex', flexDirection: 'row' }}>
-              <View onClick={() => setSelectedProvince('')} style={{
-                padding: '3px 10px', borderRadius: '999px', marginRight: '6px',
-                backgroundColor: !selectedProvince ? '#E76F51' : '#FFF3E6',
-              }}>
-                <Text style={{ fontSize: '11px', color: !selectedProvince ? '#FFF' : '#7A6756' }}>全国</Text>
-              </View>
+              <View onClick={() => setSelectedProvince('')} style={{ padding: '3px 10px', borderRadius: '999px', marginRight: '6px', backgroundColor: !selectedProvince ? '#E76F51' : '#FFF3E6' }}><Text style={{ fontSize: '11px', color: !selectedProvince ? '#FFF' : '#7A6756' }}>全国</Text></View>
               {availableProvinces.map((prov) => (
-                <View key={prov} onClick={() => setSelectedProvince(prov === selectedProvince ? '' : prov)} style={{
-                  padding: '3px 10px', borderRadius: '999px', marginRight: '6px',
-                  backgroundColor: prov === selectedProvince ? '#E76F51' : '#FFF3E6',
-                }}>
-                  <Text style={{ fontSize: '11px', color: prov === selectedProvince ? '#FFF' : '#7A6756' }}>{prov}</Text>
-                </View>
+                <View key={prov} onClick={() => setSelectedProvince(prov === selectedProvince ? '' : prov)} style={{ padding: '3px 10px', borderRadius: '999px', marginRight: '6px', backgroundColor: prov === selectedProvince ? '#E76F51' : '#FFF3E6' }}><Text style={{ fontSize: '11px', color: prov === selectedProvince ? '#FFF' : '#7A6756' }}>{prov}</Text></View>
               ))}
             </View>
           </ScrollView>
         )}
       </View>
 
-      {loading && (
-        <View style={{ padding: '80px 20px', textAlign: 'center' }}>
-          <Text style={{ fontSize: '14px', color: '#7A6756' }}>加载中...</Text>
-        </View>
-      )}
+      {loading && <View style={{ padding: '80px 20px', textAlign: 'center' }}><Text style={{ fontSize: '14px', color: '#7A6756' }}>加载中...</Text></View>}
       {!loading && error && (
         <View style={{ padding: '40px 20px' }}>
           <View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}>
             <Text style={{ fontSize: '14px', color: '#CF1322' }}>{error}</Text>
-            <View onClick={loadData} style={{ marginTop: '16px', padding: '8px 16px', borderRadius: '999px', backgroundColor: '#FCE6D6', display: 'inline-block' }}>
-              <Text style={{ fontSize: '13px', color: '#E76F51' }}>重新加载</Text>
-            </View>
+            <View onClick={loadData} style={{ marginTop: '16px', padding: '8px 16px', borderRadius: '999px', backgroundColor: '#FCE6D6', display: 'inline-block' }}><Text style={{ fontSize: '13px', color: '#E76F51' }}>重新加载</Text></View>
           </View>
         </View>
       )}
       {!loading && !error && filteredMarkers.length === 0 && (
-        <View style={{ padding: '40px 20px' }}>
-          <View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}>
-            <Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>
-              {selectedProvince ? selectedProvince + '暂无数据' : '暂无点位'}
-            </Text>
-          </View>
-        </View>
+        <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>{selectedProvince ? selectedProvince + '暂无数据' : '暂无点位'}</Text></View></View>
       )}
       {!loading && !error && filteredMarkers.length > 0 && (
-        <TaroMap
-          latitude={center.latitude}
-          longitude={center.longitude}
-          scale={scale}
-          minScale={3}
-          maxScale={18}
-          markers={mapMarkers}
-          showScale={false}
-          enableRotate={false}
-          enableOverlooking={false}
-          onMarkerTap={handleMarkerTap}
-          onCalloutTap={handleCalloutTap}
-          onError={() => {}}
-          style={{ width: '100%', height: 'calc(100vh - 120px)' }}
-        />
+        <TaroMap latitude={center.latitude} longitude={center.longitude} scale={scale} minScale={3} maxScale={18} markers={mapMarkers} showScale={false} enableRotate={false} enableOverlooking={false} onMarkerTap={handleMarkerTap} onCalloutTap={handleCalloutTap} onError={() => {}} style={{ width: '100%', height: 'calc(100vh - 120px)' }} />
       )}
 
-      <View style={{ backgroundColor: '#FFFDF9', padding: '5px 16px', borderTop: '1px solid #F1DFCF' }}>
-        <Text style={{ fontSize: '10px', color: '#C5B5A5' }}>
-          近似坐标 · 仅供浏览 · 点击标记或名称查看详情
-        </Text>
-      </View>
+      <View style={{ backgroundColor: '#FFFDF9', padding: '5px 16px', borderTop: '1px solid #F1DFCF' }}><Text style={{ fontSize: '10px', color: '#C5B5A5' }}>近似坐标 · 仅供浏览 · 点击标记或名称查看详情</Text></View>
     </View>
   )
 }
