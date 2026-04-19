@@ -12,13 +12,36 @@ const ALLOWED_FIELDS = [
   'province',
   'city',
   'wechatId',
-  'childGender',
   'childAgeRange',
   'childDropoutStatus',
   'childInterests',
   'eduServices',
   'bio',
 ]
+
+async function runMsgSecCheck(content) {
+  const normalized = String(content || '').trim()
+  if (!normalized) {
+    return { ok: true }
+  }
+
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({
+      content: normalized.slice(0, 2500),
+    })
+
+    const errCode = res?.errCode ?? res?.errcode ?? 0
+    if (errCode === 0) {
+      return { ok: true }
+    }
+
+    console.error('msgSecCheck blocked content:', res)
+    return { ok: false, message: '内容包含不合规信息，请修改后重试' }
+  } catch (err) {
+    console.error('msgSecCheck error:', err)
+    return { ok: false, message: '内容审核失败，请稍后重试' }
+  }
+}
 
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
@@ -47,6 +70,17 @@ exports.main = async (event, context) => {
   const selectedRoles = Array.isArray(cleanData.roles) ? cleanData.roles : []
   if (selectedRoles.includes('学生')) {
     return { ok: false, message: '当前仅开放家长、教育者及其他成年用户' }
+  }
+
+  const securityResult = await runMsgSecCheck([
+    cleanData.displayName,
+    cleanData.bio,
+    cleanData.childInterests,
+    cleanData.eduServices,
+  ].filter(Boolean).join('\n'))
+
+  if (!securityResult.ok) {
+    return securityResult
   }
 
   // 显示名查重
