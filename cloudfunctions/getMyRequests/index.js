@@ -11,6 +11,14 @@ exports.main = async (event, context) => {
     // 1. 收到的待处理请求
     const pendingRes = await db.collection('connections')
       .where({ toOpenid: myOpenid, status: 'pending' })
+      .field({
+        _id: true,
+        fromName: true,
+        fromCity: true,
+        fromRoles: true,
+        fromBio: true,
+        createdAt: true,
+      })
       .orderBy('createdAt', 'desc')
       .limit(50)
       .get()
@@ -18,10 +26,26 @@ exports.main = async (event, context) => {
     // 2. 已接受的联络（双向查询）
     const acceptedFrom = await db.collection('connections')
       .where({ fromOpenid: myOpenid, status: 'accepted' })
+      .field({
+        _id: true,
+        fromOpenid: true,
+        toOpenid: true,
+        fromName: true,
+        toName: true,
+        respondedAt: true,
+      })
       .limit(50)
       .get()
     const acceptedTo = await db.collection('connections')
       .where({ toOpenid: myOpenid, status: 'accepted' })
+      .field({
+        _id: true,
+        fromOpenid: true,
+        toOpenid: true,
+        fromName: true,
+        toName: true,
+        respondedAt: true,
+      })
       .limit(50)
       .get()
 
@@ -70,6 +94,13 @@ exports.main = async (event, context) => {
     // 4. 我发出的待处理请求
     const sentRes = await db.collection('connections')
       .where({ fromOpenid: myOpenid, status: 'pending' })
+      .field({
+        _id: true,
+        toName: true,
+        toCity: true,
+        status: true,
+        createdAt: true,
+      })
       .orderBy('createdAt', 'desc')
       .limit(50)
       .get()
