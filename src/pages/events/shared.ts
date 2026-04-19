@@ -18,7 +18,10 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   parent_observer: '家长观察',
   community_program: '社区计划',
   workshop: '工作坊',
-  meetup: '线下聚会',
+  meetup: '聚会',
+  discussion: '讨论',
+  family: '家庭活动',
+  online: '线上活动',
 }
 
 export const EVENT_STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
@@ -35,6 +38,9 @@ export const EVENT_TYPE_ICONS: Record<string, string> = {
   community_program: '🚀',
   workshop: '🛠️',
   meetup: '☕',
+  discussion: '💬',
+  family: '🏠',
+  online: '💻',
 }
 
 function parseEventDate(value?: string) {
