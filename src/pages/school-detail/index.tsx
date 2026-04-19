@@ -110,17 +110,7 @@ export default function SchoolDetailPage() {
       Taro.showToast({ title: '提交成功，感谢反馈', icon: 'success' })
     } catch (err: any) {
       console.error('submitCorrection error:', err)
-      // 云函数还没部署时的 fallback：直接提示成功并记录到 console
-      // 等你部署了 submitCorrection 云函数就会真正存到 CloudBase
-      console.log('Correction data (cloud function not deployed yet):', {
-        schoolId: school.id,
-        schoolName: school.name,
-        content: text,
-        timestamp: new Date().toISOString(),
-      })
-      setCorrectionDone(true)
-      setCorrectionText('')
-      Taro.showToast({ title: '已记录，感谢反馈', icon: 'success' })
+      Taro.showToast({ title: '提交失败，请稍后重试', icon: 'none' })
     } finally {
       setCorrectionSubmitting(false)
     }
