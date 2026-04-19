@@ -70,21 +70,31 @@ export default function SchoolsPage() {
     Taro.navigateTo({ url: `/pages/school-detail/index?id=${item.id}` })
   }
 
+  const goToSubmit = () => {
+    Taro.navigateTo({ url: '/pages/schools/submit' })
+  }
+
   return (
     <View style={{
       padding: '16px', backgroundColor: palette.bg,
       minHeight: '100vh', boxSizing: 'border-box',
     }}>
-      {/* 搜索区 */}
       <View style={{
         backgroundColor: palette.card, borderRadius: '20px',
         padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
       }}>
-        <View style={{ marginBottom: '8px' }}>
-          <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>学习社区库</Text>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '8px' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>学习社区库</Text>
+          </View>
+          <View onClick={goToSubmit} style={{
+            padding: '7px 12px', borderRadius: '999px', backgroundColor: palette.accentSoft,
+          }}>
+            <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>推荐新学习社区</Text>
+          </View>
         </View>
         <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-          搜索、筛选、查看学习社区详情。
+          搜索、筛选、查看学习社区详情，也可以提交新的社区推荐，进入人工审核队列。
         </Text>
         <View style={{
           backgroundColor: palette.cardSoft, borderRadius: '14px',
@@ -99,14 +109,12 @@ export default function SchoolsPage() {
         </View>
       </View>
 
-      {/* 计数 */}
       <View style={{ marginBottom: '14px' }}>
         <Text style={{ color: palette.subtext, fontSize: '13px' }}>
           {loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 个学习社区`}
         </Text>
       </View>
 
-      {/* 错误 */}
       {error ? (
         <View style={{
           padding: '12px', marginBottom: '16px', backgroundColor: '#FFF1F0',
@@ -116,7 +124,6 @@ export default function SchoolsPage() {
         </View>
       ) : null}
 
-      {/* 空状态 */}
       {!loading && filteredSchools.length === 0 ? (
         <View style={{
           padding: '16px', backgroundColor: palette.card,
@@ -126,7 +133,6 @@ export default function SchoolsPage() {
         </View>
       ) : null}
 
-      {/* 学习社区列表 */}
       {filteredSchools.map((item) => (
         <View
           key={item.id}
@@ -179,12 +185,12 @@ export default function SchoolsPage() {
           }}>
             <View style={{ marginBottom: '6px' }}>
               <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-                年龄段：{item.age_range || '未填写'}
+                适合阶段：{item.age_range || '未填写'}
               </Text>
             </View>
             <View style={{ marginBottom: '6px' }}>
               <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-                学籍：{item.has_xuji ? '有/可处理' : '未填写或无'}
+                公开说明：{item.has_xuji ? '较完整' : '待补充'}
               </Text>
             </View>
             <View>
