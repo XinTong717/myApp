@@ -38,23 +38,20 @@ export default function EventsPage() {
 
   const loadInterestCounts = async (list: EventItem[]) => {
     try {
-      const results = await Promise.all(
-        list.map(async (item) => {
-          try {
-            const res: any = await Taro.cloud.callFunction({
-              name: 'getEventInterestInfo',
-              data: { eventId: item.id },
-            })
-            return [item.id, res.result?.count || 0] as const
-          } catch (err) {
-            console.error('getEventInterestInfo error:', item.id, err)
-            return [item.id, 0] as const
-          }
-        })
-      )
-      setInterestCounts(Object.fromEntries(results))
+      const eventIds = list.map((item) => Number(item.id)).filter((id) => Number.isFinite(id) && id > 0)
+      if (eventIds.length === 0) {
+        setInterestCounts({})
+        return
+      }
+      const res: any = await Taro.cloud.callFunction({
+        name: 'getEventInterestCountsBatch',
+        data: { eventIds },
+      })
+      const result = res.result
+      setInterestCounts(result?.ok ? (result.counts || {}) : {})
     } catch (err) {
       console.error('loadInterestCounts error:', err)
+      setInterestCounts({})
     }
   }
 
@@ -65,7 +62,7 @@ export default function EventsPage() {
       const data = await fetchEvents()
       const list = Array.isArray(data) ? data : []
       setEvents(list)
-      loadInterestCounts(list)
+      await loadInterestCounts(list)
     } catch (err: any) {
       console.error('loadEvents error:', err)
       setError(err?.message || '读取活动数据失败')
@@ -201,8 +198,7 @@ export default function EventsPage() {
               backgroundColor: palette.card, borderRadius: '20px',
               padding: '16px', marginBottom: '14px',
               boxSizing: 'border-box', border: `1px solid ${palette.line}`,
-            }}
-          >
+            }}>
             <View style={{
               display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
             }}>
