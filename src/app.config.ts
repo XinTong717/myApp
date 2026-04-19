@@ -9,6 +9,7 @@ export default defineAppConfig({
     'pages/privacy-policy/index',
     'pages/school-detail/index',
     'pages/event-detail/index',
+    'pages/admin/event-reviews/index',
   ],
 
   window: {
