@@ -19,7 +19,7 @@ const ALLOWED_FIELDS = [
   'bio',
 ]
 
-async function runMsgSecCheck(content) {
+async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
   if (!normalized) {
     return { ok: true }
@@ -28,6 +28,9 @@ async function runMsgSecCheck(content) {
   try {
     const res = await cloud.openapi.security.msgSecCheck({
       content: normalized.slice(0, 2500),
+      version: 2,
+      scene: 1,
+      openid,
     })
 
     const errCode = res?.errCode ?? res?.errcode ?? 0
@@ -77,13 +80,12 @@ exports.main = async (event, context) => {
     cleanData.bio,
     cleanData.childInterests,
     cleanData.eduServices,
-  ].filter(Boolean).join('\n'))
+  ].filter(Boolean).join('\n'), openid)
 
   if (!securityResult.ok) {
     return securityResult
   }
 
-  // 显示名查重
   const dupCheck = await db.collection('users')
     .where({
       displayName: cleanData.displayName,
