@@ -188,11 +188,6 @@ export default function SchoolsPage() {
                 适合阶段：{item.age_range || '未填写'}
               </Text>
             </View>
-            <View style={{ marginBottom: '6px' }}>
-              <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-                公开说明：{item.has_xuji ? '较完整' : '待补充'}
-              </Text>
-            </View>
             <View>
               <Text style={{ color: palette.subtext, fontSize: '13px' }}>
                 费用：{item.fee || '未填写'}
