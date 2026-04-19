@@ -100,6 +100,18 @@ exports.main = async (event) => {
     }
   }
 
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const recentCountRes = await db.collection('event_submissions')
+    .where({
+      openid: OPENID,
+      createdAt: _.gte(since),
+    })
+    .count()
+
+  if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) {
+    return { ok: false, message: '24小时内最多可提交5次活动，请稍后再试' }
+  }
+
   const securityResult = await runMsgSecCheck([
     cleanData.title,
     cleanData.eventType,
@@ -113,18 +125,6 @@ exports.main = async (event) => {
 
   if (!securityResult.ok) {
     return securityResult
-  }
-
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
-  const recentCountRes = await db.collection('event_submissions')
-    .where({
-      openid: OPENID,
-      createdAt: _.gte(since),
-    })
-    .count()
-
-  if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) {
-    return { ok: false, message: '24小时内最多可提交5次活动，请稍后再试' }
   }
 
   const normalizedKey = buildNormalizedKey(cleanData.title, cleanData.province, cleanData.city, cleanData.startTime)
