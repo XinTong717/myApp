@@ -51,9 +51,8 @@ const PROVINCES = Object.keys(LOCATION_DATA)
 const GENDER_OPTIONS = ['男', '女', '其他', '不想说']
 const AGE_RANGE_OPTIONS = ['18-25', '26-35', '36-45', '46-55', '55以上']
 const ROLE_OPTIONS = ['家长', '教育者', '其他']
-const CHILD_GENDER_OPTIONS = ['男', '女', '其他']
-const CHILD_AGE_OPTIONS = ['3-6岁', '7-9岁', '10-12岁', '13-15岁', '16-18岁']
-const CHILD_STATUS_OPTIONS = ['在读公立', '在读民办', '在读多元学习社区', '暂未在校', '自主安排学习', '其他']
+const CHILD_AGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段']
+const CHILD_STATUS_OPTIONS = ['寻找学习社区', '寻找同伴连接', '寻找项目活动', '寻找家庭支持', '自主探索中', '其他']
 
 function SectionTitle(props: { text: string }) {
   return (
@@ -125,7 +124,6 @@ export default function ProfilePage() {
   const [wechatId, setWechatId] = useState('')
 
   // 家长
-  const [childGender, setChildGender] = useState('')
   const [childAgeRange, setChildAgeRange] = useState('')
   const [childDropoutStatus, setChildDropoutStatus] = useState('')
   const [childInterests, setChildInterests] = useState('')
@@ -173,8 +171,7 @@ export default function ProfilePage() {
         setProvince(p.province || '')
         setCity(p.city || '')
         setWechatId(p.wechatId || '')
-        setChildGender(p.childGender || '')
-        setChildAgeRange(p.childAgeRange || '')
+        setChildAgeRange(CHILD_AGE_OPTIONS.includes(p.childAgeRange || '') ? (p.childAgeRange || '') : '')
         setChildDropoutStatus(
           CHILD_STATUS_OPTIONS.includes(p.childDropoutStatus || '') ? (p.childDropoutStatus || '') : ''
         )
@@ -222,6 +219,7 @@ export default function ProfilePage() {
       const normalizedRoles = roles.filter((role) => role !== '学生')
       const normalizedAgeRange = ageRange === '18岁以下' ? '' : ageRange
       const normalizedChildStatus = CHILD_STATUS_OPTIONS.includes(childDropoutStatus) ? childDropoutStatus : ''
+      const normalizedChildAgeRange = CHILD_AGE_OPTIONS.includes(childAgeRange) ? childAgeRange : ''
 
       const res: any = await Taro.cloud.callFunction({
         name: 'saveProfile',
@@ -233,8 +231,7 @@ export default function ProfilePage() {
           province,
           city,
           wechatId: wechatId.trim(),
-          childGender: isParent ? childGender : '',
-          childAgeRange: isParent ? childAgeRange : '',
+          childAgeRange: isParent ? normalizedChildAgeRange : '',
           childDropoutStatus: isParent ? normalizedChildStatus : '',
           childInterests: isParent ? childInterests.trim() : '',
           eduServices: isEducator ? eduServices.trim() : '',
@@ -392,23 +389,23 @@ export default function ProfilePage() {
           padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
         }}>
           <View style={{ marginBottom: '10px' }}>
-            <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.text }}>孩子的情况</Text>
+            <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.text }}>家庭教育关注</Text>
             <View style={{ marginTop: '4px' }}>
-              <Text style={{ fontSize: '12px', color: palette.subtext }}>帮助同城家长和教育者了解你的需求</Text>
+              <Text style={{ fontSize: '12px', color: palette.subtext }}>
+                仅在你主动同意联络请求后展示，用于帮助对方理解你当前在寻找什么支持
+              </Text>
             </View>
           </View>
-          <SectionTitle text='孩子性别' />
-          <PillSelect options={CHILD_GENDER_OPTIONS} selected={childGender} onChange={(v) => setChildGender(v as string)} />
-          <SectionTitle text='孩子年龄段' />
+          <SectionTitle text='孩子学段（选填）' />
           <PillSelect options={CHILD_AGE_OPTIONS} selected={childAgeRange} onChange={(v) => setChildAgeRange(v as string)} />
-          <SectionTitle text='目前状态' />
+          <SectionTitle text='当前关注方向' />
           <PillSelect options={CHILD_STATUS_OPTIONS} selected={childDropoutStatus} onChange={(v) => setChildDropoutStatus(v as string)} />
-          <SectionTitle text='兴趣爱好 / 特别需求' />
+          <SectionTitle text='希望补充说明的情况' />
           <View style={{
             backgroundColor: '#FFFDF9', borderRadius: '14px',
             padding: '10px 12px', border: `1px solid ${palette.line}`,
           }}>
-            <Textarea value={childInterests} placeholder='比如：喜欢编程和户外运动...'
+            <Textarea value={childInterests} placeholder='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持...'
               maxlength={300} onInput={(e) => setChildInterests(e.detail.value)}
               style={{ fontSize: '14px', color: palette.text, width: '100%', minHeight: '70px' }} />
           </View>
@@ -474,7 +471,7 @@ export default function ProfilePage() {
         padding: '12px 14px', marginBottom: '20px', border: `1px dashed ${palette.line}`,
       }}>
         <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
-          🔒 你的显示名、身份、城市和简介会在地图上公开展示。微信号、孩子详情和教育服务内容仅在你同意联络请求后对方可见。
+          🔒 你的显示名、身份、城市和简介会在地图上公开展示。微信号、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。
         </Text>
       </View>
 
@@ -575,7 +572,8 @@ export default function ProfilePage() {
                   style={{
                     marginTop: '8px', backgroundColor: palette.greenSoft, borderRadius: '12px',
                     padding: '8px 12px', display: 'flex', flexDirection: 'row', alignItems: 'center',
-                  }}>
+                  }}
+                >
                   <Text style={{ fontSize: '13px', color: palette.green, flex: 1 }}>
                     微信: {conn.otherWechat}
                   </Text>
@@ -587,15 +585,15 @@ export default function ProfilePage() {
                 </View>
               )}
 
-              {/* 家长的孩子详情 */}
-              {conn.otherChildInfo && conn.otherChildInfo.ageRange ? (
+              {/* 家长的家庭教育关注 */}
+              {conn.otherChildInfo && (conn.otherChildInfo.ageRange || conn.otherChildInfo.status || conn.otherChildInfo.interests) ? (
                 <View style={{
                   marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '8px 12px',
                 }}>
-                  <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold', marginBottom: '4px' }}>孩子情况</Text>
+                  <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold', marginBottom: '4px' }}>家庭教育关注</Text>
                   <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
-                    {conn.otherChildInfo.ageRange}{conn.otherChildInfo.status ? ' · ' + conn.otherChildInfo.status : ''}
-                    {conn.otherChildInfo.interests ? '\n' + conn.otherChildInfo.interests : ''}
+                    {[conn.otherChildInfo.ageRange, conn.otherChildInfo.status].filter(Boolean).join(' · ')}
+                    {conn.otherChildInfo.interests ? `\n${conn.otherChildInfo.interests}` : ''}
                   </Text>
                 </View>
               ) : null}
