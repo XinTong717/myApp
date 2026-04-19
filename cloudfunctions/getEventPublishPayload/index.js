@@ -6,10 +6,10 @@ const db = cloud.database()
 const EVENT_TYPE_MAP = {
   '工作坊': 'workshop',
   '线下聚会': 'meetup',
-  '线上活动': 'meetup',
-  '家庭活动': 'meetup',
+  '线上活动': 'online',
+  '家庭活动': 'family',
   '项目招募': 'community_program',
-  '夜聊/讨论': 'meetup',
+  '夜聊/讨论': 'discussion',
   '其他': 'meetup',
 }
 
@@ -115,33 +115,13 @@ function buildWarnings(submission, payload) {
   const start = parseDate(submission.startTime)
   const end = parseDate(submission.endTime)
 
-  if (!submission.officialUrl) {
-    warnings.push('未提供公开链接，发布前请确认活动确实可公开参与')
-  }
-
-  if (!submission.location && !submission.isOnline) {
-    warnings.push('线下活动未填写具体地点，当前会用省市兜底')
-  }
-
-  if (!submission.endTime) {
-    warnings.push('未填写结束时间，前端会按单点开始时间展示')
-  }
-
-  if (payload.status === 'ended') {
-    warnings.push('该活动时间已过，通常不建议发布到公开活动页')
-  }
-
-  if (!start) {
-    warnings.push('开始时间格式异常，发布前需人工修正')
-  }
-
-  if (submission.endTime && !end) {
-    warnings.push('结束时间格式异常，发布前需人工修正')
-  }
-
-  if (!submission.organizer) {
-    warnings.push('未填写主办方，不建议直接发布')
-  }
+  if (!submission.officialUrl) warnings.push('未提供公开链接，发布前请确认活动确实可公开参与')
+  if (!submission.location && !submission.isOnline) warnings.push('线下活动未填写具体地点，当前会用省市兜底')
+  if (!submission.endTime) warnings.push('未填写结束时间，前端会按单点开始时间展示')
+  if (payload.status === 'ended') warnings.push('该活动时间已过，通常不建议发布到公开活动页')
+  if (!start) warnings.push('开始时间格式异常，发布前需人工修正')
+  if (submission.endTime && !end) warnings.push('结束时间格式异常，发布前需人工修正')
+  if (!submission.organizer) warnings.push('未填写主办方，不建议直接发布')
 
   return warnings
 }
@@ -185,10 +165,7 @@ exports.main = async (event) => {
 
     return {
       ok: true,
-      admin: {
-        name: admin.name || '',
-        role: admin.role || 'admin',
-      },
+      admin: { name: admin.name || '', role: admin.role || 'admin' },
       submission: {
         _id: submission._id,
         status: submission.status || 'pending',
