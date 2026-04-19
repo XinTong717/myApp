@@ -5,10 +5,7 @@ const db = cloud.database()
 
 async function getActiveAdmin(openid) {
   const res = await db.collection('admin_users')
-    .where({
-      openid,
-      isActive: true,
-    })
+    .where({ openid, isActive: true })
     .limit(1)
     .get()
 
@@ -31,10 +28,7 @@ exports.main = async (event) => {
       query = query.where({ status })
     }
 
-    const res = await query
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
-      .get()
+    const res = await query.orderBy('createdAt', 'desc').limit(limit).get()
 
     const submissions = (res.data || []).map((item) => ({
       _id: item._id,
@@ -49,6 +43,7 @@ exports.main = async (event) => {
       isOnline: !!item.isOnline,
       fee: item.fee || '',
       officialUrl: item.officialUrl || '',
+      descriptionPreview: String(item.description || '').trim().slice(0, 100),
       submitterDisplayName: item.submitterDisplayName || '',
       submitterCity: item.submitterCity || '',
       createdAt: item.createdAt || null,
