@@ -270,14 +270,8 @@ export default function ProfilePage() {
     }
   }
 
-  const openPrivacySummary = () => {
-    Taro.showModal({
-      title: '用户协议与隐私政策摘要',
-      content: '可雀会收集你主动填写的显示名、身份、城市、简介，以及你选择提供的微信号、家庭教育关注信息和教育服务信息，用于地图展示、联络请求与信息匹配。你的显示名、身份、城市和简介会公开展示；微信号及更详细信息仅在你主动同意联络请求后对特定用户可见。请勿填写可直接识别未成年人的敏感细节。',
-      showCancel: false,
-      confirmText: '我知道了',
-      confirmColor: palette.accentDeep,
-    })
+  const openPrivacyPolicy = () => {
+    Taro.navigateTo({ url: '/pages/privacy-policy/index' })
   }
 
   if (loading) {
@@ -464,8 +458,8 @@ export default function ProfilePage() {
       </View>
 
       <View style={{ marginBottom: '20px', alignItems: 'center' }}>
-        <Text onClick={openPrivacySummary} style={{ fontSize: '12px', color: palette.accentDeep }}>
-          查看《用户协议与隐私政策摘要》
+        <Text onClick={openPrivacyPolicy} style={{ fontSize: '12px', color: palette.accentDeep }}>
+          查看《用户协议与隐私政策》
         </Text>
       </View>
 
