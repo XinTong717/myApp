@@ -186,19 +186,19 @@ export default function SchoolDetailPage() {
                 backgroundColor: '#FFF3E6', marginRight: '8px', marginBottom: '8px',
               }}>
                 <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
-                  {school.has_xuji ? '有/可处理学籍' : '学籍未填写或无'}
+                  {school.has_xuji ? '可衔接主流教育体系' : '独立教育路径'}
                 </Text>
               </View>
             </View>
           </View>
 
           {/* 详细字段 */}
-          <InfoRow label='年龄段' value={school.age_range} />
-          <InfoRow label='学籍说明' value={school.xuji_note} />
-          <InfoRow label='户籍要求' value={school.residency_req} />
-          <InfoRow label='入学要求' value={school.admission_req} />
+          <InfoRow label='适合年龄' value={school.age_range} />
+          <InfoRow label='参与说明' value={school.xuji_note} />
+          <InfoRow label='参与门槛' value={school.residency_req} />
+          <InfoRow label='加入条件' value={school.admission_req} />
           <InfoRow label='费用' value={school.fee} />
-          <InfoRow label='去向' value={school.output_direction} />
+          <InfoRow label='后续衔接' value={school.output_direction} />
           <InfoRow label='官网' value={school.official_url} />
 
           {/* ===== 信息纠错区 ===== */}
@@ -242,7 +242,7 @@ export default function SchoolDetailPage() {
                 </View>
                 <View style={{ marginBottom: '8px' }}>
                   <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
-                    请描述需要修正的内容，例如：费用已涨价到 XX 万/年、学习社区已更名、官网地址有误等。提交后我们会核实更新。
+                    请描述需要修正或补充的内容，例如：费用有调整、参与方式有变化、名称已更新、官网地址有误等。提交后我们会核实更新。
                   </Text>
                 </View>
                 <Textarea
