@@ -2,6 +2,13 @@ import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { fetchEventById } from '../../services/api'
+import {
+  type EventItem,
+  EVENT_TYPE_LABELS,
+  EVENT_TYPE_ICONS,
+  formatEventTime,
+  getEventStatusInfo,
+} from '../events/shared'
 
 const palette = {
   bg: '#FFF9F2',
@@ -14,43 +21,6 @@ const palette = {
   line: '#F1DFCF',
   green: '#7BAE7F',
   greenSoft: '#EEF7EE',
-}
-
-type EventItem = {
-  id: number
-  title: string
-  event_type: string
-  description?: string
-  start_time?: string
-  end_time?: string
-  location?: string
-  fee?: string
-  status?: string
-  organizer?: string
-  is_online?: boolean
-  contact_info?: string
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  night_chat: '夜聊',
-  parent_observer: '家长观察',
-  community_program: '社区计划',
-  workshop: '工作坊',
-  meetup: '线下聚会',
-}
-
-const STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
-  recurring: { text: '每周进行', color: '#7BAE7F', bg: '#EEF7EE' },
-  recruiting: { text: '招募中', color: '#E76F51', bg: '#FCE6D6' },
-  upcoming: { text: '即将开始', color: '#5B8EBF', bg: '#E8F0F8' },
-  ongoing: { text: '进行中', color: '#7BAE7F', bg: '#EEF7EE' },
-  ended: { text: '已结束', color: '#999', bg: '#F0F0F0' },
-}
-
-const ICONS: Record<string, string> = {
-  night_chat: '🌙',
-  parent_observer: '👀',
-  community_program: '🚀',
 }
 
 function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
@@ -125,7 +95,6 @@ export default function EventDetailPage() {
 
       {!loading && event && (
         <>
-          {/* 标题区 */}
           <View style={{
             backgroundColor: palette.card, borderRadius: '20px',
             padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
@@ -139,7 +108,7 @@ export default function EventDetailPage() {
                 alignItems: 'center', justifyContent: 'center', marginRight: '10px',
               }}>
                 <Text style={{ fontSize: '20px' }}>
-                  {ICONS[event.event_type] || '📌'}
+                  {EVENT_TYPE_ICONS[event.event_type] || '📌'}
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
@@ -157,18 +126,18 @@ export default function EventDetailPage() {
                 backgroundColor: palette.accentSoft, marginRight: '8px', marginBottom: '8px',
               }}>
                 <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
-                  {TYPE_LABELS[event.event_type] || event.event_type}
+                  {EVENT_TYPE_LABELS[event.event_type] || event.event_type}
                 </Text>
               </View>
 
               {(() => {
-                const s = STATUS_LABELS[event.status || '']
-                return s ? (
+                const statusInfo = getEventStatusInfo(event)
+                return statusInfo ? (
                   <View style={{
                     padding: '5px 10px', borderRadius: '999px',
-                    backgroundColor: s.bg, marginRight: '8px', marginBottom: '8px',
+                    backgroundColor: statusInfo.bg, marginRight: '8px', marginBottom: '8px',
                   }}>
-                    <Text style={{ fontSize: '12px', color: s.color }}>{s.text}</Text>
+                    <Text style={{ fontSize: '12px', color: statusInfo.color }}>{statusInfo.text}</Text>
                   </View>
                 ) : null
               })()}
@@ -184,20 +153,12 @@ export default function EventDetailPage() {
             </View>
           </View>
 
-          {/* 关键信息 */}
-          <InfoRow label='时间' value={
-            event.event_type === 'night_chat' || event.event_type === 'parent_observer'
-            ? '每周六 20:30 - 21:30'
-            : event.event_type === 'community_program'
-                ? '持续进行'
-                : (event.start_time ? new Date(event.start_time).toLocaleString('zh-CN') : '待定')
-        } />
+          <InfoRow label='时间' value={formatEventTime(event)} />
           <InfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />
           <InfoRow label='费用' value={event.fee || '免费'} />
           <InfoRow label='组织者' value={event.organizer} />
           <InfoRow label='咨询报名' value={event.contact_info} copyable />
 
-          {/* 详细介绍 */}
           <View style={{
             backgroundColor: palette.card, borderRadius: '20px',
             padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
