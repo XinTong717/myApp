@@ -1,0 +1,9 @@
+{
+  "name": "getEventPublishPayload",
+  "version": "1.0.0",
+  "description": "Build suggested MemFire events payload from a CloudBase event submission",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
