@@ -2,6 +2,27 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+const _ = db.command
+
+async function runMsgSecCheck(content, openid) {
+  const normalized = String(content || '').trim()
+  if (!normalized) return { ok: true }
+
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({
+      content: normalized.slice(0, 1000),
+      version: 2,
+      scene: 2,
+      openid,
+    })
+    const errCode = res?.errCode ?? res?.errcode ?? 0
+    if (errCode === 0) return { ok: true }
+    return { ok: false, message: '举报说明包含不合规信息，请修改后重试' }
+  } catch (err) {
+    console.error('reportUser msgSecCheck error:', err)
+    return { ok: false, message: '举报说明审核失败，请稍后重试' }
+  }
+}
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
@@ -27,6 +48,25 @@ exports.main = async (event) => {
 
   if (target.openid === OPENID) {
     return { ok: false, message: '不能举报自己' }
+  }
+
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const duplicateRes = await db.collection('user_reports')
+    .where({
+      reporterOpenid: OPENID,
+      targetOpenid: target.openid,
+      createdAt: _.gte(since),
+    })
+    .limit(1)
+    .get()
+
+  if (duplicateRes.data.length > 0) {
+    return { ok: false, message: '24小时内你已经举报过该用户，无需重复提交' }
+  }
+
+  if (note) {
+    const securityResult = await runMsgSecCheck(note, OPENID)
+    if (!securityResult.ok) return securityResult
   }
 
   try {
