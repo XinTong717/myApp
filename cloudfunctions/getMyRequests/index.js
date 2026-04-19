@@ -8,11 +8,26 @@ exports.main = async (event, context) => {
   const myOpenid = wxContext.OPENID
 
   try {
+    const safetyRes = await db.collection('safety_relations')
+      .where({ ownerOpenid: myOpenid })
+      .field({ targetOpenid: true, isBlocked: true, isMuted: true })
+      .limit(200)
+      .get()
+
+    const hiddenOpenidSet = new Set(
+      (safetyRes.data || [])
+        .filter((item) => item.isBlocked || item.isMuted)
+        .map((item) => item.targetOpenid)
+        .filter(Boolean)
+    )
+
     // 1. 收到的待处理请求
     const pendingRes = await db.collection('connections')
       .where({ toOpenid: myOpenid, status: 'pending' })
       .field({
         _id: true,
+        fromOpenid: true,
+        fromUserId: true,
         fromName: true,
         fromCity: true,
         fromRoles: true,
@@ -23,13 +38,25 @@ exports.main = async (event, context) => {
       .limit(50)
       .get()
 
+    const pending = (pendingRes.data || []).filter((item) => !hiddenOpenidSet.has(item.fromOpenid)).map((item) => ({
+      _id: item._id,
+      fromUserId: item.fromUserId || '',
+      fromName: item.fromName,
+      fromCity: item.fromCity,
+      fromRoles: item.fromRoles,
+      fromBio: item.fromBio,
+      createdAt: item.createdAt,
+    }))
+
     // 2. 已接受的联络（双向查询）
     const acceptedFrom = await db.collection('connections')
       .where({ fromOpenid: myOpenid, status: 'accepted' })
       .field({
         _id: true,
         fromOpenid: true,
+        fromUserId: true,
         toOpenid: true,
+        toUserId: true,
         fromName: true,
         toName: true,
         respondedAt: true,
@@ -41,7 +68,9 @@ exports.main = async (event, context) => {
       .field({
         _id: true,
         fromOpenid: true,
+        fromUserId: true,
         toOpenid: true,
+        toUserId: true,
         fromName: true,
         toName: true,
         respondedAt: true,
@@ -55,11 +84,15 @@ exports.main = async (event, context) => {
     const enrichedAccepted = []
     for (const conn of allAccepted) {
       const otherOpenid = conn.fromOpenid === myOpenid ? conn.toOpenid : conn.fromOpenid
+      if (hiddenOpenidSet.has(otherOpenid)) continue
+
+      const otherUserId = conn.fromOpenid === myOpenid ? conn.toUserId : conn.fromUserId
       const otherBasicName = conn.fromOpenid === myOpenid ? conn.toName : conn.fromName
 
       const userRes = await db.collection('users')
         .where({ openid: otherOpenid })
         .field({
+          _id: true,
           displayName: true,
           city: true,
           roles: true,
@@ -76,6 +109,7 @@ exports.main = async (event, context) => {
       const other = userRes.data[0] || {}
       enrichedAccepted.push({
         _id: conn._id,
+        otherUserId: other._id || otherUserId || '',
         otherName: other.displayName || otherBasicName,
         otherCity: other.city || '',
         otherRoles: other.roles || [],
@@ -96,6 +130,8 @@ exports.main = async (event, context) => {
       .where({ fromOpenid: myOpenid, status: 'pending' })
       .field({
         _id: true,
+        toOpenid: true,
+        toUserId: true,
         toName: true,
         toCity: true,
         status: true,
@@ -105,11 +141,20 @@ exports.main = async (event, context) => {
       .limit(50)
       .get()
 
+    const sent = (sentRes.data || []).filter((item) => !hiddenOpenidSet.has(item.toOpenid)).map((item) => ({
+      _id: item._id,
+      toUserId: item.toUserId || '',
+      toName: item.toName,
+      toCity: item.toCity,
+      status: item.status,
+      createdAt: item.createdAt,
+    }))
+
     return {
       ok: true,
-      pending: pendingRes.data,
+      pending,
       accepted: enrichedAccepted,
-      sent: sentRes.data,
+      sent,
     }
   } catch (err) {
     console.error('getMyRequests error:', err)
