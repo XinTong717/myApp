@@ -18,13 +18,19 @@ exports.main = async (event, context) => {
         province: true,
         city: true,
         bio: true,
+        ageRange: true,
       })
       .limit(500)
       .get()
 
+    const users = (res.data || []).filter((user) => {
+      const roles = Array.isArray(user.roles) ? user.roles : []
+      return user.ageRange !== '18岁以下' && !roles.includes('学生')
+    })
+
     return {
       ok: true,
-      users: res.data || [],
+      users,
     }
   } catch (err) {
     console.error('getMapUsers error:', err)
