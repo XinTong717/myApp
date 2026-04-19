@@ -1,0 +1,9 @@
+{
+  "name": "reviewEventSubmission",
+  "version": "1.0.0",
+  "description": "Update event submission review status after manual publish or rejection",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
