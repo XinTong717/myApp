@@ -109,6 +109,7 @@ type SentReq = {
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const [displayName, setDisplayName] = useState('')
   const [gender, setGender] = useState('')
@@ -188,9 +189,20 @@ export default function ProfilePage() {
     }
   }
 
+  const loadAdminAccess = async () => {
+    try {
+      const res: any = await Taro.cloud.callFunction({ name: 'checkAdminAccess', data: {} })
+      setIsAdmin(!!res.result?.ok && !!res.result?.isAdmin)
+    } catch (err) {
+      console.error('checkAdminAccess error:', err)
+      setIsAdmin(false)
+    }
+  }
+
   useDidShow(() => {
     loadProfile()
     loadRequests()
+    loadAdminAccess()
   })
 
   const handleSave = async () => {
@@ -274,6 +286,10 @@ export default function ProfilePage() {
     Taro.navigateTo({ url: '/pages/privacy-policy/index' })
   }
 
+  const openAdminReviewPage = () => {
+    Taro.navigateTo({ url: '/pages/admin/event-reviews/index' })
+  }
+
   if (loading) {
     return (
       <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '40px 20px', textAlign: 'center' }}>
@@ -300,6 +316,26 @@ export default function ProfilePage() {
           </Text>
         </View>
       </View>
+
+      {isAdmin && (
+        <View
+          onClick={openAdminReviewPage}
+          style={{
+            backgroundColor: '#FFF3E6', borderRadius: '18px',
+            padding: '14px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
+          }}
+        >
+          <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.accentDeep }}>管理员入口</Text>
+          <View style={{ marginTop: '6px' }}>
+            <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
+              进入活动审核台，查看 event_submissions、复制建议 payload，并在发布后回写审核状态。
+            </Text>
+          </View>
+          <View style={{ marginTop: '10px' }}>
+            <Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>打开活动审核台 →</Text>
+          </View>
+        </View>
+      )}
 
       {totalPending > 0 && (
         <View style={{
@@ -551,8 +587,7 @@ export default function ProfilePage() {
                   style={{
                     marginTop: '8px', backgroundColor: palette.greenSoft, borderRadius: '12px',
                     padding: '8px 12px', display: 'flex', flexDirection: 'row', alignItems: 'center',
-                  }}
-                >
+                  }}>
                   <Text style={{ fontSize: '13px', color: palette.green, flex: 1 }}>
                     微信: {conn.otherWechat}
                   </Text>
