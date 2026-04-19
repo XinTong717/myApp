@@ -63,19 +63,3 @@ export async function fetchEventById(id: number) {
   return list[0] || null
 }
 
-/**
- * 读取网站端 profiles 表（用于地图展示用户分布）
- * 不读取 wechat / parent_contact / educator_contact 等隐私字段
- */
-export async function fetchProfiles() {
-  const res = await Taro.request({
-    url: `${API_BASE_URL}/profiles?select=id,username,display_name,country,province,city,bio,age,gender,lat,lng&order=id.asc`,
-    method: 'GET',
-    header: COMMON_HEADER,
-  })
-  if (res.statusCode !== 200) {
-    console.error('fetchProfiles failed:', res.statusCode, res.data)
-    throw new Error(`fetchProfiles failed: ${res.statusCode}`)
-  }
-  return res.data
-}
