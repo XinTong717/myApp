@@ -23,18 +23,49 @@ const palette = {
   greenSoft: '#EEF7EE',
 }
 
+const FILTER_OPTIONS = ['全部', '线上', '线下'] as const
+
+type FilterValue = typeof FILTER_OPTIONS[number]
+type InterestMap = Record<number, number>
+
 export default function EventsPage() {
   const [events, setEvents] = useState<EventItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showEnded, setShowEnded] = useState(false)
+  const [filter, setFilter] = useState<FilterValue>('全部')
+  const [interestCounts, setInterestCounts] = useState<InterestMap>({})
+
+  const loadInterestCounts = async (list: EventItem[]) => {
+    try {
+      const results = await Promise.all(
+        list.map(async (item) => {
+          try {
+            const res: any = await Taro.cloud.callFunction({
+              name: 'getEventInterestInfo',
+              data: { eventId: item.id },
+            })
+            return [item.id, res.result?.count || 0] as const
+          } catch (err) {
+            console.error('getEventInterestInfo error:', item.id, err)
+            return [item.id, 0] as const
+          }
+        })
+      )
+      setInterestCounts(Object.fromEntries(results))
+    } catch (err) {
+      console.error('loadInterestCounts error:', err)
+    }
+  }
 
   const loadEvents = async () => {
     try {
       setLoading(true)
       setError('')
       const data = await fetchEvents()
-      setEvents(Array.isArray(data) ? data : [])
+      const list = Array.isArray(data) ? data : []
+      setEvents(list)
+      loadInterestCounts(list)
     } catch (err: any) {
       console.error('loadEvents error:', err)
       setError(err?.message || '读取活动数据失败')
@@ -55,11 +86,23 @@ export default function EventsPage() {
     Taro.navigateTo({ url: `/pages/event-detail/index?id=${item.id}` })
   }
 
-  const visibleEvents = useMemo(
-    () => (showEnded ? events : events.filter((item) => !isEventEnded(item))),
-    [events, showEnded]
-  )
-  const hiddenEndedCount = showEnded ? 0 : events.length - visibleEvents.length
+  const goToSubmit = () => {
+    Taro.navigateTo({ url: '/pages/events/submit' })
+  }
+
+  const visibleEvents = useMemo(() => {
+    let list = showEnded ? events : events.filter((item) => !isEventEnded(item))
+
+    if (filter === '线上') {
+      list = list.filter((item) => !!item.is_online)
+    } else if (filter === '线下') {
+      list = list.filter((item) => !item.is_online)
+    }
+
+    return list
+  }, [events, showEnded, filter])
+
+  const hiddenEndedCount = showEnded ? 0 : events.length - events.filter((item) => !isEventEnded(item)).length
 
   return (
     <View style={{
@@ -73,9 +116,30 @@ export default function EventsPage() {
         <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>活动</Text>
         <View style={{ marginTop: '6px' }}>
           <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-            可雀与自由学社的活动与社区计划。点进详情了解更多。
+            可雀与自由学社的活动与社区计划。点进详情了解更多，也欢迎提交公开可参与的新活动。
           </Text>
         </View>
+        <View onClick={goToSubmit} style={{
+          marginTop: '12px', backgroundColor: palette.accentSoft,
+          borderRadius: '14px', padding: '10px 12px', alignSelf: 'flex-start',
+        }}>
+          <Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>+ 推荐新活动</Text>
+        </View>
+      </View>
+
+      <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '12px' }}>
+        {FILTER_OPTIONS.map((option) => {
+          const active = filter === option
+          return (
+            <View key={option} onClick={() => setFilter(option)} style={{
+              padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
+              backgroundColor: active ? palette.accentDeep : '#F5F0EB',
+              border: `1px solid ${active ? palette.accentDeep : palette.line}`,
+            }}>
+              <Text style={{ fontSize: '13px', color: active ? '#FFF' : palette.subtext }}>{option}</Text>
+            </View>
+          )
+        })}
       </View>
 
       <View style={{
@@ -115,7 +179,7 @@ export default function EventsPage() {
           padding: '18px 16px', border: `1px solid ${palette.line}`,
         }}>
           <Text style={{ fontSize: '14px', color: palette.subtext, lineHeight: '22px' }}>
-            {events.length > 0 ? '当前没有可显示的进行中活动。' : '暂时还没有活动。'}
+            {events.length > 0 ? '当前筛选下没有可显示的活动。' : '暂时还没有活动。'}
           </Text>
         </View>
       ) : null}
@@ -124,6 +188,7 @@ export default function EventsPage() {
         const typeLabel = EVENT_TYPE_LABELS[item.event_type] || item.event_type
         const statusInfo = getEventStatusInfo(item)
         const icon = EVENT_TYPE_ICONS[item.event_type] || '📌'
+        const interestedCount = interestCounts[item.id] || 0
 
         const firstLine = (item.description || '').split('\n').find((line) => line.trim()) || ''
         const summary = firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine
@@ -180,6 +245,15 @@ export default function EventsPage() {
                   {item.is_online ? '线上' : '线下'}
                 </Text>
               </View>
+
+              {interestedCount > 0 ? (
+                <View style={{
+                  padding: '4px 10px', borderRadius: '999px',
+                  backgroundColor: '#FFF3E6', marginRight: '8px', marginBottom: '6px',
+                }}>
+                  <Text style={{ fontSize: '12px', color: palette.accentDeep }}>#{interestedCount} 人感兴趣</Text>
+                </View>
+              ) : null}
             </View>
 
             <View style={{
