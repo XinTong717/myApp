@@ -4,6 +4,7 @@ export default defineAppConfig({
     'pages/schools/index',
     'pages/schools/submit',
     'pages/events/index',
+    'pages/events/submit',
     'pages/profile/index',
     'pages/privacy-policy/index',
     'pages/school-detail/index',
