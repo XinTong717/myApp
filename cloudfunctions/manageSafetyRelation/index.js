@@ -2,6 +2,7 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+const _ = db.command
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
@@ -54,7 +55,12 @@ exports.main = async (event) => {
       if (existing?._id) {
         await db.collection('safety_relations').doc(existing._id).remove()
       }
-      return { ok: true, message: action === 'unblock' ? '已解除拉黑' : '已取消静音', isBlocked: false, isMuted: false }
+      return {
+        ok: true,
+        message: action === 'unblock' ? '已解除拉黑' : '已取消静音',
+        isBlocked: false,
+        isMuted: false,
+      }
     }
 
     const data = {
@@ -72,6 +78,26 @@ exports.main = async (event) => {
       await db.collection('safety_relations').doc(existing._id).update({ data })
     } else {
       await db.collection('safety_relations').add({ data: { ...data, createdAt: new Date() } })
+    }
+
+    if (action === 'block') {
+      const forwardRes = await db.collection('connections')
+        .where({ fromOpenid: OPENID, toOpenid: target.openid, status: _.in(['pending', 'accepted']) })
+        .get()
+      const backwardRes = await db.collection('connections')
+        .where({ fromOpenid: target.openid, toOpenid: OPENID, status: _.in(['pending', 'accepted']) })
+        .get()
+      const toRemove = [...(forwardRes.data || []), ...(backwardRes.data || [])]
+      await Promise.all(
+        toRemove.map((conn) => db.collection('connections').doc(conn._id).update({
+          data: {
+            status: 'removed',
+            removedAt: new Date(),
+            removedBy: OPENID,
+            updatedAt: new Date(),
+          },
+        }))
+      )
     }
 
     return {
