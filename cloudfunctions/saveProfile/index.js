@@ -40,6 +40,15 @@ exports.main = async (event, context) => {
     return { ok: false, message: '显示名不能为空' }
   }
 
+  if (cleanData.ageRange === '18岁以下') {
+    return { ok: false, message: '当前仅支持18岁及以上用户注册' }
+  }
+
+  const selectedRoles = Array.isArray(cleanData.roles) ? cleanData.roles : []
+  if (selectedRoles.includes('学生')) {
+    return { ok: false, message: '当前仅开放家长、教育者及其他成年用户' }
+  }
+
   // 显示名查重
   const dupCheck = await db.collection('users')
     .where({
