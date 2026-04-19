@@ -45,12 +45,9 @@ function PillSelect(props: { options: string[]; selected: string; onChange: (val
   )
 }
 
-function toLocalInputValue(value: string) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+function combineDateTime(date: string, time: string) {
+  if (!date || !time) return ''
+  return new Date(`${date}T${time}:00`).toISOString()
 }
 
 export default function SubmitEventPage() {
@@ -60,7 +57,9 @@ export default function SubmitEventPage() {
   const [city, setCity] = useState('')
   const [eventType, setEventType] = useState('')
   const [audience, setAudience] = useState('')
+  const [startDate, setStartDate] = useState('')
   const [startTime, setStartTime] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [endTime, setEndTime] = useState('')
   const [isOnline, setIsOnline] = useState(false)
   const [location, setLocation] = useState('')
@@ -105,8 +104,12 @@ export default function SubmitEventPage() {
       Taro.showToast({ title: '请选择所在城市', icon: 'none' })
       return
     }
-    if (!startTime) {
-      Taro.showToast({ title: '请填写开始时间', icon: 'none' })
+    if (!startDate || !startTime) {
+      Taro.showToast({ title: '请完整填写开始时间', icon: 'none' })
+      return
+    }
+    if ((endDate && !endTime) || (!endDate && endTime)) {
+      Taro.showToast({ title: '结束日期和时间请一起填写', icon: 'none' })
       return
     }
     if (!organizer.trim()) {
@@ -136,8 +139,8 @@ export default function SubmitEventPage() {
           city,
           eventType,
           audience,
-          startTime: new Date(startTime).toISOString(),
-          endTime: endTime ? new Date(endTime).toISOString() : '',
+          startTime: combineDateTime(startDate, startTime),
+          endTime: endDate && endTime ? combineDateTime(endDate, endTime) : '',
           isOnline,
           location: location.trim(),
           fee: fee || '',
@@ -201,13 +204,31 @@ export default function SubmitEventPage() {
         <PillSelect options={AUDIENCE_OPTIONS} selected={audience} onChange={setAudience} />
 
         <SectionTitle text='开始时间' />
-        <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}` }}>
-          <Input type='text' value={toLocalInputValue(startTime)} placeholder='YYYY-MM-DDTHH:mm' onInput={(e) => setStartTime(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+        <View style={{ display: 'flex', flexDirection: 'row', marginBottom: '12px' }}>
+          <Picker mode='date' value={startDate} onChange={(e) => setStartDate(e.detail.value)}>
+            <View style={{ flex: 1, backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}`, marginRight: '8px' }}>
+              <Text style={{ fontSize: '14px', color: startDate ? palette.text : '#C5B5A5' }}>{startDate || '选择日期'}</Text>
+            </View>
+          </Picker>
+          <Picker mode='time' value={startTime} onChange={(e) => setStartTime(e.detail.value)}>
+            <View style={{ width: '120px', backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+              <Text style={{ fontSize: '14px', color: startTime ? palette.text : '#C5B5A5' }}>{startTime || '选择时间'}</Text>
+            </View>
+          </Picker>
         </View>
 
         <SectionTitle text='结束时间（选填）' />
-        <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}` }}>
-          <Input type='text' value={toLocalInputValue(endTime)} placeholder='YYYY-MM-DDTHH:mm' onInput={(e) => setEndTime(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+        <View style={{ display: 'flex', flexDirection: 'row', marginBottom: '16px' }}>
+          <Picker mode='date' value={endDate} onChange={(e) => setEndDate(e.detail.value)}>
+            <View style={{ flex: 1, backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}`, marginRight: '8px' }}>
+              <Text style={{ fontSize: '14px', color: endDate ? palette.text : '#C5B5A5' }}>{endDate || '选择日期'}</Text>
+            </View>
+          </Picker>
+          <Picker mode='time' value={endTime} onChange={(e) => setEndTime(e.detail.value)}>
+            <View style={{ width: '120px', backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+              <Text style={{ fontSize: '14px', color: endTime ? palette.text : '#C5B5A5' }}>{endTime || '选择时间'}</Text>
+            </View>
+          </Picker>
         </View>
 
         <SectionTitle text='线上活动' />
