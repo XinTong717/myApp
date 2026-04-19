@@ -3,7 +3,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 
-async function runMsgSecCheck(content) {
+async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
   if (!normalized) {
     return { ok: true }
@@ -12,6 +12,9 @@ async function runMsgSecCheck(content) {
   try {
     const res = await cloud.openapi.security.msgSecCheck({
       content: normalized.slice(0, 2500),
+      version: 2,
+      scene: 2,
+      openid,
     })
 
     const errCode = res?.errCode ?? res?.errcode ?? 0
@@ -40,7 +43,7 @@ exports.main = async (event, context) => {
     return { ok: false, message: '缺少学习社区信息' }
   }
 
-  const securityResult = await runMsgSecCheck(content)
+  const securityResult = await runMsgSecCheck(content, OPENID)
   if (!securityResult.ok) {
     return securityResult
   }
@@ -52,7 +55,7 @@ exports.main = async (event, context) => {
         schoolId: schoolId,
         schoolName: schoolName || '',
         content: content.trim(),
-        status: 'pending',  // pending / reviewed / applied / rejected
+        status: 'pending',
         createdAt: db.serverDate(),
       },
     })
