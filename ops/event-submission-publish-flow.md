@@ -366,6 +366,162 @@ MemFire `events.description` 是面向前台详情页的展示字段。
 
 ---
 
+## 半自动工具（已补进 repo）
+
+当前 repo 里已经新增两类云函数，帮助你把“手动发布”变成“半自动发布”：
+
+### 1. `getEventPublishPayload`
+作用：
+- 输入 `submissionId`
+- 读取 CloudBase `event_submissions`
+- 自动生成建议版 MemFire `events` payload
+- 返回 warnings，提醒你哪些地方仍需人工判断
+
+#### 输入
+```json
+{
+  "submissionId": "event_submissions doc id"
+}
+```
+
+#### 输出
+```json
+{
+  "ok": true,
+  "submission": {
+    "_id": "...",
+    "status": "pending",
+    "title": "..."
+  },
+  "suggestedEventPayload": {
+    "title": "...",
+    "event_type": "meetup",
+    "description": "...",
+    "start_time": "...",
+    "end_time": "...",
+    "location": "...",
+    "fee": "免费",
+    "status": "upcoming",
+    "organizer": "...",
+    "is_online": true,
+    "contact_info": "..."
+  },
+  "suggestedReviewUpdate": {
+    "status": "merged",
+    "publishedEventId": null,
+    "adminNote": "已发布到 events"
+  },
+  "warnings": [
+    "未提供公开链接，发布前请确认活动确实可公开参与"
+  ]
+}
+```
+
+### 2. `reviewEventSubmission`
+作用：
+- 发布成功后回写 CloudBase
+- 拒绝 submission
+- 误操作时重置回 `pending`
+
+#### 支持的 action
+- `mark_published`
+- `reject`
+- `reset_pending`
+
+#### `mark_published` 输入
+```json
+{
+  "submissionId": "...",
+  "action": "mark_published",
+  "publishedEventId": 123,
+  "reviewedBy": "xintong",
+  "adminNote": "已发布到 events"
+}
+```
+
+#### `reject` 输入
+```json
+{
+  "submissionId": "...",
+  "action": "reject",
+  "reviewedBy": "xintong",
+  "adminNote": "缺少公开链接和可验证主办方"
+}
+```
+
+#### `reset_pending` 输入
+```json
+{
+  "submissionId": "...",
+  "action": "reset_pending",
+  "reviewedBy": "xintong",
+  "adminNote": "回滚到待审核"
+}
+```
+
+---
+
+## 推荐的半自动操作流
+
+### Path A. 准备发布
+1. 调用 `getEventPublishPayload({ submissionId })`
+2. 查看返回的：
+   - `suggestedEventPayload`
+   - `warnings`
+3. 在 MemFire / DBeaver 里手动插入 `events`
+   - 可以直接复制建议 payload 再小改
+
+### Path B. 发布成功后回写
+4. 拿到 MemFire 新生成的 `events.id`
+5. 调用：
+   `reviewEventSubmission({ action: 'mark_published', submissionId, publishedEventId })`
+6. 这时 CloudBase 会更新：
+   - `status = merged`
+   - `publishedEventId`
+   - `publishedAt`
+   - `reviewedAt`
+   - `reviewedBy`
+   - `adminNote`
+
+### Path C. 审核不通过
+直接调用：
+`reviewEventSubmission({ action: 'reject', submissionId, adminNote })`
+
+### Path D. 误标或需要回滚
+如果你错误地标记了状态，但尚未想好下一步：
+调用：
+`reviewEventSubmission({ action: 'reset_pending', submissionId })`
+
+---
+
+## 失败回滚规则
+
+### 规则 1
+**不要在 MemFire 插入成功之前调用 `mark_published`。**
+
+否则会出现：
+- CloudBase 里显示 `merged`
+- 但 `events` 里其实没有这条记录
+
+### 规则 2
+如果 MemFire 插入失败：
+- 什么都不要回写
+- submission 保持 `pending`
+- 修正后重新发布
+
+### 规则 3
+如果 MemFire 已插入成功，但 CloudBase 回写失败：
+- 先记下 `publishedEventId`
+- 重新调用 `reviewEventSubmission({ action: 'mark_published', ... })`
+- 不要再往 MemFire 重复插第二条
+
+### 规则 4
+如果你误把某条 submission 标成 `merged`，但其实没成功发出去：
+- 调用 `reset_pending`
+- 再重新走发布流程
+
+---
+
 ## 推荐的管理员发布 Checklist
 
 发布前逐项确认：
@@ -434,24 +590,6 @@ MemFire `events.description` 是面向前台详情页的展示字段。
 
 ---
 
-## 下一步最值得补的不是自动发布，而是“半自动发布”
-
-在真正做 admin dashboard 之前，最值得补的是一个轻量内部工具，而不是完全自动化。
-
-### 推荐下一步
-1. 给 `event_submissions` 增加字段：
-   - `publishedEventId`
-   - `publishedAt`
-2. 写一个本地/Cloud function 小工具：
-   - 输入 submission `_id`
-   - 自动生成建议的 `events` payload
-   - 管理员确认后再写入 MemFire
-3. 成功后自动回写 CloudBase `merged`
-
-这样你仍保留人工策展，但不用每次手工拼 description 和 contact_info。
-
----
-
 ## 不建议现在就做的事情
 
 - 不建议让 `event_submissions` 自动同步到 `events`
@@ -466,12 +604,13 @@ MemFire `events.description` 是面向前台详情页的展示字段。
 当前最稳的管理员发布路径是：
 
 `event_submissions.pending`
-→ 人工审核
-→ 手动标准化映射到 MemFire `events`
-→ 成功后回写 CloudBase 为 `merged` + `publishedEventId`
+→ 调用 `getEventPublishPayload` 生成建议版 payload
+→ 人工确认后插入 MemFire `events`
+→ 成功后调用 `reviewEventSubmission(action = mark_published)` 回写 CloudBase
 
 这条路径的核心不是“快”，而是：
 - 可控
 - 可追踪
+- 可回滚
 - 不会把活动页变成开放公告墙
 - 与当前产品边界一致
