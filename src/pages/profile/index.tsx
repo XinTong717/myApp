@@ -94,9 +94,6 @@ function PillSelect(props: {
   )
 }
 
-// ============================================================
-// 联络请求类型
-// ============================================================
 type PendingReq = {
   _id: string; fromName: string; fromCity: string; fromRoles: string[]; fromBio: string; createdAt: string
 }
@@ -109,12 +106,10 @@ type SentReq = {
   _id: string; toName: string; toCity: string; status: string; createdAt: string
 }
 
-// ============================================================
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  // 基本信息
   const [displayName, setDisplayName] = useState('')
   const [gender, setGender] = useState('')
   const [ageRange, setAgeRange] = useState('')
@@ -123,18 +118,13 @@ export default function ProfilePage() {
   const [city, setCity] = useState('')
   const [wechatId, setWechatId] = useState('')
 
-  // 家长
   const [childAgeRange, setChildAgeRange] = useState('')
   const [childDropoutStatus, setChildDropoutStatus] = useState('')
   const [childInterests, setChildInterests] = useState('')
 
-  // 教育者
   const [eduServices, setEduServices] = useState('')
-
-  // 通用
   const [bio, setBio] = useState('')
 
-  // 联络请求
   const [pendingRequests, setPendingRequests] = useState<PendingReq[]>([])
   const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConn[]>([])
   const [sentRequests, setSentRequests] = useState<SentReq[]>([])
@@ -152,12 +142,10 @@ export default function ProfilePage() {
     return [provIdx, Math.max(0, cities.indexOf(city))]
   }, [province, city])
 
-  // 加载资料
   const loadProfile = async () => {
     try {
       setLoading(true)
       const res: any = await Taro.cloud.callFunction({ name: 'getMe', data: {} })
-      console.log('getMe result:', JSON.stringify(res.result))
       const p = res.result?.profile
       if (p) {
         setDisplayName(p.displayName || '')
@@ -186,7 +174,6 @@ export default function ProfilePage() {
     }
   }
 
-  // 加载联络请求
   const loadRequests = async () => {
     try {
       const res: any = await Taro.cloud.callFunction({ name: 'getMyRequests', data: {} })
@@ -206,7 +193,6 @@ export default function ProfilePage() {
     loadRequests()
   })
 
-  // 保存
   const handleSave = async () => {
     if (!displayName.trim()) {
       Taro.showToast({ title: '请填写显示名', icon: 'none' }); return
@@ -252,7 +238,6 @@ export default function ProfilePage() {
     }
   }
 
-  // 响应联络请求
   const handleRespond = async (requestId: string, action: 'accept' | 'reject') => {
     try {
       Taro.showLoading({ title: action === 'accept' ? '同意中...' : '处理中...' })
@@ -285,6 +270,16 @@ export default function ProfilePage() {
     }
   }
 
+  const openPrivacySummary = () => {
+    Taro.showModal({
+      title: '用户协议与隐私政策摘要',
+      content: '可雀会收集你主动填写的显示名、身份、城市、简介，以及你选择提供的微信号、家庭教育关注信息和教育服务信息，用于地图展示、联络请求与信息匹配。你的显示名、身份、城市和简介会公开展示；微信号及更详细信息仅在你主动同意联络请求后对特定用户可见。请勿填写可直接识别未成年人的敏感细节。',
+      showCancel: false,
+      confirmText: '我知道了',
+      confirmColor: palette.accentDeep,
+    })
+  }
+
   if (loading) {
     return (
       <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '40px 20px', textAlign: 'center' }}>
@@ -300,7 +295,6 @@ export default function ProfilePage() {
       minHeight: '100vh', backgroundColor: palette.bg,
       padding: '16px 16px 100px', boxSizing: 'border-box',
     }}>
-      {/* 标题 */}
       <View style={{
         backgroundColor: palette.card, borderRadius: '20px',
         padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
@@ -313,7 +307,6 @@ export default function ProfilePage() {
         </View>
       </View>
 
-      {/* 新联络请求提醒 */}
       {totalPending > 0 && (
         <View style={{
           backgroundColor: '#FFF3E6', borderRadius: '16px',
@@ -327,7 +320,6 @@ export default function ProfilePage() {
         </View>
       )}
 
-      {/* ===== 基本信息卡 ===== */}
       <View style={{
         backgroundColor: palette.card, borderRadius: '20px',
         padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
@@ -382,7 +374,6 @@ export default function ProfilePage() {
         </View>
       </View>
 
-      {/* ===== 家长专属区 ===== */}
       {isParent && (
         <View style={{
           backgroundColor: palette.card, borderRadius: '20px',
@@ -415,7 +406,6 @@ export default function ProfilePage() {
         </View>
       )}
 
-      {/* ===== 教育者专属区 ===== */}
       {isEducator && (
         <View style={{
           backgroundColor: palette.card, borderRadius: '20px',
@@ -441,7 +431,6 @@ export default function ProfilePage() {
         </View>
       )}
 
-      {/* ===== 一句话简介 ===== */}
       <View style={{
         backgroundColor: palette.card, borderRadius: '20px',
         padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
@@ -465,17 +454,21 @@ export default function ProfilePage() {
         </View>
       </View>
 
-      {/* ===== 隐私说明 ===== */}
       <View style={{
         backgroundColor: '#FFFDF9', borderRadius: '16px',
-        padding: '12px 14px', marginBottom: '20px', border: `1px dashed ${palette.line}`,
+        padding: '12px 14px', marginBottom: '12px', border: `1px dashed ${palette.line}`,
       }}>
         <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
           🔒 你的显示名、身份、城市和简介会在地图上公开展示。微信号、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。
         </Text>
       </View>
 
-      {/* ===== 保存按钮 ===== */}
+      <View style={{ marginBottom: '20px', alignItems: 'center' }}>
+        <Text onClick={openPrivacySummary} style={{ fontSize: '12px', color: palette.accentDeep }}>
+          查看《用户协议与隐私政策摘要》
+        </Text>
+      </View>
+
       <View onClick={saving ? undefined : handleSave} style={{
         backgroundColor: saving ? '#DDD' : palette.accentDeep,
         borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '30px',
@@ -485,9 +478,6 @@ export default function ProfilePage() {
         </Text>
       </View>
 
-      {/* ============================================================ */}
-      {/* 联络动态 */}
-      {/* ============================================================ */}
       <View style={{
         backgroundColor: palette.card, borderRadius: '20px',
         padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
@@ -495,7 +485,6 @@ export default function ProfilePage() {
         <Text style={{ fontSize: '18px', fontWeight: 'bold', color: palette.text }}>联络动态</Text>
       </View>
 
-      {/* --- 收到的请求 --- */}
       {pendingRequests.length > 0 && (
         <View style={{ marginBottom: '14px' }}>
           <View style={{ marginBottom: '8px' }}>
@@ -538,7 +527,6 @@ export default function ProfilePage() {
         </View>
       )}
 
-      {/* --- 已建立联络 --- */}
       {acceptedConnections.length > 0 && (
         <View style={{ marginBottom: '14px' }}>
           <View style={{ marginBottom: '8px' }}>
@@ -563,12 +551,9 @@ export default function ProfilePage() {
                 </View>
               ) : null}
 
-              {/* 微信号 */}
               {conn.otherWechat ? (
                 <View
-                  onClick={() => {
-                    Taro.setClipboardData({ data: conn.otherWechat })
-                  }}
+                  onClick={() => { Taro.setClipboardData({ data: conn.otherWechat }) }}
                   style={{
                     marginTop: '8px', backgroundColor: palette.greenSoft, borderRadius: '12px',
                     padding: '8px 12px', display: 'flex', flexDirection: 'row', alignItems: 'center',
@@ -585,7 +570,6 @@ export default function ProfilePage() {
                 </View>
               )}
 
-              {/* 家长的家庭教育关注 */}
               {conn.otherChildInfo && (conn.otherChildInfo.ageRange || conn.otherChildInfo.status || conn.otherChildInfo.interests) ? (
                 <View style={{
                   marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '8px 12px',
@@ -598,7 +582,6 @@ export default function ProfilePage() {
                 </View>
               ) : null}
 
-              {/* 教育者的服务 */}
               {conn.otherEduServices ? (
                 <View style={{
                   marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '8px 12px',
@@ -612,7 +595,6 @@ export default function ProfilePage() {
         </View>
       )}
 
-      {/* --- 我发出的请求 --- */}
       {sentRequests.length > 0 && (
         <View style={{ marginBottom: '14px' }}>
           <View style={{ marginBottom: '8px' }}>
@@ -632,9 +614,7 @@ export default function ProfilePage() {
                   <Text style={{ fontSize: '12px', color: palette.subtext }}> · {req.toCity}</Text>
                 ) : null}
               </View>
-              <View style={{
-                padding: '3px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6',
-              }}>
+              <View style={{ padding: '3px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6' }}>
                 <Text style={{ fontSize: '11px', color: palette.accentDeep }}>等待回应</Text>
               </View>
             </View>
@@ -642,7 +622,6 @@ export default function ProfilePage() {
         </View>
       )}
 
-      {/* 空状态 */}
       {pendingRequests.length === 0 && acceptedConnections.length === 0 && sentRequests.length === 0 && (
         <View style={{
           backgroundColor: '#FFFDF9', borderRadius: '16px',
