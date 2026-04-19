@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { View, Text, Input, Textarea, Picker } from '@tarojs/components'
+import { View, Text, Input, Textarea, Picker, Switch } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 
 const palette = {
@@ -53,6 +53,7 @@ const AGE_RANGE_OPTIONS = ['18-25', '26-35', '36-45', '46-55', '55以上']
 const ROLE_OPTIONS = ['家长', '教育者', '其他']
 const CHILD_AGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段']
 const CHILD_STATUS_OPTIONS = ['寻找学习社区', '寻找同伴连接', '寻找项目活动', '寻找家庭支持', '自主探索中', '其他']
+const REPORT_REASON_OPTIONS = ['垃圾广告', '骚扰不适', '未成年人敏感信息', '其他']
 
 function SectionTitle(props: { text: string }) {
   return (
@@ -95,15 +96,18 @@ function PillSelect(props: {
 }
 
 type PendingReq = {
-  _id: string; fromName: string; fromCity: string; fromRoles: string[]; fromBio: string; createdAt: string
+  _id: string; fromUserId: string; fromName: string; fromCity: string; fromRoles: string[]; fromBio: string; createdAt: string
 }
 type AcceptedConn = {
-  _id: string; otherName: string; otherCity: string; otherRoles: string[]; otherBio: string
+  _id: string; otherUserId: string; otherName: string; otherCity: string; otherRoles: string[]; otherBio: string
   otherWechat: string; otherChildInfo: { ageRange: string; status: string; interests: string } | null
   otherEduServices: string
 }
 type SentReq = {
-  _id: string; toName: string; toCity: string; status: string; createdAt: string
+  _id: string; toUserId: string; toName: string; toCity: string; status: string; createdAt: string
+}
+type SafetyItem = {
+  _id: string; targetUserId: string; targetName: string; targetCity: string; isBlocked: boolean; isMuted: boolean
 }
 
 export default function ProfilePage() {
@@ -118,6 +122,8 @@ export default function ProfilePage() {
   const [province, setProvince] = useState('')
   const [city, setCity] = useState('')
   const [wechatId, setWechatId] = useState('')
+  const [allowIncomingRequests, setAllowIncomingRequests] = useState(true)
+  const [isVisibleOnMap, setIsVisibleOnMap] = useState(true)
 
   const [childAgeRange, setChildAgeRange] = useState('')
   const [childDropoutStatus, setChildDropoutStatus] = useState('')
@@ -129,6 +135,8 @@ export default function ProfilePage() {
   const [pendingRequests, setPendingRequests] = useState<PendingReq[]>([])
   const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConn[]>([])
   const [sentRequests, setSentRequests] = useState<SentReq[]>([])
+  const [blockedUsers, setBlockedUsers] = useState<SafetyItem[]>([])
+  const [mutedUsers, setMutedUsers] = useState<SafetyItem[]>([])
 
   const isParent = roles.includes('家长')
   const isEducator = roles.includes('教育者')
@@ -160,6 +168,8 @@ export default function ProfilePage() {
         setProvince(p.province || '')
         setCity(p.city || '')
         setWechatId(p.wechatId || '')
+        setAllowIncomingRequests(p.allowIncomingRequests !== false)
+        setIsVisibleOnMap(p.isVisibleOnMap !== false)
         setChildAgeRange(CHILD_AGE_OPTIONS.includes(p.childAgeRange || '') ? (p.childAgeRange || '') : '')
         setChildDropoutStatus(
           CHILD_STATUS_OPTIONS.includes(p.childDropoutStatus || '') ? (p.childDropoutStatus || '') : ''
@@ -189,6 +199,19 @@ export default function ProfilePage() {
     }
   }
 
+  const loadSafetyOverview = async () => {
+    try {
+      const res: any = await Taro.cloud.callFunction({ name: 'getSafetyOverview', data: {} })
+      const r = res.result
+      if (r?.ok) {
+        setBlockedUsers(r.blocked || [])
+        setMutedUsers(r.muted || [])
+      }
+    } catch (err) {
+      console.error('getSafetyOverview error:', err)
+    }
+  }
+
   const loadAdminAccess = async () => {
     try {
       const res: any = await Taro.cloud.callFunction({ name: 'checkAdminAccess', data: {} })
@@ -199,9 +222,15 @@ export default function ProfilePage() {
     }
   }
 
+  const refreshRelations = () => {
+    loadRequests()
+    loadSafetyOverview()
+  }
+
   useDidShow(() => {
     loadProfile()
     loadRequests()
+    loadSafetyOverview()
     loadAdminAccess()
   })
 
@@ -229,6 +258,8 @@ export default function ProfilePage() {
           province,
           city,
           wechatId: wechatId.trim(),
+          allowIncomingRequests,
+          isVisibleOnMap,
           childAgeRange: isParent ? normalizedChildAgeRange : '',
           childDropoutStatus: isParent ? normalizedChildStatus : '',
           childInterests: isParent ? childInterests.trim() : '',
@@ -260,10 +291,55 @@ export default function ProfilePage() {
       Taro.hideLoading()
       const r = res.result
       Taro.showToast({ title: r?.message || '已处理', icon: r?.ok ? 'success' : 'none' })
-      if (r?.ok) loadRequests()
+      if (r?.ok) refreshRelations()
     } catch (err) {
       Taro.hideLoading()
       Taro.showToast({ title: '操作失败', icon: 'none' })
+    }
+  }
+
+  const handleWithdrawRequest = async (connectionId: string) => {
+    try {
+      const res: any = await Taro.cloud.callFunction({ name: 'manageConnection', data: { connectionId, action: 'withdraw' } })
+      Taro.showToast({ title: res.result?.message || '已撤回', icon: res.result?.ok ? 'success' : 'none' })
+      if (res.result?.ok) refreshRelations()
+    } catch (err) {
+      Taro.showToast({ title: '撤回失败', icon: 'none' })
+    }
+  }
+
+  const handleRemoveConnection = async (connectionId: string) => {
+    try {
+      const res: any = await Taro.cloud.callFunction({ name: 'manageConnection', data: { connectionId, action: 'remove_connection' } })
+      Taro.showToast({ title: res.result?.message || '已删除', icon: res.result?.ok ? 'success' : 'none' })
+      if (res.result?.ok) refreshRelations()
+    } catch (err) {
+      Taro.showToast({ title: '删除失败', icon: 'none' })
+    }
+  }
+
+  const handleSafetyAction = async (targetUserId: string, action: 'block' | 'unblock' | 'mute' | 'unmute') => {
+    try {
+      const res: any = await Taro.cloud.callFunction({ name: 'manageSafetyRelation', data: { targetUserId, action } })
+      Taro.showToast({ title: res.result?.message || '已更新', icon: res.result?.ok ? 'success' : 'none' })
+      if (res.result?.ok) {
+        refreshRelations()
+        loadProfile()
+      }
+    } catch (err) {
+      Taro.showToast({ title: '操作失败', icon: 'none' })
+    }
+  }
+
+  const handleReportUser = async (targetUserId: string) => {
+    try {
+      const reasonRes = await Taro.showActionSheet({ itemList: REPORT_REASON_OPTIONS })
+      const reason = REPORT_REASON_OPTIONS[reasonRes.tapIndex] || '其他'
+      const res: any = await Taro.cloud.callFunction({ name: 'reportUser', data: { targetUserId, reason } })
+      Taro.showToast({ title: res.result?.message || '举报已提交', icon: res.result?.ok ? 'success' : 'none' })
+    } catch (err: any) {
+      if (err?.errMsg?.includes('cancel')) return
+      Taro.showToast({ title: '举报失败', icon: 'none' })
     }
   }
 
@@ -301,14 +377,8 @@ export default function ProfilePage() {
   const totalPending = pendingRequests.length
 
   return (
-    <View style={{
-      minHeight: '100vh', backgroundColor: palette.bg,
-      padding: '16px 16px 100px', boxSizing: 'border-box',
-    }}>
-      <View style={{
-        backgroundColor: palette.card, borderRadius: '20px',
-        padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-      }}>
+    <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '16px 16px 100px', boxSizing: 'border-box' }}>
+      <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
         <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>我的资料</Text>
         <View style={{ marginTop: '6px' }}>
           <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
@@ -318,13 +388,7 @@ export default function ProfilePage() {
       </View>
 
       {isAdmin && (
-        <View
-          onClick={openAdminReviewPage}
-          style={{
-            backgroundColor: '#FFF3E6', borderRadius: '18px',
-            padding: '14px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-          }}
-        >
+        <View onClick={openAdminReviewPage} style={{ backgroundColor: '#FFF3E6', borderRadius: '18px', padding: '14px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
           <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.accentDeep }}>管理员入口</Text>
           <View style={{ marginTop: '6px' }}>
             <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
@@ -337,31 +401,73 @@ export default function ProfilePage() {
         </View>
       )}
 
+      <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+        <View style={{ marginBottom: '10px' }}>
+          <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.text }}>隐私与安全</Text>
+        </View>
+        <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', marginBottom: '12px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flex: 1, paddingRight: '12px' }}>
+            <Text style={{ fontSize: '14px', color: palette.text }}>暂停接收联络</Text>
+            <View style={{ marginTop: '4px' }}>
+              <Text style={{ fontSize: '12px', color: palette.subtext }}>打开后，其他用户将无法再向你发起新的联络请求。</Text>
+            </View>
+          </View>
+          <Switch checked={!allowIncomingRequests} color={palette.accentDeep} onChange={(e) => setAllowIncomingRequests(!e.detail.value)} />
+        </View>
+        <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', marginBottom: '12px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flex: 1, paddingRight: '12px' }}>
+            <Text style={{ fontSize: '14px', color: palette.text }}>地图可见性</Text>
+            <View style={{ marginTop: '4px' }}>
+              <Text style={{ fontSize: '12px', color: palette.subtext }}>关闭后，你的名字和简介不会再出现在探索地图上。</Text>
+            </View>
+          </View>
+          <Switch checked={isVisibleOnMap} color={palette.accentDeep} onChange={(e) => setIsVisibleOnMap(!!e.detail.value)} />
+        </View>
+        {(blockedUsers.length > 0 || mutedUsers.length > 0) && (
+          <View>
+            {blockedUsers.length > 0 && (
+              <View style={{ marginBottom: '10px' }}>
+                <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>已拉黑</Text>
+                {blockedUsers.map((item) => (
+                  <View key={item._id} style={{ backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '10px 12px', marginTop: '8px', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: '13px', color: palette.text }}>{item.targetName || '未知用户'}</Text>
+                      {item.targetCity ? <Text style={{ fontSize: '11px', color: palette.subtext }}> · {item.targetCity}</Text> : null}
+                    </View>
+                    <Text onClick={() => handleSafetyAction(item.targetUserId, 'unblock')} style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>解除拉黑</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {mutedUsers.length > 0 && (
+              <View>
+                <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>已静音</Text>
+                {mutedUsers.map((item) => (
+                  <View key={item._id} style={{ backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '10px 12px', marginTop: '8px', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: '13px', color: palette.text }}>{item.targetName || '未知用户'}</Text>
+                      {item.targetCity ? <Text style={{ fontSize: '11px', color: palette.subtext }}> · {item.targetCity}</Text> : null}
+                    </View>
+                    <Text onClick={() => handleSafetyAction(item.targetUserId, 'unmute')} style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>取消静音</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
       {totalPending > 0 && (
-        <View style={{
-          backgroundColor: '#FFF3E6', borderRadius: '16px',
-          padding: '12px 14px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-          display: 'flex', flexDirection: 'row', alignItems: 'center',
-        }}>
-          <Text style={{ fontSize: '14px', color: palette.accentDeep, fontWeight: 'bold', flex: 1 }}>
-            你有 {totalPending} 条新的联络请求
-          </Text>
+        <View style={{ backgroundColor: '#FFF3E6', borderRadius: '16px', padding: '12px 14px', marginBottom: '14px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ fontSize: '14px', color: palette.accentDeep, fontWeight: 'bold', flex: 1 }}>你有 {totalPending} 条新的联络请求</Text>
           <Text style={{ fontSize: '12px', color: palette.subtext }}>下滑查看</Text>
         </View>
       )}
 
-      <View style={{
-        backgroundColor: palette.card, borderRadius: '20px',
-        padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-      }}>
+      <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
         <SectionTitle text='显示名' />
-        <View style={{
-          backgroundColor: '#FFFDF9', borderRadius: '14px',
-          padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}`,
-        }}>
-          <Input value={displayName} placeholder='你希望别人怎么称呼你'
-            onInput={(e) => setDisplayName(e.detail.value)}
-            style={{ fontSize: '14px', color: palette.text }} />
+        <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}` }}>
+          <Input value={displayName} placeholder='你希望别人怎么称呼你' onInput={(e) => setDisplayName(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
         </View>
 
         <SectionTitle text='性别' />
@@ -374,47 +480,28 @@ export default function ProfilePage() {
         <PillSelect options={ROLE_OPTIONS} selected={roles} multi onChange={(v) => setRoles(v as string[])} />
 
         <SectionTitle text='所在城市' />
-        <Picker mode='multiSelector' range={pickerRange} value={pickerValue}
-          onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
-          <View style={{
-            backgroundColor: '#FFFDF9', borderRadius: '14px',
-            padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}`,
-            display: 'flex', flexDirection: 'row', alignItems: 'center',
-          }}>
-            <Text style={{ fontSize: '14px', flex: 1, color: province ? palette.text : '#C5B5A5' }}>
-              {province && city ? `${province} · ${city}` : '点击选择省份和城市'}
-            </Text>
+        <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
+          <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ fontSize: '14px', flex: 1, color: province ? palette.text : '#C5B5A5' }}>{province && city ? `${province} · ${city}` : '点击选择省份和城市'}</Text>
             <Text style={{ fontSize: '12px', color: palette.subtext }}>▼</Text>
           </View>
         </Picker>
 
         <SectionTitle text='微信号（选填）' />
         <View style={{ marginBottom: '8px' }}>
-          <Text style={{ fontSize: '12px', color: palette.subtext }}>
-            仅在你同意对方的联络请求后，对方才能看到你的微信号
-          </Text>
+          <Text style={{ fontSize: '12px', color: palette.subtext }}>仅在你同意对方的联络请求后，对方才能看到你的微信号</Text>
         </View>
-        <View style={{
-          backgroundColor: '#FFFDF9', borderRadius: '14px',
-          padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}`,
-        }}>
-          <Input value={wechatId} placeholder='你的微信号'
-            onInput={(e) => setWechatId(e.detail.value)}
-            style={{ fontSize: '14px', color: palette.text }} />
+        <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}` }}>
+          <Input value={wechatId} placeholder='你的微信号' onInput={(e) => setWechatId(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
         </View>
       </View>
 
       {isParent && (
-        <View style={{
-          backgroundColor: palette.card, borderRadius: '20px',
-          padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-        }}>
+        <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
           <View style={{ marginBottom: '10px' }}>
             <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.text }}>家庭教育关注</Text>
             <View style={{ marginTop: '4px' }}>
-              <Text style={{ fontSize: '12px', color: palette.subtext }}>
-                仅在你主动同意联络请求后展示，用于帮助对方理解你当前在寻找什么支持
-              </Text>
+              <Text style={{ fontSize: '12px', color: palette.subtext }}>仅在你主动同意联络请求后展示，用于帮助对方理解你当前在寻找什么支持</Text>
             </View>
           </View>
           <SectionTitle text='孩子学段（选填）' />
@@ -422,13 +509,8 @@ export default function ProfilePage() {
           <SectionTitle text='当前关注方向' />
           <PillSelect options={CHILD_STATUS_OPTIONS} selected={childDropoutStatus} onChange={(v) => setChildDropoutStatus(v as string)} />
           <SectionTitle text='希望补充说明的情况' />
-          <View style={{
-            backgroundColor: '#FFFDF9', borderRadius: '14px',
-            padding: '10px 12px', border: `1px solid ${palette.line}`,
-          }}>
-            <Textarea value={childInterests} placeholder='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持...'
-              maxlength={300} onInput={(e) => setChildInterests(e.detail.value)}
-              style={{ fontSize: '14px', color: palette.text, width: '100%', minHeight: '70px' }} />
+          <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+            <Textarea value={childInterests} placeholder='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持...' maxlength={300} onInput={(e) => setChildInterests(e.detail.value)} style={{ fontSize: '14px', color: palette.text, width: '100%', minHeight: '70px' }} />
           </View>
           <View style={{ marginTop: '4px', marginBottom: '8px' }}>
             <Text style={{ fontSize: '11px', color: '#C5B5A5' }}>{childInterests.length}/300</Text>
@@ -437,23 +519,15 @@ export default function ProfilePage() {
       )}
 
       {isEducator && (
-        <View style={{
-          backgroundColor: palette.card, borderRadius: '20px',
-          padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-        }}>
+        <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
           <View style={{ marginBottom: '10px' }}>
             <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.text }}>你提供的教育服务</Text>
             <View style={{ marginTop: '4px' }}>
               <Text style={{ fontSize: '12px', color: palette.subtext }}>帮助家庭了解你能提供什么样的支持</Text>
             </View>
           </View>
-          <View style={{
-            backgroundColor: '#FFFDF9', borderRadius: '14px',
-            padding: '10px 12px', border: `1px solid ${palette.line}`,
-          }}>
-            <Textarea value={eduServices} placeholder='比如：一对一升学规划咨询...'
-              maxlength={500} onInput={(e) => setEduServices(e.detail.value)}
-              style={{ fontSize: '14px', color: palette.text, width: '100%', minHeight: '90px' }} />
+          <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+            <Textarea value={eduServices} placeholder='比如：一对一升学规划咨询...' maxlength={500} onInput={(e) => setEduServices(e.detail.value)} style={{ fontSize: '14px', color: palette.text, width: '100%', minHeight: '90px' }} />
           </View>
           <View style={{ marginTop: '4px', marginBottom: '8px' }}>
             <Text style={{ fontSize: '11px', color: '#C5B5A5' }}>{eduServices.length}/500</Text>
@@ -461,96 +535,52 @@ export default function ProfilePage() {
         </View>
       )}
 
-      <View style={{
-        backgroundColor: palette.card, borderRadius: '20px',
-        padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-      }}>
+      <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
         <SectionTitle text='一句话简介（选填）' />
         <View style={{ marginBottom: '8px' }}>
-          <Text style={{ fontSize: '12px', color: palette.subtext }}>
-            其他用户在地图上点击你的标记后会看到这句话
-          </Text>
+          <Text style={{ fontSize: '12px', color: palette.subtext }}>其他用户在地图上点击你的标记后会看到这句话</Text>
         </View>
-        <View style={{
-          backgroundColor: '#FFFDF9', borderRadius: '14px',
-          padding: '10px 12px', border: `1px solid ${palette.line}`,
-        }}>
-          <Textarea value={bio} placeholder='简单介绍一下自己...'
-            maxlength={200} onInput={(e) => setBio(e.detail.value)}
-            style={{ fontSize: '14px', color: palette.text, width: '100%', minHeight: '60px' }} />
+        <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+          <Textarea value={bio} placeholder='简单介绍一下自己...' maxlength={200} onInput={(e) => setBio(e.detail.value)} style={{ fontSize: '14px', color: palette.text, width: '100%', minHeight: '60px' }} />
         </View>
         <View style={{ marginTop: '4px' }}>
           <Text style={{ fontSize: '11px', color: '#C5B5A5' }}>{bio.length}/200</Text>
         </View>
       </View>
 
-      <View style={{
-        backgroundColor: '#FFFDF9', borderRadius: '16px',
-        padding: '12px 14px', marginBottom: '12px', border: `1px dashed ${palette.line}`,
-      }}>
+      <View style={{ backgroundColor: '#FFFDF9', borderRadius: '16px', padding: '12px 14px', marginBottom: '12px', border: `1px dashed ${palette.line}` }}>
         <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
           🔒 你的显示名、身份、城市和简介会在地图上公开展示。微信号、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。
         </Text>
       </View>
 
       <View style={{ marginBottom: '20px', alignItems: 'center' }}>
-        <Text onClick={openPrivacyPolicy} style={{ fontSize: '12px', color: palette.accentDeep }}>
-          查看《用户协议与隐私政策》
-        </Text>
+        <Text onClick={openPrivacyPolicy} style={{ fontSize: '12px', color: palette.accentDeep }}>查看《用户协议与隐私政策》</Text>
       </View>
 
-      <View onClick={saving ? undefined : handleSave} style={{
-        backgroundColor: saving ? '#DDD' : palette.accentDeep,
-        borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '30px',
-      }}>
-        <Text style={{ fontSize: '16px', color: '#FFF', fontWeight: 'bold' }}>
-          {saving ? '保存中...' : '保存资料'}
-        </Text>
+      <View onClick={saving ? undefined : handleSave} style={{ backgroundColor: saving ? '#DDD' : palette.accentDeep, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '30px' }}>
+        <Text style={{ fontSize: '16px', color: '#FFF', fontWeight: 'bold' }}>{saving ? '保存中...' : '保存资料'}</Text>
       </View>
 
-      <View style={{
-        backgroundColor: palette.card, borderRadius: '20px',
-        padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-      }}>
+      <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
         <Text style={{ fontSize: '18px', fontWeight: 'bold', color: palette.text }}>联络动态</Text>
       </View>
 
       {pendingRequests.length > 0 && (
         <View style={{ marginBottom: '14px' }}>
-          <View style={{ marginBottom: '8px' }}>
-            <Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>
-              收到的请求（{pendingRequests.length}）
-            </Text>
-          </View>
+          <View style={{ marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>收到的请求（{pendingRequests.length}）</Text></View>
           {pendingRequests.map((req) => (
-            <View key={req._id} style={{
-              backgroundColor: palette.card, borderRadius: '16px',
-              padding: '14px', marginBottom: '10px', border: `1px solid ${palette.line}`,
-            }}>
+            <View key={req._id} style={{ backgroundColor: palette.card, borderRadius: '16px', padding: '14px', marginBottom: '10px', border: `1px solid ${palette.line}` }}>
               <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>{req.fromName}</Text>
               <View style={{ marginTop: '4px', marginBottom: '8px' }}>
-                {req.fromCity ? (
-                  <Text style={{ fontSize: '13px', color: palette.subtext }}>
-                    {req.fromCity}{req.fromRoles?.length > 0 ? ' · ' + req.fromRoles.join('/') : ''}
-                  </Text>
-                ) : null}
-                {req.fromBio ? (
-                  <View style={{ marginTop: '4px' }}>
-                    <Text style={{ fontSize: '12px', color: palette.subtext }}>{req.fromBio}</Text>
-                  </View>
-                ) : null}
+                {req.fromCity ? <Text style={{ fontSize: '13px', color: palette.subtext }}>{req.fromCity}{req.fromRoles?.length > 0 ? ' · ' + req.fromRoles.join('/') : ''}</Text> : null}
+                {req.fromBio ? <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>{req.fromBio}</Text></View> : null}
               </View>
-              <View style={{ display: 'flex', flexDirection: 'row' }}>
-                <View onClick={() => handleRespond(req._id, 'accept')} style={{
-                  padding: '6px 18px', borderRadius: '999px', backgroundColor: palette.green, marginRight: '10px',
-                }}>
-                  <Text style={{ fontSize: '13px', color: '#FFF', fontWeight: 'bold' }}>同意</Text>
-                </View>
-                <View onClick={() => handleRespond(req._id, 'reject')} style={{
-                  padding: '6px 18px', borderRadius: '999px', backgroundColor: '#F5F0EB',
-                }}>
-                  <Text style={{ fontSize: '13px', color: palette.subtext }}>忽略</Text>
-                </View>
+              <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
+                <View onClick={() => handleRespond(req._id, 'accept')} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: palette.green, marginRight: '10px', marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: '#FFF', fontWeight: 'bold' }}>同意</Text></View>
+                <View onClick={() => handleRespond(req._id, 'reject')} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: '#F5F0EB', marginRight: '10px', marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.subtext }}>忽略</Text></View>
+                {req.fromUserId ? <Text onClick={() => handleSafetyAction(req.fromUserId, 'block')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '8px' }}>拉黑</Text> : null}
+                {req.fromUserId ? <Text onClick={() => handleReportUser(req.fromUserId)} style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '8px' }}>举报</Text> : null}
               </View>
             </View>
           ))}
@@ -559,66 +589,38 @@ export default function ProfilePage() {
 
       {acceptedConnections.length > 0 && (
         <View style={{ marginBottom: '14px' }}>
-          <View style={{ marginBottom: '8px' }}>
-            <Text style={{ fontSize: '13px', color: palette.green, fontWeight: 'bold' }}>
-              已建立联络（{acceptedConnections.length}）
-            </Text>
-          </View>
+          <View style={{ marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.green, fontWeight: 'bold' }}>已建立联络（{acceptedConnections.length}）</Text></View>
           {acceptedConnections.map((conn) => (
-            <View key={conn._id} style={{
-              backgroundColor: palette.card, borderRadius: '16px',
-              padding: '14px', marginBottom: '10px', border: `1px solid ${palette.line}`,
-            }}>
+            <View key={conn._id} style={{ backgroundColor: palette.card, borderRadius: '16px', padding: '14px', marginBottom: '10px', border: `1px solid ${palette.line}` }}>
               <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>{conn.otherName}</Text>
               <View style={{ marginTop: '4px' }}>
-                <Text style={{ fontSize: '13px', color: palette.subtext }}>
-                  {conn.otherCity}{conn.otherRoles?.length > 0 ? ' · ' + conn.otherRoles.join('/') : ''}
-                </Text>
+                <Text style={{ fontSize: '13px', color: palette.subtext }}>{conn.otherCity}{conn.otherRoles?.length > 0 ? ' · ' + conn.otherRoles.join('/') : ''}</Text>
               </View>
-              {conn.otherBio ? (
-                <View style={{ marginTop: '4px' }}>
-                  <Text style={{ fontSize: '12px', color: palette.subtext }}>{conn.otherBio}</Text>
-                </View>
-              ) : null}
-
+              {conn.otherBio ? <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>{conn.otherBio}</Text></View> : null}
               {conn.otherWechat ? (
-                <View
-                  onClick={() => { Taro.setClipboardData({ data: conn.otherWechat }) }}
-                  style={{
-                    marginTop: '8px', backgroundColor: palette.greenSoft, borderRadius: '12px',
-                    padding: '8px 12px', display: 'flex', flexDirection: 'row', alignItems: 'center',
-                  }}>
-                  <Text style={{ fontSize: '13px', color: palette.green, flex: 1 }}>
-                    微信: {conn.otherWechat}
-                  </Text>
+                <View onClick={() => { Taro.setClipboardData({ data: conn.otherWechat }) }} style={{ marginTop: '8px', backgroundColor: palette.greenSoft, borderRadius: '12px', padding: '8px 12px', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ fontSize: '13px', color: palette.green, flex: 1 }}>微信: {conn.otherWechat}</Text>
                   <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text>
                 </View>
-              ) : (
-                <View style={{ marginTop: '8px' }}>
-                  <Text style={{ fontSize: '12px', color: '#C5B5A5' }}>对方未填写微信号</Text>
-                </View>
-              )}
-
+              ) : <View style={{ marginTop: '8px' }}><Text style={{ fontSize: '12px', color: '#C5B5A5' }}>对方未填写微信号</Text></View>}
               {conn.otherChildInfo && (conn.otherChildInfo.ageRange || conn.otherChildInfo.status || conn.otherChildInfo.interests) ? (
-                <View style={{
-                  marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '8px 12px',
-                }}>
+                <View style={{ marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '8px 12px' }}>
                   <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold', marginBottom: '4px' }}>家庭教育关注</Text>
-                  <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
-                    {[conn.otherChildInfo.ageRange, conn.otherChildInfo.status].filter(Boolean).join(' · ')}
-                    {conn.otherChildInfo.interests ? `\n${conn.otherChildInfo.interests}` : ''}
-                  </Text>
+                  <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>{[conn.otherChildInfo.ageRange, conn.otherChildInfo.status].filter(Boolean).join(' · ')}{conn.otherChildInfo.interests ? `\n${conn.otherChildInfo.interests}` : ''}</Text>
                 </View>
               ) : null}
-
               {conn.otherEduServices ? (
-                <View style={{
-                  marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '8px 12px',
-                }}>
+                <View style={{ marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '8px 12px' }}>
                   <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold', marginBottom: '4px' }}>教育服务</Text>
                   <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>{conn.otherEduServices}</Text>
                 </View>
               ) : null}
+              <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '10px' }}>
+                <Text onClick={() => handleRemoveConnection(conn._id)} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>删除连接</Text>
+                {conn.otherUserId ? <Text onClick={() => handleSafetyAction(conn.otherUserId, 'block')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>拉黑</Text> : null}
+                {conn.otherUserId ? <Text onClick={() => handleSafetyAction(conn.otherUserId, 'mute')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
+                {conn.otherUserId ? <Text onClick={() => handleReportUser(conn.otherUserId)} style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '6px' }}>举报</Text> : null}
+              </View>
             </View>
           ))}
         </View>
@@ -626,25 +628,21 @@ export default function ProfilePage() {
 
       {sentRequests.length > 0 && (
         <View style={{ marginBottom: '14px' }}>
-          <View style={{ marginBottom: '8px' }}>
-            <Text style={{ fontSize: '13px', color: palette.subtext, fontWeight: 'bold' }}>
-              我发出的请求（{sentRequests.length}）
-            </Text>
-          </View>
+          <View style={{ marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.subtext, fontWeight: 'bold' }}>我发出的请求（{sentRequests.length}）</Text></View>
           {sentRequests.map((req) => (
-            <View key={req._id} style={{
-              backgroundColor: palette.card, borderRadius: '16px',
-              padding: '12px 14px', marginBottom: '8px', border: `1px solid ${palette.line}`,
-              display: 'flex', flexDirection: 'row', alignItems: 'center',
-            }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: '14px', color: palette.text }}>{req.toName}</Text>
-                {req.toCity ? (
-                  <Text style={{ fontSize: '12px', color: palette.subtext }}> · {req.toCity}</Text>
-                ) : null}
+            <View key={req._id} style={{ backgroundColor: palette.card, borderRadius: '16px', padding: '12px 14px', marginBottom: '8px', border: `1px solid ${palette.line}` }}>
+              <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: '14px', color: palette.text }}>{req.toName}</Text>
+                  {req.toCity ? <Text style={{ fontSize: '12px', color: palette.subtext }}> · {req.toCity}</Text> : null}
+                </View>
+                <View style={{ padding: '3px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6' }}><Text style={{ fontSize: '11px', color: palette.accentDeep }}>等待回应</Text></View>
               </View>
-              <View style={{ padding: '3px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6' }}>
-                <Text style={{ fontSize: '11px', color: palette.accentDeep }}>等待回应</Text>
+              <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '10px' }}>
+                <Text onClick={() => handleWithdrawRequest(req._id)} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>撤回请求</Text>
+                {req.toUserId ? <Text onClick={() => handleSafetyAction(req.toUserId, 'block')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>拉黑</Text> : null}
+                {req.toUserId ? <Text onClick={() => handleSafetyAction(req.toUserId, 'mute')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
+                {req.toUserId ? <Text onClick={() => handleReportUser(req.toUserId)} style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '6px' }}>举报</Text> : null}
               </View>
             </View>
           ))}
@@ -652,14 +650,9 @@ export default function ProfilePage() {
       )}
 
       {pendingRequests.length === 0 && acceptedConnections.length === 0 && sentRequests.length === 0 && (
-        <View style={{
-          backgroundColor: '#FFFDF9', borderRadius: '16px',
-          padding: '20px', textAlign: 'center', marginBottom: '14px',
-        }}>
+        <View style={{ backgroundColor: '#FFFDF9', borderRadius: '16px', padding: '20px', textAlign: 'center', marginBottom: '14px' }}>
           <Text style={{ fontSize: '13px', color: '#C5B5A5' }}>暂无联络动态</Text>
-          <View style={{ marginTop: '6px' }}>
-            <Text style={{ fontSize: '12px', color: '#C5B5A5' }}>在探索页点击同路人，发起你的第一个联络请求</Text>
-          </View>
+          <View style={{ marginTop: '6px' }}><Text style={{ fontSize: '12px', color: '#C5B5A5' }}>在探索页点击同路人，发起你的第一个联络请求</Text></View>
         </View>
       )}
     </View>
