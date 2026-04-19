@@ -1,7 +1,14 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { fetchEvents } from '../../services/api'
+import {
+  type EventItem,
+  EVENT_TYPE_LABELS,
+  EVENT_TYPE_ICONS,
+  getEventStatusInfo,
+  isEventEnded,
+} from './shared'
 
 const palette = {
   bg: '#FFF9F2',
@@ -16,48 +23,11 @@ const palette = {
   greenSoft: '#EEF7EE',
 }
 
-type EventItem = {
-  id: number
-  title: string
-  event_type: string
-  description?: string
-  start_time?: string
-  location?: string
-  fee?: string
-  status?: string
-  organizer?: string
-  is_online?: boolean
-  contact_info?: string
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  night_chat: '夜聊',
-  parent_observer: '家长观察',
-  community_program: '社区计划',
-  workshop: '工作坊',
-  meetup: '线下聚会',
-}
-
-const STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
-  recurring: { text: '每周进行', color: '#7BAE7F', bg: '#EEF7EE' },
-  recruiting: { text: '招募中', color: '#E76F51', bg: '#FCE6D6' },
-  upcoming: { text: '即将开始', color: '#5B8EBF', bg: '#E8F0F8' },
-  ongoing: { text: '进行中', color: '#7BAE7F', bg: '#EEF7EE' },
-  ended: { text: '已结束', color: '#999', bg: '#F0F0F0' },
-}
-
-const ICONS: Record<string, string> = {
-  night_chat: '🌙',
-  parent_observer: '👀',
-  community_program: '🚀',
-  workshop: '🛠️',
-  meetup: '☕',
-}
-
 export default function EventsPage() {
   const [events, setEvents] = useState<EventItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showEnded, setShowEnded] = useState(false)
 
   const loadEvents = async () => {
     try {
@@ -85,6 +55,12 @@ export default function EventsPage() {
     Taro.navigateTo({ url: `/pages/event-detail/index?id=${item.id}` })
   }
 
+  const visibleEvents = useMemo(
+    () => (showEnded ? events : events.filter((item) => !isEventEnded(item))),
+    [events, showEnded]
+  )
+  const hiddenEndedCount = showEnded ? 0 : events.length - visibleEvents.length
+
   return (
     <View style={{
       padding: '16px', backgroundColor: palette.bg,
@@ -102,10 +78,26 @@ export default function EventsPage() {
         </View>
       </View>
 
-      <View style={{ marginBottom: '14px' }}>
-        <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-          {loading ? '加载中...' : `共 ${events.length} 个活动`}
+      <View style={{
+        marginBottom: '14px', display: 'flex',
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <Text style={{ color: palette.subtext, fontSize: '13px', flex: 1, marginRight: '12px' }}>
+          {loading
+            ? '加载中...'
+            : hiddenEndedCount > 0
+              ? `当前显示 ${visibleEvents.length} 个活动，已隐藏 ${hiddenEndedCount} 个已结束活动`
+              : `共 ${visibleEvents.length} 个活动`}
         </Text>
+
+        {events.length > 0 && (
+          <Text
+            onClick={() => setShowEnded((value) => !value)}
+            style={{ color: palette.accentDeep, fontSize: '13px', fontWeight: 'bold' }}
+          >
+            {showEnded ? '隐藏已结束' : '显示已结束'}
+          </Text>
+        )}
       </View>
 
       {error ? (
@@ -117,14 +109,24 @@ export default function EventsPage() {
         </View>
       ) : null}
 
-      {events.map((item) => {
-        const typeLabel = TYPE_LABELS[item.event_type] || item.event_type
-        const statusInfo = STATUS_LABELS[item.status || ''] || { text: item.status || '', color: palette.subtext, bg: '#F5F5F5' }
-        const icon = ICONS[item.event_type] || '📌'
+      {!loading && !error && visibleEvents.length === 0 ? (
+        <View style={{
+          backgroundColor: palette.card, borderRadius: '20px',
+          padding: '18px 16px', border: `1px solid ${palette.line}`,
+        }}>
+          <Text style={{ fontSize: '14px', color: palette.subtext, lineHeight: '22px' }}>
+            {events.length > 0 ? '当前没有可显示的进行中活动。' : '暂时还没有活动。'}
+          </Text>
+        </View>
+      ) : null}
 
-        // 从 description 中取第一行作为摘要
-        const firstLine = (item.description || '').split('\n').find((l) => l.trim()) || ''
-        const summary = firstLine.length > 40 ? firstLine.slice(0, 40) + '…' : firstLine
+      {visibleEvents.map((item) => {
+        const typeLabel = EVENT_TYPE_LABELS[item.event_type] || item.event_type
+        const statusInfo = getEventStatusInfo(item)
+        const icon = EVENT_TYPE_ICONS[item.event_type] || '📌'
+
+        const firstLine = (item.description || '').split('\n').find((line) => line.trim()) || ''
+        const summary = firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine
 
         return (
           <View
@@ -153,7 +155,6 @@ export default function EventsPage() {
               </View>
             </View>
 
-            {/* 标签 */}
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
               <View style={{
                 padding: '4px 10px', borderRadius: '999px',
@@ -162,12 +163,14 @@ export default function EventsPage() {
                 <Text style={{ fontSize: '12px', color: palette.accentDeep }}>{typeLabel}</Text>
               </View>
 
-              <View style={{
-                padding: '4px 10px', borderRadius: '999px',
-                backgroundColor: statusInfo.bg, marginRight: '8px', marginBottom: '6px',
-              }}>
-                <Text style={{ fontSize: '12px', color: statusInfo.color }}>{statusInfo.text}</Text>
-              </View>
+              {statusInfo ? (
+                <View style={{
+                  padding: '4px 10px', borderRadius: '999px',
+                  backgroundColor: statusInfo.bg, marginRight: '8px', marginBottom: '6px',
+                }}>
+                  <Text style={{ fontSize: '12px', color: statusInfo.color }}>{statusInfo.text}</Text>
+                </View>
+              ) : null}
 
               <View style={{
                 padding: '4px 10px', borderRadius: '999px',
@@ -179,7 +182,6 @@ export default function EventsPage() {
               </View>
             </View>
 
-            {/* 摘要 + 费用 */}
             <View style={{
               backgroundColor: '#FFFDF9', borderRadius: '14px',
               padding: '12px', marginBottom: '10px',
