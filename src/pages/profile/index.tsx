@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { View, Text, Input, Textarea, Picker, Switch } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
+import { LOCATION_DATA, PROVINCES } from '../../constants/location'
 
 const palette = {
   bg: '#FFF9F2',
@@ -14,40 +15,6 @@ const palette = {
   greenSoft: '#EEF7EE',
 }
 
-const LOCATION_DATA: Record<string, string[]> = {
-  '北京': ['北京'], '上海': ['上海'], '天津': ['天津'], '重庆': ['重庆'],
-  '广东': ['广州', '深圳', '珠海', '佛山', '东莞', '中山', '惠州', '其他'],
-  '浙江': ['杭州', '宁波', '温州', '绍兴', '嘉兴', '金华', '台州', '湖州', '丽水', '衢州', '其他'],
-  '江苏': ['南京', '苏州', '无锡', '常州', '南通', '徐州', '扬州', '其他'],
-  '四川': ['成都', '绵阳', '德阳', '宜宾', '南充', '乐山', '广元', '其他'],
-  '福建': ['福州', '厦门', '泉州', '漳州', '莆田', '其他'],
-  '山东': ['济南', '青岛', '烟台', '潍坊', '临沂', '威海', '其他'],
-  '湖北': ['武汉', '宜昌', '襄阳', '荆州', '其他'],
-  '湖南': ['长沙', '株洲', '湘潭', '衡阳', '岳阳', '郴州', '其他'],
-  '河南': ['郑州', '洛阳', '开封', '南阳', '其他'],
-  '河北': ['石家庄', '唐山', '保定', '邯郸', '衡水', '其他'],
-  '安徽': ['合肥', '芜湖', '蚌埠', '阜阳', '宣城', '其他'],
-  '陕西': ['西安', '咸阳', '宝鸡', '延安', '其他'],
-  '江西': ['南昌', '赣州', '九江', '景德镇', '其他'],
-  '广西': ['南宁', '柳州', '桂林', '北海', '其他'],
-  '云南': ['昆明', '大理', '丽江', '玉溪', '曲靖', '其他'],
-  '贵州': ['贵阳', '遵义', '六盘水', '其他'],
-  '山西': ['太原', '大同', '运城', '其他'],
-  '辽宁': ['沈阳', '大连', '鞍山', '其他'],
-  '吉林': ['长春', '吉林市', '延边', '通化', '其他'],
-  '黑龙江': ['哈尔滨', '大庆', '齐齐哈尔', '黑河', '其他'],
-  '内蒙古': ['呼和浩特', '包头', '鄂尔多斯', '其他'],
-  '新疆': ['乌鲁木齐', '喀什', '伊犁', '其他'],
-  '西藏': ['拉萨', '林芝', '日喀则', '其他'],
-  '甘肃': ['兰州', '天水', '酒泉', '其他'],
-  '青海': ['西宁', '海东', '其他'],
-  '宁夏': ['银川', '吴忠', '其他'],
-  '海南': ['海口', '三亚', '澄迈', '其他'],
-  '香港': ['香港'], '澳门': ['澳门'],
-  '台湾': ['台北', '新北', '高雄', '台中', '台南', '其他'],
-  '海外': ['其他'],
-}
-const PROVINCES = Object.keys(LOCATION_DATA)
 const GENDER_OPTIONS = ['男', '女', '其他', '不想说']
 const AGE_RANGE_OPTIONS = ['18-25', '26-35', '36-45', '46-55', '55以上']
 const ROLE_OPTIONS = ['家长', '教育者', '其他']
@@ -113,6 +80,7 @@ type SafetyItem = {
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [privacySaving, setPrivacySaving] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
 
   const [displayName, setDisplayName] = useState('')
@@ -160,20 +128,15 @@ export default function ProfilePage() {
         setDisplayName(p.displayName || '')
         setGender(p.gender || '')
         setAgeRange(p.ageRange === '18岁以下' ? '' : (p.ageRange || ''))
-
-        const sanitizedRoles = (Array.isArray(p.roles) ? p.roles : (p.role ? [p.role] : []))
-          .filter((role) => role !== '学生')
+        const sanitizedRoles = (Array.isArray(p.roles) ? p.roles : (p.role ? [p.role] : [])).filter((role) => role !== '学生')
         setRoles(sanitizedRoles)
-
         setProvince(p.province || '')
         setCity(p.city || '')
         setWechatId(p.wechatId || '')
         setAllowIncomingRequests(p.allowIncomingRequests !== false)
         setIsVisibleOnMap(p.isVisibleOnMap !== false)
         setChildAgeRange(CHILD_AGE_OPTIONS.includes(p.childAgeRange || '') ? (p.childAgeRange || '') : '')
-        setChildDropoutStatus(
-          CHILD_STATUS_OPTIONS.includes(p.childDropoutStatus || '') ? (p.childDropoutStatus || '') : ''
-        )
+        setChildDropoutStatus(CHILD_STATUS_OPTIONS.includes(p.childDropoutStatus || '') ? (p.childDropoutStatus || '') : '')
         setChildInterests(p.childInterests || '')
         setEduServices(p.eduServices || '')
         setBio(p.bio || '')
@@ -236,10 +199,12 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (!displayName.trim()) {
-      Taro.showToast({ title: '请填写显示名', icon: 'none' }); return
+      Taro.showToast({ title: '请填写显示名', icon: 'none' })
+      return
     }
     if (!province || !city) {
-      Taro.showToast({ title: '请选择所在城市', icon: 'none' }); return
+      Taro.showToast({ title: '请选择所在城市', icon: 'none' })
+      return
     }
     try {
       setSaving(true)
@@ -274,20 +239,42 @@ export default function ProfilePage() {
       } else {
         Taro.showToast({ title: r?.message || '保存失败', icon: 'none' })
       }
-    } catch (err: any) {
+    } catch (err) {
       Taro.showToast({ title: '保存失败', icon: 'none' })
     } finally {
       setSaving(false)
     }
   }
 
+  const handleUpdatePrivacySetting = async (field: 'allowIncomingRequests' | 'isVisibleOnMap', value: boolean) => {
+    try {
+      setPrivacySaving(true)
+      if (field === 'allowIncomingRequests') setAllowIncomingRequests(value)
+      if (field === 'isVisibleOnMap') setIsVisibleOnMap(value)
+
+      const res: any = await Taro.cloud.callFunction({
+        name: 'updatePrivacySettings',
+        data: { [field]: value },
+      })
+      const result = res.result
+      if (result?.ok) {
+        Taro.showToast({ title: '设置已更新', icon: 'success' })
+      } else {
+        await loadProfile()
+        Taro.showToast({ title: result?.message || '更新失败', icon: 'none' })
+      }
+    } catch (err) {
+      await loadProfile()
+      Taro.showToast({ title: '更新失败，请稍后重试', icon: 'none' })
+    } finally {
+      setPrivacySaving(false)
+    }
+  }
+
   const handleRespond = async (requestId: string, action: 'accept' | 'reject') => {
     try {
       Taro.showLoading({ title: action === 'accept' ? '同意中...' : '处理中...' })
-      const res: any = await Taro.cloud.callFunction({
-        name: 'respondRequest',
-        data: { requestId, action },
-      })
+      const res: any = await Taro.cloud.callFunction({ name: 'respondRequest', data: { requestId, action } })
       Taro.hideLoading()
       const r = res.result
       Taro.showToast({ title: r?.message || '已处理', icon: r?.ok ? 'success' : 'none' })
@@ -309,6 +296,14 @@ export default function ProfilePage() {
   }
 
   const handleRemoveConnection = async (connectionId: string) => {
+    const confirm = await Taro.showModal({
+      title: '删除连接',
+      content: '删除后你们将不再是已建立联络状态，需要重新发起请求。',
+      confirmText: '确认删除',
+      cancelText: '取消',
+    })
+    if (!confirm.confirm) return
+
     try {
       const res: any = await Taro.cloud.callFunction({ name: 'manageConnection', data: { connectionId, action: 'remove_connection' } })
       Taro.showToast({ title: res.result?.message || '已删除', icon: res.result?.ok ? 'success' : 'none' })
@@ -319,6 +314,16 @@ export default function ProfilePage() {
   }
 
   const handleSafetyAction = async (targetUserId: string, action: 'block' | 'unblock' | 'mute' | 'unmute') => {
+    if (action === 'block') {
+      const confirm = await Taro.showModal({
+        title: '确认拉黑',
+        content: '拉黑后，你将看不到对方，且当前待处理或已建立的联络都会断开。此操作不会自动恢复旧连接。',
+        confirmText: '确认拉黑',
+        cancelText: '取消',
+      })
+      if (!confirm.confirm) return
+    }
+
     try {
       const res: any = await Taro.cloud.callFunction({ name: 'manageSafetyRelation', data: { targetUserId, action } })
       Taro.showToast({ title: res.result?.message || '已更新', icon: res.result?.ok ? 'success' : 'none' })
@@ -350,6 +355,7 @@ export default function ProfilePage() {
     setProvince(newProv)
     setCity(cities[cityIdx] || '')
   }
+
   const handlePickerColumnChange = (e: any) => {
     if (e.detail.column === 0) {
       const newProv = PROVINCES[e.detail.value] || ''
@@ -391,9 +397,7 @@ export default function ProfilePage() {
         <View onClick={openAdminReviewPage} style={{ backgroundColor: '#FFF3E6', borderRadius: '18px', padding: '14px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
           <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.accentDeep }}>管理员入口</Text>
           <View style={{ marginTop: '6px' }}>
-            <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-              进入活动审核台，查看 event_submissions、复制建议 payload，并在发布后回写审核状态。
-            </Text>
+            <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>进入活动审核台，查看 event_submissions、复制建议 payload，并在发布后回写审核状态。</Text>
           </View>
           <View style={{ marginTop: '10px' }}>
             <Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>打开活动审核台 →</Text>
@@ -412,7 +416,7 @@ export default function ProfilePage() {
               <Text style={{ fontSize: '12px', color: palette.subtext }}>打开后，其他用户将无法再向你发起新的联络请求。</Text>
             </View>
           </View>
-          <Switch checked={!allowIncomingRequests} color={palette.accentDeep} onChange={(e) => setAllowIncomingRequests(!e.detail.value)} />
+          <Switch checked={!allowIncomingRequests} disabled={privacySaving} color={palette.accentDeep} onChange={(e) => handleUpdatePrivacySetting('allowIncomingRequests', !e.detail.value)} />
         </View>
         <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', marginBottom: '12px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1, paddingRight: '12px' }}>
@@ -421,7 +425,7 @@ export default function ProfilePage() {
               <Text style={{ fontSize: '12px', color: palette.subtext }}>关闭后，你的名字和简介不会再出现在探索地图上。</Text>
             </View>
           </View>
-          <Switch checked={isVisibleOnMap} color={palette.accentDeep} onChange={(e) => setIsVisibleOnMap(!!e.detail.value)} />
+          <Switch checked={isVisibleOnMap} disabled={privacySaving} color={palette.accentDeep} onChange={(e) => handleUpdatePrivacySetting('isVisibleOnMap', !!e.detail.value)} />
         </View>
         {(blockedUsers.length > 0 || mutedUsers.length > 0) && (
           <View>
@@ -549,9 +553,7 @@ export default function ProfilePage() {
       </View>
 
       <View style={{ backgroundColor: '#FFFDF9', borderRadius: '16px', padding: '12px 14px', marginBottom: '12px', border: `1px dashed ${palette.line}` }}>
-        <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
-          🔒 你的显示名、身份、城市和简介会在地图上公开展示。微信号、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。
-        </Text>
+        <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>🔒 你的显示名、身份、城市和简介会在地图上公开展示。微信号、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。</Text>
       </View>
 
       <View style={{ marginBottom: '20px', alignItems: 'center' }}>
