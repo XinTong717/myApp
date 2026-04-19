@@ -5,7 +5,20 @@ const db = cloud.database()
 
 const ALLOWED_ACTIONS = ['mark_published', 'reject', 'reset_pending']
 
+async function getActiveAdmin(openid) {
+  const res = await db.collection('admin_users')
+    .where({
+      openid,
+      isActive: true,
+    })
+    .limit(1)
+    .get()
+
+  return res.data[0] || null
+}
+
 exports.main = async (event) => {
+  const { OPENID } = cloud.getWXContext()
   const submissionId = String(event.submissionId || '').trim()
   const action = String(event.action || '').trim()
   const publishedEventIdRaw = event.publishedEventId
@@ -21,6 +34,11 @@ exports.main = async (event) => {
   }
 
   try {
+    const admin = await getActiveAdmin(OPENID)
+    if (!admin) {
+      return { ok: false, message: '无权限修改活动审核状态' }
+    }
+
     const docRes = await db.collection('event_submissions').doc(submissionId).get()
     const submission = docRes.data
 
@@ -40,7 +58,7 @@ exports.main = async (event) => {
           publishedEventId,
           publishedAt: db.serverDate(),
           reviewedAt: db.serverDate(),
-          reviewedBy: reviewedBy || 'admin',
+          reviewedBy: reviewedBy || admin.name || 'admin',
           adminNote: adminNote || '已发布到 events',
           updatedAt: db.serverDate(),
         },
@@ -59,7 +77,7 @@ exports.main = async (event) => {
         data: {
           status: 'rejected',
           reviewedAt: db.serverDate(),
-          reviewedBy: reviewedBy || 'admin',
+          reviewedBy: reviewedBy || admin.name || 'admin',
           adminNote: adminNote || '未通过审核',
           updatedAt: db.serverDate(),
         },
@@ -78,7 +96,7 @@ exports.main = async (event) => {
         publishedEventId: db.command.remove(),
         publishedAt: db.command.remove(),
         reviewedAt: db.serverDate(),
-        reviewedBy: reviewedBy || 'admin',
+        reviewedBy: reviewedBy || admin.name || 'admin',
         adminNote: adminNote || '已重置为待审核',
         updatedAt: db.serverDate(),
       },
