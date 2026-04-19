@@ -103,7 +103,7 @@ type MarkerItem = {
 
 function parseCities(f?: string): string[] {
   if (!f) return []
-  return f.split(',').map((s) => s.trim()).filter((s) => s && !s.startsWith('(') && !s.startsWith('\uff08'))
+  return f.split(',').map((s) => s.trim()).filter((s) => s && !s.startsWith('(') && !s.startsWith('（'))
 }
 function firstProvince(f?: string): string {
   if (!f) return ''
@@ -185,7 +185,7 @@ export default function ExplorePage() {
       })
       schools.forEach((s) => {
         const cities = parseCities(s.city)
-        const schoolName = s.name?.trim() || '未知学校'
+        const schoolName = s.name?.trim() || '未知学习社区'
         if (cities.length > 0) {
           cities.forEach((cityName) => {
             const info = CITIES[cityName]
@@ -250,7 +250,7 @@ export default function ExplorePage() {
     return filteredMarkers.map((item) => {
       const calloutContent = item.type === 'school'
         ? shortName(item.name)
-        : (item.name + (item.city ? ' \u00b7 ' + item.city : ''))
+        : (item.name + (item.city ? ' · ' + item.city : ''))
       return {
         id: item.id,
         latitude: item.latitude,
@@ -372,8 +372,7 @@ export default function ExplorePage() {
             backgroundColor: '#FFF', padding: '12px 14px',
             borderBottom: '1px solid #F1DFCF',
             display: 'flex', flexDirection: 'row', alignItems: 'center',
-          }}
-        >
+          }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>
               填写资料，出现在地图上
@@ -395,7 +394,7 @@ export default function ExplorePage() {
             backgroundColor: showSchools ? '#FCE6D6' : '#F5F5F5',
           }}>
             <Text style={{ fontSize: '12px', fontWeight: 'bold', color: showSchools ? '#E76F51' : '#BBB' }}>
-              学习社区 {showSchools ? schoolCount : '\u2014'}
+              学习社区 {showSchools ? schoolCount : '—'}
             </Text>
           </View>
           <View onClick={() => setShowUsers(!showUsers)} style={{
@@ -403,7 +402,7 @@ export default function ExplorePage() {
             backgroundColor: showUsers ? '#EEF7EE' : '#F5F5F5',
           }}>
             <Text style={{ fontSize: '12px', fontWeight: 'bold', color: showUsers ? '#7BAE7F' : '#BBB' }}>
-              同路人 {showUsers ? userCount : '\u2014'}
+              同路人 {showUsers ? userCount : '—'}
             </Text>
           </View>
           <View style={{ flex: 1 }} />
