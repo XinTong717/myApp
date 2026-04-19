@@ -49,11 +49,11 @@ const LOCATION_DATA: Record<string, string[]> = {
 }
 const PROVINCES = Object.keys(LOCATION_DATA)
 const GENDER_OPTIONS = ['男', '女', '其他', '不想说']
-const AGE_RANGE_OPTIONS = ['18岁以下', '18-25', '26-35', '36-45', '46-55', '55以上']
-const ROLE_OPTIONS = ['学生', '家长', '教育者', '其他']
+const AGE_RANGE_OPTIONS = ['18-25', '26-35', '36-45', '46-55', '55以上']
+const ROLE_OPTIONS = ['家长', '教育者', '其他']
 const CHILD_GENDER_OPTIONS = ['男', '女', '其他']
 const CHILD_AGE_OPTIONS = ['3-6岁', '7-9岁', '10-12岁', '13-15岁', '16-18岁']
-const CHILD_STATUS_OPTIONS = ['在读公立', '在读私立', '在读创新学校', '休学中', 'Gap year', '自学/在家教育', '其他']
+const CHILD_STATUS_OPTIONS = ['在读公立', '在读民办', '在读多元学习社区', '暂未在校', '自主安排学习', '其他']
 
 function SectionTitle(props: { text: string }) {
   return (
@@ -164,14 +164,20 @@ export default function ProfilePage() {
       if (p) {
         setDisplayName(p.displayName || '')
         setGender(p.gender || '')
-        setAgeRange(p.ageRange || '')
-        setRoles(Array.isArray(p.roles) ? p.roles : (p.role ? [p.role] : []))
+        setAgeRange(p.ageRange === '18岁以下' ? '' : (p.ageRange || ''))
+
+        const sanitizedRoles = (Array.isArray(p.roles) ? p.roles : (p.role ? [p.role] : []))
+          .filter((role) => role !== '学生')
+        setRoles(sanitizedRoles)
+
         setProvince(p.province || '')
         setCity(p.city || '')
         setWechatId(p.wechatId || '')
         setChildGender(p.childGender || '')
         setChildAgeRange(p.childAgeRange || '')
-        setChildDropoutStatus(p.childDropoutStatus || '')
+        setChildDropoutStatus(
+          CHILD_STATUS_OPTIONS.includes(p.childDropoutStatus || '') ? (p.childDropoutStatus || '') : ''
+        )
         setChildInterests(p.childInterests || '')
         setEduServices(p.eduServices || '')
         setBio(p.bio || '')
@@ -213,14 +219,23 @@ export default function ProfilePage() {
     }
     try {
       setSaving(true)
+      const normalizedRoles = roles.filter((role) => role !== '学生')
+      const normalizedAgeRange = ageRange === '18岁以下' ? '' : ageRange
+      const normalizedChildStatus = CHILD_STATUS_OPTIONS.includes(childDropoutStatus) ? childDropoutStatus : ''
+
       const res: any = await Taro.cloud.callFunction({
         name: 'saveProfile',
         data: {
-          displayName: displayName.trim(), gender, ageRange, roles, province, city,
+          displayName: displayName.trim(),
+          gender,
+          ageRange: normalizedAgeRange,
+          roles: normalizedRoles,
+          province,
+          city,
           wechatId: wechatId.trim(),
           childGender: isParent ? childGender : '',
           childAgeRange: isParent ? childAgeRange : '',
-          childDropoutStatus: isParent ? childDropoutStatus : '',
+          childDropoutStatus: isParent ? normalizedChildStatus : '',
           childInterests: isParent ? childInterests.trim() : '',
           eduServices: isEducator ? eduServices.trim() : '',
           bio: bio.trim(),
@@ -348,9 +363,9 @@ export default function ProfilePage() {
             display: 'flex', flexDirection: 'row', alignItems: 'center',
           }}>
             <Text style={{ fontSize: '14px', flex: 1, color: province ? palette.text : '#C5B5A5' }}>
-              {province && city ? `${province} \u00b7 ${city}` : '点击选择省份和城市'}
+              {province && city ? `${province} · ${city}` : '点击选择省份和城市'}
             </Text>
-            <Text style={{ fontSize: '12px', color: palette.subtext }}>\u25bc</Text>
+            <Text style={{ fontSize: '12px', color: palette.subtext }}>▼</Text>
           </View>
         </Picker>
 
@@ -560,8 +575,7 @@ export default function ProfilePage() {
                   style={{
                     marginTop: '8px', backgroundColor: palette.greenSoft, borderRadius: '12px',
                     padding: '8px 12px', display: 'flex', flexDirection: 'row', alignItems: 'center',
-                  }}
-                >
+                  }}>
                   <Text style={{ fontSize: '13px', color: palette.green, flex: 1 }}>
                     微信: {conn.otherWechat}
                   </Text>
