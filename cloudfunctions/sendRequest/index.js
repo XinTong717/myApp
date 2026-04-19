@@ -41,6 +41,27 @@ exports.main = async (event, context) => {
     return { ok: false, message: '不能给自己发联络请求哦' }
   }
 
+  if (target.allowIncomingRequests === false) {
+    return { ok: false, message: '对方当前暂停接收联络' }
+  }
+
+  // 拉黑检查：我拉黑了TA / TA拉黑了我
+  const mySafetyRes = await db.collection('safety_relations')
+    .where({ ownerOpenid: myOpenid, targetOpenid: target.openid, isBlocked: true })
+    .limit(1)
+    .get()
+  if (mySafetyRes.data.length > 0) {
+    return { ok: false, message: '你已拉黑该用户，需先解除拉黑' }
+  }
+
+  const targetSafetyRes = await db.collection('safety_relations')
+    .where({ ownerOpenid: target.openid, targetOpenid: myOpenid, isBlocked: true })
+    .limit(1)
+    .get()
+  if (targetSafetyRes.data.length > 0) {
+    return { ok: false, message: '当前无法向该用户发起联络' }
+  }
+
   // 检查是否已经有 pending 或 accepted 的请求（双向检查）
   const existCheck1 = await db.collection('connections')
     .where({ fromOpenid: myOpenid, toOpenid: target.openid, status: 'pending' })
@@ -66,16 +87,19 @@ exports.main = async (event, context) => {
   await db.collection('connections').add({
     data: {
       fromOpenid: myOpenid,
+      fromUserId: me._id,
       fromName: me.displayName || '',
       fromCity: me.city || '',
       fromRoles: me.roles || [],
       fromBio: me.bio || '',
       toOpenid: target.openid,
+      toUserId: target._id,
       toName: target.displayName || '',
       toCity: target.city || '',
       toRoles: target.roles || [],
       status: 'pending',
       createdAt: new Date(),
+      updatedAt: new Date(),
     },
   })
 
