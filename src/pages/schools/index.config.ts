@@ -1,4 +1,4 @@
 export default {
-    navigationBarTitleText: '学校',
-    enablePullDownRefresh: true,
-  }
+  navigationBarTitleText: '学习社区',
+  enablePullDownRefresh: true,
+}
