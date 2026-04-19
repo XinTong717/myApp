@@ -17,7 +17,11 @@ const ALLOWED_FIELDS = [
   'childInterests',
   'eduServices',
   'bio',
+  'allowIncomingRequests',
+  'isVisibleOnMap',
 ]
+
+const BOOLEAN_FIELDS = ['allowIncomingRequests', 'isVisibleOnMap']
 
 async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
@@ -56,6 +60,8 @@ exports.main = async (event, context) => {
       const val = event[key]
       if (Array.isArray(val)) {
         cleanData[key] = val.map((v) => String(v).trim()).filter(Boolean)
+      } else if (BOOLEAN_FIELDS.includes(key)) {
+        cleanData[key] = !!val
       } else {
         cleanData[key] = String(val).trim()
       }
@@ -103,15 +109,21 @@ exports.main = async (event, context) => {
     .limit(1)
     .get()
 
+  const dataToSave = {
+    allowIncomingRequests: cleanData.allowIncomingRequests !== false,
+    isVisibleOnMap: cleanData.isVisibleOnMap !== false,
+    ...cleanData,
+  }
+
   if (existing.data.length > 0) {
     await db.collection('users').doc(existing.data[0]._id).update({
-      data: cleanData,
+      data: dataToSave,
     })
     return { ok: true, mode: 'update', openid }
   }
 
   await db.collection('users').add({
-    data: { ...cleanData, openid: openid, createdAt: new Date() },
+    data: { ...dataToSave, openid: openid, createdAt: new Date() },
   })
   return { ok: true, mode: 'create', openid }
 }
