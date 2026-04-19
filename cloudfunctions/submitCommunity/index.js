@@ -3,6 +3,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
+const DAILY_SUBMISSION_LIMIT = 5
 
 const ALLOWED_FIELDS = [
   'name',
@@ -17,7 +18,7 @@ const ALLOWED_FIELDS = [
   'recommendationNote',
 ]
 
-async function runMsgSecCheck(content) {
+async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
   if (!normalized) {
     return { ok: true }
@@ -26,6 +27,9 @@ async function runMsgSecCheck(content) {
   try {
     const res = await cloud.openapi.security.msgSecCheck({
       content: normalized.slice(0, 2500),
+      version: 2,
+      scene: 2,
+      openid,
     })
     const errCode = res?.errCode ?? res?.errcode ?? 0
     if (errCode === 0) {
@@ -73,10 +77,22 @@ exports.main = async (event, context) => {
     cleanData.feeNote,
     cleanData.sourceNote,
     cleanData.recommendationNote,
-  ].filter(Boolean).join('\n'))
+  ].filter(Boolean).join('\n'), OPENID)
 
   if (!securityResult.ok) {
     return securityResult
+  }
+
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const recentCountRes = await db.collection('community_submissions')
+    .where({
+      openid: OPENID,
+      createdAt: _.gte(since),
+    })
+    .count()
+
+  if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) {
+    return { ok: false, message: '24小时内最多可提交5次推荐，请稍后再试' }
   }
 
   const normalizedKey = buildNormalizedKey(cleanData.name, cleanData.province, cleanData.city)
