@@ -31,7 +31,7 @@ exports.main = async (event) => {
     await db.collection('users').doc(res.data[0]._id).update({
       data: {
         ...updates,
-        updatedAt: new Date(),
+        updatedAt: db.serverDate(),
       },
     })
 
