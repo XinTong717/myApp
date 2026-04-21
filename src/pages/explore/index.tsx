@@ -186,13 +186,21 @@ export default function ExplorePage() {
     return allMarkers.filter((m) => m.markerProv === selectedProvince)
   }, [allMarkers, selectedProvince])
 
+  const validMarkers = useMemo(() => {
+    return filteredMarkers.filter(
+      (m) =>
+        Number.isFinite(m.latitude) &&
+        Number.isFinite(m.longitude)
+    )
+  }, [filteredMarkers])
+
   const availableProvinces = useMemo(() => {
     const set = new Set<string>()
     allMarkers.forEach((m) => { if (m.markerProv) set.add(m.markerProv) })
     return Array.from(set).sort()
   }, [allMarkers])
 
-  const mapMarkers: any[] = useMemo(() => filteredMarkers.map((item) => {
+  const mapMarkers: any[] = useMemo(() => validMarkers.map((item) => {
     const calloutContent = item.type === 'school' ? shortName(item.name) : (item.name + (item.city ? ' · ' + item.city : ''))
     return {
       id: item.id,
@@ -218,17 +226,23 @@ export default function ExplorePage() {
         textAlign: 'center',
       },
     }
-  }), [filteredMarkers])
+  }), [validMarkers])
 
   const { center, scale } = useMemo(() => {
-    if (filteredMarkers.length === 0) {
+    if (validMarkers.length === 0) {
       return { center: { latitude: 33.0, longitude: 108.0 }, scale: 5 }
     }
-    const lats = filteredMarkers.map((m) => m.latitude)
-    const lngs = filteredMarkers.map((m) => m.longitude)
-    const minLat = Math.min(...lats), maxLat = Math.max(...lats)
-    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs)
+
+    const lats = validMarkers.map((m) => m.latitude)
+    const lngs = validMarkers.map((m) => m.longitude)
+
+    const minLat = Math.min(...lats)
+    const maxLat = Math.max(...lats)
+    const minLng = Math.min(...lngs)
+    const maxLng = Math.max(...lngs)
+
     const span = Math.max(maxLat - minLat, maxLng - minLng)
+
     let s: number
     if (span < 0.2) s = 13
     else if (span < 0.5) s = 11
@@ -236,14 +250,21 @@ export default function ExplorePage() {
     else if (span < 4) s = 7
     else if (span < 10) s = 6
     else s = 5
-    return { center: { latitude: (minLat + minLat + (maxLat - minLat)) / 2, longitude: (minLng + minLng + (maxLng - minLng)) / 2 }, scale: s }
-  }, [filteredMarkers])
+
+    return {
+      center: {
+        latitude: (minLat + maxLat) / 2,
+        longitude: (minLng + maxLng) / 2,
+      },
+      scale: s,
+    }
+  }, [validMarkers])
 
   const idToMarker = useMemo(() => {
     const m: Record<number, MarkerItem> = {}
-    filteredMarkers.forEach((item) => { m[item.id] = item })
+    validMarkers.forEach((item) => { m[item.id] = item })
     return m
-  }, [filteredMarkers])
+  }, [validMarkers])
 
   const closePopup = () => setSelectedUser(null)
 
@@ -349,7 +370,7 @@ export default function ExplorePage() {
             <View onClick={() => { setShowEducators((value) => !value); closePopup() }} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showEducators ? '#FFF3E6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showEducators ? '#E76F51' : '#BBB' }}>教育者</Text></View>
           )}
           <View style={{ flex: 1 }} />
-          <Text style={{ fontSize: '11px', color: '#B5A08E', marginBottom: '6px' }}>{filteredMarkers.length} 个点位</Text>
+          <Text style={{ fontSize: '11px', color: '#B5A08E', marginBottom: '6px' }}>{validMarkers.length} 个点位</Text>
         </View>
 
         {availableProvinces.length > 0 && (
@@ -373,10 +394,10 @@ export default function ExplorePage() {
           </View>
         </View>
       )}
-      {!loading && !error && filteredMarkers.length === 0 && (
+      {!loading && !error && validMarkers.length === 0 && (
         <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>{selectedProvince ? selectedProvince + '暂无数据' : '暂无点位'}</Text></View></View>
       )}
-      {!loading && !error && filteredMarkers.length > 0 && (
+      {!loading && !error && validMarkers.length > 0 && (
         <TaroMap latitude={center.latitude} longitude={center.longitude} scale={scale} minScale={3} maxScale={18} markers={mapMarkers} showScale={false} enableRotate={false} enableOverlooking={false} onMarkerTap={handleMarkerTap} onCalloutTap={handleCalloutTap} onError={() => {}} style={{ width: '100%', height: 'calc(100vh - 120px)' }} />
       )}
 
