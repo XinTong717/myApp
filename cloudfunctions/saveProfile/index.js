@@ -17,11 +17,19 @@ const ALLOWED_FIELDS = [
   'childInterests',
   'eduServices',
   'bio',
+  'companionContext',
   'allowIncomingRequests',
   'isVisibleOnMap',
 ]
 
 const BOOLEAN_FIELDS = ['allowIncomingRequests', 'isVisibleOnMap']
+
+function normalizeRoles(roles) {
+  return (Array.isArray(roles) ? roles : [])
+    .map((role) => String(role).trim())
+    .filter(Boolean)
+    .map((role) => role === '其他' ? '同行者' : role)
+}
 
 async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
@@ -50,7 +58,7 @@ async function runMsgSecCheck(content, openid) {
   }
 }
 
-exports.main = async (event, context) => {
+exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
@@ -68,8 +76,14 @@ exports.main = async (event, context) => {
     }
   }
 
+  cleanData.roles = normalizeRoles(cleanData.roles)
+
   if (!cleanData.displayName) {
     return { ok: false, message: '显示名不能为空' }
+  }
+
+  if (!cleanData.province || !cleanData.city) {
+    return { ok: false, message: '请选择所在城市' }
   }
 
   if (cleanData.ageRange === '18岁以下') {
@@ -78,7 +92,11 @@ exports.main = async (event, context) => {
 
   const selectedRoles = Array.isArray(cleanData.roles) ? cleanData.roles : []
   if (selectedRoles.includes('学生')) {
-    return { ok: false, message: '当前仅开放家长、教育者及其他成年用户' }
+    return { ok: false, message: '当前仅开放家长、教育者及同行者等成年用户' }
+  }
+
+  if (!selectedRoles.includes('同行者')) {
+    cleanData.companionContext = ''
   }
 
   const securityResult = await runMsgSecCheck([
@@ -86,6 +104,7 @@ exports.main = async (event, context) => {
     cleanData.bio,
     cleanData.childInterests,
     cleanData.eduServices,
+    cleanData.companionContext,
   ].filter(Boolean).join('\n'), openid)
 
   if (!securityResult.ok) {
@@ -105,7 +124,7 @@ exports.main = async (event, context) => {
   }
 
   const existing = await db.collection('users')
-    .where({ openid: openid })
+    .where({ openid })
     .limit(1)
     .get()
 
@@ -123,7 +142,7 @@ exports.main = async (event, context) => {
   }
 
   await db.collection('users').add({
-    data: { ...dataToSave, openid: openid, createdAt: new Date() },
+    data: { ...dataToSave, openid, createdAt: new Date() },
   })
   return { ok: true, mode: 'create', openid }
 }
