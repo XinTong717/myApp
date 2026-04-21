@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { View, Text, Input, Textarea, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
+import { checkAdminAccess } from '../../../services/profile'
+import { listEventSubmissions, getEventPublishPayload, reviewEventSubmission } from '../../../services/admin'
 
 const palette = {
   bg: '#FFF9F2',
@@ -89,11 +91,7 @@ export default function AdminEventReviewsPage() {
   const loadSubmissions = async (status = statusFilter) => {
     try {
       setError('')
-      const res: any = await Taro.cloud.callFunction({
-        name: 'listEventSubmissions',
-        data: { status, limit: 50 },
-      })
-      const result = res.result
+      const result = await listEventSubmissions(status, 50)
       if (result?.ok) {
         const nextList = result.submissions || []
         setSubmissions(nextList)
@@ -120,8 +118,7 @@ export default function AdminEventReviewsPage() {
     try {
       setChecking(true)
       setError('')
-      const res: any = await Taro.cloud.callFunction({ name: 'checkAdminAccess', data: {} })
-      const result = res.result
+      const result = await checkAdminAccess()
       if (result?.ok && result?.isAdmin) {
         setIsAdmin(true)
         setAdminName(result.admin?.name || 'admin')
@@ -144,11 +141,7 @@ export default function AdminEventReviewsPage() {
     try {
       setDetailLoading(true)
       setError('')
-      const res: any = await Taro.cloud.callFunction({
-        name: 'getEventPublishPayload',
-        data: { submissionId },
-      })
-      const result = res.result
+      const result = await getEventPublishPayload(submissionId)
       if (result?.ok) {
         setPayloadResponse({
           suggestedEventPayload: result.suggestedEventPayload || {},
@@ -181,17 +174,13 @@ export default function AdminEventReviewsPage() {
 
     try {
       setReviewLoading(true)
-      const res: any = await Taro.cloud.callFunction({
-        name: 'reviewEventSubmission',
-        data: {
-          submissionId: selectedSubmission._id,
-          action,
-          publishedEventId: publishedEventId.trim(),
-          reviewedBy: adminName,
-          adminNote: adminNote.trim(),
-        },
+      const result = await reviewEventSubmission({
+        submissionId: selectedSubmission._id,
+        action,
+        publishedEventId: publishedEventId.trim(),
+        reviewedBy: adminName,
+        adminNote: adminNote.trim(),
       })
-      const result = res.result
       if (result?.ok) {
         Taro.showToast({ title: result.message || '已更新', icon: 'success' })
         await loadSubmissions(statusFilter)
