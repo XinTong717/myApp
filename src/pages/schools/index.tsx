@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { View, Text, Input } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
-import { fetchSchools } from '../../services/api'
+import { getSchools } from '../../services/school'
 
 const palette = {
   bg: '#FFF9F2',
@@ -38,8 +38,8 @@ export default function SchoolsPage() {
     try {
       setLoading(true)
       setError('')
-      const data = await fetchSchools()
-      setSchools(Array.isArray(data) ? data : [])
+      const result = await getSchools()
+      setSchools(result?.ok && Array.isArray(result.schools) ? result.schools : [])
     } catch (err: any) {
       console.error('loadSchools error:', err)
       setError(err?.message || '读取学习社区数据失败')
