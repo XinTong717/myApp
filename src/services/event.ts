@@ -1,29 +1,36 @@
 import { callCloud } from './cloud'
+import type {
+  CloudResponse,
+  ContactInfoResult,
+  EventInterestInfoResult,
+  EventItem,
+  ToggleEventInterestResult,
+} from '../types/domain'
 
 export async function getEvents() {
-    return callCloud<{ ok: boolean; events?: any[]; message?: string }>('getEvents')
-  }
-  
-  export async function getEventDetail(eventId: number) {
-    return callCloud<{ ok: boolean; event?: any; message?: string }>('getEventDetail', { eventId })
-  }
+  return callCloud<{ events?: EventItem[] }>('getEvents')
+}
+
+export async function getEventDetail(eventId: number) {
+  return callCloud<{ event?: EventItem | null }>('getEventDetail', { eventId })
+}
 
 export async function getEventInterestCountsBatch(eventIds: number[]) {
-  return callCloud<any>('getEventInterestCountsBatch', { eventIds })
+  return callCloud<{ counts?: Record<number, number> }>('getEventInterestCountsBatch', { eventIds })
 }
 
 export async function getEventInterestInfo(eventId: number) {
-  return callCloud<any>('getEventInterestInfo', { eventId })
+  return callCloud<EventInterestInfoResult>('getEventInterestInfo', { eventId })
 }
 
 export async function toggleEventInterest(eventId: number) {
-  return callCloud<any>('toggleEventInterest', { eventId })
+  return callCloud<ToggleEventInterestResult>('toggleEventInterest', { eventId })
 }
 
 export async function getEventContactInfo(eventId: number) {
-  return callCloud<any>('getEventContactInfo', { eventId })
+  return callCloud<ContactInfoResult>('getEventContactInfo', { eventId })
 }
 
-export async function submitEvent(data: Record<string, any>) {
-  return callCloud<any>('submitEvent', data)
+export async function submitEvent(data: Record<string, unknown>) {
+  return callCloud<CloudResponse>('submitEvent', data)
 }
