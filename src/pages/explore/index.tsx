@@ -41,7 +41,7 @@ type AppUser = { _id: string; displayName?: string; roles?: string[]; province?:
 type MarkerItem = {
   id: number; latitude: number; longitude: number; name: string
   type: 'school' | 'user'; markerProv: string; city?: string
-  originalId: number | string; bio?: string; roles?: string[]; companionContext?: string
+  originalId: number | string; bio?: string; roles?: string[]; companionContext?: string; isSelf?: boolean
 }
 
 function parseCities(f?: string): string[] {
@@ -95,6 +95,7 @@ export default function ExplorePage() {
   const [showEducators, setShowEducators] = useState(false)
   const [selectedProvince, setSelectedProvince] = useState('')
   const [hasProfile, setHasProfile] = useState(true)
+  const [selectedUser, setSelectedUser] = useState<MarkerItem | null>(null)
 
   const loadData = async () => {
     try {
@@ -173,6 +174,7 @@ export default function ExplorePage() {
           bio: u.bio,
           roles: normalizeRoles(u.roles || []),
           companionContext: u.companionContext || '',
+          isSelf: !!u.isSelf,
         })
       })
     }
@@ -234,7 +236,7 @@ export default function ExplorePage() {
     else if (span < 4) s = 7
     else if (span < 10) s = 6
     else s = 5
-    return { center: { latitude: (minLat + maxLat) / 2, longitude: (minLng + maxLng) / 2 }, scale: s }
+    return { center: { latitude: (minLat + minLat + (maxLat - minLat)) / 2, longitude: (minLng + minLng + (maxLng - minLng)) / 2 }, scale: s }
   }, [filteredMarkers])
 
   const idToMarker = useMemo(() => {
@@ -243,12 +245,15 @@ export default function ExplorePage() {
     return m
   }, [filteredMarkers])
 
+  const closePopup = () => setSelectedUser(null)
+
   const handleReportUser = async (targetUserId: string) => {
     try {
       const reasonRes = await Taro.showActionSheet({ itemList: REPORT_REASON_OPTIONS })
       const reason = REPORT_REASON_OPTIONS[reasonRes.tapIndex] || '其他'
       const res: any = await Taro.cloud.callFunction({ name: 'reportUser', data: { targetUserId, reason } })
       Taro.showToast({ title: res.result?.message || '举报已提交', icon: res.result?.ok ? 'success' : 'none' })
+      closePopup()
     } catch (err: any) {
       if (err?.errMsg?.includes('cancel')) return
       Taro.showToast({ title: '举报失败', icon: 'none' })
@@ -267,7 +272,10 @@ export default function ExplorePage() {
     try {
       const res: any = await Taro.cloud.callFunction({ name: 'manageSafetyRelation', data: { targetUserId, action: 'block' } })
       Taro.showToast({ title: res.result?.message || '已拉黑', icon: res.result?.ok ? 'success' : 'none' })
-      if (res.result?.ok) loadData()
+      if (res.result?.ok) {
+        closePopup()
+        loadData()
+      }
     } catch (err) {
       Taro.showToast({ title: '操作失败', icon: 'none' })
     }
@@ -280,26 +288,10 @@ export default function ExplorePage() {
       Taro.hideLoading()
       const r = res.result
       Taro.showToast({ title: r?.ok ? '请求已发送' : (r?.message || '发送失败'), icon: r?.ok ? 'success' : 'none' })
+      if (r?.ok) closePopup()
     } catch (err) {
       Taro.hideLoading()
       Taro.showToast({ title: '发送失败，请稍后重试', icon: 'none' })
-    }
-  }
-
-  const openUserActionSheet = async (item: MarkerItem) => {
-    try {
-      const sheetRes = await Taro.showActionSheet({ itemList: ['举报TA', '拉黑TA'] })
-      const idx = sheetRes.tapIndex
-      if (idx === 0) {
-        await handleReportUser(String(item.originalId))
-        return
-      }
-      if (idx === 1) {
-        await handleBlockUser(String(item.originalId))
-      }
-    } catch (err: any) {
-      if (err?.errMsg?.includes('cancel')) return
-      Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
     }
   }
 
@@ -312,42 +304,22 @@ export default function ExplorePage() {
       return
     }
 
+    setSelectedUser(item)
+  }
+
+  const handlePrimaryAction = async () => {
+    if (!selectedUser) return
+    if (selectedUser.isSelf) {
+      goToProfile()
+      closePopup()
+      return
+    }
     if (!hasProfile) {
-      const res = await Taro.showModal({ title: '请先填写资料', content: '填写个人资料后才能发起联络请求', confirmText: '去填写', cancelText: '取消' })
-      if (res.confirm) goToProfile()
+      goToProfile()
+      closePopup()
       return
     }
-
-    const roleStr = item.roles && item.roles.length > 0 ? item.roles.join(' / ') : ''
-    const lines: string[] = []
-    if (item.city) lines.push('城市: ' + item.city)
-    if (roleStr) lines.push('身份: ' + roleStr)
-    if (item.companionContext) lines.push('关系: ' + item.companionContext)
-    if (item.bio) lines.push(item.bio)
-    if (lines.length === 0) lines.push('这位同路人还没有填写简介')
-
-    const result = await Taro.showModal({
-      title: item.name,
-      content: lines.join('\n'),
-      confirmText: '发起联络',
-      cancelText: '关闭',
-    })
-
-    if (result.confirm) {
-      await sendRequestToUser(String(item.originalId))
-      return
-    }
-
-    const moreRes = await Taro.showModal({
-      title: item.name,
-      content: '你可以举报或拉黑这个用户。',
-      confirmText: '更多操作',
-      cancelText: '关闭',
-    })
-
-    if (moreRes.confirm) {
-      await openUserActionSheet(item)
-    }
+    await sendRequestToUser(String(selectedUser.originalId))
   }
 
   const handleMarkerTap = (e: any) => handleTap(Number(e.detail?.markerId))
@@ -355,9 +327,10 @@ export default function ExplorePage() {
 
   const schoolCount = filteredMarkers.filter((m) => m.type === 'school').length
   const userCount = filteredMarkers.filter((m) => m.type === 'user').length
+  const popupRoleText = selectedUser?.roles?.join(' / ') || ''
 
   return (
-    <View style={{ minHeight: '100vh', backgroundColor: '#FFF9F2' }}>
+    <View style={{ minHeight: '100vh', backgroundColor: '#FFF9F2', position: 'relative' }}>
       {!loading && !hasProfile && (
         <View onClick={goToProfile} style={{ backgroundColor: '#FFF', padding: '12px 14px', borderBottom: '1px solid #F1DFCF', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
@@ -370,10 +343,10 @@ export default function ExplorePage() {
 
       <View style={{ backgroundColor: '#FFF', padding: '10px 14px 6px', borderBottom: '1px solid #F1DFCF' }}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
-          <View onClick={() => setShowSchools(!showSchools)} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showSchools ? '#FCE6D6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showSchools ? '#E76F51' : '#BBB' }}>学习社区 {showSchools ? schoolCount : '—'}</Text></View>
-          <View onClick={() => setShowUsers(!showUsers)} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showUsers ? '#EEF7EE' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showUsers ? '#7BAE7F' : '#BBB' }}>同路人 {showUsers ? userCount : '—'}</Text></View>
+          <View onClick={() => { setShowSchools(!showSchools); closePopup() }} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showSchools ? '#FCE6D6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showSchools ? '#E76F51' : '#BBB' }}>学习社区 {showSchools ? schoolCount : '—'}</Text></View>
+          <View onClick={() => { setShowUsers(!showUsers); closePopup() }} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showUsers ? '#EEF7EE' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showUsers ? '#7BAE7F' : '#BBB' }}>同路人 {showUsers ? userCount : '—'}</Text></View>
           {showUsers && (
-            <View onClick={() => setShowEducators((value) => !value)} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showEducators ? '#FFF3E6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showEducators ? '#E76F51' : '#BBB' }}>教育者</Text></View>
+            <View onClick={() => { setShowEducators((value) => !value); closePopup() }} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showEducators ? '#FFF3E6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showEducators ? '#E76F51' : '#BBB' }}>教育者</Text></View>
           )}
           <View style={{ flex: 1 }} />
           <Text style={{ fontSize: '11px', color: '#B5A08E', marginBottom: '6px' }}>{filteredMarkers.length} 个点位</Text>
@@ -382,9 +355,9 @@ export default function ExplorePage() {
         {availableProvinces.length > 0 && (
           <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: '26px' }}>
             <View style={{ display: 'inline-flex', flexDirection: 'row' }}>
-              <View onClick={() => setSelectedProvince('')} style={{ padding: '3px 10px', borderRadius: '999px', marginRight: '6px', backgroundColor: !selectedProvince ? '#E76F51' : '#FFF3E6' }}><Text style={{ fontSize: '11px', color: !selectedProvince ? '#FFF' : '#7A6756' }}>全国</Text></View>
+              <View onClick={() => { setSelectedProvince(''); closePopup() }} style={{ padding: '3px 10px', borderRadius: '999px', marginRight: '6px', backgroundColor: !selectedProvince ? '#E76F51' : '#FFF3E6' }}><Text style={{ fontSize: '11px', color: !selectedProvince ? '#FFF' : '#7A6756' }}>全国</Text></View>
               {availableProvinces.map((prov) => (
-                <View key={prov} onClick={() => setSelectedProvince(prov === selectedProvince ? '' : prov)} style={{ padding: '3px 10px', borderRadius: '999px', marginRight: '6px', backgroundColor: prov === selectedProvince ? '#E76F51' : '#FFF3E6' }}><Text style={{ fontSize: '11px', color: prov === selectedProvince ? '#FFF' : '#7A6756' }}>{prov}</Text></View>
+                <View key={prov} onClick={() => { setSelectedProvince(prov === selectedProvince ? '' : prov); closePopup() }} style={{ padding: '3px 10px', borderRadius: '999px', marginRight: '6px', backgroundColor: prov === selectedProvince ? '#E76F51' : '#FFF3E6' }}><Text style={{ fontSize: '11px', color: prov === selectedProvince ? '#FFF' : '#7A6756' }}>{prov}</Text></View>
               ))}
             </View>
           </ScrollView>
@@ -408,6 +381,70 @@ export default function ExplorePage() {
       )}
 
       <View style={{ backgroundColor: '#FFFDF9', padding: '5px 16px', borderTop: '1px solid #F1DFCF' }}><Text style={{ fontSize: '10px', color: '#C5B5A5' }}>近似坐标 · 仅供浏览 · 点击标记或名称查看详情</Text></View>
+
+      {selectedUser && (
+        <View onClick={closePopup} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: 'rgba(47,36,27,0.22)', display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
+          <View onClick={(e: any) => e?.stopPropagation?.()} style={{ width: '100%', backgroundColor: '#FFFDF9', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '18px 16px 24px', boxSizing: 'border-box', borderTop: '1px solid #F1DFCF', boxShadow: '0 -8px 24px rgba(47,36,27,0.08)' }}>
+            <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', marginBottom: '12px' }}>
+              <View style={{ flex: 1, paddingRight: '12px' }}>
+                <Text style={{ fontSize: '20px', fontWeight: 'bold', color: '#2F241B' }}>{selectedUser.name}</Text>
+                <View style={{ marginTop: '6px', display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
+                  {selectedUser.city ? <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6', marginRight: '8px', marginBottom: '8px' }}><Text style={{ fontSize: '12px', color: '#E76F51' }}>{selectedUser.city}</Text></View> : null}
+                  {popupRoleText ? <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: '#EEF7EE', marginRight: '8px', marginBottom: '8px' }}><Text style={{ fontSize: '12px', color: '#7BAE7F' }}>{popupRoleText}</Text></View> : null}
+                  {selectedUser.isSelf ? <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: '#F5F0EB', marginRight: '8px', marginBottom: '8px' }}><Text style={{ fontSize: '12px', color: '#7A6756' }}>这是你自己</Text></View> : null}
+                </View>
+              </View>
+              <View onClick={closePopup} style={{ width: '32px', height: '32px', borderRadius: '999px', backgroundColor: '#F5F0EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: '16px', color: '#7A6756' }}>✕</Text>
+              </View>
+            </View>
+
+            {(selectedUser.companionContext || selectedUser.bio) ? (
+              <View style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', padding: '14px 12px', border: '1px solid #F1DFCF', marginBottom: '14px' }}>
+                {selectedUser.companionContext ? (
+                  <View style={{ marginBottom: selectedUser.bio ? '10px' : '0' }}>
+                    <Text style={{ fontSize: '12px', color: '#E76F51', fontWeight: 'bold' }}>和这个生态的关系</Text>
+                    <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '14px', color: '#2F241B', lineHeight: '22px' }}>{selectedUser.companionContext}</Text></View>
+                  </View>
+                ) : null}
+                {selectedUser.bio ? (
+                  <View>
+                    <Text style={{ fontSize: '12px', color: '#E76F51', fontWeight: 'bold' }}>简介</Text>
+                    <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '14px', color: '#2F241B', lineHeight: '22px' }}>{selectedUser.bio}</Text></View>
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <View style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', padding: '14px 12px', border: '1px solid #F1DFCF', marginBottom: '14px' }}>
+                <Text style={{ fontSize: '14px', color: '#7A6756', lineHeight: '22px' }}>这位同路人还没有填写更多介绍。</Text>
+              </View>
+            )}
+
+            {!hasProfile && !selectedUser.isSelf ? (
+              <View style={{ backgroundColor: '#FFF3E6', borderRadius: '14px', padding: '12px', marginBottom: '12px', border: '1px solid #F1DFCF' }}>
+                <Text style={{ fontSize: '13px', color: '#7A6756', lineHeight: '20px' }}>先填写“我的资料”，再发起联络。这样别人也能更好理解你是谁。</Text>
+              </View>
+            ) : null}
+
+            <View onClick={handlePrimaryAction} style={{ backgroundColor: selectedUser.isSelf ? '#F5F0EB' : '#E76F51', borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '10px' }}>
+              <Text style={{ fontSize: '15px', color: selectedUser.isSelf ? '#7A6756' : '#FFF', fontWeight: 'bold' }}>
+                {selectedUser.isSelf ? '去看我的资料' : hasProfile ? '发起联络' : '去填写资料'}
+              </Text>
+            </View>
+
+            {!selectedUser.isSelf && (
+              <View style={{ display: 'flex', flexDirection: 'row' }}>
+                <View onClick={() => handleReportUser(String(selectedUser.originalId))} style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: '14px', padding: '12px', textAlign: 'center', border: '1px solid #F1DFCF', marginRight: '8px' }}>
+                  <Text style={{ fontSize: '13px', color: '#7A6756' }}>举报</Text>
+                </View>
+                <View onClick={() => handleBlockUser(String(selectedUser.originalId))} style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: '14px', padding: '12px', textAlign: 'center', border: '1px solid #F1DFCF' }}>
+                  <Text style={{ fontSize: '13px', color: '#7A6756' }}>拉黑</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
     </View>
   )
 }
