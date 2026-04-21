@@ -34,7 +34,7 @@ function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
     <View onClick={props.copyable ? handleCopy : undefined} style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', marginBottom: '10px' }}>
       <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '4px' }}>
         <Text style={{ fontSize: '12px', color: palette.accentDeep, flex: 1 }}>{props.label}</Text>
-        {props.copyable && props.value && <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text>}
+        {props.copyable && props.value ? <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text> : null}
       </View>
       <Text style={{ fontSize: '14px', color: palette.text, lineHeight: '21px' }}>{props.value || '未填写'}</Text>
     </View>
@@ -49,6 +49,10 @@ export default function EventDetailPage() {
   const [hasInterested, setHasInterested] = useState(false)
   const [interestLoading, setInterestLoading] = useState(false)
   const [hasProfile, setHasProfile] = useState(false)
+  const [contactInfo, setContactInfo] = useState('')
+  const [contactMessage, setContactMessage] = useState('')
+  const [contactLoading, setContactLoading] = useState(false)
+  const [publicSignupText, setPublicSignupText] = useState('')
 
   const loadInterestInfo = async (eventId: number) => {
     try {
@@ -70,6 +74,34 @@ export default function EventDetailPage() {
     } catch (err) {
       console.error('loadProfileStatus error:', err)
       setHasProfile(false)
+    }
+  }
+
+  const loadContactInfo = async (eventId: number) => {
+    try {
+      setContactLoading(true)
+      setContactInfo('')
+      setContactMessage('')
+      setPublicSignupText('')
+
+      const res: any = await Taro.cloud.callFunction({ name: 'getEventContactInfo', data: { eventId } })
+      const result = res.result
+
+      if (result?.ok) {
+        setContactInfo(result.contactInfo || '')
+        const publicParts = [
+          result?.publicSignupInfo?.officialUrl ? `公开主页或报名链接：${result.publicSignupInfo.officialUrl}` : '',
+          result?.publicSignupInfo?.signupNote ? `报名方式补充说明：${result.publicSignupInfo.signupNote}` : '',
+        ].filter(Boolean)
+        setPublicSignupText(publicParts.join('\n'))
+      } else {
+        setContactMessage(result?.message || '')
+      }
+    } catch (err) {
+      console.error('loadContactInfo error:', err)
+      setContactMessage('读取联系方式失败，请稍后重试')
+    } finally {
+      setContactLoading(false)
     }
   }
 
@@ -101,10 +133,18 @@ export default function EventDetailPage() {
       setLoading(true)
       setError('')
       const id = Number(getCurrentInstance().router?.params?.id || 0)
-      const found = await fetchEventById(id)
+
+      const [found] = await Promise.all([
+        fetchEventById(id),
+        loadProfileStatus(),
+      ])
+
       setEvent(found)
       if (found?.id) {
-        loadInterestInfo(found.id)
+        await Promise.all([
+          loadInterestInfo(found.id),
+          loadContactInfo(found.id),
+        ])
       }
     } catch (err: any) {
       console.error('loadDetail error:', err)
@@ -116,22 +156,21 @@ export default function EventDetailPage() {
 
   useDidShow(() => {
     loadDetail()
-    loadProfileStatus()
   })
 
   return (
     <View style={{ padding: '16px', backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
-      {loading && <Text style={{ color: palette.subtext }}>加载中...</Text>}
+      {loading ? <Text style={{ color: palette.subtext }}>加载中...</Text> : null}
 
-      {error && (
+      {error ? (
         <View style={{ padding: '12px', marginBottom: '16px', backgroundColor: '#FFF1F0', borderRadius: '14px', border: '1px solid #FFD8D2' }}>
           <Text style={{ color: '#CF1322' }}>{error}</Text>
         </View>
-      )}
+      ) : null}
 
-      {!loading && !error && !event && <Text style={{ color: palette.subtext }}>未找到该活动</Text>}
+      {!loading && !error && !event ? <Text style={{ color: palette.subtext }}>未找到该活动</Text> : null}
 
-      {!loading && event && (
+      {!loading && event ? (
         <>
           <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
             <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
@@ -177,12 +216,21 @@ export default function EventDetailPage() {
           <InfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />
           <InfoRow label='费用' value={event.fee || '免费'} />
           <InfoRow label='组织者' value={event.organizer} />
-          {hasProfile ? (
-            <InfoRow label='咨询报名 / 组织者联系方式' value={event.contact_info} copyable />
+
+          {publicSignupText ? <InfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}
+
+          {contactLoading ? (
+            <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', marginBottom: '10px', border: `1px dashed ${palette.line}` }}>
+              <Text style={{ fontSize: '13px', color: palette.subtext }}>正在读取组织者联系方式...</Text>
+            </View>
+          ) : contactInfo ? (
+            <InfoRow label='组织者联系方式' value={contactInfo} copyable />
           ) : (
             <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', marginBottom: '10px', border: `1px dashed ${palette.line}` }}>
-              <Text style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '4px' }}>咨询报名 / 组织者联系方式</Text>
-              <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '21px' }}>完成“我的资料”填写后，可查看公开报名方式或组织者联系方式。</Text>
+              <Text style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '4px' }}>组织者联系方式</Text>
+              <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '21px' }}>
+                {contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者联系方式。')}
+              </Text>
             </View>
           )}
 
@@ -193,7 +241,7 @@ export default function EventDetailPage() {
             <Text style={{ fontSize: '14px', color: palette.text, lineHeight: '24px', whiteSpace: 'pre-wrap' }}>{event.description || '暂无详细介绍'}</Text>
           </View>
         </>
-      )}
+      ) : null}
     </View>
   )
 }
