@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
-import { fetchEvents } from '../../services/api'
+import { getEvents, getEventInterestCountsBatch } from '../../services/event'
 import {
   type EventItem,
   EVENT_TYPE_LABELS,
@@ -43,11 +43,7 @@ export default function EventsPage() {
         setInterestCounts({})
         return
       }
-      const res: any = await Taro.cloud.callFunction({
-        name: 'getEventInterestCountsBatch',
-        data: { eventIds },
-      })
-      const result = res.result
+      const result = await getEventInterestCountsBatch(eventIds)
       setInterestCounts(result?.ok ? (result.counts || {}) : {})
     } catch (err) {
       console.error('loadInterestCounts error:', err)
@@ -59,8 +55,8 @@ export default function EventsPage() {
     try {
       setLoading(true)
       setError('')
-      const data = await fetchEvents()
-      const list = Array.isArray(data) ? data : []
+      const result = await getEvents()
+      const list = result?.ok && Array.isArray(result.events) ? result.events : []
       setEvents(list)
       await loadInterestCounts(list)
     } catch (err: any) {
