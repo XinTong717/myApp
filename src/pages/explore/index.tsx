@@ -8,94 +8,40 @@ const markerUserIcon = '/assets/marker-user.png'
 const REPORT_REASON_OPTIONS = ['垃圾广告', '骚扰不适', '未成年人敏感信息', '其他']
 
 const CITIES: Record<string, { lat: number; lng: number; prov: string }> = {
-  上海: { lat: 31.2304, lng: 121.4737, prov: '上海' },
-  北京: { lat: 39.9042, lng: 116.4074, prov: '北京' },
-  天津: { lat: 39.3434, lng: 117.3616, prov: '天津' },
-  重庆: { lat: 29.5630, lng: 106.5516, prov: '重庆' },
-  广州: { lat: 23.1291, lng: 113.2644, prov: '广东' },
-  深圳: { lat: 22.5431, lng: 114.0579, prov: '广东' },
-  佛山: { lat: 23.0218, lng: 113.1219, prov: '广东' },
-  中山: { lat: 22.5176, lng: 113.3926, prov: '广东' },
-  杭州: { lat: 30.2741, lng: 120.1551, prov: '浙江' },
-  温州: { lat: 28.0006, lng: 120.6722, prov: '浙江' },
-  宁波: { lat: 29.8683, lng: 121.5440, prov: '浙江' },
-  丽水: { lat: 28.4680, lng: 119.9229, prov: '浙江' },
-  湖州: { lat: 30.8927, lng: 120.0931, prov: '浙江' },
-  绍兴: { lat: 30.0023, lng: 120.5822, prov: '浙江' },
-  衢州: { lat: 28.9353, lng: 118.8597, prov: '浙江' },
-  南京: { lat: 32.0603, lng: 118.7969, prov: '江苏' },
-  苏州: { lat: 31.2990, lng: 120.5853, prov: '江苏' },
-  常州: { lat: 31.8106, lng: 119.9740, prov: '江苏' },
-  成都: { lat: 30.5728, lng: 104.0668, prov: '四川' },
-  广元: { lat: 32.4354, lng: 105.8440, prov: '四川' },
-  福州: { lat: 26.0745, lng: 119.2965, prov: '福建' },
-  济南: { lat: 36.6512, lng: 116.9972, prov: '山东' },
-  青岛: { lat: 36.0671, lng: 120.3826, prov: '山东' },
-  西安: { lat: 34.3416, lng: 108.9398, prov: '陕西' },
-  郑州: { lat: 34.7466, lng: 113.6253, prov: '河南' },
-  开封: { lat: 34.7971, lng: 114.3416, prov: '河南' },
-  保定: { lat: 38.8739, lng: 115.4646, prov: '河北' },
-  衡水: { lat: 37.7390, lng: 115.6700, prov: '河北' },
-  武汉: { lat: 30.5928, lng: 114.3055, prov: '湖北' },
-  长沙: { lat: 28.2282, lng: 112.9388, prov: '湖南' },
-  郴州: { lat: 25.7702, lng: 113.0148, prov: '湖南' },
-  大理: { lat: 25.6065, lng: 100.2676, prov: '云南' },
-  昆明: { lat: 25.0389, lng: 102.7183, prov: '云南' },
-  玉溪: { lat: 24.3517, lng: 102.5470, prov: '云南' },
-  贵阳: { lat: 26.6470, lng: 106.6302, prov: '贵州' },
-  遵义: { lat: 27.7254, lng: 106.9272, prov: '贵州' },
-  黔西南: { lat: 25.0880, lng: 104.9060, prov: '贵州' },
-  黔南: { lat: 26.2582, lng: 107.5234, prov: '贵州' },
-  南宁: { lat: 22.8170, lng: 108.3665, prov: '广西' },
-  太原: { lat: 37.8706, lng: 112.5489, prov: '山西' },
-  宣城: { lat: 30.9408, lng: 118.7588, prov: '安徽' },
-  合肥: { lat: 31.8206, lng: 117.2272, prov: '安徽' },
-  大连: { lat: 38.9140, lng: 121.6147, prov: '辽宁' },
-  沈阳: { lat: 41.8057, lng: 123.4315, prov: '辽宁' },
-  通化: { lat: 41.7280, lng: 125.9400, prov: '吉林' },
-  长春: { lat: 43.8171, lng: 125.3235, prov: '吉林' },
-  哈尔滨: { lat: 45.8038, lng: 126.5350, prov: '黑龙江' },
-  黑河: { lat: 50.2455, lng: 127.5285, prov: '黑龙江' },
-  海口: { lat: 20.0174, lng: 110.3493, prov: '海南' },
-  三亚: { lat: 18.2528, lng: 109.5120, prov: '海南' },
-  澄迈: { lat: 19.7383, lng: 110.0075, prov: '海南' },
-  兰州: { lat: 36.0611, lng: 103.8343, prov: '甘肃' },
-  银川: { lat: 38.4872, lng: 106.2309, prov: '宁夏' },
-  南昌: { lat: 28.6820, lng: 115.8579, prov: '江西' },
-  呼和浩特: { lat: 40.8424, lng: 111.7490, prov: '内蒙古' },
-  乌鲁木齐: { lat: 43.8256, lng: 87.6168, prov: '新疆' },
-  拉萨: { lat: 29.6500, lng: 91.1409, prov: '西藏' },
-  西宁: { lat: 36.6171, lng: 101.7782, prov: '青海' },
-  香港: { lat: 22.3193, lng: 114.1694, prov: '香港' },
-  澳门: { lat: 22.1987, lng: 113.5439, prov: '澳门' },
-  台北: { lat: 25.0330, lng: 121.5654, prov: '台湾' },
+  上海: { lat: 31.2304, lng: 121.4737, prov: '上海' }, 北京: { lat: 39.9042, lng: 116.4074, prov: '北京' }, 天津: { lat: 39.3434, lng: 117.3616, prov: '天津' }, 重庆: { lat: 29.5630, lng: 106.5516, prov: '重庆' },
+  广州: { lat: 23.1291, lng: 113.2644, prov: '广东' }, 深圳: { lat: 22.5431, lng: 114.0579, prov: '广东' }, 佛山: { lat: 23.0218, lng: 113.1219, prov: '广东' }, 中山: { lat: 22.5176, lng: 113.3926, prov: '广东' },
+  杭州: { lat: 30.2741, lng: 120.1551, prov: '浙江' }, 温州: { lat: 28.0006, lng: 120.6722, prov: '浙江' }, 宁波: { lat: 29.8683, lng: 121.5440, prov: '浙江' }, 丽水: { lat: 28.4680, lng: 119.9229, prov: '浙江' }, 湖州: { lat: 30.8927, lng: 120.0931, prov: '浙江' }, 绍兴: { lat: 30.0023, lng: 120.5822, prov: '浙江' }, 衢州: { lat: 28.9353, lng: 118.8597, prov: '浙江' },
+  南京: { lat: 32.0603, lng: 118.7969, prov: '江苏' }, 苏州: { lat: 31.2990, lng: 120.5853, prov: '江苏' }, 常州: { lat: 31.8106, lng: 119.9740, prov: '江苏' },
+  成都: { lat: 30.5728, lng: 104.0668, prov: '四川' }, 广元: { lat: 32.4354, lng: 105.8440, prov: '四川' },
+  福州: { lat: 26.0745, lng: 119.2965, prov: '福建' }, 济南: { lat: 36.6512, lng: 116.9972, prov: '山东' }, 青岛: { lat: 36.0671, lng: 120.3826, prov: '山东' },
+  西安: { lat: 34.3416, lng: 108.9398, prov: '陕西' }, 郑州: { lat: 34.7466, lng: 113.6253, prov: '河南' }, 开封: { lat: 34.7971, lng: 114.3416, prov: '河南' },
+  保定: { lat: 38.8739, lng: 115.4646, prov: '河北' }, 衡水: { lat: 37.7390, lng: 115.6700, prov: '河北' }, 武汉: { lat: 30.5928, lng: 114.3055, prov: '湖北' }, 长沙: { lat: 28.2282, lng: 112.9388, prov: '湖南' }, 郴州: { lat: 25.7702, lng: 113.0148, prov: '湖南' },
+  大理: { lat: 25.6065, lng: 100.2676, prov: '云南' }, 昆明: { lat: 25.0389, lng: 102.7183, prov: '云南' }, 玉溪: { lat: 24.3517, lng: 102.5470, prov: '云南' },
+  贵阳: { lat: 26.6470, lng: 106.6302, prov: '贵州' }, 遵义: { lat: 27.7254, lng: 106.9272, prov: '贵州' }, 黔西南: { lat: 25.0880, lng: 104.9060, prov: '贵州' }, 黔南: { lat: 26.2582, lng: 107.5234, prov: '贵州' },
+  南宁: { lat: 22.8170, lng: 108.3665, prov: '广西' }, 太原: { lat: 37.8706, lng: 112.5489, prov: '山西' }, 宣城: { lat: 30.9408, lng: 118.7588, prov: '安徽' }, 合肥: { lat: 31.8206, lng: 117.2272, prov: '安徽' },
+  大连: { lat: 38.9140, lng: 121.6147, prov: '辽宁' }, 沈阳: { lat: 41.8057, lng: 123.4315, prov: '辽宁' }, 通化: { lat: 41.7280, lng: 125.9400, prov: '吉林' }, 长春: { lat: 43.8171, lng: 125.3235, prov: '吉林' },
+  哈尔滨: { lat: 45.8038, lng: 126.5350, prov: '黑龙江' }, 黑河: { lat: 50.2455, lng: 127.5285, prov: '黑龙江' }, 海口: { lat: 20.0174, lng: 110.3493, prov: '海南' }, 三亚: { lat: 18.2528, lng: 109.5120, prov: '海南' }, 澄迈: { lat: 19.7383, lng: 110.0075, prov: '海南' },
+  兰州: { lat: 36.0611, lng: 103.8343, prov: '甘肃' }, 银川: { lat: 38.4872, lng: 106.2309, prov: '宁夏' }, 南昌: { lat: 28.6820, lng: 115.8579, prov: '江西' }, 呼和浩特: { lat: 40.8424, lng: 111.7490, prov: '内蒙古' }, 乌鲁木齐: { lat: 43.8256, lng: 87.6168, prov: '新疆' }, 拉萨: { lat: 29.6500, lng: 91.1409, prov: '西藏' }, 西宁: { lat: 36.6171, lng: 101.7782, prov: '青海' },
+  香港: { lat: 22.3193, lng: 114.1694, prov: '香港' }, 澳门: { lat: 22.1987, lng: 113.5439, prov: '澳门' }, 台北: { lat: 25.0330, lng: 121.5654, prov: '台湾' },
 }
 
 const PROV_FALLBACK: Record<string, { lat: number; lng: number }> = {
-  上海: { lat: 31.2304, lng: 121.4737 }, 北京: { lat: 39.9042, lng: 116.4074 },
-  天津: { lat: 39.3434, lng: 117.3616 }, 重庆: { lat: 29.5630, lng: 106.5516 },
-  广东: { lat: 23.1291, lng: 113.2644 }, 浙江: { lat: 30.2741, lng: 120.1551 },
-  江苏: { lat: 32.0603, lng: 118.7969 }, 四川: { lat: 30.5728, lng: 104.0668 },
-  福建: { lat: 26.0745, lng: 119.2965 }, 山东: { lat: 36.6512, lng: 116.9972 },
-  湖北: { lat: 30.5928, lng: 114.3055 }, 湖南: { lat: 28.2282, lng: 112.9388 },
-  河南: { lat: 34.7466, lng: 113.6253 }, 河北: { lat: 38.0428, lng: 114.5149 },
-  安徽: { lat: 31.8206, lng: 117.2272 }, 陕西: { lat: 34.3416, lng: 108.9398 },
-  江西: { lat: 28.6820, lng: 115.8579 }, 广西: { lat: 22.8170, lng: 108.3665 },
-  云南: { lat: 25.0389, lng: 102.7183 }, 贵州: { lat: 26.6470, lng: 106.6302 },
-  山西: { lat: 37.8706, lng: 112.5489 }, 辽宁: { lat: 41.8057, lng: 123.4315 },
-  吉林: { lat: 43.8171, lng: 125.3235 }, 黑龙江: { lat: 45.8038, lng: 126.5350 },
-  甘肃: { lat: 36.0611, lng: 103.8343 }, 宁夏: { lat: 38.4872, lng: 106.2309 },
-  海南: { lat: 20.0174, lng: 110.3493 }, 内蒙古: { lat: 40.8424, lng: 111.7490 },
-  新疆: { lat: 43.8256, lng: 87.6168 }, 西藏: { lat: 29.6500, lng: 91.1409 },
-  青海: { lat: 36.6171, lng: 101.7782 },
+  上海: { lat: 31.2304, lng: 121.4737 }, 北京: { lat: 39.9042, lng: 116.4074 }, 天津: { lat: 39.3434, lng: 117.3616 }, 重庆: { lat: 29.5630, lng: 106.5516 },
+  广东: { lat: 23.1291, lng: 113.2644 }, 浙江: { lat: 30.2741, lng: 120.1551 }, 江苏: { lat: 32.0603, lng: 118.7969 }, 四川: { lat: 30.5728, lng: 104.0668 },
+  福建: { lat: 26.0745, lng: 119.2965 }, 山东: { lat: 36.6512, lng: 116.9972 }, 湖北: { lat: 30.5928, lng: 114.3055 }, 湖南: { lat: 28.2282, lng: 112.9388 },
+  河南: { lat: 34.7466, lng: 113.6253 }, 河北: { lat: 38.0428, lng: 114.5149 }, 安徽: { lat: 31.8206, lng: 117.2272 }, 陕西: { lat: 34.3416, lng: 108.9398 },
+  江西: { lat: 28.6820, lng: 115.8579 }, 广西: { lat: 22.8170, lng: 108.3665 }, 云南: { lat: 25.0389, lng: 102.7183 }, 贵州: { lat: 26.6470, lng: 106.6302 },
+  山西: { lat: 37.8706, lng: 112.5489 }, 辽宁: { lat: 41.8057, lng: 123.4315 }, 吉林: { lat: 43.8171, lng: 125.3235 }, 黑龙江: { lat: 45.8038, lng: 126.5350 },
+  甘肃: { lat: 36.0611, lng: 103.8343 }, 宁夏: { lat: 38.4872, lng: 106.2309 }, 海南: { lat: 20.0174, lng: 110.3493 }, 内蒙古: { lat: 40.8424, lng: 111.7490 },
+  新疆: { lat: 43.8256, lng: 87.6168 }, 西藏: { lat: 29.6500, lng: 91.1409 }, 青海: { lat: 36.6171, lng: 101.7782 },
 }
 
 type School = { id: number | string; name?: string; province?: string; city?: string }
-type AppUser = { _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string }
+type AppUser = { _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string; companionContext?: string; isSelf?: boolean }
 type MarkerItem = {
   id: number; latitude: number; longitude: number; name: string
   type: 'school' | 'user'; markerProv: string; city?: string
-  originalId: number | string; bio?: string; roles?: string[]
+  originalId: number | string; bio?: string; roles?: string[]; companionContext?: string
 }
 
 function parseCities(f?: string): string[] {
@@ -104,9 +50,7 @@ function parseCities(f?: string): string[] {
 }
 function firstProvince(f?: string): string {
   if (!f) return ''
-  return f.split(',')[0].trim()
-    .replace(/(省|市|壮族自治区|回族自治区|维吾尔自治区|自治区|特别行政区)$/, '')
-    .replace(/\(.*\)/, '').replace(/\(.*\)/, '').trim()
+  return f.split(',')[0].trim().replace(/(省|市|壮族自治区|回族自治区|维吾尔自治区|自治区|特别行政区)$/, '').replace(/\(.*\)/, '').replace(/\(.*\)/, '').trim()
 }
 function nameHash(name: string): number {
   let h = 0
@@ -133,6 +77,13 @@ function jitter(baseLat: number, baseLng: number, index: number, total: number, 
 function shortName(name: string, max = 10): string {
   return name.length > max ? name.slice(0, max) + '...' : name
 }
+function normalizeRoles(roles: string[] = []) {
+  return roles.map((role) => role === '其他' ? '同行者' : role)
+}
+function isPureEducator(user: AppUser) {
+  const roles = normalizeRoles(user.roles || [])
+  return roles.includes('教育者') && !roles.includes('家长')
+}
 
 export default function ExplorePage() {
   const [schools, setSchools] = useState<School[]>([])
@@ -141,12 +92,14 @@ export default function ExplorePage() {
   const [error, setError] = useState('')
   const [showSchools, setShowSchools] = useState(true)
   const [showUsers, setShowUsers] = useState(true)
+  const [showEducators, setShowEducators] = useState(false)
   const [selectedProvince, setSelectedProvince] = useState('')
   const [hasProfile, setHasProfile] = useState(true)
 
   const loadData = async () => {
     try {
-      setLoading(true); setError('')
+      setLoading(true)
+      setError('')
       const [schoolData, mapUsersRes, myRes] = await Promise.all([
         fetchSchools().catch(() => []),
         Taro.cloud.callFunction({ name: 'getMapUsers', data: {} }).catch(() => ({ result: { users: [] } })),
@@ -198,7 +151,7 @@ export default function ExplorePage() {
     }
 
     if (showUsers) {
-      appUsers.forEach((u) => {
+      appUsers.filter((u) => showEducators || u.isSelf || !isPureEducator(u)).forEach((u) => {
         if (!u.city || !u.province) return
         const cityInfo = CITIES[u.city]
         const coord = cityInfo || PROV_FALLBACK[u.province]
@@ -212,14 +165,19 @@ export default function ExplorePage() {
           id: nextId++,
           latitude: (cityInfo ? cityInfo.lat : (coord as any).lat) + offsetLat,
           longitude: (cityInfo ? cityInfo.lng : (coord as any).lng) + offsetLng,
-          name, type: 'user', markerProv: prov,
-          city: u.city, originalId: u._id,
-          bio: u.bio, roles: u.roles,
+          name,
+          type: 'user',
+          markerProv: prov,
+          city: u.city,
+          originalId: u._id,
+          bio: u.bio,
+          roles: normalizeRoles(u.roles || []),
+          companionContext: u.companionContext || '',
         })
       })
     }
     return items
-  }, [schools, appUsers, showSchools, showUsers])
+  }, [schools, appUsers, showSchools, showUsers, showEducators])
 
   const filteredMarkers = useMemo(() => {
     if (!selectedProvince) return allMarkers
@@ -247,10 +205,15 @@ export default function ExplorePage() {
         content: calloutContent,
         color: '#2F241B',
         fontSize: 11,
-        anchorX: 0, anchorY: -2,
-        borderRadius: 6, borderWidth: 0, borderColor: '#FFFFFF',
+        anchorX: 0,
+        anchorY: -2,
+        borderRadius: 6,
+        borderWidth: 0,
+        borderColor: '#FFFFFF',
         bgColor: item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,247,238,0.92)',
-        padding: 4, display: 'ALWAYS', textAlign: 'center',
+        padding: 4,
+        display: 'ALWAYS',
+        textAlign: 'center',
       },
     }
   }), [filteredMarkers])
@@ -342,12 +305,7 @@ export default function ExplorePage() {
     }
 
     if (!hasProfile) {
-      const res = await Taro.showModal({
-        title: '请先填写资料',
-        content: '填写个人资料后才能发起联络请求',
-        confirmText: '去填写',
-        cancelText: '取消',
-      })
+      const res = await Taro.showModal({ title: '请先填写资料', content: '填写个人资料后才能发起联络请求', confirmText: '去填写', cancelText: '取消' })
       if (res.confirm) goToProfile()
       return
     }
@@ -356,15 +314,11 @@ export default function ExplorePage() {
     const lines: string[] = []
     if (item.city) lines.push('城市: ' + item.city)
     if (roleStr) lines.push('身份: ' + roleStr)
+    if (item.companionContext) lines.push('关系: ' + item.companionContext)
     if (item.bio) lines.push(item.bio)
     if (lines.length === 0) lines.push('这位同路人还没有填写简介')
 
-    const result = await Taro.showModal({
-      title: item.name,
-      content: lines.join('\n'),
-      confirmText: '想认识TA',
-      cancelText: '更多',
-    })
+    const result = await Taro.showModal({ title: item.name, content: lines.join('\n'), confirmText: '想认识TA', cancelText: '更多' })
 
     if (result.confirm) {
       try {
@@ -395,18 +349,21 @@ export default function ExplorePage() {
         <View onClick={goToProfile} style={{ backgroundColor: '#FFF', padding: '12px 14px', borderBottom: '1px solid #F1DFCF', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>填写资料，出现在地图上</Text>
-            <View style={{ marginTop: '2px' }}><Text style={{ fontSize: '12px', color: '#7A6756' }}>让同城的家庭和教育者发现你</Text></View>
+            <View style={{ marginTop: '2px' }}><Text style={{ fontSize: '12px', color: '#7A6756' }}>让同城家庭和同路人发现你</Text></View>
           </View>
           <View style={{ padding: '6px 14px', borderRadius: '999px', backgroundColor: '#E76F51' }}><Text style={{ fontSize: '12px', color: '#FFF', fontWeight: 'bold' }}>去填写</Text></View>
         </View>
       )}
 
       <View style={{ backgroundColor: '#FFF', padding: '10px 14px 6px', borderBottom: '1px solid #F1DFCF' }}>
-        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '6px' }}>
-          <View onClick={() => setShowSchools(!showSchools)} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', backgroundColor: showSchools ? '#FCE6D6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showSchools ? '#E76F51' : '#BBB' }}>学习社区 {showSchools ? schoolCount : '—'}</Text></View>
-          <View onClick={() => setShowUsers(!showUsers)} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', backgroundColor: showUsers ? '#EEF7EE' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showUsers ? '#7BAE7F' : '#BBB' }}>同路人 {showUsers ? userCount : '—'}</Text></View>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
+          <View onClick={() => setShowSchools(!showSchools)} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showSchools ? '#FCE6D6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showSchools ? '#E76F51' : '#BBB' }}>学习社区 {showSchools ? schoolCount : '—'}</Text></View>
+          <View onClick={() => setShowUsers(!showUsers)} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showUsers ? '#EEF7EE' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showUsers ? '#7BAE7F' : '#BBB' }}>同路人 {showUsers ? userCount : '—'}</Text></View>
+          {showUsers && (
+            <View onClick={() => setShowEducators((value) => !value)} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showEducators ? '#FFF3E6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showEducators ? '#E76F51' : '#BBB' }}>教育者</Text></View>
+          )}
           <View style={{ flex: 1 }} />
-          <Text style={{ fontSize: '11px', color: '#B5A08E' }}>{filteredMarkers.length} 个点位</Text>
+          <Text style={{ fontSize: '11px', color: '#B5A08E', marginBottom: '6px' }}>{filteredMarkers.length} 个点位</Text>
         </View>
 
         {availableProvinces.length > 0 && (
