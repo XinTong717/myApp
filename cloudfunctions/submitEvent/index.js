@@ -9,8 +9,10 @@ const ALLOWED_FIELDS = [
   'title',
   'province',
   'city',
-  'eventType',
+  'eventTypes',
+  'eventTypeOther',
   'audience',
+  'audienceOther',
   'startTime',
   'endTime',
   'isOnline',
@@ -22,6 +24,34 @@ const ALLOWED_FIELDS = [
   'signupNote',
   'description',
 ]
+
+const ARRAY_FIELDS = ['eventTypes', 'audience']
+
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean)
+  }
+  const text = String(value || '').trim()
+  if (!text) return []
+  return text.split(/[、,，/]/).map((item) => item.trim()).filter(Boolean)
+}
+
+function mergeOtherOption(values, otherText) {
+  const filtered = values.filter((item) => item !== '其他')
+  const text = String(otherText || '').trim()
+  if (text) filtered.push(`其他：${text}`)
+  return filtered
+}
+
+function stringifyLabels(values) {
+  return values.filter(Boolean).join(' / ')
+}
+
+function pickPrimaryEventType(values) {
+  if (!Array.isArray(values) || values.length === 0) return ''
+  const known = values.find((item) => !String(item).startsWith('其他：'))
+  return known || values[0]
+}
 
 async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
@@ -62,11 +92,17 @@ exports.main = async (event) => {
     if (event[key] !== undefined) {
       if (key === 'isOnline') {
         cleanData[key] = !!event[key]
+      } else if (ARRAY_FIELDS.includes(key)) {
+        cleanData[key] = normalizeStringArray(event[key])
       } else {
         cleanData[key] = String(event[key] || '').trim()
       }
     }
   }
+
+  cleanData.eventTypes = mergeOtherOption(cleanData.eventTypes || [], cleanData.eventTypeOther)
+  cleanData.audience = mergeOtherOption(cleanData.audience || [], cleanData.audienceOther)
+  cleanData.eventType = pickPrimaryEventType(cleanData.eventTypes)
 
   if (!cleanData.title) {
     return { ok: false, message: '请填写活动标题' }
@@ -118,8 +154,8 @@ exports.main = async (event) => {
 
   const securityResult = await runMsgSecCheck([
     cleanData.title,
-    cleanData.eventType,
-    cleanData.audience,
+    stringifyLabels(cleanData.eventTypes || []),
+    stringifyLabels(cleanData.audience || []),
     cleanData.location,
     cleanData.fee,
     cleanData.feeDetail,
@@ -166,7 +202,9 @@ exports.main = async (event) => {
         province: cleanData.province,
         city: cleanData.city,
         eventType: cleanData.eventType || '',
-        audience: cleanData.audience || '',
+        eventTypes: cleanData.eventTypes || [],
+        audience: stringifyLabels(cleanData.audience || []),
+        audienceTags: cleanData.audience || [],
         startTime: cleanData.startTime,
         endTime: cleanData.endTime || '',
         isOnline: !!cleanData.isOnline,
