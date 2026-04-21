@@ -10,13 +10,37 @@ const ALLOWED_FIELDS = [
   'province',
   'city',
   'communityType',
+  'communityTypeOther',
   'ageRange',
+  'ageRangeOther',
   'officialUrl',
   'participationNote',
   'feeNote',
   'sourceNote',
   'recommendationNote',
 ]
+
+const ARRAY_FIELDS = ['communityType', 'ageRange']
+
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean)
+  }
+  const text = String(value || '').trim()
+  if (!text) return []
+  return text.split(/[、,，/]/).map((item) => item.trim()).filter(Boolean)
+}
+
+function mergeOtherOption(values, otherText) {
+  const filtered = values.filter((item) => item !== '其他')
+  const text = String(otherText || '').trim()
+  if (text) filtered.push(`其他：${text}`)
+  return filtered
+}
+
+function stringifyLabels(values) {
+  return values.filter(Boolean).join(' / ')
+}
 
 async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
@@ -55,9 +79,14 @@ exports.main = async (event) => {
   const cleanData = { updatedAt: db.serverDate() }
   for (const key of ALLOWED_FIELDS) {
     if (event[key] !== undefined) {
-      cleanData[key] = String(event[key] || '').trim()
+      cleanData[key] = ARRAY_FIELDS.includes(key)
+        ? normalizeStringArray(event[key])
+        : String(event[key] || '').trim()
     }
   }
+
+  cleanData.communityType = mergeOtherOption(cleanData.communityType || [], cleanData.communityTypeOther)
+  cleanData.ageRange = mergeOtherOption(cleanData.ageRange || [], cleanData.ageRangeOther)
 
   if (!cleanData.name) {
     return { ok: false, message: '请填写学习社区名称' }
@@ -68,8 +97,8 @@ exports.main = async (event) => {
 
   const securityResult = await runMsgSecCheck([
     cleanData.name,
-    cleanData.communityType,
-    cleanData.ageRange,
+    stringifyLabels(cleanData.communityType || []),
+    stringifyLabels(cleanData.ageRange || []),
     cleanData.officialUrl,
     cleanData.participationNote,
     cleanData.feeNote,
@@ -125,8 +154,10 @@ exports.main = async (event) => {
         name: cleanData.name,
         province: cleanData.province,
         city: cleanData.city,
-        communityType: cleanData.communityType || '',
-        ageRange: cleanData.ageRange || '',
+        communityType: stringifyLabels(cleanData.communityType || []),
+        communityTypes: cleanData.communityType || [],
+        ageRange: stringifyLabels(cleanData.ageRange || []),
+        ageRanges: cleanData.ageRange || [],
         officialUrl: cleanData.officialUrl || '',
         participationNote: cleanData.participationNote || '',
         feeNote: cleanData.feeNote || '',
