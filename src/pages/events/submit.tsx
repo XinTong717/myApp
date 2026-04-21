@@ -14,7 +14,8 @@ const palette = {
 }
 
 const EVENT_TYPE_OPTIONS = ['圆桌讨论', '工作坊', '线下聚会', '线上活动', '家庭活动', '项目招募', '其他']
-const AUDIENCE_OPTIONS = ['家长', '教育者', '青少年', '亲子共同参与', '公众开放', '其他']
+const AUDIENCE_WHO_OPTIONS = ['家长', '教育工作者', '儿童/青少年（需家长陪同）', '儿童/青少年（独立参加）', '开放给所有人', '其他']
+const MIN_AGE_OPTIONS = ['全年龄', '6岁+', '12岁+', '18岁+（成人活动）']
 const FEE_OPTIONS = ['免费', '付费', '公益捐赠', '费用待确认']
 
 function SectionTitle(props: { text: string }) {
@@ -32,11 +33,39 @@ function MultiPillSelect(props: { options: string[]; selected: string[]; onChang
       {options.map((opt) => {
         const active = selected.includes(opt)
         return (
-          <View key={opt} onClick={() => onChange(active ? selected.filter((v) => v !== opt) : [...selected, opt])} style={{
-            padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
-            backgroundColor: active ? palette.accentDeep : '#F5F0EB',
-            border: `1px solid ${active ? palette.accentDeep : palette.line}`,
-          }}>
+          <View
+            key={opt}
+            onClick={() => onChange(active ? selected.filter((v) => v !== opt) : [...selected, opt])}
+            style={{
+              padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
+              backgroundColor: active ? palette.accentDeep : '#F5F0EB',
+              border: `1px solid ${active ? palette.accentDeep : palette.line}`,
+            }}
+          >
+            <Text style={{ fontSize: '13px', color: active ? '#FFF' : palette.subtext }}>{opt}</Text>
+          </View>
+        )
+      })}
+    </View>
+  )
+}
+
+function SinglePillSelect(props: { options: string[]; selected: string; onChange: (val: string) => void }) {
+  const { options, selected, onChange } = props
+  return (
+    <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '12px' }}>
+      {options.map((opt) => {
+        const active = selected === opt
+        return (
+          <View
+            key={opt}
+            onClick={() => onChange(active ? '' : opt)}
+            style={{
+              padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
+              backgroundColor: active ? palette.accentDeep : '#F5F0EB',
+              border: `1px solid ${active ? palette.accentDeep : palette.line}`,
+            }}
+          >
             <Text style={{ fontSize: '13px', color: active ? '#FFF' : palette.subtext }}>{opt}</Text>
           </View>
         )
@@ -58,8 +87,9 @@ export default function SubmitEventPage() {
   const [customCity, setCustomCity] = useState('')
   const [eventTypes, setEventTypes] = useState<string[]>([])
   const [eventTypeOther, setEventTypeOther] = useState('')
-  const [audience, setAudience] = useState<string[]>([])
-  const [audienceOther, setAudienceOther] = useState('')
+  const [audienceWho, setAudienceWho] = useState<string[]>([])
+  const [audienceWhoOther, setAudienceWhoOther] = useState('')
+  const [minAgeRequirement, setMinAgeRequirement] = useState('')
   const [startDate, setStartDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -69,6 +99,7 @@ export default function SubmitEventPage() {
   const [fee, setFee] = useState('')
   const [feeDetail, setFeeDetail] = useState('')
   const [organizer, setOrganizer] = useState('')
+  const [organizerContact, setOrganizerContact] = useState('')
   const [officialUrl, setOfficialUrl] = useState('')
   const [signupNote, setSignupNote] = useState('')
   const [description, setDescription] = useState('')
@@ -123,8 +154,8 @@ export default function SubmitEventPage() {
       Taro.showToast({ title: '请补充活动类型中的“其他”', icon: 'none' })
       return
     }
-    if (audience.includes('其他') && !audienceOther.trim()) {
-      Taro.showToast({ title: '请补充面向对象中的“其他”', icon: 'none' })
+    if (audienceWho.includes('其他') && !audienceWhoOther.trim()) {
+      Taro.showToast({ title: '请补充参与对象中的“其他”', icon: 'none' })
       return
     }
     if (!startDate || !startTime) {
@@ -170,8 +201,9 @@ export default function SubmitEventPage() {
           city: currentCity,
           eventTypes,
           eventTypeOther: eventTypes.includes('其他') ? eventTypeOther.trim() : '',
-          audience,
-          audienceOther: audience.includes('其他') ? audienceOther.trim() : '',
+          audienceWho,
+          audienceWhoOther: audienceWho.includes('其他') ? audienceWhoOther.trim() : '',
+          minAgeRequirement,
           startTime: combineDateTime(startDate, startTime),
           endTime: endDate && endTime ? combineDateTime(endDate, endTime) : '',
           isOnline,
@@ -179,6 +211,7 @@ export default function SubmitEventPage() {
           fee,
           feeDetail: fee === '付费' ? feeDetail.trim() : '',
           organizer: organizer.trim(),
+          organizerContact: organizerContact.trim(),
           officialUrl: officialUrl.trim(),
           signupNote: signupNote.trim(),
           description: description.trim(),
@@ -245,16 +278,19 @@ export default function SubmitEventPage() {
           </View>
         )}
 
-        <SectionTitle text='面向对象（可多选）' />
-        <MultiPillSelect options={AUDIENCE_OPTIONS} selected={audience} onChange={setAudience} />
-        {audience.includes('其他') && (
+        <SectionTitle text='参与对象（可多选）' />
+        <MultiPillSelect options={AUDIENCE_WHO_OPTIONS} selected={audienceWho} onChange={setAudienceWho} />
+        {audienceWho.includes('其他') && (
           <View style={{ marginBottom: '16px' }}>
-            <View style={{ marginBottom: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>补充面向对象中的“其他”。</Text></View>
+            <View style={{ marginBottom: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>补充参与对象中的“其他”。</Text></View>
             <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
-              <Input value={audienceOther} placeholder='例如：大学生 / 创作者 / 社区志愿者' onInput={(e) => setAudienceOther(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+              <Input value={audienceWhoOther} placeholder='例如：大学生 / 创作者 / 社区志愿者' onInput={(e) => setAudienceWhoOther(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
             </View>
           </View>
         )}
+
+        <SectionTitle text='最低年龄要求（选填）' />
+        <SinglePillSelect options={MIN_AGE_OPTIONS} selected={minAgeRequirement} onChange={setMinAgeRequirement} />
 
         <SectionTitle text='开始时间' />
         <View style={{ display: 'flex', flexDirection: 'row', marginBottom: '12px' }}>
@@ -296,10 +332,9 @@ export default function SubmitEventPage() {
         </View>
 
         <SectionTitle text='费用' />
-        <MultiPillSelect options={FEE_OPTIONS} selected={fee ? [fee] : []} onChange={(values) => {
-          const nextFee = values[values.length - 1] || ''
-          setFee(nextFee)
-          if (nextFee !== '付费') setFeeDetail('')
+        <SinglePillSelect options={FEE_OPTIONS} selected={fee} onChange={(value) => {
+          setFee(value)
+          if (value !== '付费') setFeeDetail('')
         }} />
         {fee === '付费' && (
           <View style={{ marginBottom: '16px' }}>
@@ -315,14 +350,22 @@ export default function SubmitEventPage() {
           <Input value={organizer} placeholder='例如：自由学社 / 某教育团队 / 个人发起者' onInput={(e) => setOrganizer(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
         </View>
 
+        <SectionTitle text='组织者联系方式（选填）' />
+        <View style={{ marginBottom: '6px' }}>
+          <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>如果你是这个活动的组织者，可以填写你的微信号、手机号或其他联系方式。仅对填写过资料的可雀用户可见。</Text>
+        </View>
+        <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}` }}>
+          <Input value={organizerContact} placeholder='例如：微信号 / 手机号 / 邮箱' onInput={(e) => setOrganizerContact(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+        </View>
+
         <SectionTitle text='公开链接（选填）' />
         <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}` }}>
           <Input value={officialUrl} placeholder='https://...' onInput={(e) => setOfficialUrl(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
         </View>
 
-        <SectionTitle text='报名方式说明（选填）' />
+        <SectionTitle text='报名方式补充说明（选填）' />
         <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}` }}>
-          <Textarea value={signupNote} placeholder='例如：表单链接、公开主页说明或其他公开报名方式' maxlength={200} onInput={(e) => setSignupNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', fontSize: '14px', color: palette.text }} />
+          <Textarea value={signupNote} placeholder='例如：先看公开主页，再联系组织者；或报名开放时间说明' maxlength={200} onInput={(e) => setSignupNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', fontSize: '14px', color: palette.text }} />
         </View>
 
         <SectionTitle text='活动简介' />
@@ -336,7 +379,7 @@ export default function SubmitEventPage() {
 
       <View style={{ backgroundColor: '#FFFDF9', borderRadius: '16px', padding: '12px 14px', marginTop: '14px', marginBottom: '20px', border: `1px dashed ${palette.line}` }}>
         <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
-          🔒 提交内容不会自动公开。请只填写公开可验证的活动，不要填写第三方未公开的私人联系方式或未公开的未成年人信息。
+          🔒 提交内容不会自动公开。组织者联系方式仅对填写过资料的可雀用户可见。请不要提交未公开的未成年人信息。
         </Text>
       </View>
 
