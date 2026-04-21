@@ -29,8 +29,23 @@ function parseDate(value) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-function normalizeEventType(eventType) {
-  return EVENT_TYPE_MAP[String(eventType || '').trim()] || 'meetup'
+function firstEventType(submission) {
+  const eventTypes = Array.isArray(submission.eventTypes) ? submission.eventTypes.filter(Boolean) : []
+  if (eventTypes.length > 0) {
+    return eventTypes.find((item) => !String(item).startsWith('其他：')) || eventTypes[0]
+  }
+  return String(submission.eventType || '').trim()
+}
+
+function normalizeEventType(submission) {
+  return EVENT_TYPE_MAP[firstEventType(submission)] || 'meetup'
+}
+
+function stringifyLabels(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).join(' / ')
+  }
+  return String(value || '').trim()
 }
 
 function buildEventStatus(submission) {
@@ -41,7 +56,7 @@ function buildEventStatus(submission) {
   if (start && start.getTime() > now) return 'upcoming'
   if (start && end && start.getTime() <= now && end.getTime() >= now) return 'ongoing'
   if (end && end.getTime() < now) return 'ended'
-  if (normalizeEventType(submission.eventType) === 'community_program') return 'recruiting'
+  if (normalizeEventType(submission) === 'community_program') return 'recruiting'
   return 'upcoming'
 }
 
@@ -49,7 +64,6 @@ function buildLocation(submission) {
   const location = String(submission.location || '').trim()
   const province = String(submission.province || '').trim()
   const city = String(submission.city || '').trim()
-
   if (submission.isOnline) return location || '线上'
   return location || [province, city].filter(Boolean).join('') || '待定'
 }
@@ -73,12 +87,14 @@ function buildContactInfo(submission) {
 }
 
 function buildDescription(submission) {
-  const audience = String(submission.audience || '').trim() || '未注明'
+  const audience = stringifyLabels(submission.audienceTags || submission.audience) || '未注明'
+  const eventTypes = stringifyLabels(submission.eventTypes || submission.eventType)
   const description = String(submission.description || '').trim() || '暂无详细介绍'
   const signupNote = String(submission.signupNote || '').trim() || '请查看公开主页或报名链接'
   const officialUrl = String(submission.officialUrl || '').trim() || '未提供'
 
   return [
+    eventTypes ? `活动类型：${eventTypes}` : '',
     `适合人群：${audience}`,
     '',
     '活动简介：',
@@ -89,7 +105,7 @@ function buildDescription(submission) {
     '',
     '公开主页或报名链接：',
     officialUrl,
-  ].join('\n')
+  ].filter(Boolean).join('\n')
 }
 
 function buildWarnings(submission, payload) {
@@ -125,7 +141,7 @@ exports.main = async (event) => {
 
     const payload = {
       title: String(submission.title || '').trim(),
-      event_type: normalizeEventType(submission.eventType),
+      event_type: normalizeEventType(submission),
       description: buildDescription(submission),
       start_time: String(submission.startTime || '').trim(),
       end_time: String(submission.endTime || '').trim(),
@@ -148,7 +164,7 @@ exports.main = async (event) => {
         title: submission.title || '',
         province: submission.province || '',
         city: submission.city || '',
-        eventType: submission.eventType || '',
+        eventType: stringifyLabels(submission.eventTypes || submission.eventType),
         organizer: submission.organizer || '',
         startTime: submission.startTime || '',
         endTime: submission.endTime || '',
