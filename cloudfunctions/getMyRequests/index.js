@@ -4,6 +4,22 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+function normalizeRoles(roles = []) {
+  return (Array.isArray(roles) ? roles : [])
+    .map((role) => String(role).trim())
+    .filter(Boolean)
+    .map((role) => role === '其他' ? '同行者' : role)
+}
+
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean)
+  }
+  const text = String(value || '').trim()
+  if (!text) return []
+  return text.split(/[、,，/]/).map((item) => item.trim()).filter(Boolean)
+}
+
 exports.main = async () => {
   const wxContext = cloud.getWXContext()
   const myOpenid = wxContext.OPENID
@@ -34,7 +50,7 @@ exports.main = async () => {
       fromUserId: item.fromUserId || '',
       fromName: item.fromName,
       fromCity: item.fromCity,
-      fromRoles: item.fromRoles,
+      fromRoles: normalizeRoles(item.fromRoles || []),
       fromBio: item.fromBio,
       createdAt: item.createdAt,
     }))
@@ -74,21 +90,22 @@ exports.main = async () => {
       const otherUserId = conn.fromOpenid === myOpenid ? conn.toUserId : conn.fromUserId
       const otherBasicName = conn.fromOpenid === myOpenid ? conn.toName : conn.fromName
       const other = userMap.get(otherOpenid) || {}
+      const otherRoles = normalizeRoles(other.roles || [])
 
       acc.push({
         _id: conn._id,
         otherUserId: other._id || otherUserId || '',
         otherName: other.displayName || otherBasicName,
         otherCity: other.city || '',
-        otherRoles: other.roles || [],
+        otherRoles,
         otherBio: other.bio || '',
         otherWechat: other.wechatId || '',
-        otherChildInfo: (other.roles || []).includes('家长') ? {
-          ageRange: other.childAgeRange || '',
-          status: other.childDropoutStatus || '',
+        otherChildInfo: otherRoles.includes('家长') ? {
+          ageRange: normalizeStringArray(other.childAgeRange),
+          status: normalizeStringArray(other.childDropoutStatus),
           interests: other.childInterests || '',
         } : null,
-        otherEduServices: (other.roles || []).includes('教育者') ? (other.eduServices || '') : '',
+        otherEduServices: otherRoles.includes('教育者') ? (other.eduServices || '') : '',
         respondedAt: conn.respondedAt,
       })
       return acc
