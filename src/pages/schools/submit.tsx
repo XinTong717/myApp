@@ -14,7 +14,7 @@ const palette = {
 }
 
 const COMMUNITY_TYPE_OPTIONS = ['项目制学习', '线下社区', '线上社区', '混合型', '家庭共学', '其他']
-const AGE_RANGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段', '混龄', '成人为主', '未注明']
+const AGE_RANGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段', '混龄', '成人为主', '其他']
 
 function SectionTitle(props: { text: string }) {
   return (
@@ -24,14 +24,14 @@ function SectionTitle(props: { text: string }) {
   )
 }
 
-function PillSelect(props: { options: string[]; selected: string; onChange: (val: string) => void }) {
+function MultiPillSelect(props: { options: string[]; selected: string[]; onChange: (val: string[]) => void }) {
   const { options, selected, onChange } = props
   return (
     <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '12px' }}>
       {options.map((opt) => {
-        const active = selected === opt
+        const active = selected.includes(opt)
         return (
-          <View key={opt} onClick={() => onChange(opt === selected ? '' : opt)} style={{
+          <View key={opt} onClick={() => onChange(active ? selected.filter((v) => v !== opt) : [...selected, opt])} style={{
             padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
             backgroundColor: active ? palette.accentDeep : '#F5F0EB',
             border: `1px solid ${active ? palette.accentDeep : palette.line}`,
@@ -50,8 +50,10 @@ export default function SubmitCommunityPage() {
   const [province, setProvince] = useState('')
   const [cityOption, setCityOption] = useState('')
   const [customCity, setCustomCity] = useState('')
-  const [communityType, setCommunityType] = useState('')
-  const [ageRange, setAgeRange] = useState('')
+  const [communityType, setCommunityType] = useState<string[]>([])
+  const [communityTypeOther, setCommunityTypeOther] = useState('')
+  const [ageRange, setAgeRange] = useState<string[]>([])
+  const [ageRangeOther, setAgeRangeOther] = useState('')
   const [officialUrl, setOfficialUrl] = useState('')
   const [participationNote, setParticipationNote] = useState('')
   const [feeNote, setFeeNote] = useState('')
@@ -104,6 +106,14 @@ export default function SubmitCommunityPage() {
       Taro.showToast({ title: '请输入真实城市名', icon: 'none' })
       return
     }
+    if (communityType.includes('其他') && !communityTypeOther.trim()) {
+      Taro.showToast({ title: '请补充社区类型中的“其他”', icon: 'none' })
+      return
+    }
+    if (ageRange.includes('其他') && !ageRangeOther.trim()) {
+      Taro.showToast({ title: '请补充适合阶段中的“其他”', icon: 'none' })
+      return
+    }
 
     const confirm = await Taro.showModal({
       title: '提交推荐',
@@ -122,7 +132,9 @@ export default function SubmitCommunityPage() {
           province,
           city: currentCity,
           communityType,
+          communityTypeOther: communityType.includes('其他') ? communityTypeOther.trim() : '',
           ageRange,
+          ageRangeOther: ageRange.includes('其他') ? ageRangeOther.trim() : '',
           officialUrl: officialUrl.trim(),
           participationNote: participationNote.trim(),
           feeNote: feeNote.trim(),
@@ -185,11 +197,27 @@ export default function SubmitCommunityPage() {
           </View>
         )}
 
-        <SectionTitle text='社区类型（选填）' />
-        <PillSelect options={COMMUNITY_TYPE_OPTIONS} selected={communityType} onChange={setCommunityType} />
+        <SectionTitle text='社区类型（可多选）' />
+        <MultiPillSelect options={COMMUNITY_TYPE_OPTIONS} selected={communityType} onChange={setCommunityType} />
+        {communityType.includes('其他') && (
+          <View style={{ marginBottom: '16px' }}>
+            <View style={{ marginBottom: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>补充社区类型中的“其他”。</Text></View>
+            <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+              <Input value={communityTypeOther} placeholder='例如：森林学校 / 驻留计划' onInput={(e) => setCommunityTypeOther(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+            </View>
+          </View>
+        )}
 
-        <SectionTitle text='适合阶段（选填）' />
-        <PillSelect options={AGE_RANGE_OPTIONS} selected={ageRange} onChange={setAgeRange} />
+        <SectionTitle text='适合阶段（可多选）' />
+        <MultiPillSelect options={AGE_RANGE_OPTIONS} selected={ageRange} onChange={setAgeRange} />
+        {ageRange.includes('其他') && (
+          <View style={{ marginBottom: '16px' }}>
+            <View style={{ marginBottom: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>补充适合阶段中的“其他”。</Text></View>
+            <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+              <Input value={ageRangeOther} placeholder='例如：大学生 / 家庭混龄共学' onInput={(e) => setAgeRangeOther(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+            </View>
+          </View>
+        )}
 
         <SectionTitle text='公开主页 / 官网 / 公众号 / 小红书（选填）' />
         <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}` }}>
