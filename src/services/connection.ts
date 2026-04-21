@@ -1,17 +1,18 @@
 import { callCloud } from './cloud'
+import type { CloudResponse, GetMyRequestsResult } from '../types/domain'
 
 export async function getMyRequests() {
-  return callCloud<any>('getMyRequests')
+  return callCloud<GetMyRequestsResult>('getMyRequests')
 }
 
 export async function sendRequest(targetUserId: string) {
-  return callCloud<any>('sendRequest', { targetUserId })
+  return callCloud<CloudResponse>('sendRequest', { targetUserId })
 }
 
 export async function respondRequest(requestId: string, action: 'accept' | 'reject') {
-  return callCloud<any>('respondRequest', { requestId, action })
+  return callCloud<CloudResponse>('respondRequest', { requestId, action })
 }
 
 export async function manageConnection(connectionId: string, action: 'withdraw' | 'remove_connection') {
-  return callCloud<any>('manageConnection', { connectionId, action })
+  return callCloud<CloudResponse>('manageConnection', { connectionId, action })
 }
