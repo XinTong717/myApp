@@ -17,10 +17,18 @@ const palette = {
 
 const GENDER_OPTIONS = ['男', '女', '其他', '不想说']
 const AGE_RANGE_OPTIONS = ['18-25', '26-35', '36-45', '46-55', '55以上']
-const ROLE_OPTIONS = ['家长', '教育者', '其他']
+const ROLE_OPTIONS = ['家长', '教育者', '同行者']
 const CHILD_AGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段']
 const CHILD_STATUS_OPTIONS = ['寻找学习社区', '寻找同伴连接', '寻找项目活动', '寻找家庭支持', '自主探索中', '其他']
 const REPORT_REASON_OPTIONS = ['垃圾广告', '骚扰不适', '未成年人敏感信息', '其他']
+
+function normalizeRoles(roles: string[] = []) {
+  return roles.map((role) => role === '其他' ? '同行者' : role)
+}
+
+function renderRoleText(roles: string[] = []) {
+  return normalizeRoles(roles).join('/')
+}
 
 function SectionTitle(props: { text: string }) {
   return (
@@ -88,7 +96,8 @@ export default function ProfilePage() {
   const [ageRange, setAgeRange] = useState('')
   const [roles, setRoles] = useState<string[]>([])
   const [province, setProvince] = useState('')
-  const [city, setCity] = useState('')
+  const [cityOption, setCityOption] = useState('')
+  const [customCity, setCustomCity] = useState('')
   const [wechatId, setWechatId] = useState('')
   const [allowIncomingRequests, setAllowIncomingRequests] = useState(true)
   const [isVisibleOnMap, setIsVisibleOnMap] = useState(true)
@@ -98,6 +107,7 @@ export default function ProfilePage() {
   const [childInterests, setChildInterests] = useState('')
 
   const [eduServices, setEduServices] = useState('')
+  const [companionContext, setCompanionContext] = useState('')
   const [bio, setBio] = useState('')
 
   const [pendingRequests, setPendingRequests] = useState<PendingReq[]>([])
@@ -108,6 +118,8 @@ export default function ProfilePage() {
 
   const isParent = roles.includes('家长')
   const isEducator = roles.includes('教育者')
+  const isCompanion = roles.includes('同行者')
+  const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
 
   const pickerRange = useMemo(() => {
     const cities = province ? (LOCATION_DATA[province] || ['其他']) : ['请先选择省份']
@@ -116,8 +128,9 @@ export default function ProfilePage() {
   const pickerValue = useMemo(() => {
     const provIdx = Math.max(0, PROVINCES.indexOf(province))
     const cities = province ? (LOCATION_DATA[province] || []) : []
-    return [provIdx, Math.max(0, cities.indexOf(city))]
-  }, [province, city])
+    const normalizedCityOption = cityOption || (cities[0] || '')
+    return [provIdx, Math.max(0, cities.indexOf(normalizedCityOption))]
+  }, [province, cityOption])
 
   const loadProfile = async () => {
     try {
@@ -128,10 +141,20 @@ export default function ProfilePage() {
         setDisplayName(p.displayName || '')
         setGender(p.gender || '')
         setAgeRange(p.ageRange === '18岁以下' ? '' : (p.ageRange || ''))
-        const sanitizedRoles = (Array.isArray(p.roles) ? p.roles : (p.role ? [p.role] : [])).filter((role) => role !== '学生')
+        const sanitizedRoles = normalizeRoles((Array.isArray(p.roles) ? p.roles : (p.role ? [p.role] : [])).filter((role) => role !== '学生'))
         setRoles(sanitizedRoles)
         setProvince(p.province || '')
-        setCity(p.city || '')
+        const availableCities = LOCATION_DATA[p.province || ''] || []
+        if (p.city && availableCities.includes(p.city)) {
+          setCityOption(p.city)
+          setCustomCity('')
+        } else if (p.city) {
+          setCityOption('其他')
+          setCustomCity(p.city)
+        } else {
+          setCityOption('')
+          setCustomCity('')
+        }
         setWechatId(p.wechatId || '')
         setAllowIncomingRequests(p.allowIncomingRequests !== false)
         setIsVisibleOnMap(p.isVisibleOnMap !== false)
@@ -139,6 +162,7 @@ export default function ProfilePage() {
         setChildDropoutStatus(CHILD_STATUS_OPTIONS.includes(p.childDropoutStatus || '') ? (p.childDropoutStatus || '') : '')
         setChildInterests(p.childInterests || '')
         setEduServices(p.eduServices || '')
+        setCompanionContext(p.companionContext || '')
         setBio(p.bio || '')
       }
     } catch (err) {
@@ -202,13 +226,17 @@ export default function ProfilePage() {
       Taro.showToast({ title: '请填写显示名', icon: 'none' })
       return
     }
-    if (!province || !city) {
+    if (!province || !currentCity) {
       Taro.showToast({ title: '请选择所在城市', icon: 'none' })
+      return
+    }
+    if (cityOption === '其他' && !customCity.trim()) {
+      Taro.showToast({ title: '请输入真实城市名', icon: 'none' })
       return
     }
     try {
       setSaving(true)
-      const normalizedRoles = roles.filter((role) => role !== '学生')
+      const normalizedRoles = normalizeRoles(roles.filter((role) => role !== '学生'))
       const normalizedAgeRange = ageRange === '18岁以下' ? '' : ageRange
       const normalizedChildStatus = CHILD_STATUS_OPTIONS.includes(childDropoutStatus) ? childDropoutStatus : ''
       const normalizedChildAgeRange = CHILD_AGE_OPTIONS.includes(childAgeRange) ? childAgeRange : ''
@@ -221,7 +249,7 @@ export default function ProfilePage() {
           ageRange: normalizedAgeRange,
           roles: normalizedRoles,
           province,
-          city,
+          city: currentCity,
           wechatId: wechatId.trim(),
           allowIncomingRequests,
           isVisibleOnMap,
@@ -229,6 +257,7 @@ export default function ProfilePage() {
           childDropoutStatus: isParent ? normalizedChildStatus : '',
           childInterests: isParent ? childInterests.trim() : '',
           eduServices: isEducator ? eduServices.trim() : '',
+          companionContext: isCompanion ? companionContext.trim() : '',
           bio: bio.trim(),
         },
       })
@@ -252,10 +281,7 @@ export default function ProfilePage() {
       if (field === 'allowIncomingRequests') setAllowIncomingRequests(value)
       if (field === 'isVisibleOnMap') setIsVisibleOnMap(value)
 
-      const res: any = await Taro.cloud.callFunction({
-        name: 'updatePrivacySettings',
-        data: { [field]: value },
-      })
+      const res: any = await Taro.cloud.callFunction({ name: 'updatePrivacySettings', data: { [field]: value } })
       const result = res.result
       if (result?.ok) {
         Taro.showToast({ title: '设置已更新', icon: 'success' })
@@ -352,15 +378,21 @@ export default function ProfilePage() {
     const [provIdx, cityIdx] = e.detail.value
     const newProv = PROVINCES[provIdx] || ''
     const cities = LOCATION_DATA[newProv] || []
+    const nextCityOption = cities[cityIdx] || ''
     setProvince(newProv)
-    setCity(cities[cityIdx] || '')
+    setCityOption(nextCityOption)
+    if (nextCityOption !== '其他') {
+      setCustomCity('')
+    }
   }
 
   const handlePickerColumnChange = (e: any) => {
     if (e.detail.column === 0) {
       const newProv = PROVINCES[e.detail.value] || ''
+      const firstCity = (LOCATION_DATA[newProv] || [])[0] || ''
       setProvince(newProv)
-      setCity((LOCATION_DATA[newProv] || [])[0] || '')
+      setCityOption(firstCity)
+      setCustomCity('')
     }
   }
 
@@ -388,7 +420,7 @@ export default function ProfilePage() {
         <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>我的资料</Text>
         <View style={{ marginTop: '6px' }}>
           <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-            填写后你会出现在探索地图上，让同城的家庭和教育者发现你。
+            填写后你会出现在探索地图上，让同城家庭和同路人发现你。
           </Text>
         </View>
       </View>
@@ -481,15 +513,23 @@ export default function ProfilePage() {
         <PillSelect options={AGE_RANGE_OPTIONS} selected={ageRange} onChange={(v) => setAgeRange(v as string)} />
 
         <SectionTitle text='身份（可多选）' />
-        <PillSelect options={ROLE_OPTIONS} selected={roles} multi onChange={(v) => setRoles(v as string[])} />
+        <PillSelect options={ROLE_OPTIONS} selected={roles} multi onChange={(v) => setRoles(normalizeRoles(v as string[]))} />
 
         <SectionTitle text='所在城市' />
         <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
-          <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ fontSize: '14px', flex: 1, color: province ? palette.text : '#C5B5A5' }}>{province && city ? `${province} · ${city}` : '点击选择省份和城市'}</Text>
+          <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: cityOption === '其他' ? '8px' : '12px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ fontSize: '14px', flex: 1, color: province ? palette.text : '#C5B5A5' }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text>
             <Text style={{ fontSize: '12px', color: palette.subtext }}>▼</Text>
           </View>
         </Picker>
+        {cityOption === '其他' && (
+          <View style={{ marginBottom: '12px' }}>
+            <View style={{ marginBottom: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表中会显示你填写的城市。</Text></View>
+            <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+              <Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onInput={(e) => setCustomCity(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+            </View>
+          </View>
+        )}
 
         <SectionTitle text='微信号（选填）' />
         <View style={{ marginBottom: '8px' }}>
@@ -539,6 +579,23 @@ export default function ProfilePage() {
         </View>
       )}
 
+      {isCompanion && (
+        <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+          <View style={{ marginBottom: '10px' }}>
+            <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.text }}>你和这个生态的关系</Text>
+            <View style={{ marginTop: '4px' }}>
+              <Text style={{ fontSize: '12px', color: palette.subtext }}>比如：研究者、gap year、内容创作者、社区组织者、观察者等。这个说明会帮助别人理解你为什么在这里。</Text>
+            </View>
+          </View>
+          <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+            <Textarea value={companionContext} placeholder='例如：gap year 中，长期关注多元教育与社区学习' maxlength={150} onInput={(e) => setCompanionContext(e.detail.value)} style={{ fontSize: '14px', color: palette.text, width: '100%', minHeight: '70px' }} />
+          </View>
+          <View style={{ marginTop: '4px', marginBottom: '8px' }}>
+            <Text style={{ fontSize: '11px', color: '#C5B5A5' }}>{companionContext.length}/150</Text>
+          </View>
+        </View>
+      )}
+
       <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
         <SectionTitle text='一句话简介（选填）' />
         <View style={{ marginBottom: '8px' }}>
@@ -575,7 +632,7 @@ export default function ProfilePage() {
             <View key={req._id} style={{ backgroundColor: palette.card, borderRadius: '16px', padding: '14px', marginBottom: '10px', border: `1px solid ${palette.line}` }}>
               <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>{req.fromName}</Text>
               <View style={{ marginTop: '4px', marginBottom: '8px' }}>
-                {req.fromCity ? <Text style={{ fontSize: '13px', color: palette.subtext }}>{req.fromCity}{req.fromRoles?.length > 0 ? ' · ' + req.fromRoles.join('/') : ''}</Text> : null}
+                {req.fromCity ? <Text style={{ fontSize: '13px', color: palette.subtext }}>{req.fromCity}{req.fromRoles?.length > 0 ? ' · ' + renderRoleText(req.fromRoles) : ''}</Text> : null}
                 {req.fromBio ? <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>{req.fromBio}</Text></View> : null}
               </View>
               <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -596,7 +653,7 @@ export default function ProfilePage() {
             <View key={conn._id} style={{ backgroundColor: palette.card, borderRadius: '16px', padding: '14px', marginBottom: '10px', border: `1px solid ${palette.line}` }}>
               <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>{conn.otherName}</Text>
               <View style={{ marginTop: '4px' }}>
-                <Text style={{ fontSize: '13px', color: palette.subtext }}>{conn.otherCity}{conn.otherRoles?.length > 0 ? ' · ' + conn.otherRoles.join('/') : ''}</Text>
+                <Text style={{ fontSize: '13px', color: palette.subtext }}>{conn.otherCity}{conn.otherRoles?.length > 0 ? ' · ' + renderRoleText(conn.otherRoles) : ''}</Text>
               </View>
               {conn.otherBio ? <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>{conn.otherBio}</Text></View> : null}
               {conn.otherWechat ? (
