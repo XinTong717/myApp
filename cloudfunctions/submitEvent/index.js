@@ -16,6 +16,7 @@ const ALLOWED_FIELDS = [
   'isOnline',
   'location',
   'fee',
+  'feeDetail',
   'organizer',
   'officialUrl',
   'signupNote',
@@ -80,10 +81,13 @@ exports.main = async (event) => {
     return { ok: false, message: '请填写活动简介' }
   }
   if (!cleanData.organizer) {
-    return { ok: false, message: '请填写主办方' }
+    return { ok: false, message: '请填写组织者' }
+  }
+  if (!cleanData.fee) {
+    return { ok: false, message: '请填写费用信息' }
   }
   if (cleanData.officialUrl && !/^https?:\/\//i.test(cleanData.officialUrl)) {
-    return { ok: false, message: '公开链接需以 http:// 或 https:// 开头' }
+    return { ok: false, message: '公开主页或报名链接需以 http:// 或 https:// 开头' }
   }
 
   const startDate = new Date(cleanData.startTime)
@@ -118,7 +122,9 @@ exports.main = async (event) => {
     cleanData.audience,
     cleanData.location,
     cleanData.fee,
+    cleanData.feeDetail,
     cleanData.organizer,
+    cleanData.officialUrl,
     cleanData.signupNote,
     cleanData.description,
   ].filter(Boolean).join('\n'), OPENID)
@@ -166,6 +172,7 @@ exports.main = async (event) => {
         isOnline: !!cleanData.isOnline,
         location: cleanData.location || '',
         fee: cleanData.fee || '',
+        feeDetail: cleanData.feeDetail || '',
         organizer: cleanData.organizer || '',
         officialUrl: cleanData.officialUrl || '',
         signupNote: cleanData.signupNote || '',
