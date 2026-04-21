@@ -178,11 +178,11 @@ export default function EventDetailPage() {
           <InfoRow label='费用' value={event.fee || '免费'} />
           <InfoRow label='组织者' value={event.organizer} />
           {hasProfile ? (
-            <InfoRow label='咨询报名' value={event.contact_info} copyable />
+            <InfoRow label='咨询报名 / 组织者联系方式' value={event.contact_info} copyable />
           ) : (
             <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', marginBottom: '10px', border: `1px dashed ${palette.line}` }}>
-              <Text style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '4px' }}>咨询报名</Text>
-              <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '21px' }}>完成“我的资料”填写后，可查看公开报名方式或联系信息。</Text>
+              <Text style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '4px' }}>咨询报名 / 组织者联系方式</Text>
+              <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '21px' }}>完成“我的资料”填写后，可查看公开报名方式或组织者联系方式。</Text>
             </View>
           )}
 
