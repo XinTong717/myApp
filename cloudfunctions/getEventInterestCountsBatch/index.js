@@ -2,7 +2,6 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
-const _ = db.command
 
 exports.main = async (event) => {
   const eventIds = Array.isArray(event.eventIds)
@@ -14,22 +13,19 @@ exports.main = async (event) => {
   }
 
   try {
-    const res = await db.collection('event_interest')
-      .where({
-        eventId: _.in(eventIds),
-        status: 'interested',
-      })
-      .field({ eventId: true })
-      .limit(1000)
-      .get()
-
     const counts = {}
-    for (const eventId of eventIds) counts[eventId] = 0
-    for (const item of res.data || []) {
-      const eventId = Number(item.eventId)
-      if (!counts[eventId]) counts[eventId] = 0
-      counts[eventId] += 1
-    }
+
+    await Promise.all(
+      eventIds.map(async (eventId) => {
+        const res = await db.collection('event_interest')
+          .where({
+            eventId,
+            status: 'interested',
+          })
+          .count()
+        counts[eventId] = res.total || 0
+      })
+    )
 
     return { ok: true, counts }
   } catch (err) {
