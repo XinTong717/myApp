@@ -25,11 +25,18 @@ const ALLOWED_FIELDS = [
 const BOOLEAN_FIELDS = ['allowIncomingRequests', 'isVisibleOnMap']
 const ARRAY_FIELDS = ['roles', 'childAgeRange', 'childDropoutStatus']
 
+const ROLE_WHITELIST = ['家长', '教育者', '同行者']
+const GENDER_WHITELIST = ['男', '女', '其他', '不想说']
+const AGE_RANGE_WHITELIST = ['18-25', '26-35', '36-45', '46-55', '55以上']
+const CHILD_AGE_WHITELIST = ['学龄前', '小学阶段', '中学阶段']
+const CHILD_STATUS_WHITELIST = ['寻找学习社区', '寻找同伴连接', '寻找项目活动', '寻找家庭支持', '自主探索中']
+
 function normalizeRoles(roles) {
   return (Array.isArray(roles) ? roles : [])
     .map((role) => String(role).trim())
     .filter(Boolean)
     .map((role) => role === '其他' ? '同行者' : role)
+    .filter((role) => ROLE_WHITELIST.includes(role))
 }
 
 function normalizeStringArray(value) {
@@ -39,6 +46,22 @@ function normalizeStringArray(value) {
   const text = String(value || '').trim()
   if (!text) return []
   return text.split(/[、,，/]/).map((item) => item.trim()).filter(Boolean)
+}
+
+function validateLength(label, value, max) {
+  const text = String(value || '')
+  if (text.length > max) {
+    return `${label}不能超过${max}字`
+  }
+  return ''
+}
+
+function validateWechatId(value) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  if (text.length < 5 || text.length > 50) return '微信号格式不正确'
+  if (!/^[a-zA-Z][-_a-zA-Z0-9]{4,49}$/.test(text)) return '微信号格式不正确'
+  return ''
 }
 
 async function runMsgSecCheck(content, openid) {
@@ -72,7 +95,7 @@ exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
-  const cleanData = { updatedAt: new Date() }
+  const cleanData = { updatedAt: db.serverDate() }
   for (const key of ALLOWED_FIELDS) {
     if (event[key] !== undefined) {
       const val = event[key]
@@ -96,13 +119,41 @@ exports.main = async (event) => {
     return { ok: false, message: '请选择所在城市' }
   }
 
+  if (cleanData.gender && !GENDER_WHITELIST.includes(cleanData.gender)) {
+    return { ok: false, message: '性别选项不合法' }
+  }
+
+  if (cleanData.ageRange && !AGE_RANGE_WHITELIST.includes(cleanData.ageRange)) {
+    return { ok: false, message: '年龄段选项不合法' }
+  }
+
   if (cleanData.ageRange === '18岁以下') {
     return { ok: false, message: '当前仅支持18岁及以上用户注册' }
   }
 
   const selectedRoles = Array.isArray(cleanData.roles) ? cleanData.roles : []
-  if (selectedRoles.includes('学生')) {
-    return { ok: false, message: '当前仅开放家长、教育者及同行者等成年用户' }
+  if (selectedRoles.length === 0) {
+    return { ok: false, message: '请至少选择一个身份' }
+  }
+
+  cleanData.childAgeRange = normalizeStringArray(cleanData.childAgeRange).filter((item) => CHILD_AGE_WHITELIST.includes(item))
+  cleanData.childDropoutStatus = normalizeStringArray(cleanData.childDropoutStatus).filter((item) => CHILD_STATUS_WHITELIST.includes(item))
+
+  const lengthError =
+    validateLength('显示名', cleanData.displayName, 30) ||
+    validateLength('城市', cleanData.city, 30) ||
+    validateLength('简介', cleanData.bio, 200) ||
+    validateLength('和生态的关系', cleanData.companionContext, 150) ||
+    validateLength('家庭教育关注说明', cleanData.childInterests, 300) ||
+    validateLength('教育服务', cleanData.eduServices, 500)
+
+  if (lengthError) {
+    return { ok: false, message: lengthError }
+  }
+
+  const wechatError = validateWechatId(cleanData.wechatId)
+  if (wechatError) {
+    return { ok: false, message: wechatError }
   }
 
   if (!selectedRoles.includes('同行者')) {
@@ -156,11 +207,11 @@ exports.main = async (event) => {
     await db.collection('users').doc(existing.data[0]._id).update({
       data: dataToSave,
     })
-    return { ok: true, mode: 'update', openid }
+    return { ok: true, mode: 'update' }
   }
 
   await db.collection('users').add({
-    data: { ...dataToSave, openid, createdAt: new Date() },
+    data: { ...dataToSave, openid, createdAt: db.serverDate() },
   })
-  return { ok: true, mode: 'create', openid }
+  return { ok: true, mode: 'create' }
 }
