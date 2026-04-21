@@ -39,8 +39,8 @@ exports.main = async (event) => {
     await db.collection('connections').doc(connectionId).update({
       data: {
         status: 'withdrawn',
-        withdrawnAt: new Date(),
-        updatedAt: new Date(),
+        withdrawnAt: db.serverDate(),
+        updatedAt: db.serverDate(),
       },
     })
 
@@ -57,9 +57,9 @@ exports.main = async (event) => {
   await db.collection('connections').doc(connectionId).update({
     data: {
       status: 'removed',
-      removedAt: new Date(),
+      removedAt: db.serverDate(),
       removedBy: OPENID,
-      updatedAt: new Date(),
+      updatedAt: db.serverDate(),
     },
   })
 
