@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text, Textarea } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
-import { fetchSchoolById } from '../../services/api'
+import { getSchoolDetail, submitCorrection } from '../../services/school'
 
 const palette = {
   bg: '#FFF9F2',
@@ -65,8 +65,8 @@ export default function SchoolDetailPage() {
       setLoading(true)
       setError('')
       const id = Number(getCurrentInstance().router?.params?.id || 0)
-      const found = await fetchSchoolById(id)
-      setSchool(found)
+      const result = await getSchoolDetail(id)
+      setSchool(result?.school || null)
     } catch (err: any) {
       console.error('loadDetail error:', err)
       setError(err?.message || '读取学习社区详情失败')
@@ -82,7 +82,7 @@ export default function SchoolDetailPage() {
     setCorrectionDone(false)
   })
 
-  const submitCorrection = async () => {
+  const handleSubmitCorrection = async () => {
     const text = correctionText.trim()
     if (!text) {
       Taro.showToast({ title: '请填写修正内容', icon: 'none' })
@@ -92,15 +92,7 @@ export default function SchoolDetailPage() {
 
     try {
       setCorrectionSubmitting(true)
-      await Taro.cloud.callFunction({
-        name: 'submitCorrection',
-        data: {
-          schoolId: school.id,
-          schoolName: school.name,
-          content: text,
-        },
-      })
-
+      await submitCorrection(school.id, school.name, text)
       setCorrectionDone(true)
       setCorrectionText('')
       Taro.showToast({ title: '提交成功，感谢反馈', icon: 'success' })
@@ -279,7 +271,7 @@ export default function SchoolDetailPage() {
                     <Text style={{ fontSize: '13px', color: palette.subtext }}>取消</Text>
                   </View>
                   <View
-                    onClick={correctionSubmitting ? undefined : submitCorrection}
+                    onClick={correctionSubmitting ? undefined : handleSubmitCorrection}
                     style={{
                       padding: '8px 20px', borderRadius: '999px',
                       backgroundColor: correctionSubmitting ? '#DDD' : palette.accentDeep,
