@@ -55,7 +55,6 @@ export default function SchoolDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // 纠错功能状态
   const [showCorrectionForm, setShowCorrectionForm] = useState(false)
   const [correctionText, setCorrectionText] = useState('')
   const [correctionSubmitting, setCorrectionSubmitting] = useState(false)
@@ -160,33 +159,61 @@ export default function SchoolDetailPage() {
               </View>
             </View>
 
-            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: school.official_url ? '10px' : '0' }}>
               <View style={{
                 padding: '5px 10px', borderRadius: '999px',
                 backgroundColor: palette.accentSoft, marginRight: '8px', marginBottom: '8px',
               }}>
                 <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
-                  {school.province || '未知'} {school.city || ''}
+                  {[school.province, school.city].filter(Boolean).join(' ') || '地区未填写'}
                 </Text>
               </View>
-              <View style={{
-                padding: '5px 10px', borderRadius: '999px',
-                backgroundColor: palette.greenSoft, marginRight: '8px', marginBottom: '8px',
-              }}>
-                <Text style={{ fontSize: '12px', color: palette.green }}>
-                  {school.school_type || '未填写'}
-                </Text>
-              </View>
+              {!!school.school_type && (
+                <View style={{
+                  padding: '5px 10px', borderRadius: '999px',
+                  backgroundColor: palette.greenSoft, marginRight: '8px', marginBottom: '8px',
+                }}>
+                  <Text style={{ fontSize: '12px', color: palette.green }}>
+                    {school.school_type}
+                  </Text>
+                </View>
+              )}
+              {!!school.age_range && (
+                <View style={{
+                  padding: '5px 10px', borderRadius: '999px',
+                  backgroundColor: '#F5F0EB', marginRight: '8px', marginBottom: '8px',
+                }}>
+                  <Text style={{ fontSize: '12px', color: palette.subtext }}>
+                    {school.age_range}
+                  </Text>
+                </View>
+              )}
             </View>
+
+            {!!school.official_url && (
+              <View
+                onClick={() => Taro.setClipboardData({ data: school.official_url || '' })}
+                style={{
+                  backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px',
+                  display: 'flex', flexDirection: 'row', alignItems: 'center', border: `1px solid ${palette.line}`,
+                }}
+              >
+                <View style={{ flex: 1, paddingRight: '10px' }}>
+                  <Text style={{ fontSize: '12px', color: palette.accentDeep }}>官方/说明链接</Text>
+                  <View style={{ marginTop: '4px' }}>
+                    <Text style={{ fontSize: '13px', color: palette.text, lineHeight: '20px' }}>{school.official_url}</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text>
+              </View>
+            )}
           </View>
 
-          <InfoRow label='适合阶段' value={school.age_range} />
           <InfoRow label='公开说明' value={school.xuji_note} />
           <InfoRow label='参与前了解' value={school.residency_req} />
           <InfoRow label='参与方式参考' value={school.admission_req} />
           <InfoRow label='参考费用' value={school.fee} />
           <InfoRow label='相关说明' value={school.output_direction} />
-          <InfoRow label='官方/说明链接' value={school.official_url} />
 
           <View style={{
             backgroundColor: palette.card, borderRadius: '20px',
