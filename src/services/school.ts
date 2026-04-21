@@ -1,17 +1,18 @@
 import { callCloud } from './cloud'
+import type { CloudResponse, SchoolItem } from '../types/domain'
 
 export async function getSchools() {
-    return callCloud<{ ok: boolean; schools?: any[]; message?: string }>('getSchools')
-  }
-  
-  export async function getSchoolDetail(schoolId: number) {
-    return callCloud<{ ok: boolean; school?: any; message?: string }>('getSchoolDetail', { schoolId })
-  }
+  return callCloud<{ schools?: SchoolItem[] }>('getSchools')
+}
 
-export async function submitCommunity(data: Record<string, any>) {
-  return callCloud<any>('submitCommunity', data)
+export async function getSchoolDetail(schoolId: number) {
+  return callCloud<{ school?: SchoolItem | null }>('getSchoolDetail', { schoolId })
+}
+
+export async function submitCommunity(data: Record<string, unknown>) {
+  return callCloud<CloudResponse>('submitCommunity', data)
 }
 
 export async function submitCorrection(schoolId: number, schoolName: string, content: string) {
-  return callCloud<any>('submitCorrection', { schoolId, schoolName, content })
+  return callCloud<CloudResponse>('submitCorrection', { schoolId, schoolName, content })
 }
