@@ -9,16 +9,14 @@ const EVENT_TYPE_MAP = {
   '线上活动': 'online',
   '家庭活动': 'family',
   '项目招募': 'community_program',
+  '圆桌讨论': 'discussion',
   '夜聊/讨论': 'discussion',
   '其他': 'meetup',
 }
 
 async function getActiveAdmin(openid) {
   const res = await db.collection('admin_users')
-    .where({
-      openid,
-      isActive: true,
-    })
+    .where({ openid, isActive: true })
     .limit(1)
     .get()
 
@@ -40,22 +38,10 @@ function buildEventStatus(submission) {
   const start = parseDate(submission.startTime)
   const end = parseDate(submission.endTime)
 
-  if (start && start.getTime() > now) {
-    return 'upcoming'
-  }
-
-  if (start && end && start.getTime() <= now && end.getTime() >= now) {
-    return 'ongoing'
-  }
-
-  if (end && end.getTime() < now) {
-    return 'ended'
-  }
-
-  if (normalizeEventType(submission.eventType) === 'community_program') {
-    return 'recruiting'
-  }
-
+  if (start && start.getTime() > now) return 'upcoming'
+  if (start && end && start.getTime() <= now && end.getTime() >= now) return 'ongoing'
+  if (end && end.getTime() < now) return 'ended'
+  if (normalizeEventType(submission.eventType) === 'community_program') return 'recruiting'
   return 'upcoming'
 }
 
@@ -64,36 +50,32 @@ function buildLocation(submission) {
   const province = String(submission.province || '').trim()
   const city = String(submission.city || '').trim()
 
-  if (submission.isOnline) {
-    return location || '线上'
-  }
-
+  if (submission.isOnline) return location || '线上'
   return location || [province, city].filter(Boolean).join('') || '待定'
+}
+
+function buildFee(submission) {
+  const fee = String(submission.fee || '').trim()
+  const feeDetail = String(submission.feeDetail || '').trim()
+  if (!fee) return '费用待确认'
+  if (fee === '付费') return feeDetail || '付费'
+  return fee
 }
 
 function buildContactInfo(submission) {
   const officialUrl = String(submission.officialUrl || '').trim()
   const signupNote = String(submission.signupNote || '').trim()
 
-  if (officialUrl && signupNote) {
-    return `公开链接：${officialUrl}\n报名方式：${signupNote}`
-  }
-
-  if (officialUrl) {
-    return `公开链接：${officialUrl}`
-  }
-
-  if (signupNote) {
-    return `报名方式：${signupNote}`
-  }
-
+  if (officialUrl && signupNote) return `公开主页或报名链接：${officialUrl}\n报名方式：${signupNote}`
+  if (officialUrl) return `公开主页或报名链接：${officialUrl}`
+  if (signupNote) return `报名方式：${signupNote}`
   return '请等待更多公开信息'
 }
 
 function buildDescription(submission) {
   const audience = String(submission.audience || '').trim() || '未注明'
   const description = String(submission.description || '').trim() || '暂无详细介绍'
-  const signupNote = String(submission.signupNote || '').trim() || '请查看公开链接'
+  const signupNote = String(submission.signupNote || '').trim() || '请查看公开主页或报名链接'
   const officialUrl = String(submission.officialUrl || '').trim() || '未提供'
 
   return [
@@ -105,7 +87,7 @@ function buildDescription(submission) {
     '报名方式：',
     signupNote,
     '',
-    '公开链接：',
+    '公开主页或报名链接：',
     officialUrl,
   ].join('\n')
 }
@@ -115,13 +97,14 @@ function buildWarnings(submission, payload) {
   const start = parseDate(submission.startTime)
   const end = parseDate(submission.endTime)
 
-  if (!submission.officialUrl) warnings.push('未提供公开链接，发布前请确认活动确实可公开参与')
+  if (!submission.officialUrl) warnings.push('未提供公开主页或报名链接，发布前请确认活动确实可公开参与')
   if (!submission.location && !submission.isOnline) warnings.push('线下活动未填写具体地点，当前会用省市兜底')
   if (!submission.endTime) warnings.push('未填写结束时间，前端会按单点开始时间展示')
   if (payload.status === 'ended') warnings.push('该活动时间已过，通常不建议发布到公开活动页')
   if (!start) warnings.push('开始时间格式异常，发布前需人工修正')
   if (submission.endTime && !end) warnings.push('结束时间格式异常，发布前需人工修正')
-  if (!submission.organizer) warnings.push('未填写主办方，不建议直接发布')
+  if (!submission.organizer) warnings.push('未填写组织者，不建议直接发布')
+  if (submission.fee === '付费' && !String(submission.feeDetail || '').trim()) warnings.push('该活动标记为付费，但未填写费用说明')
 
   return warnings
 }
@@ -130,22 +113,15 @@ exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
   const submissionId = String(event.submissionId || '').trim()
 
-  if (!submissionId) {
-    return { ok: false, message: '缺少 submissionId' }
-  }
+  if (!submissionId) return { ok: false, message: '缺少 submissionId' }
 
   try {
     const admin = await getActiveAdmin(OPENID)
-    if (!admin) {
-      return { ok: false, message: '无权限访问管理员发布辅助工具' }
-    }
+    if (!admin) return { ok: false, message: '无权限访问管理员发布辅助工具' }
 
     const res = await db.collection('event_submissions').doc(submissionId).get()
     const submission = res.data
-
-    if (!submission) {
-      return { ok: false, message: '未找到该活动提交记录' }
-    }
+    if (!submission) return { ok: false, message: '未找到该活动提交记录' }
 
     const payload = {
       title: String(submission.title || '').trim(),
@@ -154,7 +130,7 @@ exports.main = async (event) => {
       start_time: String(submission.startTime || '').trim(),
       end_time: String(submission.endTime || '').trim(),
       location: buildLocation(submission),
-      fee: String(submission.fee || '').trim() || '免费',
+      fee: buildFee(submission),
       status: buildEventStatus(submission),
       organizer: String(submission.organizer || '').trim(),
       is_online: !!submission.isOnline,
