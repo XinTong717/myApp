@@ -23,12 +23,22 @@ const ALLOWED_FIELDS = [
 ]
 
 const BOOLEAN_FIELDS = ['allowIncomingRequests', 'isVisibleOnMap']
+const ARRAY_FIELDS = ['roles', 'childAgeRange', 'childDropoutStatus']
 
 function normalizeRoles(roles) {
   return (Array.isArray(roles) ? roles : [])
     .map((role) => String(role).trim())
     .filter(Boolean)
     .map((role) => role === '其他' ? '同行者' : role)
+}
+
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean)
+  }
+  const text = String(value || '').trim()
+  if (!text) return []
+  return text.split(/[、,，/]/).map((item) => item.trim()).filter(Boolean)
 }
 
 async function runMsgSecCheck(content, openid) {
@@ -66,8 +76,8 @@ exports.main = async (event) => {
   for (const key of ALLOWED_FIELDS) {
     if (event[key] !== undefined) {
       const val = event[key]
-      if (Array.isArray(val)) {
-        cleanData[key] = val.map((v) => String(v).trim()).filter(Boolean)
+      if (ARRAY_FIELDS.includes(key)) {
+        cleanData[key] = normalizeStringArray(val)
       } else if (BOOLEAN_FIELDS.includes(key)) {
         cleanData[key] = !!val
       } else {
@@ -97,6 +107,14 @@ exports.main = async (event) => {
 
   if (!selectedRoles.includes('同行者')) {
     cleanData.companionContext = ''
+  }
+  if (!selectedRoles.includes('家长')) {
+    cleanData.childAgeRange = []
+    cleanData.childDropoutStatus = []
+    cleanData.childInterests = ''
+  }
+  if (!selectedRoles.includes('教育者')) {
+    cleanData.eduServices = ''
   }
 
   const securityResult = await runMsgSecCheck([
