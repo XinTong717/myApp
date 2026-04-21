@@ -3,8 +3,8 @@ import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { getEventDetail, getEventInterestInfo, getEventContactInfo, toggleEventInterest } from '../../services/event'
 import { getMe } from '../../services/profile'
+import type { EventItem } from '../events/shared'
 import {
-  type EventItem,
   EVENT_TYPE_LABELS,
   EVENT_TYPE_ICONS,
   formatEventTime,

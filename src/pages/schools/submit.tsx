@@ -18,13 +18,6 @@ const palette = {
 const COMMUNITY_TYPE_OPTIONS = ['项目制学习', '线下社区', '线上社区', '混合型', '家庭共学', '其他']
 const AGE_RANGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段', '混龄', '成人为主', '其他']
 
-function SectionTitle(props: { text: string }) {
-  return (
-    <View style={{ marginBottom: '6px' }}>
-      <Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>{props.text}</Text>
-    </View>
-  )
-}
 
 function MultiPillSelect(props: { options: string[]; selected: string[]; onChange: (val: string[]) => void }) {
   const { options, selected, onChange } = props

@@ -276,7 +276,7 @@ export default function ExplorePage() {
 
   const handleReportUser = async (targetUserId: string) => {
     try {
-      const reasonRes = await Taro.showActionSheet({ itemList: REPORT_REASON_OPTIONS })
+      const reasonRes = await Taro.showActionSheet({ itemList: [...REPORT_REASON_OPTIONS] })
       const reason = REPORT_REASON_OPTIONS[reasonRes.tapIndex] || '其他'
       const result = await reportUser(targetUserId, reason)
       Taro.showToast({ title: result?.message || '举报已提交', icon: result?.ok ? 'success' : 'none' })
@@ -312,6 +312,7 @@ export default function ExplorePage() {
     try {
       Taro.showLoading({ title: '发送中...' })
       const r = await sendRequest(targetUserId)
+      Taro.hideLoading()
       Taro.showToast({ title: r?.ok ? '请求已发送' : (r?.message || '发送失败'), icon: r?.ok ? 'success' : 'none' })
       if (r?.ok) closePopup()
     } catch (err) {
