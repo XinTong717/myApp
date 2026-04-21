@@ -2,8 +2,12 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+const _ = db.command
 
-exports.main = async (event, context) => {
+const DAILY_LIMIT = 20
+const SAME_TARGET_DAILY_LIMIT = 3
+
+exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
   const myOpenid = wxContext.OPENID
   const { targetUserId } = event
@@ -12,7 +16,6 @@ exports.main = async (event, context) => {
     return { ok: false, message: '缺少目标用户' }
   }
 
-  // 查自己的资料
   const myRes = await db.collection('users')
     .where({ openid: myOpenid })
     .limit(1)
@@ -23,7 +26,6 @@ exports.main = async (event, context) => {
   }
   const me = myRes.data[0]
 
-  // 查目标用户
   let target
   try {
     const targetRes = await db.collection('users').doc(targetUserId).get()
@@ -36,7 +38,6 @@ exports.main = async (event, context) => {
     return { ok: false, message: '找不到该用户' }
   }
 
-  // 不能给自己发请求
   if (target.openid === myOpenid) {
     return { ok: false, message: '不能给自己发联络请求哦' }
   }
@@ -45,7 +46,6 @@ exports.main = async (event, context) => {
     return { ok: false, message: '对方当前暂停接收联络' }
   }
 
-  // 拉黑检查：我拉黑了TA / TA拉黑了我
   const mySafetyRes = await db.collection('safety_relations')
     .where({ ownerOpenid: myOpenid, targetOpenid: target.openid, isBlocked: true })
     .limit(1)
@@ -62,7 +62,6 @@ exports.main = async (event, context) => {
     return { ok: false, message: '当前无法向该用户发起联络' }
   }
 
-  // 检查是否已经有 pending 或 accepted 的请求（双向检查）
   const existCheck1 = await db.collection('connections')
     .where({ fromOpenid: myOpenid, toOpenid: target.openid, status: 'pending' })
     .limit(1)
@@ -83,7 +82,32 @@ exports.main = async (event, context) => {
     return { ok: false, message: '你们已经是联络人了' }
   }
 
-  // 创建请求
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+  const [dailyCountRes, sameTargetCountRes] = await Promise.all([
+    db.collection('connections')
+      .where({
+        fromOpenid: myOpenid,
+        createdAt: _.gte(since),
+      })
+      .count(),
+    db.collection('connections')
+      .where({
+        fromOpenid: myOpenid,
+        toOpenid: target.openid,
+        createdAt: _.gte(since),
+      })
+      .count(),
+  ])
+
+  if ((dailyCountRes?.total || 0) >= DAILY_LIMIT) {
+    return { ok: false, message: '24小时内发起联络次数过多，请稍后再试' }
+  }
+
+  if ((sameTargetCountRes?.total || 0) >= SAME_TARGET_DAILY_LIMIT) {
+    return { ok: false, message: '24小时内你已多次尝试联系该用户，请稍后再试' }
+  }
+
   await db.collection('connections').add({
     data: {
       fromOpenid: myOpenid,
@@ -98,8 +122,8 @@ exports.main = async (event, context) => {
       toCity: target.city || '',
       toRoles: target.roles || [],
       status: 'pending',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: db.serverDate(),
+      updatedAt: db.serverDate(),
     },
   })
 
