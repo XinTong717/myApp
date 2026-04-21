@@ -50,9 +50,8 @@ exports.main = async (event, context) => {
 
     const users = (usersRes.data || []).filter((user) => {
       if (user.isVisibleOnMap === false) return false
-      if (user.openid === OPENID) return false
-      if (hiddenOpenids.has(user.openid)) return false
-      if (blockedByOpenids.has(user.openid)) return false
+      if (user.openid !== OPENID && hiddenOpenids.has(user.openid)) return false
+      if (user.openid !== OPENID && blockedByOpenids.has(user.openid)) return false
       return true
     }).map((user) => ({
       _id: user._id,
@@ -61,6 +60,7 @@ exports.main = async (event, context) => {
       province: user.province,
       city: user.city,
       bio: user.bio,
+      isSelf: user.openid === OPENID,
     }))
 
     return {
