@@ -2,6 +2,19 @@ import { useState, useMemo } from 'react'
 import { View, Text, Input, Textarea, Picker, Switch } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../../constants/location'
+import {
+  GENDER_OPTIONS,
+  AGE_RANGE_OPTIONS,
+  ROLE_OPTIONS,
+  CHILD_AGE_OPTIONS,
+  CHILD_STATUS_OPTIONS,
+} from '../../constants/profile'
+import { REPORT_REASON_OPTIONS } from '../../constants/safety'
+import SectionTitle from '../../components/profile/SectionTitle'
+import PillSelect from '../../components/profile/PillSelect'
+import { getMe, saveProfile, updatePrivacySettings, getSafetyOverview, checkAdminAccess } from '../../services/profile'
+import { getMyRequests, respondRequest, manageConnection } from '../../services/connection'
+import { manageSafetyRelation, reportUser } from '../../services/safety'
 
 const palette = {
   bg: '#FFF9F2',
@@ -14,13 +27,6 @@ const palette = {
   green: '#7BAE7F',
   greenSoft: '#EEF7EE',
 }
-
-const GENDER_OPTIONS = ['男', '女', '其他', '不想说']
-const AGE_RANGE_OPTIONS = ['18-25', '26-35', '36-45', '46-55', '55以上']
-const ROLE_OPTIONS = ['家长', '教育者', '同行者']
-const CHILD_AGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段']
-const CHILD_STATUS_OPTIONS = ['寻找学习社区', '寻找同伴连接', '寻找项目活动', '寻找家庭支持', '自主探索中']
-const REPORT_REASON_OPTIONS = ['垃圾广告', '骚扰不适', '未成年人敏感信息', '其他']
 
 function normalizeRoles(roles: string[] = []) {
   return roles.map((role) => role === '其他' ? '同行者' : role)
@@ -41,46 +47,6 @@ function renderRoleText(roles: string[] = []) {
 
 function renderStringArray(value: string[] = []) {
   return value.filter(Boolean).join(' · ')
-}
-
-function SectionTitle(props: { text: string }) {
-  return (
-    <View style={{ marginBottom: '6px' }}>
-      <Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>{props.text}</Text>
-    </View>
-  )
-}
-
-function PillSelect(props: {
-  options: string[]; selected: string | string[]; multi?: boolean
-  onChange: (val: string | string[]) => void
-}) {
-  const { options, selected, multi, onChange } = props
-  const selectedSet = new Set(Array.isArray(selected) ? selected : [selected])
-  const handleTap = (opt: string) => {
-    if (multi) {
-      const arr = Array.isArray(selected) ? [...selected] : []
-      onChange(arr.includes(opt) ? arr.filter((v) => v !== opt) : [...arr, opt])
-    } else {
-      onChange(opt === selected ? '' : opt)
-    }
-  }
-  return (
-    <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '12px' }}>
-      {options.map((opt) => {
-        const active = selectedSet.has(opt)
-        return (
-          <View key={opt} onClick={() => handleTap(opt)} style={{
-            padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
-            backgroundColor: active ? palette.accentDeep : '#F5F0EB',
-            border: `1px solid ${active ? palette.accentDeep : palette.line}`,
-          }}>
-            <Text style={{ fontSize: '13px', color: active ? '#FFF' : palette.subtext }}>{opt}</Text>
-          </View>
-        )
-      })}
-    </View>
-  )
 }
 
 type PendingReq = {
@@ -148,13 +114,13 @@ export default function ProfilePage() {
   const loadProfile = async () => {
     try {
       setLoading(true)
-      const res: any = await Taro.cloud.callFunction({ name: 'getMe', data: {} })
-      const p = res.result?.profile
+      const res = await getMe()
+      const p = res.profile
       if (p) {
         setDisplayName(p.displayName || '')
         setGender(p.gender || '')
         setAgeRange(p.ageRange === '18岁以下' ? '' : (p.ageRange || ''))
-        const sanitizedRoles = normalizeRoles((Array.isArray(p.roles) ? p.roles : (p.role ? [p.role] : [])).filter((role) => role !== '学生'))
+        const sanitizedRoles = normalizeRoles((Array.isArray(p.roles) ? p.roles : []).filter((role) => role !== '学生'))
         setRoles(sanitizedRoles)
         setProvince(p.province || '')
         const availableCities = LOCATION_DATA[p.province || ''] || []
@@ -187,8 +153,7 @@ export default function ProfilePage() {
 
   const loadRequests = async () => {
     try {
-      const res: any = await Taro.cloud.callFunction({ name: 'getMyRequests', data: {} })
-      const r = res.result
+      const r = await getMyRequests()
       if (r?.ok) {
         setPendingRequests(r.pending || [])
         setAcceptedConnections(r.accepted || [])
@@ -201,8 +166,7 @@ export default function ProfilePage() {
 
   const loadSafetyOverview = async () => {
     try {
-      const res: any = await Taro.cloud.callFunction({ name: 'getSafetyOverview', data: {} })
-      const r = res.result
+      const r = await getSafetyOverview()
       if (r?.ok) {
         setBlockedUsers(r.blocked || [])
         setMutedUsers(r.muted || [])
@@ -214,8 +178,8 @@ export default function ProfilePage() {
 
   const loadAdminAccess = async () => {
     try {
-      const res: any = await Taro.cloud.callFunction({ name: 'checkAdminAccess', data: {} })
-      setIsAdmin(!!res.result?.ok && !!res.result?.isAdmin)
+      const res = await checkAdminAccess()
+      setIsAdmin(!!res?.ok && !!res?.isAdmin)
     } catch (err) {
       console.error('checkAdminAccess error:', err)
       setIsAdmin(false)
@@ -252,27 +216,23 @@ export default function ProfilePage() {
       const normalizedRoles = normalizeRoles(roles.filter((role) => role !== '学生'))
       const normalizedAgeRange = ageRange === '18岁以下' ? '' : ageRange
 
-      const res: any = await Taro.cloud.callFunction({
-        name: 'saveProfile',
-        data: {
-          displayName: displayName.trim(),
-          gender,
-          ageRange: normalizedAgeRange,
-          roles: normalizedRoles,
-          province,
-          city: currentCity,
-          wechatId: wechatId.trim(),
-          allowIncomingRequests,
-          isVisibleOnMap,
-          childAgeRange: isParent ? childAgeRange : [],
-          childDropoutStatus: isParent ? childDropoutStatus : [],
-          childInterests: isParent ? childInterests.trim() : '',
-          eduServices: isEducator ? eduServices.trim() : '',
-          companionContext: isCompanion ? companionContext.trim() : '',
-          bio: bio.trim(),
-        },
+      const r = await saveProfile({
+        displayName: displayName.trim(),
+        gender,
+        ageRange: normalizedAgeRange,
+        roles: normalizedRoles,
+        province,
+        city: currentCity,
+        wechatId: wechatId.trim(),
+        allowIncomingRequests,
+        isVisibleOnMap,
+        childAgeRange: isParent ? childAgeRange : [],
+        childDropoutStatus: isParent ? childDropoutStatus : [],
+        childInterests: isParent ? childInterests.trim() : '',
+        eduServices: isEducator ? eduServices.trim() : '',
+        companionContext: isCompanion ? companionContext.trim() : '',
+        bio: bio.trim(),
       })
-      const r = res.result
       if (r?.ok) {
         Taro.showToast({ title: '保存成功', icon: 'success' })
         setTimeout(() => { loadProfile() }, 500)
@@ -292,8 +252,7 @@ export default function ProfilePage() {
       if (field === 'allowIncomingRequests') setAllowIncomingRequests(value)
       if (field === 'isVisibleOnMap') setIsVisibleOnMap(value)
 
-      const res: any = await Taro.cloud.callFunction({ name: 'updatePrivacySettings', data: { [field]: value } })
-      const result = res.result
+      const result = await updatePrivacySettings({ [field]: value })
       if (result?.ok) {
         Taro.showToast({ title: '设置已更新', icon: 'success' })
       } else {
@@ -311,9 +270,8 @@ export default function ProfilePage() {
   const handleRespond = async (requestId: string, action: 'accept' | 'reject') => {
     try {
       Taro.showLoading({ title: action === 'accept' ? '同意中...' : '处理中...' })
-      const res: any = await Taro.cloud.callFunction({ name: 'respondRequest', data: { requestId, action } })
+      const r = await respondRequest(requestId, action)
       Taro.hideLoading()
-      const r = res.result
       Taro.showToast({ title: r?.message || '已处理', icon: r?.ok ? 'success' : 'none' })
       if (r?.ok) refreshRelations()
     } catch (err) {
@@ -324,9 +282,9 @@ export default function ProfilePage() {
 
   const handleWithdrawRequest = async (connectionId: string) => {
     try {
-      const res: any = await Taro.cloud.callFunction({ name: 'manageConnection', data: { connectionId, action: 'withdraw' } })
-      Taro.showToast({ title: res.result?.message || '已撤回', icon: res.result?.ok ? 'success' : 'none' })
-      if (res.result?.ok) refreshRelations()
+      const result = await manageConnection(connectionId, 'withdraw')
+      Taro.showToast({ title: result?.message || '已撤回', icon: result?.ok ? 'success' : 'none' })
+      if (result?.ok) refreshRelations()
     } catch (err) {
       Taro.showToast({ title: '撤回失败', icon: 'none' })
     }
@@ -342,9 +300,9 @@ export default function ProfilePage() {
     if (!confirm.confirm) return
 
     try {
-      const res: any = await Taro.cloud.callFunction({ name: 'manageConnection', data: { connectionId, action: 'remove_connection' } })
-      Taro.showToast({ title: res.result?.message || '已删除', icon: res.result?.ok ? 'success' : 'none' })
-      if (res.result?.ok) refreshRelations()
+      const result = await manageConnection(connectionId, 'remove_connection')
+      Taro.showToast({ title: result?.message || '已删除', icon: result?.ok ? 'success' : 'none' })
+      if (result?.ok) refreshRelations()
     } catch (err) {
       Taro.showToast({ title: '删除失败', icon: 'none' })
     }
@@ -362,9 +320,9 @@ export default function ProfilePage() {
     }
 
     try {
-      const res: any = await Taro.cloud.callFunction({ name: 'manageSafetyRelation', data: { targetUserId, action } })
-      Taro.showToast({ title: res.result?.message || '已更新', icon: res.result?.ok ? 'success' : 'none' })
-      if (res.result?.ok) {
+      const result = await manageSafetyRelation(targetUserId, action)
+      Taro.showToast({ title: result?.message || '已更新', icon: result?.ok ? 'success' : 'none' })
+      if (result?.ok) {
         refreshRelations()
         loadProfile()
       }
@@ -375,10 +333,10 @@ export default function ProfilePage() {
 
   const handleReportUser = async (targetUserId: string) => {
     try {
-      const reasonRes = await Taro.showActionSheet({ itemList: REPORT_REASON_OPTIONS })
+      const reasonRes = await Taro.showActionSheet({ itemList: [...REPORT_REASON_OPTIONS] })
       const reason = REPORT_REASON_OPTIONS[reasonRes.tapIndex] || '其他'
-      const res: any = await Taro.cloud.callFunction({ name: 'reportUser', data: { targetUserId, reason } })
-      Taro.showToast({ title: res.result?.message || '举报已提交', icon: res.result?.ok ? 'success' : 'none' })
+      const result = await reportUser(targetUserId, reason)
+      Taro.showToast({ title: result?.message || '举报已提交', icon: result?.ok ? 'success' : 'none' })
     } catch (err: any) {
       if (err?.errMsg?.includes('cancel')) return
       Taro.showToast({ title: '举报失败', icon: 'none' })
