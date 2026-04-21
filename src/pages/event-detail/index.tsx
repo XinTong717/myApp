@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
-import { fetchEventById } from '../../services/api'
+import { getEventDetail, getEventInterestInfo, getEventContactInfo, toggleEventInterest } from '../../services/event'
+import { getMe } from '../../services/profile'
 import {
   type EventItem,
   EVENT_TYPE_LABELS,
@@ -56,10 +57,10 @@ export default function EventDetailPage() {
 
   const loadInterestInfo = async (eventId: number) => {
     try {
-      const res: any = await Taro.cloud.callFunction({ name: 'getEventInterestInfo', data: { eventId } })
-      if (res.result?.ok) {
-        setInterestCount(res.result.count || 0)
-        setHasInterested(!!res.result.hasInterested)
+      const result = await getEventInterestInfo(eventId)
+      if (result?.ok) {
+        setInterestCount(result.count || 0)
+        setHasInterested(!!result.hasInterested)
       }
     } catch (err) {
       console.error('loadInterestInfo error:', err)
@@ -68,8 +69,8 @@ export default function EventDetailPage() {
 
   const loadProfileStatus = async () => {
     try {
-      const res: any = await Taro.cloud.callFunction({ name: 'getMe', data: {} })
-      const profile = res.result?.profile
+      const res = await getMe()
+      const profile = res.profile
       setHasProfile(!!(profile && profile.displayName && profile.province && profile.city))
     } catch (err) {
       console.error('loadProfileStatus error:', err)
@@ -84,8 +85,7 @@ export default function EventDetailPage() {
       setContactMessage('')
       setPublicSignupText('')
 
-      const res: any = await Taro.cloud.callFunction({ name: 'getEventContactInfo', data: { eventId } })
-      const result = res.result
+      const result = await getEventContactInfo(eventId)
 
       if (result?.ok) {
         setContactInfo(result.contactInfo || '')
@@ -110,8 +110,7 @@ export default function EventDetailPage() {
 
     try {
       setInterestLoading(true)
-      const res: any = await Taro.cloud.callFunction({ name: 'toggleEventInterest', data: { eventId: event.id } })
-      const result = res.result
+      const result = await toggleEventInterest(event.id)
       if (result?.ok) {
         const nextHasInterested = !!result.hasInterested
         setHasInterested(nextHasInterested)
@@ -135,15 +134,16 @@ export default function EventDetailPage() {
       const id = Number(getCurrentInstance().router?.params?.id || 0)
 
       const [found] = await Promise.all([
-        fetchEventById(id),
+        getEventDetail(id),
         loadProfileStatus(),
       ])
 
-      setEvent(found)
-      if (found?.id) {
+      const detail = found?.event || null
+      setEvent(detail)
+      if (detail?.id) {
         await Promise.all([
-          loadInterestInfo(found.id),
-          loadContactInfo(found.id),
+          loadInterestInfo(detail.id),
+          loadContactInfo(detail.id),
         ])
       }
     } catch (err: any) {
