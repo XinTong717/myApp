@@ -11,8 +11,9 @@ const ALLOWED_FIELDS = [
   'city',
   'eventTypes',
   'eventTypeOther',
-  'audience',
-  'audienceOther',
+  'audienceWho',
+  'audienceWhoOther',
+  'minAgeRequirement',
   'startTime',
   'endTime',
   'isOnline',
@@ -20,12 +21,13 @@ const ALLOWED_FIELDS = [
   'fee',
   'feeDetail',
   'organizer',
+  'organizerContact',
   'officialUrl',
   'signupNote',
   'description',
 ]
 
-const ARRAY_FIELDS = ['eventTypes', 'audience']
+const ARRAY_FIELDS = ['eventTypes', 'audienceWho']
 
 function normalizeStringArray(value) {
   if (Array.isArray(value)) {
@@ -101,7 +103,7 @@ exports.main = async (event) => {
   }
 
   cleanData.eventTypes = mergeOtherOption(cleanData.eventTypes || [], cleanData.eventTypeOther)
-  cleanData.audience = mergeOtherOption(cleanData.audience || [], cleanData.audienceOther)
+  cleanData.audienceWho = mergeOtherOption(cleanData.audienceWho || [], cleanData.audienceWhoOther)
   cleanData.eventType = pickPrimaryEventType(cleanData.eventTypes)
 
   if (!cleanData.title) {
@@ -155,11 +157,13 @@ exports.main = async (event) => {
   const securityResult = await runMsgSecCheck([
     cleanData.title,
     stringifyLabels(cleanData.eventTypes || []),
-    stringifyLabels(cleanData.audience || []),
+    stringifyLabels(cleanData.audienceWho || []),
+    cleanData.minAgeRequirement,
     cleanData.location,
     cleanData.fee,
     cleanData.feeDetail,
     cleanData.organizer,
+    cleanData.organizerContact,
     cleanData.officialUrl,
     cleanData.signupNote,
     cleanData.description,
@@ -203,8 +207,9 @@ exports.main = async (event) => {
         city: cleanData.city,
         eventType: cleanData.eventType || '',
         eventTypes: cleanData.eventTypes || [],
-        audience: stringifyLabels(cleanData.audience || []),
-        audienceTags: cleanData.audience || [],
+        audienceWho: stringifyLabels(cleanData.audienceWho || []),
+        audienceWhoTags: cleanData.audienceWho || [],
+        minAgeRequirement: cleanData.minAgeRequirement || '',
         startTime: cleanData.startTime,
         endTime: cleanData.endTime || '',
         isOnline: !!cleanData.isOnline,
@@ -212,6 +217,7 @@ exports.main = async (event) => {
         fee: cleanData.fee || '',
         feeDetail: cleanData.feeDetail || '',
         organizer: cleanData.organizer || '',
+        organizerContact: cleanData.organizerContact || '',
         officialUrl: cleanData.officialUrl || '',
         signupNote: cleanData.signupNote || '',
         description: cleanData.description || '',
