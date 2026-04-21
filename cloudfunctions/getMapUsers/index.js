@@ -4,7 +4,14 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-exports.main = async (event, context) => {
+function normalizeRoles(roles) {
+  return (Array.isArray(roles) ? roles : [])
+    .map((role) => String(role).trim())
+    .filter(Boolean)
+    .map((role) => role === '其他' ? '同行者' : role)
+}
+
+exports.main = async () => {
   const { OPENID } = cloud.getWXContext()
 
   try {
@@ -21,6 +28,7 @@ exports.main = async (event, context) => {
           province: true,
           city: true,
           bio: true,
+          companionContext: true,
           openid: true,
           isVisibleOnMap: true,
         })
@@ -56,10 +64,11 @@ exports.main = async (event, context) => {
     }).map((user) => ({
       _id: user._id,
       displayName: user.displayName,
-      roles: user.roles,
+      roles: normalizeRoles(user.roles),
       province: user.province,
       city: user.city,
       bio: user.bio,
+      companionContext: user.companionContext || '',
       isSelf: user.openid === OPENID,
     }))
 
