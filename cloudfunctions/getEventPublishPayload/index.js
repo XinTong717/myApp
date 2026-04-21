@@ -79,12 +79,10 @@ function buildFee(submission) {
 function buildContactInfo(submission) {
   const officialUrl = String(submission.officialUrl || '').trim()
   const signupNote = String(submission.signupNote || '').trim()
-  const organizerContact = String(submission.organizerContact || '').trim()
 
   const lines = []
   if (officialUrl) lines.push(`公开主页或报名链接：${officialUrl}`)
   if (signupNote) lines.push(`报名方式补充说明：${signupNote}`)
-  if (organizerContact) lines.push(`组织者联系方式：${organizerContact}`)
   return lines.length > 0 ? lines.join('\n') : '请等待更多公开信息'
 }
 
