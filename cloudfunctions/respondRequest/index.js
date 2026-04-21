@@ -3,7 +3,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 
-exports.main = async (event, context) => {
+exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
   const myOpenid = wxContext.OPENID
   const { requestId, action } = event
@@ -16,7 +16,6 @@ exports.main = async (event, context) => {
     return { ok: false, message: '无效操作' }
   }
 
-  // 查找这条请求
   let conn
   try {
     const res = await db.collection('connections').doc(requestId).get()
@@ -25,12 +24,10 @@ exports.main = async (event, context) => {
     return { ok: false, message: '找不到该请求' }
   }
 
-  // 只有被请求方可以操作
   if (conn.toOpenid !== myOpenid) {
     return { ok: false, message: '无权操作此请求' }
   }
 
-  // 只能操作 pending 的
   if (conn.status !== 'pending') {
     return { ok: false, message: '该请求已处理过了' }
   }
@@ -38,7 +35,8 @@ exports.main = async (event, context) => {
   await db.collection('connections').doc(requestId).update({
     data: {
       status: action === 'accept' ? 'accepted' : 'rejected',
-      respondedAt: new Date(),
+      respondedAt: db.serverDate(),
+      updatedAt: db.serverDate(),
     },
   })
 
