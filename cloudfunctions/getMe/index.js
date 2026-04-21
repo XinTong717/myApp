@@ -3,17 +3,16 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 
-exports.main = async (event, context) => {
+exports.main = async () => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
   const res = await db.collection('users')
-    .where({ openid: openid })
+    .where({ openid })
     .limit(1)
     .get()
 
   return {
-    openid,
     profile: res.data[0] || null,
   }
 }
