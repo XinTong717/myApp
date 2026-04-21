@@ -255,41 +255,49 @@ export default function ExplorePage() {
     }
   }
 
-  const handleSafetyAction = async (targetUserId: string, action: 'block' | 'mute') => {
+  const handleBlockUser = async (targetUserId: string) => {
+    const confirm = await Taro.showModal({
+      title: '确认拉黑',
+      content: '拉黑后，你将不再看到对方，且当前待处理或已建立的联络都会断开。',
+      confirmText: '确认拉黑',
+      cancelText: '取消',
+    })
+    if (!confirm.confirm) return
+
     try {
-      const res: any = await Taro.cloud.callFunction({ name: 'manageSafetyRelation', data: { targetUserId, action } })
-      Taro.showToast({ title: res.result?.message || '已更新', icon: res.result?.ok ? 'success' : 'none' })
+      const res: any = await Taro.cloud.callFunction({ name: 'manageSafetyRelation', data: { targetUserId, action: 'block' } })
+      Taro.showToast({ title: res.result?.message || '已拉黑', icon: res.result?.ok ? 'success' : 'none' })
       if (res.result?.ok) loadData()
     } catch (err) {
       Taro.showToast({ title: '操作失败', icon: 'none' })
     }
   }
 
+  const sendRequestToUser = async (targetUserId: string) => {
+    try {
+      Taro.showLoading({ title: '发送中...' })
+      const res: any = await Taro.cloud.callFunction({ name: 'sendRequest', data: { targetUserId } })
+      Taro.hideLoading()
+      const r = res.result
+      Taro.showToast({ title: r?.ok ? '请求已发送' : (r?.message || '发送失败'), icon: r?.ok ? 'success' : 'none' })
+    } catch (err) {
+      Taro.hideLoading()
+      Taro.showToast({ title: '发送失败，请稍后重试', icon: 'none' })
+    }
+  }
+
   const openUserActionSheet = async (item: MarkerItem) => {
     try {
-      const sheetRes = await Taro.showActionSheet({ itemList: ['想认识TA', '拉黑TA', '静音TA', '举报TA'] })
+      const sheetRes = await Taro.showActionSheet({ itemList: ['举报TA', '拉黑TA'] })
       const idx = sheetRes.tapIndex
       if (idx === 0) {
-        Taro.showLoading({ title: '发送中...' })
-        const res: any = await Taro.cloud.callFunction({ name: 'sendRequest', data: { targetUserId: String(item.originalId) } })
-        Taro.hideLoading()
-        const r = res.result
-        Taro.showToast({ title: r?.ok ? '请求已发送' : (r?.message || '发送失败'), icon: r?.ok ? 'success' : 'none' })
+        await handleReportUser(String(item.originalId))
         return
       }
       if (idx === 1) {
-        await handleSafetyAction(String(item.originalId), 'block')
-        return
-      }
-      if (idx === 2) {
-        await handleSafetyAction(String(item.originalId), 'mute')
-        return
-      }
-      if (idx === 3) {
-        await handleReportUser(String(item.originalId))
+        await handleBlockUser(String(item.originalId))
       }
     } catch (err: any) {
-      Taro.hideLoading()
       if (err?.errMsg?.includes('cancel')) return
       Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
     }
@@ -318,23 +326,28 @@ export default function ExplorePage() {
     if (item.bio) lines.push(item.bio)
     if (lines.length === 0) lines.push('这位同路人还没有填写简介')
 
-    const result = await Taro.showModal({ title: item.name, content: lines.join('\n'), confirmText: '想认识TA', cancelText: '更多' })
+    const result = await Taro.showModal({
+      title: item.name,
+      content: lines.join('\n'),
+      confirmText: '发起联络',
+      cancelText: '关闭',
+    })
 
     if (result.confirm) {
-      try {
-        Taro.showLoading({ title: '发送中...' })
-        const res: any = await Taro.cloud.callFunction({ name: 'sendRequest', data: { targetUserId: String(item.originalId) } })
-        Taro.hideLoading()
-        const r = res.result
-        Taro.showToast({ title: r?.ok ? '请求已发送' : (r?.message || '发送失败'), icon: r?.ok ? 'success' : 'none' })
-      } catch (err) {
-        Taro.hideLoading()
-        Taro.showToast({ title: '发送失败，请稍后重试', icon: 'none' })
-      }
+      await sendRequestToUser(String(item.originalId))
       return
     }
 
-    await openUserActionSheet(item)
+    const moreRes = await Taro.showModal({
+      title: item.name,
+      content: '你可以举报或拉黑这个用户。',
+      confirmText: '更多操作',
+      cancelText: '关闭',
+    })
+
+    if (moreRes.confirm) {
+      await openUserActionSheet(item)
+    }
   }
 
   const handleMarkerTap = (e: any) => handleTap(Number(e.detail?.markerId))
