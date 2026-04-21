@@ -71,13 +71,13 @@ exports.main = async (event) => {
       targetCity: target.city || '',
       isBlocked: nextBlocked,
       isMuted: nextMuted,
-      updatedAt: new Date(),
+      updatedAt: db.serverDate(),
     }
 
     if (existing?._id) {
       await db.collection('safety_relations').doc(existing._id).update({ data })
     } else {
-      await db.collection('safety_relations').add({ data: { ...data, createdAt: new Date() } })
+      await db.collection('safety_relations').add({ data: { ...data, createdAt: db.serverDate() } })
     }
 
     if (action === 'block') {
@@ -92,9 +92,9 @@ exports.main = async (event) => {
         toRemove.map((conn) => db.collection('connections').doc(conn._id).update({
           data: {
             status: 'removed',
-            removedAt: new Date(),
+            removedAt: db.serverDate(),
             removedBy: OPENID,
-            updatedAt: new Date(),
+            updatedAt: db.serverDate(),
           },
         }))
       )
