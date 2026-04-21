@@ -42,6 +42,12 @@ function stringifyLabels(values) {
   return values.filter(Boolean).join(' / ')
 }
 
+function validateLength(label, value, max) {
+  const text = String(value || '')
+  if (text.length > max) return `${label}不能超过${max}字`
+  return ''
+}
+
 async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
   if (!normalized) {
@@ -93,6 +99,23 @@ exports.main = async (event) => {
   }
   if (!cleanData.province || !cleanData.city) {
     return { ok: false, message: '请选择所在城市' }
+  }
+
+  const lengthError =
+    validateLength('学习社区名称', cleanData.name, 100) ||
+    validateLength('城市', cleanData.city, 30) ||
+    validateLength('公开主页', cleanData.officialUrl, 300) ||
+    validateLength('参与说明', cleanData.participationNote, 300) ||
+    validateLength('费用说明', cleanData.feeNote, 200) ||
+    validateLength('信息来源', cleanData.sourceNote, 300) ||
+    validateLength('推荐理由', cleanData.recommendationNote, 1000)
+
+  if (lengthError) {
+    return { ok: false, message: lengthError }
+  }
+
+  if (cleanData.officialUrl && !/^https?:\/\//i.test(cleanData.officialUrl)) {
+    return { ok: false, message: '公开主页需以 http:// 或 https:// 开头' }
   }
 
   const securityResult = await runMsgSecCheck([
