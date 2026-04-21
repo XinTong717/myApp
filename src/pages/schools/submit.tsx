@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { View, Text, Input, Textarea, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../../constants/location'
+import { submitCommunity } from '../../services/school'
+import SectionTitle from '../../components/profile/SectionTitle'
 
 const palette = {
   bg: '#FFF9F2',
@@ -125,24 +127,20 @@ export default function SubmitCommunityPage() {
 
     try {
       setSubmitting(true)
-      const res: any = await Taro.cloud.callFunction({
-        name: 'submitCommunity',
-        data: {
-          name: name.trim(),
-          province,
-          city: currentCity,
-          communityType,
-          communityTypeOther: communityType.includes('其他') ? communityTypeOther.trim() : '',
-          ageRange,
-          ageRangeOther: ageRange.includes('其他') ? ageRangeOther.trim() : '',
-          officialUrl: officialUrl.trim(),
-          participationNote: participationNote.trim(),
-          feeNote: feeNote.trim(),
-          sourceNote: sourceNote.trim(),
-          recommendationNote: recommendationNote.trim(),
-        },
+      const result = await submitCommunity({
+        name: name.trim(),
+        province,
+        city: currentCity,
+        communityType,
+        communityTypeOther: communityType.includes('其他') ? communityTypeOther.trim() : '',
+        ageRange,
+        ageRangeOther: ageRange.includes('其他') ? ageRangeOther.trim() : '',
+        officialUrl: officialUrl.trim(),
+        participationNote: participationNote.trim(),
+        feeNote: feeNote.trim(),
+        sourceNote: sourceNote.trim(),
+        recommendationNote: recommendationNote.trim(),
       })
-      const result = res.result
       if (result?.ok) {
         Taro.showToast({ title: '提交成功，感谢推荐', icon: 'success' })
         setTimeout(() => {

@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { View, Text, Input, Textarea, Picker, Switch } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../../constants/location'
+import { submitEvent } from '../../services/event'
+import SectionTitle from '../../components/profile/SectionTitle'
 
 const palette = {
   bg: '#FFF9F2',
@@ -193,31 +195,27 @@ export default function SubmitEventPage() {
 
     try {
       setSubmitting(true)
-      const res: any = await Taro.cloud.callFunction({
-        name: 'submitEvent',
-        data: {
-          title: title.trim(),
-          province,
-          city: currentCity,
-          eventTypes,
-          eventTypeOther: eventTypes.includes('其他') ? eventTypeOther.trim() : '',
-          audienceWho,
-          audienceWhoOther: audienceWho.includes('其他') ? audienceWhoOther.trim() : '',
-          minAgeRequirement,
-          startTime: combineDateTime(startDate, startTime),
-          endTime: endDate && endTime ? combineDateTime(endDate, endTime) : '',
-          isOnline,
-          location: location.trim(),
-          fee,
-          feeDetail: fee === '付费' ? feeDetail.trim() : '',
-          organizer: organizer.trim(),
-          organizerContact: organizerContact.trim(),
-          officialUrl: officialUrl.trim(),
-          signupNote: signupNote.trim(),
-          description: description.trim(),
-        },
+      const result = await submitEvent({
+        title: title.trim(),
+        province,
+        city: currentCity,
+        eventTypes,
+        eventTypeOther: eventTypes.includes('其他') ? eventTypeOther.trim() : '',
+        audienceWho,
+        audienceWhoOther: audienceWho.includes('其他') ? audienceWhoOther.trim() : '',
+        minAgeRequirement,
+        startTime: combineDateTime(startDate, startTime),
+        endTime: endDate && endTime ? combineDateTime(endDate, endTime) : '',
+        isOnline,
+        location: location.trim(),
+        fee,
+        feeDetail: fee === '付费' ? feeDetail.trim() : '',
+        organizer: organizer.trim(),
+        organizerContact: organizerContact.trim(),
+        officialUrl: officialUrl.trim(),
+        signupNote: signupNote.trim(),
+        description: description.trim(),
       })
-      const result = res.result
       if (result?.ok) {
         Taro.showToast({ title: '提交成功', icon: 'success' })
         setTimeout(() => {

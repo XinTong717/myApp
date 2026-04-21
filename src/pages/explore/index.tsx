@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Map as TaroMap, Text, View, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { fetchSchools } from '../../services/api'
+import { getSchools } from '../../services/school'
+import { getMe } from '../../services/profile'
+import { sendRequest } from '../../services/connection'
+import { manageSafetyRelation, reportUser } from '../../services/safety'
+import { REPORT_REASON_OPTIONS } from '../../constants/safety'
 
 const markerSchoolIcon = '/assets/marker-school.png'
 const markerUserIcon = '/assets/marker-user.png'
-const REPORT_REASON_OPTIONS = ['垃圾广告', '骚扰不适', '未成年人敏感信息', '其他']
 
 const CITIES: Record<string, { lat: number; lng: number; prov: string }> = {
   上海: { lat: 31.2304, lng: 121.4737, prov: '上海' }, 北京: { lat: 39.9042, lng: 116.4074, prov: '北京' }, 天津: { lat: 39.3434, lng: 117.3616, prov: '天津' }, 重庆: { lat: 29.5630, lng: 106.5516, prov: '重庆' },
@@ -101,15 +104,18 @@ export default function ExplorePage() {
     try {
       setLoading(true)
       setError('')
-      const [schoolData, mapUsersRes, myRes] = await Promise.all([
-        fetchSchools().catch(() => []),
+      const [schoolRes, mapUsersRes, myRes] = await Promise.all([
+        getSchools().catch(() => ({ ok: false, schools: [] })),
         Taro.cloud.callFunction({ name: 'getMapUsers', data: {} }).catch(() => ({ result: { users: [] } })),
-        Taro.cloud.callFunction({ name: 'getMe', data: {} }).catch(() => ({ result: { profile: null } })),
+        getMe().catch(() => ({ profile: null })),
       ])
-      setSchools(Array.isArray(schoolData) ? schoolData : [])
+      
+      setSchools(schoolRes?.ok && Array.isArray(schoolRes.schools) ? schoolRes.schools : [])
+      
       const mapResult = (mapUsersRes as any)?.result
       setAppUsers(Array.isArray(mapResult?.users) ? mapResult.users : [])
-      const myProfile = (myRes as any)?.result?.profile
+      
+      const myProfile = myRes?.profile
       setHasProfile(!!(myProfile && myProfile.displayName && myProfile.province && myProfile.city))
     } catch (err: any) {
       setError(err?.message || '读取数据失败')
@@ -272,8 +278,8 @@ export default function ExplorePage() {
     try {
       const reasonRes = await Taro.showActionSheet({ itemList: REPORT_REASON_OPTIONS })
       const reason = REPORT_REASON_OPTIONS[reasonRes.tapIndex] || '其他'
-      const res: any = await Taro.cloud.callFunction({ name: 'reportUser', data: { targetUserId, reason } })
-      Taro.showToast({ title: res.result?.message || '举报已提交', icon: res.result?.ok ? 'success' : 'none' })
+      const result = await reportUser(targetUserId, reason)
+      Taro.showToast({ title: result?.message || '举报已提交', icon: result?.ok ? 'success' : 'none' })
       closePopup()
     } catch (err: any) {
       if (err?.errMsg?.includes('cancel')) return
@@ -291,9 +297,9 @@ export default function ExplorePage() {
     if (!confirm.confirm) return
 
     try {
-      const res: any = await Taro.cloud.callFunction({ name: 'manageSafetyRelation', data: { targetUserId, action: 'block' } })
-      Taro.showToast({ title: res.result?.message || '已拉黑', icon: res.result?.ok ? 'success' : 'none' })
-      if (res.result?.ok) {
+        const result = await manageSafetyRelation(targetUserId, 'block')
+        Taro.showToast({ title: result?.message || '已拉黑', icon: result?.ok ? 'success' : 'none' })
+        if (result?.ok) {
         closePopup()
         loadData()
       }
@@ -305,9 +311,7 @@ export default function ExplorePage() {
   const sendRequestToUser = async (targetUserId: string) => {
     try {
       Taro.showLoading({ title: '发送中...' })
-      const res: any = await Taro.cloud.callFunction({ name: 'sendRequest', data: { targetUserId } })
-      Taro.hideLoading()
-      const r = res.result
+      const r = await sendRequest(targetUserId)
       Taro.showToast({ title: r?.ok ? '请求已发送' : (r?.message || '发送失败'), icon: r?.ok ? 'success' : 'none' })
       if (r?.ok) closePopup()
     } catch (err) {
