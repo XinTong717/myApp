@@ -4,6 +4,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+const REASON_WHITELIST = ['垃圾广告', '骚扰不适', '未成年人敏感信息', '其他']
+
 async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
   if (!normalized) return { ok: true }
@@ -32,6 +34,14 @@ exports.main = async (event) => {
 
   if (!targetUserId) {
     return { ok: false, message: '缺少目标用户' }
+  }
+
+  if (reason && !REASON_WHITELIST.includes(reason)) {
+    return { ok: false, message: '举报原因不合法' }
+  }
+
+  if (note.length > 1000) {
+    return { ok: false, message: '举报说明不能超过1000字' }
   }
 
   let target
@@ -79,8 +89,8 @@ exports.main = async (event) => {
         reason: reason || '未分类',
         note,
         status: 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: db.serverDate(),
+        updatedAt: db.serverDate(),
       },
     })
 
