@@ -1,11 +1,14 @@
 import { callCloud } from './cloud'
+import { fetchEventById, fetchEvents } from './api'
 
 export async function getEvents() {
-  return callCloud<{ ok: boolean; events?: any[]; message?: string }>('getEvents')
+  const events = await fetchEvents()
+  return { ok: true, events: Array.isArray(events) ? events : [] }
 }
 
 export async function getEventDetail(eventId: number) {
-  return callCloud<{ ok: boolean; event?: any; message?: string }>('getEventDetail', { eventId })
+  const event = await fetchEventById(eventId)
+  return { ok: true, event }
 }
 
 export async function getEventInterestCountsBatch(eventIds: number[]) {
