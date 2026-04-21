@@ -79,28 +79,32 @@ function buildFee(submission) {
 function buildContactInfo(submission) {
   const officialUrl = String(submission.officialUrl || '').trim()
   const signupNote = String(submission.signupNote || '').trim()
+  const organizerContact = String(submission.organizerContact || '').trim()
 
-  if (officialUrl && signupNote) return `公开主页或报名链接：${officialUrl}\n报名方式：${signupNote}`
-  if (officialUrl) return `公开主页或报名链接：${officialUrl}`
-  if (signupNote) return `报名方式：${signupNote}`
-  return '请等待更多公开信息'
+  const lines = []
+  if (officialUrl) lines.push(`公开主页或报名链接：${officialUrl}`)
+  if (signupNote) lines.push(`报名方式补充说明：${signupNote}`)
+  if (organizerContact) lines.push(`组织者联系方式：${organizerContact}`)
+  return lines.length > 0 ? lines.join('\n') : '请等待更多公开信息'
 }
 
 function buildDescription(submission) {
-  const audience = stringifyLabels(submission.audienceTags || submission.audience) || '未注明'
+  const audienceWho = stringifyLabels(submission.audienceWhoTags || submission.audienceWho) || '未注明'
+  const minAge = String(submission.minAgeRequirement || '').trim() || '未注明'
   const eventTypes = stringifyLabels(submission.eventTypes || submission.eventType)
   const description = String(submission.description || '').trim() || '暂无详细介绍'
-  const signupNote = String(submission.signupNote || '').trim() || '请查看公开主页或报名链接'
+  const signupNote = String(submission.signupNote || '').trim() || '请查看公开主页或活动说明'
   const officialUrl = String(submission.officialUrl || '').trim() || '未提供'
 
   return [
     eventTypes ? `活动类型：${eventTypes}` : '',
-    `适合人群：${audience}`,
+    `参与对象：${audienceWho}`,
+    `最低年龄要求：${minAge}`,
     '',
     '活动简介：',
     description,
     '',
-    '报名方式：',
+    '报名方式补充说明：',
     signupNote,
     '',
     '公开主页或报名链接：',
@@ -112,8 +116,11 @@ function buildWarnings(submission, payload) {
   const warnings = []
   const start = parseDate(submission.startTime)
   const end = parseDate(submission.endTime)
+  const officialUrl = String(submission.officialUrl || '').trim()
+  const signupNote = String(submission.signupNote || '').trim()
+  const organizerContact = String(submission.organizerContact || '').trim()
 
-  if (!submission.officialUrl) warnings.push('未提供公开主页或报名链接，发布前请确认活动确实可公开参与')
+  if (!officialUrl && !signupNote && !organizerContact) warnings.push('未提供公开链接、报名说明或组织者联系方式，发布前请确认活动可被用户实际联系到')
   if (!submission.location && !submission.isOnline) warnings.push('线下活动未填写具体地点，当前会用省市兜底')
   if (!submission.endTime) warnings.push('未填写结束时间，前端会按单点开始时间展示')
   if (payload.status === 'ended') warnings.push('该活动时间已过，通常不建议发布到公开活动页')
@@ -165,7 +172,10 @@ exports.main = async (event) => {
         province: submission.province || '',
         city: submission.city || '',
         eventType: stringifyLabels(submission.eventTypes || submission.eventType),
+        audienceWho: stringifyLabels(submission.audienceWhoTags || submission.audienceWho),
+        minAgeRequirement: submission.minAgeRequirement || '',
         organizer: submission.organizer || '',
+        organizerContact: submission.organizerContact || '',
         startTime: submission.startTime || '',
         endTime: submission.endTime || '',
         officialUrl: submission.officialUrl || '',
