@@ -49,7 +49,7 @@ function buildNormalizedKey(name, province, city) {
     .join('::')
 }
 
-exports.main = async (event, context) => {
+exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
 
   const cleanData = { updatedAt: db.serverDate() }
@@ -65,14 +65,12 @@ exports.main = async (event, context) => {
   if (!cleanData.province || !cleanData.city) {
     return { ok: false, message: '请选择所在城市' }
   }
-  if (cleanData.officialUrl && !/^https?:\/\//i.test(cleanData.officialUrl)) {
-    return { ok: false, message: '官网或公开链接需以 http:// 或 https:// 开头' }
-  }
 
   const securityResult = await runMsgSecCheck([
     cleanData.name,
     cleanData.communityType,
     cleanData.ageRange,
+    cleanData.officialUrl,
     cleanData.participationNote,
     cleanData.feeNote,
     cleanData.sourceNote,
