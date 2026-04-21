@@ -55,6 +55,10 @@ function pickPrimaryEventType(values) {
   return known || values[0]
 }
 
+function overLimit(value, max) {
+    return String(value || '').length > max
+  }
+
 async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
   if (!normalized) {
@@ -126,6 +130,34 @@ exports.main = async (event) => {
   }
   if (cleanData.officialUrl && !/^https?:\/\//i.test(cleanData.officialUrl)) {
     return { ok: false, message: '公开主页或报名链接需以 http:// 或 https:// 开头' }
+  }
+
+  if (overLimit(cleanData.title, 80)) {
+    return { ok: false, message: '活动标题不能超过80字' }
+  }
+  if (overLimit(cleanData.city, 30)) {
+    return { ok: false, message: '城市不能超过30字' }
+  }
+  if (overLimit(cleanData.location, 120)) {
+    return { ok: false, message: '地点不能超过120字' }
+  }
+  if (overLimit(cleanData.fee, 80)) {
+    return { ok: false, message: '费用说明不能超过80字' }
+  }
+  if (overLimit(cleanData.feeDetail, 200)) {
+    return { ok: false, message: '费用补充说明不能超过200字' }
+  }
+  if (overLimit(cleanData.organizer, 80)) {
+    return { ok: false, message: '组织者不能超过80字' }
+  }
+  if (overLimit(cleanData.organizerContact, 200)) {
+    return { ok: false, message: '组织者联系方式不能超过200字' }
+  }
+  if (overLimit(cleanData.signupNote, 300)) {
+    return { ok: false, message: '报名方式补充说明不能超过300字' }
+  }
+  if (overLimit(cleanData.description, 2000)) {
+    return { ok: false, message: '活动简介不能超过2000字' }
   }
 
   const startDate = new Date(cleanData.startTime)

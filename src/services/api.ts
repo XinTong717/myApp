@@ -9,57 +9,94 @@ const COMMON_HEADER = {
   'Content-Type': 'application/json',
 }
 
-export async function fetchSchools() {
+const SCHOOL_LIST_FIELDS = [
+  'id',
+  'name',
+  'province',
+  'city',
+  'age_range',
+  'school_type',
+].join(',')
+
+const SCHOOL_DETAIL_FIELDS = [
+  'id',
+  'name',
+  'province',
+  'city',
+  'age_range',
+  'school_type',
+  'has_xuji',
+  'xuji_note',
+  'residency_req',
+  'admission_req',
+  'fee',
+  'output_direction',
+  'official_url',
+].join(',')
+
+const EVENT_LIST_FIELDS = [
+  'id',
+  'title',
+  'event_type',
+  'description',
+  'start_time',
+  'end_time',
+  'location',
+  'fee',
+  'status',
+  'organizer',
+  'is_online',
+].join(',')
+
+const EVENT_DETAIL_FIELDS = [
+  'id',
+  'title',
+  'event_type',
+  'description',
+  'start_time',
+  'end_time',
+  'location',
+  'fee',
+  'status',
+  'organizer',
+  'is_online',
+].join(',')
+
+async function requestList(url: string) {
   const res = await Taro.request({
-    url: `${API_BASE_URL}/schools?select=*&order=id.asc`,
+    url,
     method: 'GET',
     header: COMMON_HEADER,
   })
   if (res.statusCode !== 200) {
-    console.error('fetchSchools failed:', res.statusCode, res.data)
-    throw new Error(`fetchSchools failed: ${res.statusCode}`)
+    console.error('MemFire request failed:', res.statusCode, res.data)
+    throw new Error(`request failed: ${res.statusCode}`)
   }
-  return res.data
+  return Array.isArray(res.data) ? res.data : []
+}
+
+export async function fetchSchools() {
+  return requestList(
+    `${API_BASE_URL}/schools?select=${encodeURIComponent(SCHOOL_LIST_FIELDS)}&order=id.asc`
+  )
 }
 
 export async function fetchEvents() {
-  const res = await Taro.request({
-    url: `${API_BASE_URL}/events?select=*&order=start_time.asc`,
-    method: 'GET',
-    header: COMMON_HEADER,
-  })
-  if (res.statusCode !== 200) {
-    console.error('fetchEvents failed:', res.statusCode, res.data)
-    throw new Error(`fetchEvents failed: ${res.statusCode}`)
-  }
-  return res.data
+  return requestList(
+    `${API_BASE_URL}/events?select=${encodeURIComponent(EVENT_LIST_FIELDS)}&order=start_time.asc`
+  )
 }
 
 export async function fetchSchoolById(id: number) {
-  const res = await Taro.request({
-    url: `${API_BASE_URL}/schools?select=*&id=eq.${id}&limit=1`,
-    method: 'GET',
-    header: COMMON_HEADER,
-  })
-  if (res.statusCode !== 200) {
-    console.error('fetchSchoolById failed:', res.statusCode, res.data)
-    throw new Error(`fetchSchoolById failed: ${res.statusCode}`)
-  }
-  const list = Array.isArray(res.data) ? res.data : []
+  const list = await requestList(
+    `${API_BASE_URL}/schools?select=${encodeURIComponent(SCHOOL_DETAIL_FIELDS)}&id=eq.${id}&limit=1`
+  )
   return list[0] || null
 }
 
 export async function fetchEventById(id: number) {
-  const res = await Taro.request({
-    url: `${API_BASE_URL}/events?select=*&id=eq.${id}&limit=1`,
-    method: 'GET',
-    header: COMMON_HEADER,
-  })
-  if (res.statusCode !== 200) {
-    console.error('fetchEventById failed:', res.statusCode, res.data)
-    throw new Error(`fetchEventById failed: ${res.statusCode}`)
-  }
-  const list = Array.isArray(res.data) ? res.data : []
+  const list = await requestList(
+    `${API_BASE_URL}/events?select=${encodeURIComponent(EVENT_DETAIL_FIELDS)}&id=eq.${id}&limit=1`
+  )
   return list[0] || null
 }
-
