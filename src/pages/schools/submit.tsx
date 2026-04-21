@@ -48,7 +48,8 @@ export default function SubmitCommunityPage() {
   const [submitting, setSubmitting] = useState(false)
   const [name, setName] = useState('')
   const [province, setProvince] = useState('')
-  const [city, setCity] = useState('')
+  const [cityOption, setCityOption] = useState('')
+  const [customCity, setCustomCity] = useState('')
   const [communityType, setCommunityType] = useState('')
   const [ageRange, setAgeRange] = useState('')
   const [officialUrl, setOfficialUrl] = useState('')
@@ -57,6 +58,8 @@ export default function SubmitCommunityPage() {
   const [sourceNote, setSourceNote] = useState('')
   const [recommendationNote, setRecommendationNote] = useState('')
 
+  const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
+
   const pickerRange = useMemo(() => {
     const cities = province ? (LOCATION_DATA[province] || ['其他']) : ['请先选择省份']
     return [PROVINCES, cities]
@@ -64,22 +67,27 @@ export default function SubmitCommunityPage() {
   const pickerValue = useMemo(() => {
     const provIdx = Math.max(0, PROVINCES.indexOf(province))
     const cities = province ? (LOCATION_DATA[province] || []) : []
-    return [provIdx, Math.max(0, cities.indexOf(city))]
-  }, [province, city])
+    const normalizedCityOption = cityOption || (cities[0] || '')
+    return [provIdx, Math.max(0, cities.indexOf(normalizedCityOption))]
+  }, [province, cityOption])
 
   const handlePickerChange = (e: any) => {
     const [provIdx, cityIdx] = e.detail.value
     const nextProvince = PROVINCES[provIdx] || ''
     const cities = LOCATION_DATA[nextProvince] || []
+    const nextCityOption = cities[cityIdx] || ''
     setProvince(nextProvince)
-    setCity(cities[cityIdx] || '')
+    setCityOption(nextCityOption)
+    if (nextCityOption !== '其他') setCustomCity('')
   }
 
   const handlePickerColumnChange = (e: any) => {
     if (e.detail.column === 0) {
       const nextProvince = PROVINCES[e.detail.value] || ''
+      const firstCity = (LOCATION_DATA[nextProvince] || [])[0] || ''
       setProvince(nextProvince)
-      setCity((LOCATION_DATA[nextProvince] || [])[0] || '')
+      setCityOption(firstCity)
+      setCustomCity('')
     }
   }
 
@@ -88,8 +96,12 @@ export default function SubmitCommunityPage() {
       Taro.showToast({ title: '请填写学习社区名称', icon: 'none' })
       return
     }
-    if (!province || !city) {
+    if (!province || !currentCity) {
       Taro.showToast({ title: '请选择所在城市', icon: 'none' })
+      return
+    }
+    if (cityOption === '其他' && !customCity.trim()) {
+      Taro.showToast({ title: '请输入真实城市名', icon: 'none' })
       return
     }
 
@@ -99,9 +111,7 @@ export default function SubmitCommunityPage() {
       confirmText: '确认提交',
       cancelText: '再看看',
     })
-    if (!confirm.confirm) {
-      return
-    }
+    if (!confirm.confirm) return
 
     try {
       setSubmitting(true)
@@ -110,7 +120,7 @@ export default function SubmitCommunityPage() {
         data: {
           name: name.trim(),
           province,
-          city,
+          city: currentCity,
           communityType,
           ageRange,
           officialUrl: officialUrl.trim(),
@@ -146,7 +156,7 @@ export default function SubmitCommunityPage() {
         <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>推荐新学习社区</Text>
         <View style={{ marginTop: '6px' }}>
           <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-            提交公开可验证的信息，帮助更多家庭发现新的学习社区。请优先填写官网或公开链接，不要提交私密联系方式。
+            提交公开可验证的信息，帮助更多家庭发现新的学习社区。请优先填写公开主页、公众号或小红书，不要填写第三方未公开的私人联系方式。
           </Text>
         </View>
       </View>
@@ -159,13 +169,21 @@ export default function SubmitCommunityPage() {
 
         <SectionTitle text='所在城市' />
         <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
-          <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: cityOption === '其他' ? '8px' : '16px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ fontSize: '14px', flex: 1, color: province ? palette.text : '#C5B5A5' }}>
-              {province && city ? `${province} · ${city}` : '点击选择省份和城市'}
+              {province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}
             </Text>
             <Text style={{ fontSize: '12px', color: palette.subtext }}>▼</Text>
           </View>
         </Picker>
+        {cityOption === '其他' && (
+          <View style={{ marginBottom: '16px' }}>
+            <View style={{ marginBottom: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View>
+            <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+              <Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onInput={(e) => setCustomCity(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+            </View>
+          </View>
+        )}
 
         <SectionTitle text='社区类型（选填）' />
         <PillSelect options={COMMUNITY_TYPE_OPTIONS} selected={communityType} onChange={setCommunityType} />
@@ -173,9 +191,9 @@ export default function SubmitCommunityPage() {
         <SectionTitle text='适合阶段（选填）' />
         <PillSelect options={AGE_RANGE_OPTIONS} selected={ageRange} onChange={setAgeRange} />
 
-        <SectionTitle text='官网或公开链接（选填）' />
+        <SectionTitle text='公开主页 / 官网 / 公众号 / 小红书（选填）' />
         <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}` }}>
-          <Input value={officialUrl} placeholder='https://...' onInput={(e) => setOfficialUrl(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+          <Input value={officialUrl} placeholder='https://... 或公众号名称 / 小红书账号' onInput={(e) => setOfficialUrl(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
         </View>
 
         <SectionTitle text='参与方式说明（选填）' />
@@ -204,7 +222,7 @@ export default function SubmitCommunityPage() {
 
       <View style={{ backgroundColor: '#FFFDF9', borderRadius: '16px', padding: '12px 14px', marginTop: '14px', marginBottom: '20px', border: `1px dashed ${palette.line}` }}>
         <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
-          🔒 你的提交会先进入审核，不会自动公开。请只提交公开可验证的信息，不要填写私人微信号、手机号或未公开的未成年人信息。
+          🔒 你的提交会先进入审核，不会自动公开。请只提交公开可验证的信息，不要填写第三方未公开的私人联系方式或未公开的未成年人信息。
         </Text>
       </View>
 
