@@ -177,14 +177,6 @@ export default function SchoolDetailPage() {
                   {school.school_type || '未填写'}
                 </Text>
               </View>
-              <View style={{
-                padding: '5px 10px', borderRadius: '999px',
-                backgroundColor: '#FFF3E6', marginRight: '8px', marginBottom: '8px',
-              }}>
-                <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
-                  {school.has_xuji ? '公开说明较完整' : '公开说明待补充'}
-                </Text>
-              </View>
             </View>
           </View>
 
