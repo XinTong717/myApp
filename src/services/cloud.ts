@@ -9,15 +9,18 @@ export async function callCloud<T = Record<string, unknown>>(name: string, data:
   const clientRequestId = createClientRequestId(name)
 
   try {
-    const res = await Taro.cloud.callFunction({ name, data })
-    const result = ((res.result || {}) as CloudResponse<T>) || { ok: false }
+    const res = await Taro.cloud.callFunction({ name, data: { ...data, clientRequestId } })
+    const result = ((res.result || {}) as CloudResponse<T>) || ({ ok: false } as CloudResponse<T>)
 
     if (!result.requestId) {
       result.requestId = clientRequestId
     }
 
-    if (result.ok === undefined) {
-      result.ok = true
+    if (typeof result.ok !== 'boolean') {
+      console.warn(`callCloud ${name} missing explicit ok flag`, result)
+      result.ok = false
+      result.code = result.code || 'INVALID_CLOUD_RESPONSE'
+      result.message = result.message || '服务返回格式异常，请稍后重试'
     }
 
     return result
