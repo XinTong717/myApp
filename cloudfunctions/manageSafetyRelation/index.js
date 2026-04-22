@@ -4,17 +4,26 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+function createRequestId() {
+  return `manage-safety-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function buildSafetyDocId(ownerOpenid, targetOpenid) {
+  return `safety_${ownerOpenid}_${targetOpenid}`
+}
+
 exports.main = async (event) => {
+  const requestId = createRequestId()
   const { OPENID } = cloud.getWXContext()
   const targetUserId = String(event.targetUserId || '').trim()
   const action = String(event.action || '').trim()
 
   if (!targetUserId || !action) {
-    return { ok: false, message: '参数缺失' }
+    return { ok: false, code: 'BAD_REQUEST', requestId, message: '参数缺失' }
   }
 
   if (!['block', 'unblock', 'mute', 'unmute'].includes(action)) {
-    return { ok: false, message: '无效操作' }
+    return { ok: false, code: 'INVALID_ACTION', requestId, message: '无效操作' }
   }
 
   let target
@@ -22,23 +31,38 @@ exports.main = async (event) => {
     const targetRes = await db.collection('users').doc(targetUserId).get()
     target = targetRes.data
   } catch (err) {
-    return { ok: false, message: '找不到该用户' }
+    return { ok: false, code: 'TARGET_NOT_FOUND', requestId, message: '找不到该用户' }
   }
 
   if (!target || !target.openid) {
-    return { ok: false, message: '找不到该用户' }
+    return { ok: false, code: 'TARGET_NOT_FOUND', requestId, message: '找不到该用户' }
   }
 
   if (target.openid === OPENID) {
-    return { ok: false, message: '不能对自己执行这个操作' }
+    return { ok: false, code: 'SELF_ACTION_NOT_ALLOWED', requestId, message: '不能对自己执行这个操作' }
   }
 
-  const existingRes = await db.collection('safety_relations')
-    .where({ ownerOpenid: OPENID, targetOpenid: target.openid })
-    .limit(1)
-    .get()
+  const stableDocId = buildSafetyDocId(OPENID, target.openid)
 
-  const existing = existingRes.data[0] || null
+  let existing = null
+  try {
+    const stableRes = await db.collection('safety_relations').doc(stableDocId).get()
+    existing = stableRes.data || null
+  } catch (err) {
+    existing = null
+  }
+
+  let legacyDocs = []
+  if (!existing) {
+    const existingRes = await db.collection('safety_relations')
+      .where({ ownerOpenid: OPENID, targetOpenid: target.openid })
+      .limit(20)
+      .get()
+
+    legacyDocs = existingRes.data || []
+    existing = legacyDocs.find((item) => item._id === stableDocId) || legacyDocs[0] || null
+  }
+
   const currentBlocked = !!existing?.isBlocked
   const currentMuted = !!existing?.isMuted
 
@@ -53,10 +77,18 @@ exports.main = async (event) => {
   try {
     if (!nextBlocked && !nextMuted) {
       if (existing?._id) {
-        await db.collection('safety_relations').doc(existing._id).remove()
+        await db.collection('safety_relations').doc(existing._id).remove().catch(() => null)
       }
+      await Promise.all(
+        legacyDocs
+          .filter((item) => item._id !== existing?._id)
+          .map((item) => db.collection('safety_relations').doc(item._id).remove().catch(() => null))
+      )
+
       return {
         ok: true,
+        code: 'OK',
+        requestId,
         message: action === 'unblock' ? '已解除拉黑' : '已取消静音',
         isBlocked: false,
         isMuted: false,
@@ -74,11 +106,18 @@ exports.main = async (event) => {
       updatedAt: db.serverDate(),
     }
 
-    if (existing?._id) {
-      await db.collection('safety_relations').doc(existing._id).update({ data })
-    } else {
-      await db.collection('safety_relations').add({ data: { ...data, createdAt: db.serverDate() } })
-    }
+    await db.collection('safety_relations').doc(stableDocId).set({
+      data: {
+        ...data,
+        createdAt: existing?.createdAt || db.serverDate(),
+      },
+    })
+
+    await Promise.all(
+      legacyDocs
+        .filter((item) => item._id !== stableDocId)
+        .map((item) => db.collection('safety_relations').doc(item._id).remove().catch(() => null))
+    )
 
     if (action === 'block') {
       const forwardRes = await db.collection('connections')
@@ -96,12 +135,14 @@ exports.main = async (event) => {
             removedBy: OPENID,
             updatedAt: db.serverDate(),
           },
-        }))
+        }).catch(() => null))
       )
     }
 
     return {
       ok: true,
+      code: 'OK',
+      requestId,
       message: action === 'block'
         ? '已拉黑该用户'
         : action === 'unblock'
@@ -114,6 +155,6 @@ exports.main = async (event) => {
     }
   } catch (err) {
     console.error('manageSafetyRelation error:', err)
-    return { ok: false, message: '操作失败，请稍后重试' }
+    return { ok: false, code: 'MANAGE_SAFETY_FAILED', requestId, message: '操作失败，请稍后重试' }
   }
 }
