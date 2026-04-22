@@ -6,7 +6,7 @@ export async function getMe() {
 }
 
 export async function saveProfile(data: Record<string, unknown>) {
-  return callCloud<{ mode?: 'create' | 'update' }>('saveProfile', data)
+  return callCloud<{ mode?: 'create' | 'update'; profile?: UserProfile | null }>('saveProfile', data)
 }
 
 export async function updatePrivacySettings(data: { allowIncomingRequests?: boolean; isVisibleOnMap?: boolean }) {
