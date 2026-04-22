@@ -4,6 +4,10 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+function createRequestId() {
+  return `get-map-users-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 function normalizeRoles(roles) {
   return (Array.isArray(roles) ? roles : [])
     .map((role) => String(role).trim())
@@ -12,6 +16,7 @@ function normalizeRoles(roles) {
 }
 
 exports.main = async () => {
+  const requestId = createRequestId()
   const { OPENID } = cloud.getWXContext()
 
   try {
@@ -74,14 +79,18 @@ exports.main = async () => {
 
     return {
       ok: true,
+      code: 'OK',
+      requestId,
       users,
     }
   } catch (err) {
     console.error('getMapUsers error:', err)
     return {
       ok: false,
+      code: 'GET_MAP_USERS_FAILED',
+      requestId,
       users: [],
-      error: err.message,
+      message: '读取地图用户失败',
     }
   }
 }
