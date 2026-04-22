@@ -31,6 +31,10 @@ const AGE_RANGE_WHITELIST = ['18-25', '26-35', '36-45', '46-55', '55以上']
 const CHILD_AGE_WHITELIST = ['学龄前', '小学阶段', '中学阶段']
 const CHILD_STATUS_WHITELIST = ['寻找学习社区', '寻找同伴连接', '寻找项目活动', '寻找家庭支持', '自主探索中']
 
+function createRequestId() {
+  return `save-profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 function normalizeRoles(roles) {
   return (Array.isArray(roles) ? roles : [])
     .map((role) => String(role).trim())
@@ -115,6 +119,7 @@ async function runMsgSecCheck(content, openid) {
 }
 
 exports.main = async (event) => {
+  const requestId = createRequestId()
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
@@ -135,28 +140,28 @@ exports.main = async (event) => {
   cleanData.roles = normalizeRoles(cleanData.roles)
 
   if (!cleanData.displayName) {
-    return { ok: false, message: '显示名不能为空' }
+    return { ok: false, code: 'DISPLAY_NAME_REQUIRED', requestId, message: '显示名不能为空' }
   }
 
   if (!cleanData.province || !cleanData.city) {
-    return { ok: false, message: '请选择所在城市' }
+    return { ok: false, code: 'CITY_REQUIRED', requestId, message: '请选择所在城市' }
   }
 
   if (cleanData.gender && !GENDER_WHITELIST.includes(cleanData.gender)) {
-    return { ok: false, message: '性别选项不合法' }
+    return { ok: false, code: 'INVALID_GENDER', requestId, message: '性别选项不合法' }
   }
 
   if (cleanData.ageRange && !AGE_RANGE_WHITELIST.includes(cleanData.ageRange)) {
-    return { ok: false, message: '年龄段选项不合法' }
+    return { ok: false, code: 'INVALID_AGE_RANGE', requestId, message: '年龄段选项不合法' }
   }
 
   if (cleanData.ageRange === '18岁以下') {
-    return { ok: false, message: '当前仅支持18岁及以上用户注册' }
+    return { ok: false, code: 'UNDERAGE_NOT_ALLOWED', requestId, message: '当前仅支持18岁及以上用户注册' }
   }
 
   const selectedRoles = Array.isArray(cleanData.roles) ? cleanData.roles : []
   if (selectedRoles.length === 0) {
-    return { ok: false, message: '请至少选择一个身份' }
+    return { ok: false, code: 'ROLE_REQUIRED', requestId, message: '请至少选择一个身份' }
   }
 
   cleanData.childAgeRange = normalizeStringArray(cleanData.childAgeRange).filter((item) => CHILD_AGE_WHITELIST.includes(item))
@@ -171,12 +176,12 @@ exports.main = async (event) => {
     validateLength('教育服务', cleanData.eduServices, 500)
 
   if (lengthError) {
-    return { ok: false, message: lengthError }
+    return { ok: false, code: 'INVALID_LENGTH', requestId, message: lengthError }
   }
 
   const wechatError = validateWechatId(cleanData.wechatId)
   if (wechatError) {
-    return { ok: false, message: wechatError }
+    return { ok: false, code: 'INVALID_WECHAT_ID', requestId, message: wechatError }
   }
 
   if (!selectedRoles.includes('同行者')) {
@@ -200,7 +205,12 @@ exports.main = async (event) => {
   ].filter(Boolean).join('\n'), openid)
 
   if (!securityResult.ok) {
-    return securityResult
+    return {
+      ok: false,
+      code: 'CONTENT_SECURITY_BLOCKED',
+      requestId,
+      message: securityResult.message,
+    }
   }
 
   const dupCheck = await db.collection('users')
@@ -212,37 +222,41 @@ exports.main = async (event) => {
     .get()
 
   if (dupCheck.data.length > 0) {
-    return { ok: false, message: '这个显示名已被使用，请换一个' }
+    return { ok: false, code: 'DISPLAY_NAME_TAKEN', requestId, message: '这个显示名已被使用，请换一个' }
   }
 
   const existing = await db.collection('users')
     .where({ openid })
-    .limit(1)
+    .limit(20)
     .get()
 
+  const existingDocs = existing.data || []
+  const canonicalDoc = existingDocs.find((item) => item._id === openid) || existingDocs[0] || null
   const dataToSave = {
     allowIncomingRequests: cleanData.allowIncomingRequests !== false,
     isVisibleOnMap: cleanData.isVisibleOnMap !== false,
     ...cleanData,
+    openid,
+    createdAt: canonicalDoc?.createdAt || db.serverDate(),
   }
 
-  let docId = ''
-  if (existing.data.length > 0) {
-    docId = existing.data[0]._id
-    await db.collection('users').doc(docId).update({
-      data: dataToSave,
-    })
-  } else {
-    const addRes = await db.collection('users').add({
-      data: { ...dataToSave, openid, createdAt: db.serverDate() },
-    })
-    docId = addRes._id
+  await db.collection('users').doc(openid).set({
+    data: dataToSave,
+  })
+
+  const staleDocs = existingDocs.filter((item) => item._id !== openid)
+  if (staleDocs.length > 0) {
+    await Promise.all(
+      staleDocs.map((item) => db.collection('users').doc(item._id).remove().catch(() => null))
+    )
   }
 
-  const latest = await db.collection('users').doc(docId).get()
+  const latest = await db.collection('users').doc(openid).get()
   return {
     ok: true,
-    mode: existing.data.length > 0 ? 'update' : 'create',
+    code: 'OK',
+    requestId,
+    mode: canonicalDoc ? 'update' : 'create',
     profile: normalizeProfile(latest.data || null),
   }
 }
