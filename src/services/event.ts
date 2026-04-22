@@ -1,4 +1,5 @@
 import { callCloud } from './cloud'
+import { getCachedValue, setCachedValue } from './cache'
 import type {
   CloudResponse,
   ContactInfoResult,
@@ -9,8 +10,22 @@ import type {
   ToggleEventInterestResult,
 } from '../types/domain'
 
-export async function getEvents() {
-  return callCloud<EventListResult>('getEvents')
+const EVENT_LIST_CACHE_KEY = 'cloud-cache:events:list:v1'
+const EVENT_LIST_TTL_MS = 5 * 60 * 1000
+
+export async function getEvents(options: { forceRefresh?: boolean } = {}) {
+  if (!options.forceRefresh) {
+    const cached = getCachedValue<EventListResult>(EVENT_LIST_CACHE_KEY)
+    if (cached) {
+      return cached
+    }
+  }
+
+  const result = await callCloud<EventListResult>('getEvents')
+  if (result.ok) {
+    setCachedValue(EVENT_LIST_CACHE_KEY, result, EVENT_LIST_TTL_MS)
+  }
+  return result
 }
 
 export async function getEventDetail(eventId: number) {
