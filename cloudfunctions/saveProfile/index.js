@@ -36,6 +36,11 @@ function createRequestId() {
   return `save-profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+function resolveRequestId(event) {
+  const clientRequestId = String(event?.clientRequestId || '').trim()
+  return clientRequestId || createRequestId()
+}
+
 function hasOwn(obj, key) {
   return Object.prototype.hasOwnProperty.call(obj, key)
 }
@@ -124,7 +129,7 @@ async function runMsgSecCheck(content, openid) {
 }
 
 exports.main = async (event) => {
-  const requestId = createRequestId()
+  const requestId = resolveRequestId(event)
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
