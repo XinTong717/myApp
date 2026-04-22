@@ -33,6 +33,11 @@ function createRequestId() {
   return `submit-event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+function resolveRequestId(event) {
+  const clientRequestId = String(event?.clientRequestId || '').trim()
+  return clientRequestId || createRequestId()
+}
+
 function normalizeStringArray(value) {
   if (Array.isArray(value)) {
     return value.map((item) => String(item).trim()).filter(Boolean)
@@ -95,7 +100,7 @@ function buildNormalizedKey(title, province, city, startTime) {
 }
 
 exports.main = async (event) => {
-  const requestId = createRequestId()
+  const requestId = resolveRequestId(event)
   const { OPENID } = cloud.getWXContext()
 
   const cleanData = { updatedAt: db.serverDate() }
