@@ -4,6 +4,10 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+function createRequestId() {
+  return `get-my-requests-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 function normalizeRoles(roles = []) {
   return (Array.isArray(roles) ? roles : [])
     .map((role) => String(role).trim())
@@ -21,6 +25,7 @@ function normalizeStringArray(value) {
 }
 
 exports.main = async () => {
+  const requestId = createRequestId()
   const wxContext = cloud.getWXContext()
   const myOpenid = wxContext.OPENID
 
@@ -127,9 +132,17 @@ exports.main = async () => {
       createdAt: item.createdAt,
     }))
 
-    return { ok: true, pending, accepted: enrichedAccepted, sent }
+    return { ok: true, code: 'OK', requestId, pending, accepted: enrichedAccepted, sent }
   } catch (err) {
     console.error('getMyRequests error:', err)
-    return { ok: false, pending: [], accepted: [], sent: [], error: err.message }
+    return {
+      ok: false,
+      code: 'GET_MY_REQUESTS_FAILED',
+      requestId,
+      pending: [],
+      accepted: [],
+      sent: [],
+      message: '读取联络动态失败',
+    }
   }
 }
