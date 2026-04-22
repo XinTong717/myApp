@@ -1,4 +1,5 @@
 import { View, Text } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import type { AcceptedConnection, PendingRequest, SentRequest } from '../../types/domain'
 import { profilePalette as palette } from './palette'
 
@@ -84,7 +85,7 @@ export default function ProfileConnectionsSection(props: Props) {
               </View>
               {conn.otherBio ? <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>{conn.otherBio}</Text></View> : null}
               {conn.otherWechat ? (
-                <View onClick={() => {}} style={{ marginTop: '8px', backgroundColor: palette.greenSoft, borderRadius: '12px', padding: '8px 12px', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                <View onClick={() => { Taro.setClipboardData({ data: conn.otherWechat }) }} style={{ marginTop: '8px', backgroundColor: palette.greenSoft, borderRadius: '12px', padding: '8px 12px', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
                   <Text style={{ fontSize: '13px', color: palette.green, flex: 1 }}>微信: {conn.otherWechat}</Text>
                   <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text>
                 </View>
