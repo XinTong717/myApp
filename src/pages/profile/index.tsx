@@ -15,6 +15,13 @@ import PillSelect from '../../components/profile/PillSelect'
 import { getMe, saveProfile, updatePrivacySettings, getSafetyOverview, checkAdminAccess } from '../../services/profile'
 import { getMyRequests, respondRequest, manageConnection } from '../../services/connection'
 import { manageSafetyRelation, reportUser } from '../../services/safety'
+import type {
+  AcceptedConnection,
+  PendingRequest,
+  SafetyItem,
+  SentRequest,
+  UserProfile,
+} from '../../types/domain'
 
 const palette = {
   bg: '#FFF9F2',
@@ -28,40 +35,16 @@ const palette = {
   greenSoft: '#EEF7EE',
 }
 
-function normalizeRoles(roles: string[] = []) {
+function normalizeRolesForDisplay(roles: string[] = []) {
   return roles.map((role) => role === '其他' ? '同行者' : role)
 }
 
-function normalizeStringArray(value: any): string[] {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean)
-  }
-  const text = String(value || '').trim()
-  if (!text) return []
-  return text.split(/[、,，/]/).map((item) => item.trim()).filter(Boolean)
-}
-
 function renderRoleText(roles: string[] = []) {
-  return normalizeRoles(roles).join('/')
+  return normalizeRolesForDisplay(roles).join('/')
 }
 
 function renderStringArray(value: string[] = []) {
   return value.filter(Boolean).join(' · ')
-}
-
-type PendingReq = {
-  _id: string; fromUserId: string; fromName: string; fromCity: string; fromRoles: string[]; fromBio: string; createdAt: string
-}
-type AcceptedConn = {
-  _id: string; otherUserId: string; otherName: string; otherCity: string; otherRoles: string[]; otherBio: string
-  otherWechat: string; otherChildInfo: { ageRange: string[]; status: string[]; interests: string } | null
-  otherEduServices: string
-}
-type SentReq = {
-  _id: string; toUserId: string; toName: string; toCity: string; status: string; createdAt: string
-}
-type SafetyItem = {
-  _id: string; targetUserId: string; targetName: string; targetCity: string; isBlocked: boolean; isMuted: boolean
 }
 
 export default function ProfilePage() {
@@ -89,9 +72,9 @@ export default function ProfilePage() {
   const [companionContext, setCompanionContext] = useState('')
   const [bio, setBio] = useState('')
 
-  const [pendingRequests, setPendingRequests] = useState<PendingReq[]>([])
-  const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConn[]>([])
-  const [sentRequests, setSentRequests] = useState<SentReq[]>([])
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([])
+  const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConnection[]>([])
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([])
   const [blockedUsers, setBlockedUsers] = useState<SafetyItem[]>([])
   const [mutedUsers, setMutedUsers] = useState<SafetyItem[]>([])
 
@@ -99,6 +82,37 @@ export default function ProfilePage() {
   const isEducator = roles.includes('教育者')
   const isCompanion = roles.includes('同行者')
   const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
+
+  const applyProfile = (p: UserProfile | null) => {
+    if (!p) return
+    setDisplayName(p.displayName || '')
+    setGender(p.gender || '')
+    setAgeRange(p.ageRange || '')
+    setRoles(Array.isArray(p.roles) ? p.roles : [])
+    setProvince(p.province || '')
+
+    const availableCities = LOCATION_DATA[p.province || ''] || []
+    if (p.city && availableCities.includes(p.city)) {
+      setCityOption(p.city)
+      setCustomCity('')
+    } else if (p.city) {
+      setCityOption('其他')
+      setCustomCity(p.city)
+    } else {
+      setCityOption('')
+      setCustomCity('')
+    }
+
+    setWechatId(p.wechatId || '')
+    setAllowIncomingRequests(p.allowIncomingRequests !== false)
+    setIsVisibleOnMap(p.isVisibleOnMap !== false)
+    setChildAgeRange(Array.isArray(p.childAgeRange) ? p.childAgeRange : [])
+    setChildDropoutStatus(Array.isArray(p.childDropoutStatus) ? p.childDropoutStatus : [])
+    setChildInterests(p.childInterests || '')
+    setEduServices(p.eduServices || '')
+    setCompanionContext(p.companionContext || '')
+    setBio(p.bio || '')
+  }
 
   const pickerRange = useMemo(() => {
     const cities = province ? (LOCATION_DATA[province] || ['其他']) : ['请先选择省份']
@@ -115,35 +129,7 @@ export default function ProfilePage() {
     try {
       setLoading(true)
       const res = await getMe()
-      const p = res.profile
-      if (p) {
-        setDisplayName(p.displayName || '')
-        setGender(p.gender || '')
-        setAgeRange(p.ageRange === '18岁以下' ? '' : (p.ageRange || ''))
-        const sanitizedRoles = normalizeRoles((Array.isArray(p.roles) ? p.roles : []).filter((role) => role !== '学生'))
-        setRoles(sanitizedRoles)
-        setProvince(p.province || '')
-        const availableCities = LOCATION_DATA[p.province || ''] || []
-        if (p.city && availableCities.includes(p.city)) {
-          setCityOption(p.city)
-          setCustomCity('')
-        } else if (p.city) {
-          setCityOption('其他')
-          setCustomCity(p.city)
-        } else {
-          setCityOption('')
-          setCustomCity('')
-        }
-        setWechatId(p.wechatId || '')
-        setAllowIncomingRequests(p.allowIncomingRequests !== false)
-        setIsVisibleOnMap(p.isVisibleOnMap !== false)
-        setChildAgeRange(normalizeStringArray(p.childAgeRange))
-        setChildDropoutStatus(normalizeStringArray(p.childDropoutStatus))
-        setChildInterests(p.childInterests || '')
-        setEduServices(p.eduServices || '')
-        setCompanionContext(p.companionContext || '')
-        setBio(p.bio || '')
-      }
+      applyProfile(res.profile)
     } catch (err) {
       console.error('loadProfile error:', err)
     } finally {
@@ -213,14 +199,12 @@ export default function ProfilePage() {
     }
     try {
       setSaving(true)
-      const normalizedRoles = normalizeRoles(roles.filter((role) => role !== '学生'))
-      const normalizedAgeRange = ageRange === '18岁以下' ? '' : ageRange
 
       const r = await saveProfile({
         displayName: displayName.trim(),
         gender,
-        ageRange: normalizedAgeRange,
-        roles: normalizedRoles,
+        ageRange,
+        roles,
         province,
         city: currentCity,
         wechatId: wechatId.trim(),
@@ -234,8 +218,12 @@ export default function ProfilePage() {
         bio: bio.trim(),
       })
       if (r?.ok) {
+        if (r.profile) {
+          applyProfile(r.profile)
+        } else {
+          await loadProfile()
+        }
         Taro.showToast({ title: '保存成功', icon: 'success' })
-        setTimeout(() => { loadProfile() }, 500)
       } else {
         Taro.showToast({ title: r?.message || '保存失败', icon: 'none' })
       }
@@ -482,7 +470,7 @@ export default function ProfilePage() {
         <PillSelect options={AGE_RANGE_OPTIONS} selected={ageRange} onChange={(v) => setAgeRange(v as string)} />
 
         <SectionTitle text='身份（可多选）' />
-        <PillSelect options={ROLE_OPTIONS} selected={roles} multi onChange={(v) => setRoles(normalizeRoles(v as string[]))} />
+        <PillSelect options={ROLE_OPTIONS} selected={roles} multi onChange={(v) => setRoles(v as string[])} />
 
         <SectionTitle text='所在城市' />
         <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
