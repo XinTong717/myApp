@@ -11,12 +11,17 @@ function createRequestId() {
   return `send-request-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+function resolveRequestId(event) {
+  const clientRequestId = String(event?.clientRequestId || '').trim()
+  return clientRequestId || createRequestId()
+}
+
 function buildConnectionDocId(fromOpenid, toOpenid) {
   return `conn_${fromOpenid}_${toOpenid}`
 }
 
 exports.main = async (event) => {
-  const requestId = createRequestId()
+  const requestId = resolveRequestId(event)
   const wxContext = cloud.getWXContext()
   const myOpenid = wxContext.OPENID
   const targetUserId = String(event.targetUserId || '').trim()
