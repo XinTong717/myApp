@@ -3,7 +3,12 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 
+function createRequestId() {
+  return `get-safety-overview-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 exports.main = async () => {
+  const requestId = createRequestId()
   const { OPENID } = cloud.getWXContext()
 
   try {
@@ -25,11 +30,20 @@ exports.main = async () => {
 
     return {
       ok: true,
+      code: 'OK',
+      requestId,
       blocked: items.filter((item) => item.isBlocked),
       muted: items.filter((item) => item.isMuted),
     }
   } catch (err) {
     console.error('getSafetyOverview error:', err)
-    return { ok: false, blocked: [], muted: [], message: '读取安全设置失败' }
+    return {
+      ok: false,
+      code: 'GET_SAFETY_OVERVIEW_FAILED',
+      requestId,
+      blocked: [],
+      muted: [],
+      message: '读取安全设置失败',
+    }
   }
 }
