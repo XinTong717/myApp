@@ -29,6 +29,10 @@ const ALLOWED_FIELDS = [
 
 const ARRAY_FIELDS = ['eventTypes', 'audienceWho']
 
+function createRequestId() {
+  return `submit-event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 function normalizeStringArray(value) {
   if (Array.isArray(value)) {
     return value.map((item) => String(item).trim()).filter(Boolean)
@@ -56,8 +60,8 @@ function pickPrimaryEventType(values) {
 }
 
 function overLimit(value, max) {
-    return String(value || '').length > max
-  }
+  return String(value || '').length > max
+}
 
 async function runMsgSecCheck(content, openid) {
   const normalized = String(content || '').trim()
@@ -77,10 +81,10 @@ async function runMsgSecCheck(content, openid) {
       return { ok: true }
     }
     console.error('submitEvent msgSecCheck blocked content:', res)
-    return { ok: false, message: '内容包含不合规信息，请修改后重试' }
+    return { ok: false, code: 'CONTENT_SECURITY_BLOCKED', message: '内容包含不合规信息，请修改后重试' }
   } catch (err) {
     console.error('submitEvent msgSecCheck error:', err)
-    return { ok: false, message: '内容审核失败，请稍后重试' }
+    return { ok: false, code: 'CONTENT_SECURITY_FAILED', message: '内容审核失败，请稍后重试' }
   }
 }
 
@@ -91,6 +95,7 @@ function buildNormalizedKey(title, province, city, startTime) {
 }
 
 exports.main = async (event) => {
+  const requestId = createRequestId()
   const { OPENID } = cloud.getWXContext()
 
   const cleanData = { updatedAt: db.serverDate() }
@@ -111,66 +116,66 @@ exports.main = async (event) => {
   cleanData.eventType = pickPrimaryEventType(cleanData.eventTypes)
 
   if (!cleanData.title) {
-    return { ok: false, message: '请填写活动标题' }
+    return { ok: false, code: 'TITLE_REQUIRED', requestId, message: '请填写活动标题' }
   }
   if (!cleanData.province || !cleanData.city) {
-    return { ok: false, message: '请选择所在城市' }
+    return { ok: false, code: 'CITY_REQUIRED', requestId, message: '请选择所在城市' }
   }
   if (!cleanData.startTime) {
-    return { ok: false, message: '请填写开始时间' }
+    return { ok: false, code: 'START_TIME_REQUIRED', requestId, message: '请填写开始时间' }
   }
   if (!cleanData.description) {
-    return { ok: false, message: '请填写活动简介' }
+    return { ok: false, code: 'DESCRIPTION_REQUIRED', requestId, message: '请填写活动简介' }
   }
   if (!cleanData.organizer) {
-    return { ok: false, message: '请填写组织者' }
+    return { ok: false, code: 'ORGANIZER_REQUIRED', requestId, message: '请填写组织者' }
   }
   if (!cleanData.fee) {
-    return { ok: false, message: '请填写费用信息' }
+    return { ok: false, code: 'FEE_REQUIRED', requestId, message: '请填写费用信息' }
   }
   if (cleanData.officialUrl && !/^https?:\/\//i.test(cleanData.officialUrl)) {
-    return { ok: false, message: '公开主页或报名链接需以 http:// 或 https:// 开头' }
+    return { ok: false, code: 'INVALID_OFFICIAL_URL', requestId, message: '公开主页或报名链接需以 http:// 或 https:// 开头' }
   }
 
   if (overLimit(cleanData.title, 80)) {
-    return { ok: false, message: '活动标题不能超过80字' }
+    return { ok: false, code: 'TITLE_TOO_LONG', requestId, message: '活动标题不能超过80字' }
   }
   if (overLimit(cleanData.city, 30)) {
-    return { ok: false, message: '城市不能超过30字' }
+    return { ok: false, code: 'CITY_TOO_LONG', requestId, message: '城市不能超过30字' }
   }
   if (overLimit(cleanData.location, 120)) {
-    return { ok: false, message: '地点不能超过120字' }
+    return { ok: false, code: 'LOCATION_TOO_LONG', requestId, message: '地点不能超过120字' }
   }
   if (overLimit(cleanData.fee, 80)) {
-    return { ok: false, message: '费用说明不能超过80字' }
+    return { ok: false, code: 'FEE_TOO_LONG', requestId, message: '费用说明不能超过80字' }
   }
   if (overLimit(cleanData.feeDetail, 200)) {
-    return { ok: false, message: '费用补充说明不能超过200字' }
+    return { ok: false, code: 'FEE_DETAIL_TOO_LONG', requestId, message: '费用补充说明不能超过200字' }
   }
   if (overLimit(cleanData.organizer, 80)) {
-    return { ok: false, message: '组织者不能超过80字' }
+    return { ok: false, code: 'ORGANIZER_TOO_LONG', requestId, message: '组织者不能超过80字' }
   }
   if (overLimit(cleanData.organizerContact, 200)) {
-    return { ok: false, message: '组织者联系方式不能超过200字' }
+    return { ok: false, code: 'ORGANIZER_CONTACT_TOO_LONG', requestId, message: '组织者联系方式不能超过200字' }
   }
   if (overLimit(cleanData.signupNote, 300)) {
-    return { ok: false, message: '报名方式补充说明不能超过300字' }
+    return { ok: false, code: 'SIGNUP_NOTE_TOO_LONG', requestId, message: '报名方式补充说明不能超过300字' }
   }
   if (overLimit(cleanData.description, 2000)) {
-    return { ok: false, message: '活动简介不能超过2000字' }
+    return { ok: false, code: 'DESCRIPTION_TOO_LONG', requestId, message: '活动简介不能超过2000字' }
   }
 
   const startDate = new Date(cleanData.startTime)
   if (Number.isNaN(startDate.getTime())) {
-    return { ok: false, message: '开始时间格式不正确' }
+    return { ok: false, code: 'INVALID_START_TIME', requestId, message: '开始时间格式不正确' }
   }
   if (cleanData.endTime) {
     const endDate = new Date(cleanData.endTime)
     if (Number.isNaN(endDate.getTime())) {
-      return { ok: false, message: '结束时间格式不正确' }
+      return { ok: false, code: 'INVALID_END_TIME', requestId, message: '结束时间格式不正确' }
     }
     if (endDate.getTime() < startDate.getTime()) {
-      return { ok: false, message: '结束时间不能早于开始时间' }
+      return { ok: false, code: 'END_BEFORE_START', requestId, message: '结束时间不能早于开始时间' }
     }
   }
 
@@ -183,7 +188,7 @@ exports.main = async (event) => {
     .count()
 
   if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) {
-    return { ok: false, message: '24小时内最多可提交5次活动，请稍后再试' }
+    return { ok: false, code: 'DAILY_LIMIT_REACHED', requestId, message: '24小时内最多可提交5次活动，请稍后再试' }
   }
 
   const securityResult = await runMsgSecCheck([
@@ -202,7 +207,12 @@ exports.main = async (event) => {
   ].filter(Boolean).join('\n'), OPENID)
 
   if (!securityResult.ok) {
-    return securityResult
+    return {
+      ok: false,
+      code: securityResult.code || 'CONTENT_SECURITY_BLOCKED',
+      requestId,
+      message: securityResult.message,
+    }
   }
 
   const normalizedKey = buildNormalizedKey(cleanData.title, cleanData.province, cleanData.city, cleanData.startTime)
@@ -216,7 +226,7 @@ exports.main = async (event) => {
     .get()
 
   if (existing.data.length > 0) {
-    return { ok: false, message: '这个活动已在审核队列或已收录，无需重复提交' }
+    return { ok: false, code: 'DUPLICATE_SUBMISSION', requestId, message: '这个活动已在审核队列或已收录，无需重复提交' }
   }
 
   const userRes = await db.collection('users')
@@ -262,9 +272,9 @@ exports.main = async (event) => {
       },
     })
 
-    return { ok: true, message: '提交成功，已进入审核队列' }
+    return { ok: true, code: 'OK', requestId, message: '提交成功，已进入审核队列' }
   } catch (err) {
     console.error('submitEvent error:', err)
-    return { ok: false, message: '提交失败，请稍后重试' }
+    return { ok: false, code: 'SUBMIT_EVENT_FAILED', requestId, message: '提交失败，请稍后重试' }
   }
 }
