@@ -19,6 +19,18 @@ export type EventItem = {
   is_online?: boolean
 }
 
+export type EventListResult = CloudResponse<{
+  events?: EventItem[]
+}>
+
+export type EventDetailResult = CloudResponse<{
+  event?: EventItem | null
+}>
+
+export type EventInterestCountsBatchResult = CloudResponse<{
+  counts?: Record<number, number>
+}>
+
 export type SchoolItem = {
   id: number
   name: string
@@ -51,6 +63,7 @@ export type EventInterestInfoResult = CloudResponse<{
 
 export type ToggleEventInterestResult = CloudResponse<{
   hasInterested?: boolean
+  count?: number
 }>
 
 export type UserProfile = {
@@ -73,6 +86,17 @@ export type UserProfile = {
   updatedAt?: string
 }
 
+export type GetMeResult = CloudResponse<{
+  profile?: UserProfile | null
+}>
+
+export type SaveProfileResult = CloudResponse<{
+  mode?: 'create' | 'update'
+  profile?: UserProfile | null
+}>
+
+export type UpdatePrivacySettingsResult = CloudResponse<Record<string, never>>
+
 export type SafetyItem = {
   _id: string
   targetUserId: string
@@ -86,6 +110,13 @@ export type SafetyOverviewResult = CloudResponse<{
   blocked?: SafetyItem[]
   muted?: SafetyItem[]
 }>
+
+export type ManageSafetyRelationResult = CloudResponse<{
+  isBlocked?: boolean
+  isMuted?: boolean
+}>
+
+export type ReportUserResult = CloudResponse<Record<string, never>>
 
 export type MapUser = {
   _id: string
@@ -143,7 +174,24 @@ export type GetMyRequestsResult = CloudResponse<{
   sent?: SentRequest[]
 }>
 
+export type SendRequestResult = CloudResponse<{
+  connectionId?: string
+}>
+
+export type RespondRequestResult = CloudResponse<{
+  nextStatus?: string
+}>
+
+export type ManageConnectionResult = CloudResponse<{
+  nextStatus?: string
+}>
+
 export type SimpleActionResult = CloudResponse<Record<string, never>>
+
+export type AdminAccessResult = CloudResponse<{
+  isAdmin?: boolean
+  admin?: { name?: string }
+}>
 
 export type EventSubmissionItem = {
   _id: string
