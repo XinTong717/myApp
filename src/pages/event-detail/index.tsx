@@ -3,6 +3,7 @@ import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { getEventDetail, getEventInterestInfo, getEventContactInfo, toggleEventInterest } from '../../services/event'
 import { getMe } from '../../services/profile'
+import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import type { EventItem } from '../events/shared'
 import {
   EVENT_TYPE_LABELS,
@@ -22,6 +23,13 @@ const palette = {
   line: '#F1DFCF',
   green: '#7BAE7F',
   greenSoft: '#EEF7EE',
+}
+
+const EVENT_CODE_MESSAGES = {
+  BAD_REQUEST: '活动参数有误',
+  TOGGLE_EVENT_INTEREST_FAILED: '操作失败，请稍后重试',
+  GET_EVENT_INTEREST_INFO_FAILED: '读取感兴趣信息失败',
+  CLOUD_CALL_FAILED: '网络异常，请稍后重试',
 }
 
 function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
@@ -61,6 +69,8 @@ export default function EventDetailPage() {
       if (result?.ok) {
         setInterestCount(result.count || 0)
         setHasInterested(!!result.hasInterested)
+      } else {
+        logCloudFailure('getEventInterestInfo', result)
       }
     } catch (err) {
       console.error('loadInterestInfo error:', err)
@@ -96,6 +106,7 @@ export default function EventDetailPage() {
         setPublicSignupText(publicParts.join('\n'))
       } else {
         setContactMessage(result?.message || '')
+        logCloudFailure('getEventContactInfo', result)
       }
     } catch (err) {
       console.error('loadContactInfo error:', err)
@@ -114,10 +125,16 @@ export default function EventDetailPage() {
       if (result?.ok) {
         const nextHasInterested = !!result.hasInterested
         setHasInterested(nextHasInterested)
-        setInterestCount((count) => nextHasInterested ? count + 1 : Math.max(0, count - 1))
+        if (typeof result.count === 'number') {
+          setInterestCount(result.count)
+        } else {
+          setInterestCount((count) => nextHasInterested ? count + 1 : Math.max(0, count - 1))
+        }
         Taro.showToast({ title: result.message || '已更新', icon: 'success' })
       } else {
-        Taro.showToast({ title: result?.message || '操作失败', icon: 'none' })
+        const message = resolveCloudMessage(result, EVENT_CODE_MESSAGES, '操作失败')
+        Taro.showToast({ title: message, icon: 'none' })
+        logCloudFailure('toggleEventInterest', result)
       }
     } catch (err) {
       console.error('toggleEventInterest error:', err)
