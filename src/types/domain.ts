@@ -1,6 +1,8 @@
 export type CloudResponse<T = Record<string, unknown>> = T & {
   ok?: boolean
   message?: string
+  code?: string
+  requestId?: string
 }
 
 export type EventItem = {
