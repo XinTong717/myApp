@@ -1,6 +1,10 @@
-import { View, Text, Textarea } from '@tarojs/components'
+import { Textarea, Text, View } from '@tarojs/components'
 import SectionTitle from './SectionTitle'
 import PillSelect from './PillSelect'
+import ProfileCard from './ProfileCard'
+import ProfileInputBox from './ProfileInputBox'
+import ProfileHelperText from './ProfileHelperText'
+import ProfileCounterText from './ProfileCounterText'
 import { profilePalette as palette } from './palette'
 
 type Props = {
@@ -27,7 +31,7 @@ export default function ProfileParentSection(props: Props) {
   } = props
 
   return (
-    <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+    <ProfileCard>
       <View style={{ marginBottom: '10px' }}>
         <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.text }}>家庭教育关注</Text>
         <View style={{ marginTop: '4px' }}>
@@ -39,12 +43,11 @@ export default function ProfileParentSection(props: Props) {
       <SectionTitle text='当前关注方向（可多选）' />
       <PillSelect options={childStatusOptions} selected={childDropoutStatus} multi onChange={(v) => setChildDropoutStatus(v as string[])} />
       <SectionTitle text='希望补充说明的情况' />
-      <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+      <ProfileHelperText text='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持。' marginBottom='6px' />
+      <ProfileInputBox marginBottom='0'>
         <Textarea value={childInterests} placeholder='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持...' maxlength={300} onInput={(e) => setChildInterests(e.detail.value)} style={{ fontSize: '14px', color: palette.text, width: '100%', minHeight: '70px' }} />
-      </View>
-      <View style={{ marginTop: '4px', marginBottom: '8px' }}>
-        <Text style={{ fontSize: '11px', color: '#C5B5A5' }}>{childInterests.length}/300</Text>
-      </View>
-    </View>
+      </ProfileInputBox>
+      <ProfileCounterText current={childInterests.length} max={300} />
+    </ProfileCard>
   )
 }
