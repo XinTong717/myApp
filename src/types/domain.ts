@@ -1,5 +1,5 @@
 export type CloudResponse<T = Record<string, unknown>> = T & {
-  ok?: boolean
+  ok: boolean
   message?: string
   code?: string
   requestId?: string
