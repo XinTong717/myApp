@@ -12,6 +12,15 @@ const SCHOOL_LIST_FIELDS = [
   'school_type',
 ].join(',')
 
+function createRequestId() {
+  return `get-schools-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function resolveRequestId(event) {
+  const clientRequestId = String(event?.clientRequestId || '').trim()
+  return clientRequestId || createRequestId()
+}
+
 function requestJson(url) {
   return new Promise((resolve, reject) => {
     const req = https.request(url, {
@@ -40,10 +49,12 @@ function requestJson(url) {
   })
 }
 
-exports.main = async () => {
+exports.main = async (event) => {
+  const requestId = resolveRequestId(event)
+
   try {
     if (!API_KEY) {
-      return { ok: false, message: 'MEMFIRE_API_KEY 未配置', schools: [] }
+      return { ok: false, code: 'MEMFIRE_API_KEY_MISSING', requestId, message: 'MEMFIRE_API_KEY 未配置', schools: [] }
     }
 
     const url = `${API_BASE_URL}/schools?select=${encodeURIComponent(SCHOOL_LIST_FIELDS)}&order=id.asc`
@@ -51,10 +62,12 @@ exports.main = async () => {
 
     return {
       ok: true,
+      code: 'OK',
+      requestId,
       schools: Array.isArray(data) ? data : [],
     }
   } catch (err) {
     console.error('getSchools error:', err)
-    return { ok: false, message: '读取学习社区失败', schools: [] }
+    return { ok: false, code: 'GET_SCHOOLS_FAILED', requestId, message: '读取学习社区失败', schools: [] }
   }
 }
