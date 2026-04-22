@@ -1,10 +1,10 @@
 import { callCloud } from './cloud'
-import type { CloudResponse } from '../types/domain'
+import type { ManageSafetyRelationResult, ReportUserResult } from '../types/domain'
 
 export async function reportUser(targetUserId: string, reason: string, note = '') {
-  return callCloud<CloudResponse>('reportUser', { targetUserId, reason, note })
+  return callCloud<ReportUserResult>('reportUser', { targetUserId, reason, note })
 }
 
 export async function manageSafetyRelation(targetUserId: string, action: 'block' | 'unblock' | 'mute' | 'unmute') {
-  return callCloud<CloudResponse>('manageSafetyRelation', { targetUserId, action })
+  return callCloud<ManageSafetyRelationResult>('manageSafetyRelation', { targetUserId, action })
 }
