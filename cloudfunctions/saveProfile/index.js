@@ -22,6 +22,7 @@ const ALLOWED_FIELDS = [
   'isVisibleOnMap',
 ]
 
+const REQUIRED_FULL_PAYLOAD_FIELDS = [...ALLOWED_FIELDS]
 const BOOLEAN_FIELDS = ['allowIncomingRequests', 'isVisibleOnMap']
 const ARRAY_FIELDS = ['roles', 'childAgeRange', 'childDropoutStatus']
 
@@ -33,6 +34,10 @@ const CHILD_STATUS_WHITELIST = ['寻找学习社区', '寻找同伴连接', '寻
 
 function createRequestId() {
   return `save-profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key)
 }
 
 function normalizeRoles(roles) {
@@ -111,10 +116,10 @@ async function runMsgSecCheck(content, openid) {
     }
 
     console.error('msgSecCheck blocked content:', res)
-    return { ok: false, message: '内容包含不合规信息，请修改后重试' }
+    return { ok: false, code: 'CONTENT_SECURITY_BLOCKED', message: '内容包含不合规信息，请修改后重试' }
   } catch (err) {
     console.error('msgSecCheck error:', err)
-    return { ok: false, message: '内容审核失败，请稍后重试' }
+    return { ok: false, code: 'CONTENT_SECURITY_FAILED', message: '内容审核失败，请稍后重试' }
   }
 }
 
@@ -122,6 +127,16 @@ exports.main = async (event) => {
   const requestId = createRequestId()
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
+
+  const missingFullPayloadFields = REQUIRED_FULL_PAYLOAD_FIELDS.filter((key) => !hasOwn(event, key))
+  if (missingFullPayloadFields.length > 0) {
+    return {
+      ok: false,
+      code: 'FULL_PAYLOAD_REQUIRED',
+      requestId,
+      message: 'saveProfile 仅支持全量保存，请使用完整资料表单提交',
+    }
+  }
 
   const cleanData = { updatedAt: db.serverDate() }
   for (const key of ALLOWED_FIELDS) {
@@ -207,7 +222,7 @@ exports.main = async (event) => {
   if (!securityResult.ok) {
     return {
       ok: false,
-      code: 'CONTENT_SECURITY_BLOCKED',
+      code: securityResult.code || 'CONTENT_SECURITY_BLOCKED',
       requestId,
       message: securityResult.message,
     }
