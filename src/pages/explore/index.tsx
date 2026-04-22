@@ -3,6 +3,7 @@ import { Map as TaroMap, Text, View, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
 import { getMe } from '../../services/profile'
+import { getMapUsers } from '../../services/map'
 import { sendRequest } from '../../services/connection'
 import { manageSafetyRelation, reportUser } from '../../services/safety'
 import { REPORT_REASON_OPTIONS } from '../../constants/safety'
@@ -116,15 +117,24 @@ export default function ExplorePage() {
       setError('')
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
         getSchools().catch(() => ({ ok: false, schools: [] })),
-        Taro.cloud.callFunction({ name: 'getMapUsers', data: {} }).catch(() => ({ result: { users: [] } })),
+        getMapUsers().catch(() => ({ ok: false, users: [] })),
         getMe().catch(() => ({ profile: null })),
       ])
-      
-      setSchools(schoolRes?.ok && Array.isArray(schoolRes.schools) ? schoolRes.schools : [])
-      
-      const mapResult = (mapUsersRes as any)?.result
-      setAppUsers(Array.isArray(mapResult?.users) ? mapResult.users : [])
-      
+
+      if (schoolRes?.ok && Array.isArray(schoolRes.schools)) {
+        setSchools(schoolRes.schools)
+      } else {
+        setSchools([])
+        logCloudFailure('getSchoolsInExplore', schoolRes)
+      }
+
+      if (mapUsersRes?.ok && Array.isArray(mapUsersRes.users)) {
+        setAppUsers(mapUsersRes.users)
+      } else {
+        setAppUsers([])
+        logCloudFailure('getMapUsersInExplore', mapUsersRes)
+      }
+
       const myProfile = myRes?.profile
       setHasProfile(!!(myProfile && myProfile.displayName && myProfile.province && myProfile.city))
     } catch (err: any) {
