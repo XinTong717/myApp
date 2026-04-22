@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
+import { EVENT_CODE_MESSAGES } from '../../constants/cloudMessages'
 import { getEventDetail, getEventInterestInfo, getEventContactInfo, toggleEventInterest } from '../../services/event'
 import { getMe } from '../../services/profile'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
@@ -23,13 +24,6 @@ const palette = {
   line: '#F1DFCF',
   green: '#7BAE7F',
   greenSoft: '#EEF7EE',
-}
-
-const EVENT_CODE_MESSAGES = {
-  BAD_REQUEST: '活动参数有误',
-  TOGGLE_EVENT_INTEREST_FAILED: '操作失败，请稍后重试',
-  GET_EVENT_INTEREST_INFO_FAILED: '读取感兴趣信息失败',
-  CLOUD_CALL_FAILED: '网络异常，请稍后重试',
 }
 
 function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
