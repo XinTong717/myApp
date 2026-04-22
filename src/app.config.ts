@@ -2,14 +2,32 @@ export default defineAppConfig({
   pages: [
     'pages/explore/index',
     'pages/schools/index',
-    'pages/schools/submit',
     'pages/events/index',
-    'pages/events/submit',
     'pages/profile/index',
     'pages/privacy-policy/index',
-    'pages/school-detail/index',
-    'pages/event-detail/index',
-    'pages/admin/event-reviews/index',
+  ],
+
+  subPackages: [
+    {
+      root: 'pages/schools',
+      pages: ['submit'],
+    },
+    {
+      root: 'pages/events',
+      pages: ['submit'],
+    },
+    {
+      root: 'pages/school-detail',
+      pages: ['index'],
+    },
+    {
+      root: 'pages/event-detail',
+      pages: ['index'],
+    },
+    {
+      root: 'pages/admin',
+      pages: ['event-reviews/index'],
+    },
   ],
 
   window: {
