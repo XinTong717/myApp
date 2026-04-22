@@ -8,6 +8,11 @@ function createRequestId() {
   return `toggle-interest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+function resolveRequestId(event) {
+  const clientRequestId = String(event?.clientRequestId || '').trim()
+  return clientRequestId || createRequestId()
+}
+
 function buildInterestDocId(eventId, openid) {
   return `event_${eventId}_${openid}`
 }
@@ -38,7 +43,7 @@ async function syncInterestCount(eventId) {
 }
 
 exports.main = async (event) => {
-  const requestId = createRequestId()
+  const requestId = resolveRequestId(event)
   const { OPENID } = cloud.getWXContext()
   const eventId = Number(event.eventId || 0)
 
