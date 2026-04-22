@@ -2,6 +2,7 @@ import { View, Text, Switch } from '@tarojs/components'
 import type { SafetyItem } from '../../types/domain'
 import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
+import ProfileSectionHeading from './ProfileSectionHeading'
 import { profilePalette as palette } from './palette'
 
 type Props = {
@@ -27,9 +28,7 @@ export default function ProfilePrivacySection(props: Props) {
 
   return (
     <ProfileCard>
-      <View style={{ marginBottom: '10px' }}>
-        <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.text }}>隐私与安全</Text>
-      </View>
+      <ProfileSectionHeading title='隐私与安全' />
       <ProfileInputBox>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1, paddingRight: '12px' }}>
