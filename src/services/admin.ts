@@ -1,8 +1,12 @@
 import { callCloud } from './cloud'
-import type { CloudResponse, EventPublishPayloadResult, EventSubmissionItem } from '../types/domain'
+import type {
+  EventPublishPayloadResult,
+  ListEventSubmissionsResult,
+  ReviewEventSubmissionResult,
+} from '../types/domain'
 
 export async function listEventSubmissions(status: string, limit = 50) {
-  return callCloud<{ submissions?: EventSubmissionItem[] }>('listEventSubmissions', { status, limit })
+  return callCloud<ListEventSubmissionsResult>('listEventSubmissions', { status, limit })
 }
 
 export async function getEventPublishPayload(submissionId: string) {
@@ -16,5 +20,5 @@ export async function reviewEventSubmission(data: {
   reviewedBy?: string
   adminNote?: string
 }) {
-  return callCloud<CloudResponse>('reviewEventSubmission', data)
+  return callCloud<ReviewEventSubmissionResult>('reviewEventSubmission', data)
 }
