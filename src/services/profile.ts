@@ -1,22 +1,28 @@
 import { callCloud } from './cloud'
-import type { SafetyItem, UserProfile } from '../types/domain'
+import type {
+  AdminAccessResult,
+  GetMeResult,
+  SaveProfileResult,
+  SafetyOverviewResult,
+  UpdatePrivacySettingsResult,
+} from '../types/domain'
 
 export async function getMe() {
-  return callCloud<{ profile: UserProfile | null }>('getMe')
+  return callCloud<GetMeResult>('getMe')
 }
 
 export async function saveProfile(data: Record<string, unknown>) {
-  return callCloud<{ mode?: 'create' | 'update'; profile?: UserProfile | null }>('saveProfile', data)
+  return callCloud<SaveProfileResult>('saveProfile', data)
 }
 
 export async function updatePrivacySettings(data: { allowIncomingRequests?: boolean; isVisibleOnMap?: boolean }) {
-  return callCloud<Record<string, never>>('updatePrivacySettings', data)
+  return callCloud<UpdatePrivacySettingsResult>('updatePrivacySettings', data)
 }
 
 export async function getSafetyOverview() {
-  return callCloud<{ blocked?: SafetyItem[]; muted?: SafetyItem[] }>('getSafetyOverview')
+  return callCloud<SafetyOverviewResult>('getSafetyOverview')
 }
 
 export async function checkAdminAccess() {
-  return callCloud<{ isAdmin?: boolean; admin?: { name?: string } }>('checkAdminAccess')
+  return callCloud<AdminAccessResult>('checkAdminAccess')
 }
