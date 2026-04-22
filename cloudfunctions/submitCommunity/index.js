@@ -22,6 +22,10 @@ const ALLOWED_FIELDS = [
 
 const ARRAY_FIELDS = ['communityType', 'ageRange']
 
+function createRequestId() {
+  return `submit-community-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 function normalizeStringArray(value) {
   if (Array.isArray(value)) {
     return value.map((item) => String(item).trim()).filter(Boolean)
@@ -66,10 +70,10 @@ async function runMsgSecCheck(content, openid) {
       return { ok: true }
     }
     console.error('submitCommunity msgSecCheck blocked content:', res)
-    return { ok: false, message: '内容包含不合规信息，请修改后重试' }
+    return { ok: false, code: 'CONTENT_SECURITY_BLOCKED', message: '内容包含不合规信息，请修改后重试' }
   } catch (err) {
     console.error('submitCommunity msgSecCheck error:', err)
-    return { ok: false, message: '内容审核失败，请稍后重试' }
+    return { ok: false, code: 'CONTENT_SECURITY_FAILED', message: '内容审核失败，请稍后重试' }
   }
 }
 
@@ -80,6 +84,7 @@ function buildNormalizedKey(name, province, city) {
 }
 
 exports.main = async (event) => {
+  const requestId = createRequestId()
   const { OPENID } = cloud.getWXContext()
 
   const cleanData = { updatedAt: db.serverDate() }
@@ -95,10 +100,10 @@ exports.main = async (event) => {
   cleanData.ageRange = mergeOtherOption(cleanData.ageRange || [], cleanData.ageRangeOther)
 
   if (!cleanData.name) {
-    return { ok: false, message: '请填写学习社区名称' }
+    return { ok: false, code: 'NAME_REQUIRED', requestId, message: '请填写学习社区名称' }
   }
   if (!cleanData.province || !cleanData.city) {
-    return { ok: false, message: '请选择所在城市' }
+    return { ok: false, code: 'CITY_REQUIRED', requestId, message: '请选择所在城市' }
   }
 
   const lengthError =
@@ -111,11 +116,11 @@ exports.main = async (event) => {
     validateLength('推荐理由', cleanData.recommendationNote, 1000)
 
   if (lengthError) {
-    return { ok: false, message: lengthError }
+    return { ok: false, code: 'INVALID_LENGTH', requestId, message: lengthError }
   }
 
   if (cleanData.officialUrl && !/^https?:\/\//i.test(cleanData.officialUrl)) {
-    return { ok: false, message: '公开主页需以 http:// 或 https:// 开头' }
+    return { ok: false, code: 'INVALID_OFFICIAL_URL', requestId, message: '公开主页需以 http:// 或 https:// 开头' }
   }
 
   const securityResult = await runMsgSecCheck([
@@ -130,7 +135,12 @@ exports.main = async (event) => {
   ].filter(Boolean).join('\n'), OPENID)
 
   if (!securityResult.ok) {
-    return securityResult
+    return {
+      ok: false,
+      code: securityResult.code || 'CONTENT_SECURITY_BLOCKED',
+      requestId,
+      message: securityResult.message,
+    }
   }
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -142,7 +152,7 @@ exports.main = async (event) => {
     .count()
 
   if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) {
-    return { ok: false, message: '24小时内最多可提交5次推荐，请稍后再试' }
+    return { ok: false, code: 'DAILY_LIMIT_REACHED', requestId, message: '24小时内最多可提交5次推荐，请稍后再试' }
   }
 
   const normalizedKey = buildNormalizedKey(cleanData.name, cleanData.province, cleanData.city)
@@ -156,7 +166,7 @@ exports.main = async (event) => {
     .get()
 
   if (existing.data.length > 0) {
-    return { ok: false, message: '这个学习社区已在审核队列或已收录，无需重复提交' }
+    return { ok: false, code: 'DUPLICATE_SUBMISSION', requestId, message: '这个学习社区已在审核队列或已收录，无需重复提交' }
   }
 
   const userRes = await db.collection('users')
@@ -195,9 +205,9 @@ exports.main = async (event) => {
       },
     })
 
-    return { ok: true, message: '提交成功，感谢推荐' }
+    return { ok: true, code: 'OK', requestId, message: '提交成功，感谢推荐' }
   } catch (err) {
     console.error('submitCommunity error:', err)
-    return { ok: false, message: '提交失败，请稍后重试' }
+    return { ok: false, code: 'SUBMIT_COMMUNITY_FAILED', requestId, message: '提交失败，请稍后重试' }
   }
 }
