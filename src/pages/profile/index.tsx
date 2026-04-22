@@ -17,6 +17,8 @@ import ProfileParentSection from '../../components/profile/ProfileParentSection'
 import ProfileEducatorSection from '../../components/profile/ProfileEducatorSection'
 import ProfileCompanionSection from '../../components/profile/ProfileCompanionSection'
 import ProfileBioSection from '../../components/profile/ProfileBioSection'
+import ProfileNoticeBox from '../../components/profile/ProfileNoticeBox'
+import ProfilePrimaryButton from '../../components/profile/ProfilePrimaryButton'
 import { profilePalette as palette } from '../../components/profile/palette'
 import { checkAdminAccess } from '../../services/profile'
 import { useConnections } from '../../hooks/useConnections'
@@ -191,17 +193,13 @@ export default function ProfilePage() {
 
       <ProfileBioSection bio={bio} setBio={setBio} />
 
-      <View style={{ backgroundColor: '#FFFDF9', borderRadius: '16px', padding: '12px 14px', marginBottom: '12px', border: `1px dashed ${palette.line}` }}>
-        <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>🔒 你的显示名、身份、城市和简介会在地图上公开展示。微信号、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。</Text>
-      </View>
+      <ProfileNoticeBox text='🔒 你的显示名、身份、城市和简介会在地图上公开展示。微信号、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。' />
 
       <View style={{ marginBottom: '20px', alignItems: 'center' }}>
         <Text onClick={openPrivacyPolicy} style={{ fontSize: '12px', color: palette.accentDeep }}>查看《用户协议与隐私政策》</Text>
       </View>
 
-      <View onClick={saving ? undefined : handleSave} style={{ backgroundColor: saving ? '#DDD' : palette.accentDeep, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '30px' }}>
-        <Text style={{ fontSize: '16px', color: '#FFF', fontWeight: 'bold' }}>{saving ? '保存中...' : '保存资料'}</Text>
-      </View>
+      <ProfilePrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleSave} />
 
       <ProfileConnectionsSection
         pendingRequests={pendingRequests}
