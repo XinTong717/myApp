@@ -82,6 +82,26 @@ export type SafetyItem = {
   isMuted: boolean
 }
 
+export type SafetyOverviewResult = CloudResponse<{
+  blocked?: SafetyItem[]
+  muted?: SafetyItem[]
+}>
+
+export type MapUser = {
+  _id: string
+  displayName?: string
+  roles?: string[]
+  province?: string
+  city?: string
+  bio?: string
+  companionContext?: string
+  isSelf?: boolean
+}
+
+export type GetMapUsersResult = CloudResponse<{
+  users?: MapUser[]
+}>
+
 export type PendingRequest = {
   _id: string
   fromUserId: string
