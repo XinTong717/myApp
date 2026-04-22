@@ -48,6 +48,29 @@ function normalizeStringArray(value) {
   return text.split(/[、,，/]/).map((item) => item.trim()).filter(Boolean)
 }
 
+function normalizeProfile(profile) {
+  if (!profile) return null
+  return {
+    displayName: String(profile.displayName || '').trim(),
+    gender: String(profile.gender || '').trim(),
+    ageRange: profile.ageRange === '18岁以下' ? '' : String(profile.ageRange || '').trim(),
+    roles: normalizeRoles(profile.roles),
+    province: String(profile.province || '').trim(),
+    city: String(profile.city || '').trim(),
+    wechatId: String(profile.wechatId || '').trim(),
+    allowIncomingRequests: profile.allowIncomingRequests !== false,
+    isVisibleOnMap: profile.isVisibleOnMap !== false,
+    childAgeRange: normalizeStringArray(profile.childAgeRange).filter((item) => CHILD_AGE_WHITELIST.includes(item)),
+    childDropoutStatus: normalizeStringArray(profile.childDropoutStatus).filter((item) => CHILD_STATUS_WHITELIST.includes(item)),
+    childInterests: String(profile.childInterests || '').trim(),
+    eduServices: String(profile.eduServices || '').trim(),
+    companionContext: String(profile.companionContext || '').trim(),
+    bio: String(profile.bio || '').trim(),
+    createdAt: profile.createdAt || null,
+    updatedAt: profile.updatedAt || null,
+  }
+}
+
 function validateLength(label, value, max) {
   const text = String(value || '')
   if (text.length > max) {
@@ -203,15 +226,23 @@ exports.main = async (event) => {
     ...cleanData,
   }
 
+  let docId = ''
   if (existing.data.length > 0) {
-    await db.collection('users').doc(existing.data[0]._id).update({
+    docId = existing.data[0]._id
+    await db.collection('users').doc(docId).update({
       data: dataToSave,
     })
-    return { ok: true, mode: 'update' }
+  } else {
+    const addRes = await db.collection('users').add({
+      data: { ...dataToSave, openid, createdAt: db.serverDate() },
+    })
+    docId = addRes._id
   }
 
-  await db.collection('users').add({
-    data: { ...dataToSave, openid, createdAt: db.serverDate() },
-  })
-  return { ok: true, mode: 'create' }
+  const latest = await db.collection('users').doc(docId).get()
+  return {
+    ok: true,
+    mode: existing.data.length > 0 ? 'update' : 'create',
+    profile: normalizeProfile(latest.data || null),
+  }
 }
