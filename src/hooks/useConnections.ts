@@ -2,18 +2,8 @@ import { useState } from 'react'
 import Taro from '@tarojs/taro'
 import { getMyRequests, manageConnection, respondRequest } from '../services/connection'
 import type { AcceptedConnection, PendingRequest, SentRequest } from '../types/domain'
+import { CONNECTION_CODE_MESSAGES } from '../constants/cloudMessages'
 import { logCloudFailure, resolveCloudMessage } from '../utils/cloudFeedback'
-
-const CONNECTION_CODE_MESSAGES = {
-  BAD_REQUEST: '参数有误，请稍后重试',
-  CONNECTION_NOT_FOUND: '这条联络记录不存在或已失效',
-  FORBIDDEN: '你没有权限执行这个操作',
-  INVALID_ACTION: '操作类型不合法',
-  INVALID_STATUS: '当前状态下无法执行这个操作',
-  REQUEST_ALREADY_PROCESSED: '该请求已处理过了',
-  GET_MY_REQUESTS_FAILED: '读取联络动态失败',
-  CLOUD_CALL_FAILED: '网络异常，请稍后重试',
-}
 
 export function useConnections() {
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([])
