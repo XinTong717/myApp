@@ -1,6 +1,9 @@
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import type { AcceptedConnection, PendingRequest, SentRequest } from '../../types/domain'
+import ProfileCard from './ProfileCard'
+import ProfileInputBox from './ProfileInputBox'
+import ProfileNoticeBox from './ProfileNoticeBox'
 import { profilePalette as palette } from './palette'
 
 function normalizeRolesForDisplay(roles: string[] = []) {
@@ -43,21 +46,18 @@ export default function ProfileConnectionsSection(props: Props) {
   return (
     <>
       {totalPending > 0 && (
-        <View style={{ backgroundColor: '#FFF3E6', borderRadius: '16px', padding: '12px 14px', marginBottom: '14px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ fontSize: '14px', color: palette.accentDeep, fontWeight: 'bold', flex: 1 }}>你有 {totalPending} 条新的联络请求</Text>
-          <Text style={{ fontSize: '12px', color: palette.subtext }}>下滑查看</Text>
-        </View>
+        <ProfileNoticeBox text={`你有 ${totalPending} 条新的联络请求，请下滑查看。`} dashed={false} marginBottom='14px' />
       )}
 
-      <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+      <ProfileCard padding='18px 16px'>
         <Text style={{ fontSize: '18px', fontWeight: 'bold', color: palette.text }}>联络动态</Text>
-      </View>
+      </ProfileCard>
 
       {pendingRequests.length > 0 && (
         <View style={{ marginBottom: '14px' }}>
           <View style={{ marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>收到的请求（{pendingRequests.length}）</Text></View>
           {pendingRequests.map((req) => (
-            <View key={req._id} style={{ backgroundColor: palette.card, borderRadius: '16px', padding: '14px', marginBottom: '10px', border: `1px solid ${palette.line}` }}>
+            <ProfileCard key={req._id} padding='14px'>
               <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>{req.fromName}</Text>
               <View style={{ marginTop: '4px', marginBottom: '8px' }}>
                 {req.fromCity ? <Text style={{ fontSize: '13px', color: palette.subtext }}>{req.fromCity}{req.fromRoles?.length > 0 ? ' · ' + renderRoleText(req.fromRoles) : ''}</Text> : null}
@@ -69,7 +69,7 @@ export default function ProfileConnectionsSection(props: Props) {
                 {req.fromUserId ? <Text onClick={() => onSafetyAction(req.fromUserId, 'block')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '8px' }}>拉黑</Text> : null}
                 {req.fromUserId ? <Text onClick={() => onReportUser(req.fromUserId)} style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '8px' }}>举报</Text> : null}
               </View>
-            </View>
+            </ProfileCard>
           ))}
         </View>
       )}
@@ -78,29 +78,31 @@ export default function ProfileConnectionsSection(props: Props) {
         <View style={{ marginBottom: '14px' }}>
           <View style={{ marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.green, fontWeight: 'bold' }}>已建立联络（{acceptedConnections.length}）</Text></View>
           {acceptedConnections.map((conn) => (
-            <View key={conn._id} style={{ backgroundColor: palette.card, borderRadius: '16px', padding: '14px', marginBottom: '10px', border: `1px solid ${palette.line}` }}>
+            <ProfileCard key={conn._id} padding='14px'>
               <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>{conn.otherName}</Text>
               <View style={{ marginTop: '4px' }}>
                 <Text style={{ fontSize: '13px', color: palette.subtext }}>{conn.otherCity}{conn.otherRoles?.length > 0 ? ' · ' + renderRoleText(conn.otherRoles) : ''}</Text>
               </View>
               {conn.otherBio ? <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>{conn.otherBio}</Text></View> : null}
               {conn.otherWechat ? (
-                <View onClick={() => { Taro.setClipboardData({ data: conn.otherWechat }) }} style={{ marginTop: '8px', backgroundColor: palette.greenSoft, borderRadius: '12px', padding: '8px 12px', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontSize: '13px', color: palette.green, flex: 1 }}>微信: {conn.otherWechat}</Text>
-                  <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text>
-                </View>
+                <ProfileInputBox marginBottom='0'>
+                  <View onClick={() => { Taro.setClipboardData({ data: conn.otherWechat }) }} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontSize: '13px', color: palette.green, flex: 1 }}>微信: {conn.otherWechat}</Text>
+                    <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text>
+                  </View>
+                </ProfileInputBox>
               ) : <View style={{ marginTop: '8px' }}><Text style={{ fontSize: '12px', color: '#C5B5A5' }}>对方未填写微信号</Text></View>}
               {conn.otherChildInfo && (conn.otherChildInfo.ageRange.length > 0 || conn.otherChildInfo.status.length > 0 || conn.otherChildInfo.interests) ? (
-                <View style={{ marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '8px 12px' }}>
+                <ProfileInputBox marginBottom='8px'>
                   <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold', marginBottom: '4px' }}>家庭教育关注</Text>
                   <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>{[renderStringArray(conn.otherChildInfo.ageRange), renderStringArray(conn.otherChildInfo.status)].filter(Boolean).join(' · ')}{conn.otherChildInfo.interests ? `\n${conn.otherChildInfo.interests}` : ''}</Text>
-                </View>
+                </ProfileInputBox>
               ) : null}
               {conn.otherEduServices ? (
-                <View style={{ marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '8px 12px' }}>
+                <ProfileInputBox marginBottom='8px'>
                   <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold', marginBottom: '4px' }}>教育服务</Text>
                   <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>{conn.otherEduServices}</Text>
-                </View>
+                </ProfileInputBox>
               ) : null}
               <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '10px' }}>
                 <Text onClick={() => onRemoveConnection(conn._id)} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>删除连接</Text>
@@ -108,7 +110,7 @@ export default function ProfileConnectionsSection(props: Props) {
                 {conn.otherUserId ? <Text onClick={() => onSafetyAction(conn.otherUserId, 'mute')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
                 {conn.otherUserId ? <Text onClick={() => onReportUser(conn.otherUserId)} style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '6px' }}>举报</Text> : null}
               </View>
-            </View>
+            </ProfileCard>
           ))}
         </View>
       )}
@@ -117,7 +119,7 @@ export default function ProfileConnectionsSection(props: Props) {
         <View style={{ marginBottom: '14px' }}>
           <View style={{ marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.subtext, fontWeight: 'bold' }}>我发出的请求（{sentRequests.length}）</Text></View>
           {sentRequests.map((req) => (
-            <View key={req._id} style={{ backgroundColor: palette.card, borderRadius: '16px', padding: '12px 14px', marginBottom: '8px', border: `1px solid ${palette.line}` }}>
+            <ProfileCard key={req._id} padding='12px 14px'>
               <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: '14px', color: palette.text }}>{req.toName}</Text>
@@ -131,16 +133,13 @@ export default function ProfileConnectionsSection(props: Props) {
                 {req.toUserId ? <Text onClick={() => onSafetyAction(req.toUserId, 'mute')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
                 {req.toUserId ? <Text onClick={() => onReportUser(req.toUserId)} style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '6px' }}>举报</Text> : null}
               </View>
-            </View>
+            </ProfileCard>
           ))}
         </View>
       )}
 
       {pendingRequests.length === 0 && acceptedConnections.length === 0 && sentRequests.length === 0 && (
-        <View style={{ backgroundColor: '#FFFDF9', borderRadius: '16px', padding: '20px', textAlign: 'center', marginBottom: '14px' }}>
-          <Text style={{ fontSize: '13px', color: '#C5B5A5' }}>暂无联络动态</Text>
-          <View style={{ marginTop: '6px' }}><Text style={{ fontSize: '12px', color: '#C5B5A5' }}>在探索页点击同路人，发起你的第一个联络请求</Text></View>
-        </View>
+        <ProfileNoticeBox text='暂无联络动态。在探索页点击同路人，发起你的第一个联络请求。' />
       )}
     </>
   )
