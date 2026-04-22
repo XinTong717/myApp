@@ -2,21 +2,23 @@ import { callCloud } from './cloud'
 import type {
   CloudResponse,
   ContactInfoResult,
+  EventDetailResult,
+  EventInterestCountsBatchResult,
   EventInterestInfoResult,
-  EventItem,
+  EventListResult,
   ToggleEventInterestResult,
 } from '../types/domain'
 
 export async function getEvents() {
-  return callCloud<{ events?: EventItem[] }>('getEvents')
+  return callCloud<EventListResult>('getEvents')
 }
 
 export async function getEventDetail(eventId: number) {
-  return callCloud<{ event?: EventItem | null }>('getEventDetail', { eventId })
+  return callCloud<EventDetailResult>('getEventDetail', { eventId })
 }
 
 export async function getEventInterestCountsBatch(eventIds: number[]) {
-  return callCloud<{ counts?: Record<number, number> }>('getEventInterestCountsBatch', { eventIds })
+  return callCloud<EventInterestCountsBatchResult>('getEventInterestCountsBatch', { eventIds })
 }
 
 export async function getEventInterestInfo(eventId: number) {
