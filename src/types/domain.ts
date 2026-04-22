@@ -47,6 +47,18 @@ export type SchoolItem = {
   official_url?: string
 }
 
+export type SchoolListResult = CloudResponse<{
+  schools?: SchoolItem[]
+}>
+
+export type SchoolDetailResult = CloudResponse<{
+  school?: SchoolItem | null
+}>
+
+export type SubmitCommunityResult = CloudResponse<Record<string, never>>
+
+export type SubmitCorrectionResult = CloudResponse<Record<string, never>>
+
 export type ContactInfoResult = CloudResponse<{
   contactInfo?: string
   publicSignupInfo?: {
@@ -212,6 +224,12 @@ export type EventSubmissionItem = {
   publishedEventId: number | null
   adminNote: string
 }
+
+export type ListEventSubmissionsResult = CloudResponse<{
+  submissions?: EventSubmissionItem[]
+}>
+
+export type ReviewEventSubmissionResult = CloudResponse<Record<string, never>>
 
 export type EventPublishPayloadResult = CloudResponse<{
   suggestedEventPayload?: Record<string, unknown>
