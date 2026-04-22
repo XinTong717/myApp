@@ -1,4 +1,5 @@
 import { callCloud } from './cloud'
+import { getCachedValue, setCachedValue } from './cache'
 import type {
   SchoolDetailResult,
   SchoolListResult,
@@ -6,8 +7,22 @@ import type {
   SubmitCorrectionResult,
 } from '../types/domain'
 
-export async function getSchools() {
-  return callCloud<SchoolListResult>('getSchools')
+const SCHOOL_LIST_CACHE_KEY = 'cloud-cache:schools:list:v1'
+const SCHOOL_LIST_TTL_MS = 60 * 60 * 1000
+
+export async function getSchools(options: { forceRefresh?: boolean } = {}) {
+  if (!options.forceRefresh) {
+    const cached = getCachedValue<SchoolListResult>(SCHOOL_LIST_CACHE_KEY)
+    if (cached) {
+      return cached
+    }
+  }
+
+  const result = await callCloud<SchoolListResult>('getSchools')
+  if (result.ok) {
+    setCachedValue(SCHOOL_LIST_CACHE_KEY, result, SCHOOL_LIST_TTL_MS)
+  }
+  return result
 }
 
 export async function getSchoolDetail(schoolId: number) {
