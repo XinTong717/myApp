@@ -25,8 +25,13 @@ function App({ children }: PropsWithChildren<any>) {
     console.log('App launched.')
     if (process.env.TARO_ENV === 'weapp') {
       Taro.cloud.init({
-        env: 'cloud1-9g8njw4c79fb1322', // 你在云开发控制台创建环境后拿到的 envId
+        env: __WEAPP_CLOUD_ENV_ID__,
       })
+
+      if (__WEAPP_IS_SHARED_CLOUD_ENV__) {
+        console.warn(`[cloud] ${__WEAPP_RUNTIME_ENV} build is using a shared cloud env. Set TARO_APP_CLOUD_ENV_DEV and TARO_APP_CLOUD_ENV_PROD to isolate test and production data.`)
+      }
+
       setupWeappPrivacyAuthorization()
     }
   })
