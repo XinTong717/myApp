@@ -9,19 +9,12 @@ import {
   CHILD_AGE_OPTIONS,
   CHILD_STATUS_OPTIONS,
 } from '../../constants/profile'
-import { REPORT_REASON_OPTIONS } from '../../constants/safety'
 import SectionTitle from '../../components/profile/SectionTitle'
 import PillSelect from '../../components/profile/PillSelect'
-import { getMe, saveProfile, updatePrivacySettings, getSafetyOverview, checkAdminAccess } from '../../services/profile'
-import { getMyRequests, respondRequest, manageConnection } from '../../services/connection'
-import { manageSafetyRelation, reportUser } from '../../services/safety'
-import type {
-  AcceptedConnection,
-  PendingRequest,
-  SafetyItem,
-  SentRequest,
-  UserProfile,
-} from '../../types/domain'
+import { getMe, saveProfile, updatePrivacySettings, checkAdminAccess } from '../../services/profile'
+import { useConnections } from '../../hooks/useConnections'
+import { useSafety } from '../../hooks/useSafety'
+import type { UserProfile } from '../../types/domain'
 
 const palette = {
   bg: '#FFF9F2',
@@ -72,11 +65,23 @@ export default function ProfilePage() {
   const [companionContext, setCompanionContext] = useState('')
   const [bio, setBio] = useState('')
 
-  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([])
-  const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConnection[]>([])
-  const [sentRequests, setSentRequests] = useState<SentRequest[]>([])
-  const [blockedUsers, setBlockedUsers] = useState<SafetyItem[]>([])
-  const [mutedUsers, setMutedUsers] = useState<SafetyItem[]>([])
+  const {
+    pendingRequests,
+    acceptedConnections,
+    sentRequests,
+    loadRequests,
+    handleRespond,
+    handleWithdrawRequest,
+    handleRemoveConnection,
+  } = useConnections()
+
+  const {
+    blockedUsers,
+    mutedUsers,
+    loadSafetyOverview,
+    handleSafetyAction,
+    handleReportUser,
+  } = useSafety()
 
   const isParent = roles.includes('家长')
   const isEducator = roles.includes('教育者')
@@ -134,31 +139,6 @@ export default function ProfilePage() {
       console.error('loadProfile error:', err)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const loadRequests = async () => {
-    try {
-      const r = await getMyRequests()
-      if (r?.ok) {
-        setPendingRequests(r.pending || [])
-        setAcceptedConnections(r.accepted || [])
-        setSentRequests(r.sent || [])
-      }
-    } catch (err) {
-      console.error('loadRequests error:', err)
-    }
-  }
-
-  const loadSafetyOverview = async () => {
-    try {
-      const r = await getSafetyOverview()
-      if (r?.ok) {
-        setBlockedUsers(r.blocked || [])
-        setMutedUsers(r.muted || [])
-      }
-    } catch (err) {
-      console.error('getSafetyOverview error:', err)
     }
   }
 
@@ -252,82 +232,6 @@ export default function ProfilePage() {
       Taro.showToast({ title: '更新失败，请稍后重试', icon: 'none' })
     } finally {
       setPrivacySaving(false)
-    }
-  }
-
-  const handleRespond = async (requestId: string, action: 'accept' | 'reject') => {
-    try {
-      Taro.showLoading({ title: action === 'accept' ? '同意中...' : '处理中...' })
-      const r = await respondRequest(requestId, action)
-      Taro.hideLoading()
-      Taro.showToast({ title: r?.message || '已处理', icon: r?.ok ? 'success' : 'none' })
-      if (r?.ok) refreshRelations()
-    } catch (err) {
-      Taro.hideLoading()
-      Taro.showToast({ title: '操作失败', icon: 'none' })
-    }
-  }
-
-  const handleWithdrawRequest = async (connectionId: string) => {
-    try {
-      const result = await manageConnection(connectionId, 'withdraw')
-      Taro.showToast({ title: result?.message || '已撤回', icon: result?.ok ? 'success' : 'none' })
-      if (result?.ok) refreshRelations()
-    } catch (err) {
-      Taro.showToast({ title: '撤回失败', icon: 'none' })
-    }
-  }
-
-  const handleRemoveConnection = async (connectionId: string) => {
-    const confirm = await Taro.showModal({
-      title: '删除连接',
-      content: '删除后你们将不再是已建立联络状态，需要重新发起请求。',
-      confirmText: '确认删除',
-      cancelText: '取消',
-    })
-    if (!confirm.confirm) return
-
-    try {
-      const result = await manageConnection(connectionId, 'remove_connection')
-      Taro.showToast({ title: result?.message || '已删除', icon: result?.ok ? 'success' : 'none' })
-      if (result?.ok) refreshRelations()
-    } catch (err) {
-      Taro.showToast({ title: '删除失败', icon: 'none' })
-    }
-  }
-
-  const handleSafetyAction = async (targetUserId: string, action: 'block' | 'unblock' | 'mute' | 'unmute') => {
-    if (action === 'block') {
-      const confirm = await Taro.showModal({
-        title: '确认拉黑',
-        content: '拉黑后，你将看不到对方，且当前待处理或已建立的联络都会断开。此操作不会自动恢复旧连接。',
-        confirmText: '确认拉黑',
-        cancelText: '取消',
-      })
-      if (!confirm.confirm) return
-    }
-
-    try {
-      const result = await manageSafetyRelation(targetUserId, action)
-      Taro.showToast({ title: result?.message || '已更新', icon: result?.ok ? 'success' : 'none' })
-      if (result?.ok) {
-        refreshRelations()
-        loadProfile()
-      }
-    } catch (err) {
-      Taro.showToast({ title: '操作失败', icon: 'none' })
-    }
-  }
-
-  const handleReportUser = async (targetUserId: string) => {
-    try {
-      const reasonRes = await Taro.showActionSheet({ itemList: [...REPORT_REASON_OPTIONS] })
-      const reason = REPORT_REASON_OPTIONS[reasonRes.tapIndex] || '其他'
-      const result = await reportUser(targetUserId, reason)
-      Taro.showToast({ title: result?.message || '举报已提交', icon: result?.ok ? 'success' : 'none' })
-    } catch (err: any) {
-      if (err?.errMsg?.includes('cancel')) return
-      Taro.showToast({ title: '举报失败', icon: 'none' })
     }
   }
 
@@ -427,7 +331,7 @@ export default function ProfilePage() {
                       <Text style={{ fontSize: '13px', color: palette.text }}>{item.targetName || '未知用户'}</Text>
                       {item.targetCity ? <Text style={{ fontSize: '11px', color: palette.subtext }}> · {item.targetCity}</Text> : null}
                     </View>
-                    <Text onClick={() => handleSafetyAction(item.targetUserId, 'unblock')} style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>解除拉黑</Text>
+                    <Text onClick={() => handleSafetyAction(item.targetUserId, 'unblock', () => { refreshRelations(); loadProfile() })} style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>解除拉黑</Text>
                   </View>
                 ))}
               </View>
@@ -441,7 +345,7 @@ export default function ProfilePage() {
                       <Text style={{ fontSize: '13px', color: palette.text }}>{item.targetName || '未知用户'}</Text>
                       {item.targetCity ? <Text style={{ fontSize: '11px', color: palette.subtext }}> · {item.targetCity}</Text> : null}
                     </View>
-                    <Text onClick={() => handleSafetyAction(item.targetUserId, 'unmute')} style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>取消静音</Text>
+                    <Text onClick={() => handleSafetyAction(item.targetUserId, 'unmute', () => { refreshRelations(); loadProfile() })} style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>取消静音</Text>
                   </View>
                 ))}
               </View>
@@ -593,9 +497,9 @@ export default function ProfilePage() {
                 {req.fromBio ? <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>{req.fromBio}</Text></View> : null}
               </View>
               <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
-                <View onClick={() => handleRespond(req._id, 'accept')} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: palette.green, marginRight: '10px', marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: '#FFF', fontWeight: 'bold' }}>同意</Text></View>
-                <View onClick={() => handleRespond(req._id, 'reject')} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: '#F5F0EB', marginRight: '10px', marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.subtext }}>忽略</Text></View>
-                {req.fromUserId ? <Text onClick={() => handleSafetyAction(req.fromUserId, 'block')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '8px' }}>拉黑</Text> : null}
+                <View onClick={() => handleRespond(req._id, 'accept', refreshRelations)} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: palette.green, marginRight: '10px', marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: '#FFF', fontWeight: 'bold' }}>同意</Text></View>
+                <View onClick={() => handleRespond(req._id, 'reject', refreshRelations)} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: '#F5F0EB', marginRight: '10px', marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.subtext }}>忽略</Text></View>
+                {req.fromUserId ? <Text onClick={() => handleSafetyAction(req.fromUserId, 'block', () => { refreshRelations(); loadProfile() })} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '8px' }}>拉黑</Text> : null}
                 {req.fromUserId ? <Text onClick={() => handleReportUser(req.fromUserId)} style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '8px' }}>举报</Text> : null}
               </View>
             </View>
@@ -632,9 +536,9 @@ export default function ProfilePage() {
                 </View>
               ) : null}
               <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '10px' }}>
-                <Text onClick={() => handleRemoveConnection(conn._id)} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>删除连接</Text>
-                {conn.otherUserId ? <Text onClick={() => handleSafetyAction(conn.otherUserId, 'block')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>拉黑</Text> : null}
-                {conn.otherUserId ? <Text onClick={() => handleSafetyAction(conn.otherUserId, 'mute')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
+                <Text onClick={() => handleRemoveConnection(conn._id, refreshRelations)} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>删除连接</Text>
+                {conn.otherUserId ? <Text onClick={() => handleSafetyAction(conn.otherUserId, 'block', () => { refreshRelations(); loadProfile() })} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>拉黑</Text> : null}
+                {conn.otherUserId ? <Text onClick={() => handleSafetyAction(conn.otherUserId, 'mute', () => { refreshRelations(); loadProfile() })} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
                 {conn.otherUserId ? <Text onClick={() => handleReportUser(conn.otherUserId)} style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '6px' }}>举报</Text> : null}
               </View>
             </View>
@@ -655,9 +559,9 @@ export default function ProfilePage() {
                 <View style={{ padding: '3px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6' }}><Text style={{ fontSize: '11px', color: palette.accentDeep }}>等待回应</Text></View>
               </View>
               <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '10px' }}>
-                <Text onClick={() => handleWithdrawRequest(req._id)} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>撤回请求</Text>
-                {req.toUserId ? <Text onClick={() => handleSafetyAction(req.toUserId, 'block')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>拉黑</Text> : null}
-                {req.toUserId ? <Text onClick={() => handleSafetyAction(req.toUserId, 'mute')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
+                <Text onClick={() => handleWithdrawRequest(req._id, refreshRelations)} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>撤回请求</Text>
+                {req.toUserId ? <Text onClick={() => handleSafetyAction(req.toUserId, 'block', () => { refreshRelations(); loadProfile() })} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>拉黑</Text> : null}
+                {req.toUserId ? <Text onClick={() => handleSafetyAction(req.toUserId, 'mute', () => { refreshRelations(); loadProfile() })} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
                 {req.toUserId ? <Text onClick={() => handleReportUser(req.toUserId)} style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '6px' }}>举报</Text> : null}
               </View>
             </View>
