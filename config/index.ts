@@ -4,7 +4,14 @@ import devConfig from './dev'
 import prodConfig from './prod'
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
-export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
+export default defineConfig<'webpack5'>(async (merge, { mode }) => {
+  const runtimeEnv = process.env.NODE_ENV || mode || 'development'
+  const fallbackCloudEnvId = 'cloud1-9g8njw4c79fb1322'
+  const devCloudEnvId = process.env.TARO_APP_CLOUD_ENV_DEV || fallbackCloudEnvId
+  const prodCloudEnvId = process.env.TARO_APP_CLOUD_ENV_PROD || fallbackCloudEnvId
+  const cloudEnvId = runtimeEnv === 'development' ? devCloudEnvId : prodCloudEnvId
+  const isSharedCloudEnv = devCloudEnvId === prodCloudEnvId
+
   const baseConfig: UserConfigExport<'webpack5'> = {
     projectName: 'myApp',
     date: '2026-2-20',
@@ -18,9 +25,12 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
     sourceRoot: 'src',
     outputRoot: 'dist',
     plugins: [
-      "@tarojs/plugin-generator"
+      '@tarojs/plugin-generator'
     ],
     defineConstants: {
+      __WEAPP_CLOUD_ENV_ID__: JSON.stringify(cloudEnvId),
+      __WEAPP_RUNTIME_ENV__: JSON.stringify(runtimeEnv),
+      __WEAPP_IS_SHARED_CLOUD_ENV__: JSON.stringify(isSharedCloudEnv),
     },
     copy: {
       patterns: [
@@ -92,7 +102,6 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
       }
     }
   }
-
 
   if (process.env.NODE_ENV === 'development') {
     // 本地开发构建配置（不混淆压缩）
