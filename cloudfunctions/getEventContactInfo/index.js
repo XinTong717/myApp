@@ -4,6 +4,10 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+function createRequestId() {
+  return `get-event-contact-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 function isProfileComplete(profile) {
   return !!(
     profile &&
@@ -14,11 +18,12 @@ function isProfileComplete(profile) {
 }
 
 exports.main = async (event) => {
+  const requestId = createRequestId()
   const { OPENID } = cloud.getWXContext()
   const eventId = Number(event.eventId || 0)
 
   if (!eventId) {
-    return { ok: false, message: '缺少活动 ID' }
+    return { ok: false, code: 'BAD_REQUEST', requestId, message: '缺少活动 ID' }
   }
 
   try {
@@ -31,6 +36,8 @@ exports.main = async (event) => {
     if (!isProfileComplete(profile)) {
       return {
         ok: false,
+        code: 'PROFILE_REQUIRED',
+        requestId,
         message: '完成“我的资料”填写后，才可查看组织者联系方式',
         needCompleteProfile: true,
       }
@@ -48,6 +55,8 @@ exports.main = async (event) => {
     if (!submission) {
       return {
         ok: true,
+        code: 'OK',
+        requestId,
         contactInfo: '',
         message: '该活动暂无额外联系方式',
       }
@@ -55,6 +64,8 @@ exports.main = async (event) => {
 
     return {
       ok: true,
+      code: 'OK',
+      requestId,
       contactInfo: String(submission.organizerContact || '').trim(),
       publicSignupInfo: {
         officialUrl: String(submission.officialUrl || '').trim(),
@@ -63,6 +74,11 @@ exports.main = async (event) => {
     }
   } catch (err) {
     console.error('getEventContactInfo error:', err)
-    return { ok: false, message: '读取联系方式失败，请稍后重试' }
+    return {
+      ok: false,
+      code: 'GET_EVENT_CONTACT_INFO_FAILED',
+      requestId,
+      message: '读取联系方式失败，请稍后重试',
+    }
   }
 }
