@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Map as TaroMap, Text, View, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
+import { REPORT_CODE_MESSAGES, REQUEST_CODE_MESSAGES, SAFETY_CODE_MESSAGES } from '../../constants/cloudMessages'
 import { getSchools } from '../../services/school'
 import { getMe } from '../../services/profile'
 import { getMapUsers } from '../../services/map'
@@ -12,43 +13,6 @@ import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 
 const markerSchoolIcon = '/assets/marker-school.png'
 const markerUserIcon = '/assets/marker-user.png'
-
-const REQUEST_CODE_MESSAGES = {
-  TARGET_REQUIRED: '缺少目标用户',
-  PROFILE_REQUIRED: '请先填写你的资料',
-  TARGET_NOT_FOUND: '找不到该用户',
-  SELF_REQUEST_NOT_ALLOWED: '不能给自己发联络请求',
-  TARGET_PAUSED_REQUESTS: '对方当前暂停接收联络',
-  YOU_BLOCKED_TARGET: '你已拉黑该用户，需先解除拉黑',
-  TARGET_BLOCKED_YOU: '当前无法向该用户发起联络',
-  REQUEST_ALREADY_PENDING: '你已经发送过请求了，等待对方回应',
-  REVERSE_PENDING_EXISTS: '对方已经向你发起请求，请先去处理联络动态',
-  ALREADY_CONNECTED: '你们已经是联络人了',
-  DAILY_LIMIT_REACHED: '24小时内发起联络次数过多，请稍后再试',
-  SAME_TARGET_LIMIT_REACHED: '24小时内你已多次尝试联系该用户，请稍后再试',
-  CLOUD_CALL_FAILED: '网络异常，请稍后重试',
-}
-
-const SAFETY_CODE_MESSAGES = {
-  TARGET_NOT_FOUND: '找不到该用户',
-  SELF_ACTION_NOT_ALLOWED: '不能对自己执行这个操作',
-  MANAGE_SAFETY_FAILED: '操作失败，请稍后重试',
-  BAD_REQUEST: '参数有误，请稍后重试',
-  CLOUD_CALL_FAILED: '网络异常，请稍后重试',
-}
-
-const REPORT_CODE_MESSAGES = {
-  TARGET_REQUIRED: '缺少目标用户',
-  INVALID_REASON: '举报原因不合法',
-  NOTE_TOO_LONG: '举报说明不能超过1000字',
-  TARGET_NOT_FOUND: '找不到该用户',
-  SELF_REPORT_NOT_ALLOWED: '不能举报自己',
-  DUPLICATE_REPORT: '24小时内你已经举报过该用户，无需重复提交',
-  CONTENT_SECURITY_BLOCKED: '举报说明包含不合规信息，请修改后重试',
-  CONTENT_SECURITY_FAILED: '举报说明审核失败，请稍后重试',
-  REPORT_USER_FAILED: '举报失败，请稍后重试',
-  CLOUD_CALL_FAILED: '网络异常，请稍后重试',
-}
 
 type School = { id: number | string; name?: string; province?: string; city?: string }
 type AppUser = { _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string; companionContext?: string; isSelf?: boolean }
