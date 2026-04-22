@@ -17,6 +17,15 @@ const EVENT_LIST_FIELDS = [
   'is_online',
 ].join(',')
 
+function createRequestId() {
+  return `get-events-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function resolveRequestId(event) {
+  const clientRequestId = String(event?.clientRequestId || '').trim()
+  return clientRequestId || createRequestId()
+}
+
 function requestJson(url) {
   return new Promise((resolve, reject) => {
     const req = https.request(url, {
@@ -45,17 +54,19 @@ function requestJson(url) {
   })
 }
 
-exports.main = async () => {
+exports.main = async (event) => {
+  const requestId = resolveRequestId(event)
+
   try {
     if (!API_KEY) {
-      return { ok: false, message: 'MEMFIRE_API_KEY 未配置', events: [] }
+      return { ok: false, code: 'MEMFIRE_API_KEY_MISSING', requestId, message: 'MEMFIRE_API_KEY 未配置', events: [] }
     }
 
     const url = `${API_BASE_URL}/events?select=${encodeURIComponent(EVENT_LIST_FIELDS)}&order=start_time.asc`
     const data = await requestJson(url)
-    return { ok: true, events: Array.isArray(data) ? data : [] }
+    return { ok: true, code: 'OK', requestId, events: Array.isArray(data) ? data : [] }
   } catch (err) {
     console.error('getEvents error:', err)
-    return { ok: false, message: '读取活动失败', events: [] }
+    return { ok: false, code: 'GET_EVENTS_FAILED', requestId, message: '读取活动失败', events: [] }
   }
 }
