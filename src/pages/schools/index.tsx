@@ -34,11 +34,11 @@ export default function SchoolsPage() {
   const [error, setError] = useState('')
   const [keyword, setKeyword] = useState('')
 
-  const loadSchools = async () => {
+  const loadSchools = async (options: { forceRefresh?: boolean } = {}) => {
     try {
       setLoading(true)
       setError('')
-      const result = await getSchools()
+      const result = await getSchools({ forceRefresh: !!options.forceRefresh })
       setSchools(result?.ok && Array.isArray(result.schools) ? result.schools : [])
     } catch (err: any) {
       console.error('loadSchools error:', err)
@@ -52,7 +52,7 @@ export default function SchoolsPage() {
   useDidShow(() => { loadSchools() })
 
   usePullDownRefresh(async () => {
-    await loadSchools()
+    await loadSchools({ forceRefresh: true })
     Taro.stopPullDownRefresh()
   })
 
