@@ -71,7 +71,7 @@ export default function SchoolsPage() {
   }
 
   const goToSubmit = () => {
-    Taro.navigateTo({ url: '/pages/schools/submit' })
+    Taro.navigateTo({ url: '/pkg/schools/submit/index' })
   }
 
   return (
