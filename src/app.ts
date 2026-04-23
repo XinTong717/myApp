@@ -24,6 +24,9 @@ function App({ children }: PropsWithChildren<any>) {
   useLaunch(() => {
     console.log('App launched.')
     if (process.env.TARO_ENV === 'weapp') {
+      console.log(`[cloud] runtime env = ${__WEAPP_CLOUD_ENV_ID__}`)
+      console.log(`[cloud] runtime mode = ${__WEAPP_RUNTIME_ENV__}`)
+
       Taro.cloud.init({
         env: __WEAPP_CLOUD_ENV_ID__,
       })
