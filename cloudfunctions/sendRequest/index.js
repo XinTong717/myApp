@@ -20,6 +20,24 @@ function buildConnectionDocId(fromOpenid, toOpenid) {
   return `conn_${fromOpenid}_${toOpenid}`
 }
 
+async function getUserProfileByOpenid(openid) {
+  try {
+    const docRes = await db.collection('users').doc(openid).get()
+    if (docRes.data) {
+      return docRes.data
+    }
+  } catch (err) {
+    console.warn('sendRequest canonical doc lookup missed, fallback to legacy query')
+  }
+
+  const legacyRes = await db.collection('users')
+    .where({ openid })
+    .limit(1)
+    .get()
+
+  return legacyRes.data[0] || null
+}
+
 exports.main = async (event) => {
   const requestId = resolveRequestId(event)
   const wxContext = cloud.getWXContext()
@@ -30,15 +48,10 @@ exports.main = async (event) => {
     return { ok: false, code: 'TARGET_REQUIRED', requestId, message: '缺少目标用户' }
   }
 
-  const myRes = await db.collection('users')
-    .where({ openid: myOpenid })
-    .limit(1)
-    .get()
-
-  if (myRes.data.length === 0) {
+  const me = await getUserProfileByOpenid(myOpenid)
+  if (!me) {
     return { ok: false, code: 'PROFILE_REQUIRED', requestId, message: '请先填写你的资料' }
   }
-  const me = myRes.data[0]
 
   let target
   try {
