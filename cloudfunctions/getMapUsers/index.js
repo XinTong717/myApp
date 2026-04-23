@@ -26,6 +26,7 @@ exports.main = async () => {
           province: _.neq(''),
           city: _.neq(''),
           displayName: _.neq(''),
+          isVisibleOnMap: _.neq(false),
         })
         .field({
           displayName: true,
@@ -62,7 +63,6 @@ exports.main = async () => {
     )
 
     const users = (usersRes.data || []).filter((user) => {
-      if (user.isVisibleOnMap === false) return false
       if (user.openid !== OPENID && hiddenOpenids.has(user.openid)) return false
       if (user.openid !== OPENID && blockedByOpenids.has(user.openid)) return false
       return true
