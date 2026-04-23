@@ -29,7 +29,11 @@
     "dev:rn": "npm run build:rn -- --watch",
     "dev:qq": "npm run build:qq -- --watch",
     "dev:jd": "npm run build:jd -- --watch",
-    "dev:harmony-hybrid": "npm run build:harmony-hybrid -- --watch"
+    "dev:harmony-hybrid": "npm run build:harmony-hybrid -- --watch",
+    "use:devtools:dev": "node scripts/set-devtools-env.cjs cloud1-9g8njw4c79fb1322",
+    "use:devtools:prod": "node scripts/set-devtools-env.cjs keque-prod-d5gc6ylp793fabaea",
+    "dev:weapp:dev": "npm run use:devtools:dev && npm run dev:weapp",
+    "build:weapp:prod": "npm run use:devtools:prod && NODE_ENV=production npm run build:weapp"
   },
   "browserslist": [
     "defaults and fully supports es6-module",
