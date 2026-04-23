@@ -42,6 +42,28 @@ async function syncInterestCount(eventId) {
   return count
 }
 
+async function updateInterestCountAfterMutation(eventId, delta) {
+  const countDocId = buildCountDocId(eventId)
+
+  try {
+    const currentRes = await db.collection(COUNT_COLLECTION).doc(countDocId).get()
+    const currentCount = Number(currentRes.data?.count || 0)
+    const nextCount = Math.max(0, currentCount + delta)
+
+    await db.collection(COUNT_COLLECTION).doc(countDocId).set({
+      data: {
+        eventId,
+        count: nextCount,
+        updatedAt: db.serverDate(),
+      },
+    })
+
+    return nextCount
+  } catch (err) {
+    return syncInterestCount(eventId)
+  }
+}
+
 exports.main = async (event) => {
   const requestId = resolveRequestId(event)
   const { OPENID } = cloud.getWXContext()
@@ -96,7 +118,9 @@ exports.main = async (event) => {
     }
 
     if (current) {
-      const nextStatus = current.status === 'interested' ? 'cancelled' : 'interested'
+      const wasInterested = current.status === 'interested'
+      const nextStatus = wasInterested ? 'cancelled' : 'interested'
+      const delta = wasInterested ? -1 : 1
 
       await db.collection('event_interest').doc(stableDocId).update({
         data: {
@@ -105,7 +129,7 @@ exports.main = async (event) => {
         },
       })
 
-      const count = await syncInterestCount(eventId)
+      const count = await updateInterestCountAfterMutation(eventId, delta)
 
       return {
         ok: true,
@@ -127,7 +151,7 @@ exports.main = async (event) => {
       },
     })
 
-    const count = await syncInterestCount(eventId)
+    const count = await updateInterestCountAfterMutation(eventId, 1)
 
     return {
       ok: true,
