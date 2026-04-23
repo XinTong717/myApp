@@ -88,6 +88,25 @@ function buildNormalizedKey(name, province, city) {
     .join('::')
 }
 
+async function getUserProfileByOpenid(openid) {
+  try {
+    const docRes = await db.collection('users').doc(openid).get()
+    if (docRes.data) {
+      return docRes.data
+    }
+  } catch (err) {
+    console.warn('submitCommunity canonical doc lookup missed, fallback to legacy query')
+  }
+
+  const legacyRes = await db.collection('users')
+    .where({ openid })
+    .field({ displayName: true, roles: true, city: true })
+    .limit(1)
+    .get()
+
+  return legacyRes.data[0] || null
+}
+
 exports.main = async (event) => {
   const requestId = resolveRequestId(event)
   const { OPENID } = cloud.getWXContext()
@@ -174,12 +193,7 @@ exports.main = async (event) => {
     return { ok: false, code: 'DUPLICATE_SUBMISSION', requestId, message: '这个学习社区已在审核队列或已收录，无需重复提交' }
   }
 
-  const userRes = await db.collection('users')
-    .where({ openid: OPENID })
-    .field({ displayName: true, roles: true, city: true })
-    .limit(1)
-    .get()
-  const submitter = userRes.data[0] || {}
+  const submitter = await getUserProfileByOpenid(OPENID) || {}
 
   try {
     await db.collection('community_submissions').add({
