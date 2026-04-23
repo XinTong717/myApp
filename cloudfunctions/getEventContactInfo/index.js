@@ -17,6 +17,24 @@ function isProfileComplete(profile) {
   )
 }
 
+async function getUserProfileByOpenid(openid) {
+  try {
+    const docRes = await db.collection('users').doc(openid).get()
+    if (docRes.data) {
+      return docRes.data
+    }
+  } catch (err) {
+    console.warn('getEventContactInfo canonical doc lookup missed, fallback to legacy query')
+  }
+
+  const legacyRes = await db.collection('users')
+    .where({ openid })
+    .limit(1)
+    .get()
+
+  return legacyRes.data[0] || null
+}
+
 exports.main = async (event) => {
   const requestId = createRequestId()
   const { OPENID } = cloud.getWXContext()
@@ -27,12 +45,7 @@ exports.main = async (event) => {
   }
 
   try {
-    const userRes = await db.collection('users')
-      .where({ openid: OPENID })
-      .limit(1)
-      .get()
-
-    const profile = userRes.data[0] || null
+    const profile = await getUserProfileByOpenid(OPENID)
     if (!isProfileComplete(profile)) {
       return {
         ok: false,
