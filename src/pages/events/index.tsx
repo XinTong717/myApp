@@ -80,7 +80,7 @@ export default function EventsPage() {
   }
 
   const goToSubmit = () => {
-    Taro.navigateTo({ url: '/pages/events/submit' })
+    Taro.navigateTo({ url: '/pkg/events/submit/index' })
   }
 
   const visibleEvents = useMemo(() => {
