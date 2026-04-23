@@ -9,12 +9,12 @@ export default defineAppConfig({
 
   subPackages: [
     {
-      root: 'pages/schools',
-      pages: ['submit'],
+      root: 'pkg/schools',
+      pages: ['submit/index'],
     },
     {
-      root: 'pages/events',
-      pages: ['submit'],
+      root: 'pkg/events',
+      pages: ['submit/index'],
     },
     {
       root: 'pages/school-detail',
