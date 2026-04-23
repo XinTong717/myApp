@@ -51,11 +51,11 @@ export default function EventsPage() {
     }
   }
 
-  const loadEvents = async () => {
+  const loadEvents = async (options: { forceRefresh?: boolean } = {}) => {
     try {
       setLoading(true)
       setError('')
-      const result = await getEvents()
+      const result = await getEvents({ forceRefresh: !!options.forceRefresh })
       const list = result?.ok && Array.isArray(result.events) ? result.events : []
       setEvents(list)
       await loadInterestCounts(list)
@@ -71,7 +71,7 @@ export default function EventsPage() {
   useDidShow(() => { loadEvents() })
 
   usePullDownRefresh(async () => {
-    await loadEvents()
+    await loadEvents({ forceRefresh: true })
     Taro.stopPullDownRefresh()
   })
 
