@@ -26,6 +26,16 @@ function buildCountDocId(eventId) {
   return String(eventId)
 }
 
+function toUpstreamFailure(requestId, err, emptyField, fallbackValue) {
+  const isTimeout = err?.code === 'UPSTREAM_TIMEOUT'
+  return fail(
+    requestId,
+    isTimeout ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_UNAVAILABLE',
+    isTimeout ? '加载超时，请重试' : '暂时无法加载，请稍后重试',
+    { [emptyField]: fallbackValue, stale: true }
+  )
+}
+
 async function syncInterestCount(eventId) {
   const countRes = await db.collection('event_interest').where({ eventId, status: 'interested' }).count()
   const count = countRes.total || 0
@@ -56,7 +66,7 @@ async function updateInterestCountAfterMutation(eventId, delta) {
   }
 }
 
-async function getSchools(event, wxContext) {
+async function getSchools(event) {
   const requestId = resolveRequestId('get-schools', event)
   try {
     if (!API_KEY) return fail(requestId, 'MEMFIRE_API_KEY_MISSING', 'MEMFIRE_API_KEY 未配置', { schools: [] })
@@ -65,7 +75,7 @@ async function getSchools(event, wxContext) {
     return ok(requestId, { schools: Array.isArray(data) ? data : [] })
   } catch (err) {
     console.error('appService getSchools error:', err)
-    return fail(requestId, 'GET_SCHOOLS_FAILED', '读取学习社区失败', { schools: [] })
+    return toUpstreamFailure(requestId, err, 'schools', [])
   }
 }
 
@@ -80,7 +90,7 @@ async function getSchoolDetail(event) {
     return ok(requestId, { school: Array.isArray(data) ? (data[0] || null) : null })
   } catch (err) {
     console.error('appService getSchoolDetail error:', err)
-    return fail(requestId, 'GET_SCHOOL_DETAIL_FAILED', '读取学习社区详情失败', { school: null })
+    return toUpstreamFailure(requestId, err, 'school', null)
   }
 }
 
@@ -93,7 +103,7 @@ async function getEvents(event) {
     return ok(requestId, { events: Array.isArray(data) ? data : [] })
   } catch (err) {
     console.error('appService getEvents error:', err)
-    return fail(requestId, 'GET_EVENTS_FAILED', '读取活动失败', { events: [] })
+    return toUpstreamFailure(requestId, err, 'events', [])
   }
 }
 
@@ -108,7 +118,7 @@ async function getEventDetail(event) {
     return ok(requestId, { event: Array.isArray(data) ? (data[0] || null) : null })
   } catch (err) {
     console.error('appService getEventDetail error:', err)
-    return fail(requestId, 'GET_EVENT_DETAIL_FAILED', '读取活动详情失败', { event: null })
+    return toUpstreamFailure(requestId, err, 'event', null)
   }
 }
 
@@ -291,7 +301,7 @@ async function submitEvent(event, wxContext) {
 
 async function getEventInterestCountsBatch(event) {
   const requestId = resolveRequestId('event-interest-counts', event)
-  const eventIds = Array.isArray(event.eventIds) ? event.eventIds.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0) : []
+  const eventIds = Array.isArray(event.eventIds) ? event.eventIds.slice(0, 50).map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0) : []
   if (eventIds.length === 0) return ok(requestId, { counts: {} })
   try {
     const counts = {}
