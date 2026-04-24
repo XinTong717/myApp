@@ -56,9 +56,12 @@ export default function EventsPage() {
       setLoading(true)
       setError('')
       const result = await getEvents({ forceRefresh: !!options.forceRefresh })
-      const list = result?.ok && Array.isArray(result.events) ? result.events : []
+      const list = Array.isArray(result.events) ? result.events : []
       setEvents(list)
       await loadInterestCounts(list)
+      if (!result?.ok && list.length === 0) {
+        setError(result?.message || '读取活动数据失败')
+      }
     } catch (err: any) {
       console.error('loadEvents error:', err)
       setError(err?.message || '读取活动数据失败')
