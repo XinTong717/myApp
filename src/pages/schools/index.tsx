@@ -39,7 +39,11 @@ export default function SchoolsPage() {
       setLoading(true)
       setError('')
       const result = await getSchools({ forceRefresh: !!options.forceRefresh })
-      setSchools(result?.ok && Array.isArray(result.schools) ? result.schools : [])
+      const nextSchools = Array.isArray(result.schools) ? result.schools : []
+      setSchools(nextSchools)
+      if (!result?.ok && nextSchools.length === 0) {
+        setError(result?.message || '读取学习社区数据失败')
+      }
     } catch (err: any) {
       console.error('loadSchools error:', err)
       setError(err?.message || '读取学习社区数据失败')
