@@ -22,6 +22,8 @@ type MarkerItem = {
   originalId: number | string; bio?: string; roles?: string[]; companionContext?: string; isSelf?: boolean
 }
 
+type Coord = { lat: number; lng: number }
+
 function parseCities(f?: string): string[] {
   if (!f) return []
   return f.split(',').map((s) => s.trim()).filter((s) => s && !s.startsWith('(') && !s.startsWith('（'))
@@ -35,7 +37,11 @@ function nameHash(name: string): number {
   for (let i = 0; i < name.length; i++) { h = ((h << 5) - h + name.charCodeAt(i)) | 0 }
   return Math.abs(h % 10000) / 10000
 }
+function isValidCoord(coord?: Partial<Coord> | null): coord is Coord {
+  return !!coord && Number.isFinite(coord.lat) && Number.isFinite(coord.lng)
+}
 function jitter(baseLat: number, baseLng: number, index: number, total: number, name: string): { lat: number; lng: number } {
+  if (!Number.isFinite(baseLat) || !Number.isFinite(baseLng)) return { lat: NaN, lng: NaN }
   if (total <= 1) return { lat: baseLat, lng: baseLng }
   const cols = Math.ceil(Math.sqrt(total))
   const row = Math.floor(index / cols)
@@ -45,11 +51,13 @@ function jitter(baseLat: number, baseLng: number, index: number, total: number, 
   const rows = Math.ceil(total / cols)
   const gridH = (rows - 1) * spacing
   const gridLat = baseLat - gridH / 2 + row * spacing
+  const cosLat = Math.cos(baseLat * Math.PI / 180)
+  const safeCosLat = Math.abs(cosLat) < 1e-6 ? 1e-6 : cosLat
   const gridLng = baseLng - gridW / 2 + col * spacing
   const h = nameHash(name); const h2 = nameHash(name + 'x')
   return {
     lat: gridLat + (h - 0.5) * 0.016,
-    lng: gridLng + (h2 - 0.5) * 0.016 / Math.cos(baseLat * Math.PI / 180),
+    lng: gridLng + (h2 - 0.5) * 0.016 / safeCosLat,
   }
 }
 function shortName(name: string, max = 10): string {
@@ -126,16 +134,17 @@ export default function ExplorePage() {
         if (cities.length > 0) {
           cities.forEach((cityName) => {
             const info = CITIES[cityName]
-            if (!info) return
+            if (!isValidCoord(info)) return
             const idx = cityIndex[cityName] || 0
             cityIndex[cityName] = idx + 1
             const jittered = jitter(info.lat, info.lng, idx, cityCount[cityName] || 1, schoolName)
+            if (!isValidCoord(jittered)) return
             items.push({ id: nextId++, latitude: jittered.lat, longitude: jittered.lng, name: schoolName, type: 'school', markerProv: info.prov, city: cityName, originalId: s.id })
           })
         } else {
           const prov = firstProvince(s.province)
           const coord = PROV_FALLBACK[prov]
-          if (!coord) return
+          if (!isValidCoord(coord)) return
           items.push({ id: nextId++, latitude: coord.lat, longitude: coord.lng, name: schoolName, type: 'school', markerProv: prov, city: '', originalId: s.id })
         }
       })
@@ -145,17 +154,21 @@ export default function ExplorePage() {
       appUsers.filter((u) => showEducators || u.isSelf || !isPureEducator(u)).forEach((u) => {
         if (!u.city || !u.province) return
         const cityInfo = CITIES[u.city]
-        const coord = cityInfo || PROV_FALLBACK[u.province]
-        if (!coord) return
-        const prov = cityInfo ? cityInfo.prov : u.province
+        const fallbackCoord = PROV_FALLBACK[u.province]
+        const coord = isValidCoord(cityInfo) ? cityInfo : fallbackCoord
+        if (!isValidCoord(coord)) return
+        const prov = isValidCoord(cityInfo) ? cityInfo.prov : u.province
         const name = u.displayName?.trim() || '同路人'
         const h = nameHash(name + u._id)
         const offsetLat = (h - 0.5) * 0.02
         const offsetLng = (nameHash(u._id) - 0.5) * 0.02
+        const latitude = coord.lat + offsetLat
+        const longitude = coord.lng + offsetLng
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return
         items.push({
           id: nextId++,
-          latitude: (cityInfo ? cityInfo.lat : coord.lat) + offsetLat,
-          longitude: (cityInfo ? cityInfo.lng : coord.lng) + offsetLng,
+          latitude,
+          longitude,
           name,
           type: 'user',
           markerProv: prov,
@@ -216,7 +229,7 @@ export default function ExplorePage() {
         textAlign: 'center',
       },
     }
-  }), [validMarkers])
+  }).filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude)), [validMarkers])
 
   const { center, scale } = useMemo(() => {
     if (validMarkers.length === 0) {
@@ -241,14 +254,22 @@ export default function ExplorePage() {
     else if (span < 10) s = 6
     else s = 5
 
+    const nextCenter = {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+    }
+
+    if (!Number.isFinite(nextCenter.latitude) || !Number.isFinite(nextCenter.longitude)) {
+      return { center: { latitude: 33.0, longitude: 108.0 }, scale: 5 }
+    }
+
     return {
-      center: {
-        latitude: (minLat + maxLat) / 2,
-        longitude: (minLng + maxLng) / 2,
-      },
+      center: nextCenter,
       scale: s,
     }
   }, [validMarkers])
+
+  const canRenderMap = mapMarkers.length > 0 && Number.isFinite(center.latitude) && Number.isFinite(center.longitude)
 
   const idToMarker = useMemo(() => {
     const m: Record<number, MarkerItem> = {}
@@ -396,11 +417,11 @@ export default function ExplorePage() {
           </View>
         </View>
       )}
-      {!loading && !error && validMarkers.length === 0 && (
+      {!loading && !error && !canRenderMap && (
         <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>{selectedProvince ? selectedProvince + '暂无数据' : '暂无点位'}</Text></View></View>
       )}
-      {!loading && !error && validMarkers.length > 0 && (
-        <TaroMap latitude={center.latitude} longitude={center.longitude} scale={scale} minScale={3} maxScale={18} markers={mapMarkers} showScale={false} enableRotate={false} enableOverlooking={false} onMarkerTap={handleMarkerTap} onCalloutTap={handleCalloutTap} onError={() => {}} style={{ width: '100%', height: 'calc(100vh - 120px)' }} />
+      {!loading && !error && canRenderMap && (
+        <TaroMap key={`${selectedProvince || 'all'}-${mapMarkers.length}`} latitude={center.latitude} longitude={center.longitude} scale={scale} minScale={3} maxScale={18} markers={mapMarkers} showScale={false} enableRotate={false} enableOverlooking={false} onMarkerTap={handleMarkerTap} onCalloutTap={handleCalloutTap} onError={() => {}} style={{ width: '100%', height: 'calc(100vh - 120px)' }} />
       )}
 
       <View style={{ backgroundColor: '#FFFDF9', padding: '5px 16px', borderTop: '1px solid #F1DFCF' }}><Text style={{ fontSize: '10px', color: '#C5B5A5' }}>近似坐标 · 仅供浏览 · 点击标记或名称查看详情</Text></View>
