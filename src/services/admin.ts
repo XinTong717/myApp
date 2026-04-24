@@ -17,7 +17,6 @@ export async function reviewEventSubmission(data: {
   submissionId: string
   action: 'mark_published' | 'reject' | 'reset_pending'
   publishedEventId?: string
-  reviewedBy?: string
   adminNote?: string
 }) {
   return callCloud<ReviewEventSubmissionResult>('reviewEventSubmission', data)
