@@ -83,11 +83,13 @@ export default function ExplorePage() {
   const [hasProfile, setHasProfile] = useState(true)
   const [selectedUser, setSelectedUser] = useState<MarkerItem | null>(null)
   const [mapMountReady, setMapMountReady] = useState(false)
+  const [isNavigatingAway, setIsNavigatingAway] = useState(false)
 
   const loadData = async () => {
     try {
       setLoading(true)
       setError('')
+      setIsNavigatingAway(false)
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
         getSchools().catch(() => ({ ok: false, schools: [] })),
         getMapUsers({ forceRefresh: true }).catch(() => ({ ok: false, users: [] })),
@@ -274,14 +276,14 @@ export default function ExplorePage() {
 
   useEffect(() => {
     setMapMountReady(false)
-    if (!canRenderMap || loading || error) {
+    if (!canRenderMap || loading || error || isNavigatingAway) {
       return
     }
     const timer = setTimeout(() => {
       setMapMountReady(true)
     }, 80)
     return () => clearTimeout(timer)
-  }, [canRenderMap, loading, error, selectedProvince, mapMarkers.length, center.latitude, center.longitude])
+  }, [canRenderMap, loading, error, isNavigatingAway, selectedProvince, mapMarkers.length, center.latitude, center.longitude])
 
   const idToMarker = useMemo(() => {
     const m: Record<number, MarkerItem> = {}
@@ -290,6 +292,15 @@ export default function ExplorePage() {
   }, [validMarkers])
 
   const closePopup = () => setSelectedUser(null)
+
+  const navigateToProfileSafely = useCallback(() => {
+    setIsNavigatingAway(true)
+    setMapMountReady(false)
+    setSelectedUser(null)
+    setTimeout(() => {
+      goToProfile()
+    }, 60)
+  }, [])
 
   const handleReportUser = async (targetUserId: string) => {
     try {
@@ -366,13 +377,11 @@ export default function ExplorePage() {
   const handlePrimaryAction = async () => {
     if (!selectedUser) return
     if (selectedUser.isSelf) {
-      goToProfile()
-      closePopup()
+      navigateToProfileSafely()
       return
     }
     if (!hasProfile) {
-      goToProfile()
-      closePopup()
+      navigateToProfileSafely()
       return
     }
     await sendRequestToUser(String(selectedUser.originalId))
@@ -399,8 +408,8 @@ export default function ExplorePage() {
         </View>
       )
     }
-    if (!canRenderMap || !mapMountReady) {
-      return <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>{selectedProvince ? selectedProvince + '暂无数据' : canRenderMap ? '地图加载中…' : '暂无点位'}</Text></View></View>
+    if (!canRenderMap || !mapMountReady || isNavigatingAway) {
+      return <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>{isNavigatingAway ? '页面跳转中…' : selectedProvince ? selectedProvince + '暂无数据' : canRenderMap ? '地图加载中…' : '暂无点位'}</Text></View></View>
     }
     return (
       <TaroMap
@@ -420,7 +429,7 @@ export default function ExplorePage() {
         style={{ width: '100%', height: 'calc(100vh - 120px)' }}
       />
     )
-  }, [loading, error, canRenderMap, mapMountReady, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap])
+  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap])
 
   return (
     <View style={{ minHeight: '100vh', backgroundColor: '#FFF9F2', position: 'relative' }}>
