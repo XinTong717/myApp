@@ -20,6 +20,10 @@ async function runMsgSecCheck({ content, openid, scene = 2, maxLen = 2500, block
     return { ok: false, code: 'CONTENT_SECURITY_BLOCKED', message: blockedMessage }
   } catch (err) {
     console.error('runMsgSecCheck error:', err)
+    if (scene === 1) {
+      console.warn('runMsgSecCheck degraded for scene 1, allow request to continue')
+      return { ok: true, code: 'CONTENT_SECURITY_FAILED_SOFT' }
+    }
     return { ok: false, code: 'CONTENT_SECURITY_FAILED', message: failedMessage }
   }
 }
