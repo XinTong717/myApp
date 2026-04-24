@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Map as TaroMap, Text, View, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { REPORT_CODE_MESSAGES, REQUEST_CODE_MESSAGES, SAFETY_CODE_MESSAGES } from '../../constants/cloudMessages'
@@ -351,7 +351,7 @@ export default function ExplorePage() {
     }
   }
 
-  const handleTap = async (markerId: number) => {
+  const handleTap = useCallback((markerId: number) => {
     const item = idToMarker[markerId]
     if (!item) return
 
@@ -361,7 +361,7 @@ export default function ExplorePage() {
     }
 
     setSelectedUser(item)
-  }
+  }, [idToMarker])
 
   const handlePrimaryAction = async () => {
     if (!selectedUser) return
@@ -378,12 +378,49 @@ export default function ExplorePage() {
     await sendRequestToUser(String(selectedUser.originalId))
   }
 
-  const handleMarkerTap = (e: any) => handleTap(Number(e.detail?.markerId))
-  const handleCalloutTap = (e: any) => handleTap(Number(e.detail?.markerId))
+  const handleMarkerTap = useCallback((e: any) => handleTap(Number(e.detail?.markerId)), [handleTap])
+  const handleCalloutTap = useCallback((e: any) => handleTap(Number(e.detail?.markerId)), [handleTap])
 
   const schoolCount = filteredMarkers.filter((m) => m.type === 'school').length
   const userCount = filteredMarkers.filter((m) => m.type === 'user').length
   const popupRoleText = selectedUser?.roles?.join(' / ') || ''
+
+  const mapNode = useMemo(() => {
+    if (loading) {
+      return <View style={{ padding: '80px 20px', textAlign: 'center' }}><Text style={{ fontSize: '14px', color: '#7A6756' }}>加载中...</Text></View>
+    }
+    if (error) {
+      return (
+        <View style={{ padding: '40px 20px' }}>
+          <View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}>
+            <Text style={{ fontSize: '14px', color: '#CF1322' }}>{error}</Text>
+            <View onClick={loadData} style={{ marginTop: '16px', padding: '8px 16px', borderRadius: '999px', backgroundColor: '#FCE6D6', display: 'inline-block' }}><Text style={{ fontSize: '13px', color: '#E76F51' }}>重新加载</Text></View>
+          </View>
+        </View>
+      )
+    }
+    if (!canRenderMap || !mapMountReady) {
+      return <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>{selectedProvince ? selectedProvince + '暂无数据' : canRenderMap ? '地图加载中…' : '暂无点位'}</Text></View></View>
+    }
+    return (
+      <TaroMap
+        key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}`}
+        latitude={center.latitude}
+        longitude={center.longitude}
+        scale={scale}
+        minScale={3}
+        maxScale={18}
+        markers={mapMarkers}
+        showScale={false}
+        enableRotate={false}
+        enableOverlooking={false}
+        onMarkerTap={handleMarkerTap}
+        onCalloutTap={handleCalloutTap}
+        onError={() => {}}
+        style={{ width: '100%', height: 'calc(100vh - 120px)' }}
+      />
+    )
+  }, [loading, error, canRenderMap, mapMountReady, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap])
 
   return (
     <View style={{ minHeight: '100vh', backgroundColor: '#FFF9F2', position: 'relative' }}>
@@ -420,21 +457,7 @@ export default function ExplorePage() {
         )}
       </View>
 
-      {loading && <View style={{ padding: '80px 20px', textAlign: 'center' }}><Text style={{ fontSize: '14px', color: '#7A6756' }}>加载中...</Text></View>}
-      {!loading && error && (
-        <View style={{ padding: '40px 20px' }}>
-          <View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}>
-            <Text style={{ fontSize: '14px', color: '#CF1322' }}>{error}</Text>
-            <View onClick={loadData} style={{ marginTop: '16px', padding: '8px 16px', borderRadius: '999px', backgroundColor: '#FCE6D6', display: 'inline-block' }}><Text style={{ fontSize: '13px', color: '#E76F51' }}>重新加载</Text></View>
-          </View>
-        </View>
-      )}
-      {!loading && !error && (!canRenderMap || !mapMountReady) && (
-        <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>{selectedProvince ? selectedProvince + '暂无数据' : canRenderMap ? '地图加载中…' : '暂无点位'}</Text></View></View>
-      )}
-      {!loading && !error && canRenderMap && mapMountReady && (
-        <TaroMap key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}`} latitude={center.latitude} longitude={center.longitude} scale={scale} minScale={3} maxScale={18} markers={mapMarkers} showScale={false} enableRotate={false} enableOverlooking={false} onMarkerTap={handleMarkerTap} onCalloutTap={handleCalloutTap} onError={() => {}} style={{ width: '100%', height: 'calc(100vh - 120px)' }} />
-      )}
+      {mapNode}
 
       <View style={{ backgroundColor: '#FFFDF9', padding: '5px 16px', borderTop: '1px solid #F1DFCF' }}><Text style={{ fontSize: '10px', color: '#C5B5A5' }}>近似坐标 · 仅供浏览 · 点击标记或名称查看详情</Text></View>
 
