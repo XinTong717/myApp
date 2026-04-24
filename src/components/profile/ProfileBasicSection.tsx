@@ -91,10 +91,10 @@ export default function ProfileBasicSection(props: Props) {
         </View>
       )}
 
-      <SectionTitle text='微信号（选填）' />
-      <ProfileHelperText text='仅在你同意对方的联络请求后，对方才能看到你的微信号' />
+      <SectionTitle text='可被搜索到的联系方式（选填）' />
+      <ProfileHelperText text='可填写微信号、绑定手机号或 QQ 号。仅在你同意对方的联络请求后，对方才能看到它。' />
       <ProfileInputBox>
-        <Input value={wechatId} placeholder='你的微信号' onInput={(e) => setWechatId(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+        <Input value={wechatId} placeholder='例如：微信号 / 绑定手机号 / QQ 号' onInput={(e) => setWechatId(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
       </ProfileInputBox>
     </ProfileCard>
   )
