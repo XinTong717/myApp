@@ -5,7 +5,6 @@ const {
   normalizeStringArray,
   normalizeRoles,
   normalizeProfile,
-  ROLE_WHITELIST,
   CHILD_AGE_WHITELIST,
   CHILD_STATUS_WHITELIST,
   validateLength,
@@ -15,6 +14,7 @@ const { getUserProfileByOpenid, resolveUserDocId } = require('../lib/userRepo')
 const REASON_WHITELIST = ['垃圾广告', '骚扰不适', '未成年人敏感信息', '其他']
 const DAILY_LIMIT = 20
 const SAME_TARGET_DAILY_LIMIT = 3
+const REJECTED_REQUEST_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
 function hasOwn(obj, key) {
   return Object.prototype.hasOwnProperty.call(obj, key)
@@ -34,6 +34,14 @@ function validateWechatId(value) {
   if (text.length < 5 || text.length > 50) return '微信号格式不正确'
   if (!/^[a-zA-Z][-_a-zA-Z0-9]{4,49}$/.test(text)) return '微信号格式不正确'
   return ''
+}
+
+function getCooldownRemainingDays(dateLike) {
+  const ts = new Date(dateLike || '').getTime()
+  if (!Number.isFinite(ts)) return 0
+  const remainingMs = ts + REJECTED_REQUEST_COOLDOWN_MS - Date.now()
+  if (remainingMs <= 0) return 0
+  return Math.ceil(remainingMs / (24 * 60 * 60 * 1000))
 }
 
 async function getMe(event, wxContext) {
@@ -115,7 +123,11 @@ async function saveProfile(event, wxContext) {
   const existing = await db.collection('users').where({ openid }).limit(20).get()
   const existingDocs = existing.data || []
   const canonicalDoc = existingDocs.find((item) => item._id === openid) || existingDocs[0] || null
+  const baseDoc = canonicalDoc ? { ...canonicalDoc } : {}
+  delete baseDoc._id
+
   const dataToSave = {
+    ...baseDoc,
     allowIncomingRequests: cleanData.allowIncomingRequests !== false,
     isVisibleOnMap: cleanData.isVisibleOnMap !== false,
     ...cleanData,
@@ -216,6 +228,12 @@ async function sendRequest(event, wxContext) {
   try { sameDirectionRecord = (await db.collection('connections').doc(connectionId).get()).data || null } catch (err) { sameDirectionRecord = null }
   if (sameDirectionRecord?.status === 'pending') return fail(requestId, 'REQUEST_ALREADY_PENDING', '你已经发送过请求了，等待对方回应')
   if (sameDirectionRecord?.status === 'accepted') return fail(requestId, 'ALREADY_CONNECTED', '你们已经是联络人了')
+  if (sameDirectionRecord?.status === 'rejected') {
+    const cooldownDays = getCooldownRemainingDays(sameDirectionRecord.respondedAt || sameDirectionRecord.updatedAt)
+    if (cooldownDays > 0) {
+      return fail(requestId, 'REJECTED_COOLDOWN', `对方近期已拒绝你的联络请求，请 ${cooldownDays} 天后再试`)
+    }
+  }
   let reverseRecord = null
   try { reverseRecord = (await db.collection('connections').doc(reverseConnectionId).get()).data || null } catch (err) { reverseRecord = null }
   if (reverseRecord?.status === 'accepted') return fail(requestId, 'ALREADY_CONNECTED', '你们已经是联络人了')
