@@ -1,7 +1,7 @@
 const { fail, resolveRequestId } = require('./lib/response')
 const { cloud } = require('./lib/cloud')
 const publicHandlers = require('./handlers/public')
-const userHandlers = require('./handlers/user')
+const userHandlers = require('./handlers/userV2')
 const adminHandlers = require('./handlers/admin')
 
 const actionHandlers = {
