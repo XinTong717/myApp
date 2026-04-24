@@ -149,11 +149,13 @@ export function useProfileForm() {
       if (result?.ok) {
         Taro.showToast({ title: '设置已更新', icon: 'success' })
       } else {
-        await loadProfile()
+        if (field === 'allowIncomingRequests') setAllowIncomingRequests(!value)
+        if (field === 'isVisibleOnMap') setIsVisibleOnMap(!value)
         Taro.showToast({ title: result?.message || '更新失败', icon: 'none' })
       }
     } catch (err) {
-      await loadProfile()
+      if (field === 'allowIncomingRequests') setAllowIncomingRequests(!value)
+      if (field === 'isVisibleOnMap') setIsVisibleOnMap(!value)
       Taro.showToast({ title: '更新失败，请稍后重试', icon: 'none' })
     } finally {
       setPrivacySaving(false)
