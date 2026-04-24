@@ -1,5 +1,5 @@
 import { callCloud } from './cloud'
-import { getCachedValue, setCachedValue } from './cache'
+import { getScopedCachedValue, setScopedCachedValue } from './cache'
 import type {
   CloudResponse,
   ContactInfoResult,
@@ -14,17 +14,28 @@ const EVENT_LIST_CACHE_KEY = 'cloud-cache:events:list:v1'
 const EVENT_LIST_TTL_MS = 5 * 60 * 1000
 
 export async function getEvents(options: { forceRefresh?: boolean } = {}) {
-  if (!options.forceRefresh) {
-    const cached = getCachedValue<EventListResult>(EVENT_LIST_CACHE_KEY)
-    if (cached) {
-      return cached
-    }
+  const cached = options.forceRefresh ? null : await getScopedCachedValue<EventListResult>(EVENT_LIST_CACHE_KEY)
+  if (cached) {
+    return cached
   }
 
   const result = await callCloud<EventListResult>('getEvents')
   if (result.ok) {
-    setCachedValue(EVENT_LIST_CACHE_KEY, result, EVENT_LIST_TTL_MS)
+    await setScopedCachedValue(EVENT_LIST_CACHE_KEY, result, EVENT_LIST_TTL_MS)
+    return result
   }
+
+  const staleCached = await getScopedCachedValue<EventListResult>(EVENT_LIST_CACHE_KEY)
+  if (staleCached) {
+    return {
+      ...staleCached,
+      ok: true,
+      stale: true,
+      code: result.code,
+      message: result.message,
+    }
+  }
+
   return result
 }
 
