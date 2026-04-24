@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Map as TaroMap, Text, View, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { REPORT_CODE_MESSAGES, REQUEST_CODE_MESSAGES, SAFETY_CODE_MESSAGES } from '../../constants/cloudMessages'
@@ -82,6 +82,7 @@ export default function ExplorePage() {
   const [selectedProvince, setSelectedProvince] = useState('')
   const [hasProfile, setHasProfile] = useState(true)
   const [selectedUser, setSelectedUser] = useState<MarkerItem | null>(null)
+  const [mapMountReady, setMapMountReady] = useState(false)
 
   const loadData = async () => {
     try {
@@ -89,7 +90,7 @@ export default function ExplorePage() {
       setError('')
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
         getSchools().catch(() => ({ ok: false, schools: [] })),
-        getMapUsers().catch(() => ({ ok: false, users: [] })),
+        getMapUsers({ forceRefresh: true }).catch(() => ({ ok: false, users: [] })),
         getMe().catch(() => ({ profile: null })),
       ])
 
@@ -271,6 +272,17 @@ export default function ExplorePage() {
 
   const canRenderMap = mapMarkers.length > 0 && Number.isFinite(center.latitude) && Number.isFinite(center.longitude)
 
+  useEffect(() => {
+    setMapMountReady(false)
+    if (!canRenderMap || loading || error) {
+      return
+    }
+    const timer = setTimeout(() => {
+      setMapMountReady(true)
+    }, 80)
+    return () => clearTimeout(timer)
+  }, [canRenderMap, loading, error, selectedProvince, mapMarkers.length, center.latitude, center.longitude])
+
   const idToMarker = useMemo(() => {
     const m: Record<number, MarkerItem> = {}
     validMarkers.forEach((item) => { m[item.id] = item })
@@ -417,11 +429,11 @@ export default function ExplorePage() {
           </View>
         </View>
       )}
-      {!loading && !error && !canRenderMap && (
-        <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>{selectedProvince ? selectedProvince + '暂无数据' : '暂无点位'}</Text></View></View>
+      {!loading && !error && (!canRenderMap || !mapMountReady) && (
+        <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>{selectedProvince ? selectedProvince + '暂无数据' : canRenderMap ? '地图加载中…' : '暂无点位'}</Text></View></View>
       )}
-      {!loading && !error && canRenderMap && (
-        <TaroMap key={`${selectedProvince || 'all'}-${mapMarkers.length}`} latitude={center.latitude} longitude={center.longitude} scale={scale} minScale={3} maxScale={18} markers={mapMarkers} showScale={false} enableRotate={false} enableOverlooking={false} onMarkerTap={handleMarkerTap} onCalloutTap={handleCalloutTap} onError={() => {}} style={{ width: '100%', height: 'calc(100vh - 120px)' }} />
+      {!loading && !error && canRenderMap && mapMountReady && (
+        <TaroMap key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}`} latitude={center.latitude} longitude={center.longitude} scale={scale} minScale={3} maxScale={18} markers={mapMarkers} showScale={false} enableRotate={false} enableOverlooking={false} onMarkerTap={handleMarkerTap} onCalloutTap={handleCalloutTap} onError={() => {}} style={{ width: '100%', height: 'calc(100vh - 120px)' }} />
       )}
 
       <View style={{ backgroundColor: '#FFFDF9', padding: '5px 16px', borderTop: '1px solid #F1DFCF' }}><Text style={{ fontSize: '10px', color: '#C5B5A5' }}>近似坐标 · 仅供浏览 · 点击标记或名称查看详情</Text></View>
