@@ -38,12 +38,29 @@ function toUpstreamFailure(requestId, err, emptyField, fallbackValue) {
   )
 }
 
+async function countInterestedFromSource(eventId) {
+  try {
+    const countRes = await db.collection('event_interest').where({ eventId, status: 'interested' }).count()
+    return countRes.total || 0
+  } catch (err) {
+    console.warn('event interest source count failed:', err)
+    return 0
+  }
+}
+
+async function writeInterestCountCache(eventId, count) {
+  try {
+    await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).set({
+      data: { eventId, count, updatedAt: db.serverDate() },
+    })
+  } catch (err) {
+    console.warn('event interest count cache write skipped:', err)
+  }
+}
+
 async function syncInterestCount(eventId) {
-  const countRes = await db.collection('event_interest').where({ eventId, status: 'interested' }).count()
-  const count = countRes.total || 0
-  await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).set({
-    data: { eventId, count, updatedAt: db.serverDate() },
-  })
+  const count = await countInterestedFromSource(eventId)
+  await writeInterestCountCache(eventId, count)
   return count
 }
 
@@ -59,13 +76,24 @@ async function getCachedCount(eventId) {
 async function getCachedCounts(eventIds) {
   const counts = {}
   const countDocIds = eventIds.map((eventId) => buildCountDocId(eventId))
-  if (countDocIds.length === 0) return counts
-  const cachedRes = await db.collection(COUNT_COLLECTION).where({ _id: _.in(countDocIds) }).get()
-  const cacheMap = new Map((cachedRes.data || []).map((item) => [String(item._id), Number(item.count || 0)]))
-  for (const eventId of eventIds) {
-    const cacheKey = buildCountDocId(eventId)
-    counts[eventId] = cacheMap.has(cacheKey) ? (cacheMap.get(cacheKey) || 0) : 0
+
+  if (countDocIds.length > 0) {
+    try {
+      const cachedRes = await db.collection(COUNT_COLLECTION).where({ _id: _.in(countDocIds) }).get()
+      for (const item of cachedRes.data || []) {
+        counts[Number(item.eventId || item._id)] = Number(item.count || 0)
+      }
+    } catch (err) {
+      console.warn('event interest count cache read skipped:', err)
+    }
   }
+
+  for (const eventId of eventIds) {
+    if (!Object.prototype.hasOwnProperty.call(counts, eventId)) {
+      counts[eventId] = await syncInterestCount(eventId)
+    }
+  }
+
   return counts
 }
 
@@ -76,20 +104,8 @@ function attachInterestCounts(events, counts = {}) {
   }))
 }
 
-async function updateInterestCountAfterMutation(eventId, delta) {
-  const countDocId = buildCountDocId(eventId)
-  try {
-    const currentRes = await db.collection(COUNT_COLLECTION).doc(countDocId).get()
-    const currentCount = Number(currentRes.data?.count || 0)
-    const nextCount = Math.max(0, currentCount + delta)
-    await db.collection(COUNT_COLLECTION).doc(countDocId).set({
-      data: { eventId, count: nextCount, updatedAt: db.serverDate() },
-    })
-    return nextCount
-  } catch (err) {
-    console.warn('event interest count cache update skipped:', err)
-    return null
-  }
+async function updateInterestCountAfterMutation(eventId) {
+  return syncInterestCount(eventId)
 }
 
 async function getSchools(event) {
@@ -132,14 +148,9 @@ async function getEvents(event) {
     if (event?.includeInterestCounts === false || events.length === 0) {
       return ok(requestId, { events })
     }
-    try {
-      const eventIds = events.map((item) => Number(item.id)).filter((id) => Number.isFinite(id) && id > 0)
-      const counts = await getCachedCounts(eventIds)
-      return ok(requestId, { events: attachInterestCounts(events, counts) })
-    } catch (countErr) {
-      console.warn('appService getEvents interest counts degraded:', countErr)
-      return ok(requestId, { events: attachInterestCounts(events), degraded: true })
-    }
+    const eventIds = events.map((item) => Number(item.id)).filter((id) => Number.isFinite(id) && id > 0)
+    const counts = await getCachedCounts(eventIds)
+    return ok(requestId, { events: attachInterestCounts(events, counts) })
   } catch (err) {
     console.error('appService getEvents error:', err)
     return toUpstreamFailure(requestId, err, 'events', [])
@@ -357,7 +368,6 @@ async function getEventInterestInfo(event, wxContext) {
   if (!eventId) return fail(requestId, 'BAD_REQUEST', '缺少活动 ID', { count: 0, hasInterested: false })
 
   let hasInterested = false
-  let count = 0
   let degraded = false
 
   try {
@@ -374,14 +384,8 @@ async function getEventInterestInfo(event, wxContext) {
     console.warn('getEventInterestInfo interested state degraded:', err)
   }
 
-  try {
-    const cachedCount = await getCachedCount(eventId)
-    count = cachedCount === null ? 0 : cachedCount
-  } catch (err) {
-    degraded = true
-    count = 0
-    console.warn('getEventInterestInfo count degraded:', err)
-  }
+  const cachedCount = await getCachedCount(eventId)
+  const count = cachedCount === null ? await syncInterestCount(eventId) : cachedCount
 
   return ok(requestId, { count, hasInterested, degraded })
 }
@@ -415,11 +419,11 @@ async function toggleEventInterest(event, wxContext) {
       const nextStatus = wasInterested ? 'cancelled' : 'interested'
       const delta = wasInterested ? -1 : 1
       await db.collection('event_interest').doc(stableDocId).update({ data: { status: nextStatus, updatedAt: db.serverDate() } })
-      const count = await updateInterestCountAfterMutation(eventId, delta)
+      const count = await updateInterestCountAfterMutation(eventId)
       return ok(requestId, { hasInterested: nextStatus === 'interested', count, delta, message: nextStatus === 'interested' ? '已标记为感兴趣' : '已取消感兴趣' })
     }
     await db.collection('event_interest').doc(stableDocId).set({ data: { eventId, openid, status: 'interested', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
-    const count = await updateInterestCountAfterMutation(eventId, 1)
+    const count = await updateInterestCountAfterMutation(eventId)
     return ok(requestId, { hasInterested: true, count, delta: 1, message: '已标记为感兴趣' })
   } catch (err) {
     console.error('appService toggleEventInterest error:', err)
