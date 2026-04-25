@@ -4,7 +4,7 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { REPORT_CODE_MESSAGES, REQUEST_CODE_MESSAGES, SAFETY_CODE_MESSAGES } from '../../constants/cloudMessages'
 import { getSchools } from '../../services/school'
 import { getMe } from '../../services/profile'
-import { getMapUsers } from '../../services/map'
+import { clearMapUsersCache, getMapUsers } from '../../services/map'
 import { sendRequest } from '../../services/connection'
 import { manageSafetyRelation, reportUser } from '../../services/safety'
 import { REPORT_REASON_OPTIONS } from '../../constants/safety'
@@ -85,15 +85,15 @@ export default function ExplorePage() {
   const [mapMountReady, setMapMountReady] = useState(false)
   const [isNavigatingAway, setIsNavigatingAway] = useState(false)
 
-  const loadData = async () => {
+  const loadData = async (options: { forceRefreshMapUsers?: boolean } = {}) => {
     try {
       setLoading(true)
       setError('')
       setIsNavigatingAway(false)
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
-        getSchools().catch(() => ({ ok: false, schools: [] })),
-        getMapUsers({ forceRefresh: true }).catch(() => ({ ok: false, users: [] })),
-        getMe().catch(() => ({ profile: null })),
+        getSchools(),
+        getMapUsers({ forceRefresh: !!options.forceRefreshMapUsers }),
+        getMe(),
       ])
 
       if (schoolRes?.ok && Array.isArray(schoolRes.schools)) {
@@ -334,8 +334,9 @@ export default function ExplorePage() {
       const message = resolveCloudMessage(result, SAFETY_CODE_MESSAGES, '已拉黑')
       Taro.showToast({ title: message, icon: result?.ok ? 'success' : 'none' })
       if (result?.ok) {
+        await clearMapUsersCache()
         closePopup()
-        loadData()
+        loadData({ forceRefreshMapUsers: true })
       } else {
         logCloudFailure('blockUserFromExplore', result)
       }
@@ -403,7 +404,7 @@ export default function ExplorePage() {
         <View style={{ padding: '40px 20px' }}>
           <View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}>
             <Text style={{ fontSize: '14px', color: '#CF1322' }}>{error}</Text>
-            <View onClick={loadData} style={{ marginTop: '16px', padding: '8px 16px', borderRadius: '999px', backgroundColor: '#FCE6D6', display: 'inline-block' }}><Text style={{ fontSize: '13px', color: '#E76F51' }}>重新加载</Text></View>
+            <View onClick={() => loadData({ forceRefreshMapUsers: true })} style={{ marginTop: '16px', padding: '8px 16px', borderRadius: '999px', backgroundColor: '#FCE6D6', display: 'inline-block' }}><Text style={{ fontSize: '13px', color: '#E76F51' }}>重新加载</Text></View>
           </View>
         </View>
       )
