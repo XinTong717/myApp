@@ -69,6 +69,13 @@ async function getCachedCounts(eventIds) {
   return counts
 }
 
+function attachInterestCounts(events, counts = {}) {
+  return events.map((item) => ({
+    ...item,
+    interest_count: counts[Number(item.id)] || 0,
+  }))
+}
+
 async function updateInterestCountAfterMutation(eventId, delta) {
   const countDocId = buildCountDocId(eventId)
   try {
@@ -125,14 +132,14 @@ async function getEvents(event) {
     if (event?.includeInterestCounts === false || events.length === 0) {
       return ok(requestId, { events })
     }
-    const eventIds = events.map((item) => Number(item.id)).filter((id) => Number.isFinite(id) && id > 0)
-    const counts = await getCachedCounts(eventIds)
-    return ok(requestId, {
-      events: events.map((item) => ({
-        ...item,
-        interest_count: counts[Number(item.id)] || 0,
-      })),
-    })
+    try {
+      const eventIds = events.map((item) => Number(item.id)).filter((id) => Number.isFinite(id) && id > 0)
+      const counts = await getCachedCounts(eventIds)
+      return ok(requestId, { events: attachInterestCounts(events, counts) })
+    } catch (countErr) {
+      console.warn('appService getEvents interest counts degraded:', countErr)
+      return ok(requestId, { events: attachInterestCounts(events), degraded: true })
+    }
   } catch (err) {
     console.error('appService getEvents error:', err)
     return toUpstreamFailure(requestId, err, 'events', [])
