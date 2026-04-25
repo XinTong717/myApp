@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro'
 import { REPORT_REASON_OPTIONS } from '../constants/safety'
 import { SAFETY_CODE_MESSAGES } from '../constants/cloudMessages'
 import { getSafetyOverview } from '../services/profile'
+import { clearMapUsersCache } from '../services/map'
 import { manageSafetyRelation, reportUser } from '../services/safety'
 import type { SafetyItem } from '../types/domain'
 import { logCloudFailure, resolveCloudMessage } from '../utils/cloudFeedback'
@@ -45,6 +46,7 @@ export function useSafety() {
       const message = resolveCloudMessage(result, SAFETY_CODE_MESSAGES, '已更新')
       Taro.showToast({ title: message, icon: result?.ok ? 'success' : 'none' })
       if (result?.ok) {
+        await clearMapUsersCache()
         onUpdated?.()
       } else {
         logCloudFailure('manageSafetyRelation', result)
