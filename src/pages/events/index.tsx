@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
-import { getEvents, getEventInterestCountsBatch } from '../../services/event'
+import { getEvents } from '../../services/event'
 import {
   type EventItem,
   EVENT_TYPE_LABELS,
@@ -28,37 +28,35 @@ const FILTER_OPTIONS = ['全部', '线上', '线下'] as const
 type FilterValue = typeof FILTER_OPTIONS[number]
 type InterestMap = Record<number, number>
 
+type EventItemWithInterest = EventItem & { interest_count?: number }
+
 export default function EventsPage() {
-  const [events, setEvents] = useState<EventItem[]>([])
+  const [events, setEvents] = useState<EventItemWithInterest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showEnded, setShowEnded] = useState(false)
   const [filter, setFilter] = useState<FilterValue>('全部')
   const [interestCounts, setInterestCounts] = useState<InterestMap>({})
 
-  const loadInterestCounts = async (list: EventItem[]) => {
-    try {
-      const eventIds = list.map((item) => Number(item.id)).filter((id) => Number.isFinite(id) && id > 0)
-      if (eventIds.length === 0) {
-        setInterestCounts({})
-        return
+  const applyInterestCounts = (list: EventItemWithInterest[]) => {
+    const counts = list.reduce<InterestMap>((acc, item) => {
+      const eventId = Number(item.id)
+      if (Number.isFinite(eventId) && eventId > 0) {
+        acc[eventId] = Number(item.interest_count || 0)
       }
-      const result = await getEventInterestCountsBatch(eventIds)
-      setInterestCounts(result?.ok ? (result.counts || {}) : {})
-    } catch (err) {
-      console.error('loadInterestCounts error:', err)
-      setInterestCounts({})
-    }
+      return acc
+    }, {})
+    setInterestCounts(counts)
   }
 
   const loadEvents = async (options: { forceRefresh?: boolean } = {}) => {
     try {
       setLoading(true)
       setError('')
-      const result = await getEvents({ forceRefresh: !!options.forceRefresh })
-      const list = Array.isArray(result.events) ? result.events : []
+      const result = await getEvents({ forceRefresh: !!options.forceRefresh, includeInterestCounts: true })
+      const list = Array.isArray(result.events) ? (result.events as EventItemWithInterest[]) : []
       setEvents(list)
-      await loadInterestCounts(list)
+      applyInterestCounts(list)
       if (!result?.ok && list.length === 0) {
         setError(result?.message || '读取活动数据失败')
       }
