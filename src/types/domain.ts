@@ -17,6 +17,7 @@ export type EventItem = {
   status?: string
   organizer?: string
   is_online?: boolean
+  interest_count?: number
 }
 
 export type EventListResult = CloudResponse<{
@@ -76,6 +77,7 @@ export type EventInterestInfoResult = CloudResponse<{
 export type ToggleEventInterestResult = CloudResponse<{
   hasInterested?: boolean
   count?: number
+  delta?: number
 }>
 
 export type UserProfile = {
