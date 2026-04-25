@@ -10,16 +10,17 @@ import type {
   ToggleEventInterestResult,
 } from '../types/domain'
 
-const EVENT_LIST_CACHE_KEY = 'cloud-cache:events:list:v1'
+const EVENT_LIST_CACHE_KEY = 'cloud-cache:events:list:v2'
 const EVENT_LIST_TTL_MS = 5 * 60 * 1000
 
-export async function getEvents(options: { forceRefresh?: boolean } = {}) {
+export async function getEvents(options: { forceRefresh?: boolean; includeInterestCounts?: boolean } = {}) {
+  const includeInterestCounts = options.includeInterestCounts !== false
   const cached = options.forceRefresh ? null : await getScopedCachedValue<EventListResult>(EVENT_LIST_CACHE_KEY)
   if (cached) {
     return cached
   }
 
-  const result = await callCloud<EventListResult>('getEvents')
+  const result = await callCloud<EventListResult>('getEvents', { includeInterestCounts })
   if (result.ok) {
     await setScopedCachedValue(EVENT_LIST_CACHE_KEY, result, EVENT_LIST_TTL_MS)
     return result
