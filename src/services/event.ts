@@ -1,5 +1,5 @@
 import { callCloud } from './cloud'
-import { getScopedCachedValue, setScopedCachedValue } from './cache'
+import { clearScopedCachedValue, getScopedCachedValue, setScopedCachedValue } from './cache'
 import type {
   CloudResponse,
   ContactInfoResult,
@@ -20,6 +20,13 @@ async function readAnyEventListCache() {
   ) || (
     await getScopedCachedValue<EventListResult>(EVENT_LIST_LEGACY_CACHE_KEY)
   )
+}
+
+export async function clearEventListCache() {
+  await Promise.all([
+    clearScopedCachedValue(EVENT_LIST_CACHE_KEY),
+    clearScopedCachedValue(EVENT_LIST_LEGACY_CACHE_KEY),
+  ])
 }
 
 export async function getEvents(options: { forceRefresh?: boolean; includeInterestCounts?: boolean } = {}) {
