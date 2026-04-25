@@ -72,13 +72,15 @@ async function getCachedCounts(eventIds) {
 async function updateInterestCountAfterMutation(eventId, delta) {
   const countDocId = buildCountDocId(eventId)
   try {
-    await db.collection(COUNT_COLLECTION).doc(countDocId).update({
-      data: { count: _.inc(delta), updatedAt: db.serverDate() },
-    })
-  } catch (err) {
+    const currentRes = await db.collection(COUNT_COLLECTION).doc(countDocId).get()
+    const currentCount = Number(currentRes.data?.count || 0)
+    const nextCount = Math.max(0, currentCount + delta)
     await db.collection(COUNT_COLLECTION).doc(countDocId).set({
-      data: { eventId, count: Math.max(0, delta), updatedAt: db.serverDate() },
+      data: { eventId, count: nextCount, updatedAt: db.serverDate() },
     })
+    return nextCount
+  } catch (err) {
+    return syncInterestCount(eventId)
   }
 }
 
@@ -397,12 +399,12 @@ async function toggleEventInterest(event, wxContext) {
       const nextStatus = wasInterested ? 'cancelled' : 'interested'
       const delta = wasInterested ? -1 : 1
       await db.collection('event_interest').doc(stableDocId).update({ data: { status: nextStatus, updatedAt: db.serverDate() } })
-      await updateInterestCountAfterMutation(eventId, delta)
-      return ok(requestId, { hasInterested: nextStatus === 'interested', delta, message: nextStatus === 'interested' ? '已标记为感兴趣' : '已取消感兴趣' })
+      const count = await updateInterestCountAfterMutation(eventId, delta)
+      return ok(requestId, { hasInterested: nextStatus === 'interested', count, delta, message: nextStatus === 'interested' ? '已标记为感兴趣' : '已取消感兴趣' })
     }
     await db.collection('event_interest').doc(stableDocId).set({ data: { eventId, openid, status: 'interested', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
-    await updateInterestCountAfterMutation(eventId, 1)
-    return ok(requestId, { hasInterested: true, delta: 1, message: '已标记为感兴趣' })
+    const count = await updateInterestCountAfterMutation(eventId, 1)
+    return ok(requestId, { hasInterested: true, count, delta: 1, message: '已标记为感兴趣' })
   } catch (err) {
     console.error('appService toggleEventInterest error:', err)
     return fail(requestId, 'TOGGLE_EVENT_INTEREST_FAILED', '操作失败，请稍后重试')
