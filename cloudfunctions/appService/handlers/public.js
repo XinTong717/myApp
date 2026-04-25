@@ -12,6 +12,8 @@ const { getUserProfileByOpenid } = require('../lib/userRepo')
 
 const COUNT_COLLECTION = 'event_interest_counts'
 const DAILY_SUBMISSION_LIMIT = 5
+const SCHOOL_LIST_LIMIT = 200
+const EVENT_LIST_LIMIT = 50
 
 const SCHOOL_LIST_FIELDS = ['id', 'name', 'province', 'city', 'age_range', 'school_type'].join(',')
 const SCHOOL_DETAIL_FIELDS = ['id', 'name', 'province', 'city', 'age_range', 'school_type', 'has_xuji', 'xuji_note', 'residency_req', 'admission_req', 'fee', 'output_direction', 'official_url'].join(',')
@@ -46,23 +48,37 @@ async function syncInterestCount(eventId) {
 }
 
 async function getCachedCount(eventId) {
-  const cacheRes = await db.collection(COUNT_COLLECTION).where({ _id: buildCountDocId(eventId) }).limit(1).get()
-  if (cacheRes.data.length > 0) return Number(cacheRes.data[0].count || 0)
-  return null
+  try {
+    const cacheRes = await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).get()
+    return Number(cacheRes.data?.count || 0)
+  } catch (err) {
+    return null
+  }
+}
+
+async function getCachedCounts(eventIds) {
+  const counts = {}
+  const countDocIds = eventIds.map((eventId) => buildCountDocId(eventId))
+  if (countDocIds.length === 0) return counts
+  const cachedRes = await db.collection(COUNT_COLLECTION).where({ _id: _.in(countDocIds) }).get()
+  const cacheMap = new Map((cachedRes.data || []).map((item) => [String(item._id), Number(item.count || 0)]))
+  for (const eventId of eventIds) {
+    const cacheKey = buildCountDocId(eventId)
+    counts[eventId] = cacheMap.has(cacheKey) ? (cacheMap.get(cacheKey) || 0) : 0
+  }
+  return counts
 }
 
 async function updateInterestCountAfterMutation(eventId, delta) {
   const countDocId = buildCountDocId(eventId)
   try {
-    const currentRes = await db.collection(COUNT_COLLECTION).doc(countDocId).get()
-    const currentCount = Number(currentRes.data?.count || 0)
-    const nextCount = Math.max(0, currentCount + delta)
-    await db.collection(COUNT_COLLECTION).doc(countDocId).set({
-      data: { eventId, count: nextCount, updatedAt: db.serverDate() },
+    await db.collection(COUNT_COLLECTION).doc(countDocId).update({
+      data: { count: _.inc(delta), updatedAt: db.serverDate() },
     })
-    return nextCount
   } catch (err) {
-    return syncInterestCount(eventId)
+    await db.collection(COUNT_COLLECTION).doc(countDocId).set({
+      data: { eventId, count: Math.max(0, delta), updatedAt: db.serverDate() },
+    })
   }
 }
 
@@ -70,7 +86,8 @@ async function getSchools(event) {
   const requestId = resolveRequestId('get-schools', event)
   try {
     if (!API_KEY) return fail(requestId, 'MEMFIRE_API_KEY_MISSING', 'MEMFIRE_API_KEY 未配置', { schools: [] })
-    const url = `${API_BASE_URL}/schools?select=${encodeURIComponent(SCHOOL_LIST_FIELDS)}&order=id.asc`
+    const limit = Math.min(Math.max(Number(event?.limit || SCHOOL_LIST_LIMIT), 1), SCHOOL_LIST_LIMIT)
+    const url = `${API_BASE_URL}/schools?select=${encodeURIComponent(SCHOOL_LIST_FIELDS)}&order=id.asc&limit=${limit}`
     const data = await requestJson(url)
     return ok(requestId, { schools: Array.isArray(data) ? data : [] })
   } catch (err) {
@@ -98,9 +115,21 @@ async function getEvents(event) {
   const requestId = resolveRequestId('get-events', event)
   try {
     if (!API_KEY) return fail(requestId, 'MEMFIRE_API_KEY_MISSING', 'MEMFIRE_API_KEY 未配置', { events: [] })
-    const url = `${API_BASE_URL}/events?select=${encodeURIComponent(EVENT_LIST_FIELDS)}&order=start_time.asc`
+    const limit = Math.min(Math.max(Number(event?.limit || EVENT_LIST_LIMIT), 1), EVENT_LIST_LIMIT)
+    const url = `${API_BASE_URL}/events?select=${encodeURIComponent(EVENT_LIST_FIELDS)}&order=start_time.asc&limit=${limit}`
     const data = await requestJson(url)
-    return ok(requestId, { events: Array.isArray(data) ? data : [] })
+    const events = Array.isArray(data) ? data : []
+    if (event?.includeInterestCounts === false || events.length === 0) {
+      return ok(requestId, { events })
+    }
+    const eventIds = events.map((item) => Number(item.id)).filter((id) => Number.isFinite(id) && id > 0)
+    const counts = await getCachedCounts(eventIds)
+    return ok(requestId, {
+      events: events.map((item) => ({
+        ...item,
+        interest_count: counts[Number(item.id)] || 0,
+      })),
+    })
   } catch (err) {
     console.error('appService getEvents error:', err)
     return toUpstreamFailure(requestId, err, 'events', [])
@@ -304,22 +333,7 @@ async function getEventInterestCountsBatch(event) {
   const eventIds = Array.isArray(event.eventIds) ? event.eventIds.slice(0, 50).map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0) : []
   if (eventIds.length === 0) return ok(requestId, { counts: {} })
   try {
-    const counts = {}
-    const countDocIds = eventIds.map((eventId) => buildCountDocId(eventId))
-    const cachedRes = await db.collection(COUNT_COLLECTION).where({ _id: _.in(countDocIds) }).get()
-    const cacheMap = new Map((cachedRes.data || []).map((item) => [String(item._id), Number(item.count || 0)]))
-    const missingIds = []
-    for (const eventId of eventIds) {
-      const cacheKey = buildCountDocId(eventId)
-      if (cacheMap.has(cacheKey)) counts[eventId] = cacheMap.get(cacheKey) || 0
-      else missingIds.push(eventId)
-    }
-    if (missingIds.length > 0) {
-      await Promise.all(missingIds.map(async (eventId) => {
-        counts[eventId] = await syncInterestCount(eventId)
-      }))
-    }
-    return ok(requestId, { counts })
+    return ok(requestId, { counts: await getCachedCounts(eventIds) })
   } catch (err) {
     console.error('appService getEventInterestCountsBatch error:', err)
     return fail(requestId, 'GET_EVENT_INTEREST_COUNTS_FAILED', '读取活动感兴趣人数失败', { counts: {} })
@@ -333,9 +347,14 @@ async function getEventInterestInfo(event, wxContext) {
   if (!eventId) return fail(requestId, 'BAD_REQUEST', '缺少活动 ID', { count: 0, hasInterested: false })
   try {
     const stableDocId = buildInterestDocId(eventId, openid)
-    const stableRes = await db.collection('event_interest').where({ _id: stableDocId }).limit(1).get()
+    let current = null
+    try {
+      current = (await db.collection('event_interest').doc(stableDocId).get()).data || null
+    } catch (err) {
+      current = null
+    }
     let hasInterested = false
-    if (stableRes.data.length > 0) hasInterested = stableRes.data[0].status === 'interested'
+    if (current) hasInterested = current.status === 'interested'
     else {
       const mineRes = await db.collection('event_interest').where({ eventId, openid, status: _.in(['interested']) }).limit(1).get()
       hasInterested = mineRes.data.length > 0
@@ -356,8 +375,12 @@ async function toggleEventInterest(event, wxContext) {
   if (!eventId) return fail(requestId, 'BAD_REQUEST', '缺少活动 ID')
   const stableDocId = buildInterestDocId(eventId, openid)
   try {
-    const stableRes = await db.collection('event_interest').where({ _id: stableDocId }).limit(1).get()
-    let current = stableRes.data[0] || null
+    let current = null
+    try {
+      current = (await db.collection('event_interest').doc(stableDocId).get()).data || null
+    } catch (err) {
+      current = null
+    }
     if (!current) {
       const legacyRes = await db.collection('event_interest').where({ eventId, openid }).limit(20).get()
       const legacyList = legacyRes.data || []
@@ -374,12 +397,12 @@ async function toggleEventInterest(event, wxContext) {
       const nextStatus = wasInterested ? 'cancelled' : 'interested'
       const delta = wasInterested ? -1 : 1
       await db.collection('event_interest').doc(stableDocId).update({ data: { status: nextStatus, updatedAt: db.serverDate() } })
-      const count = await updateInterestCountAfterMutation(eventId, delta)
-      return ok(requestId, { hasInterested: nextStatus === 'interested', count, message: nextStatus === 'interested' ? '已标记为感兴趣' : '已取消感兴趣' })
+      await updateInterestCountAfterMutation(eventId, delta)
+      return ok(requestId, { hasInterested: nextStatus === 'interested', delta, message: nextStatus === 'interested' ? '已标记为感兴趣' : '已取消感兴趣' })
     }
     await db.collection('event_interest').doc(stableDocId).set({ data: { eventId, openid, status: 'interested', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
-    const count = await updateInterestCountAfterMutation(eventId, 1)
-    return ok(requestId, { hasInterested: true, count, message: '已标记为感兴趣' })
+    await updateInterestCountAfterMutation(eventId, 1)
+    return ok(requestId, { hasInterested: true, delta: 1, message: '已标记为感兴趣' })
   } catch (err) {
     console.error('appService toggleEventInterest error:', err)
     return fail(requestId, 'TOGGLE_EVENT_INTEREST_FAILED', '操作失败，请稍后重试')
