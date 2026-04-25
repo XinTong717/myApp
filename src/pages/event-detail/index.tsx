@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { EVENT_CODE_MESSAGES } from '../../constants/cloudMessages'
-import { getEventDetail, getEventInterestInfo, getEventContactInfo, toggleEventInterest } from '../../services/event'
+import { clearEventListCache, getEventDetail, getEventInterestInfo, getEventContactInfo, toggleEventInterest } from '../../services/event'
 import { getMe } from '../../services/profile'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import type { EventItem } from '../events/shared'
@@ -124,6 +124,7 @@ export default function EventDetailPage() {
         } else {
           setInterestCount((count) => nextHasInterested ? count + 1 : Math.max(0, count - 1))
         }
+        await clearEventListCache()
         Taro.showToast({ title: result.message || '已更新', icon: 'success' })
       } else {
         const message = resolveCloudMessage(result, EVENT_CODE_MESSAGES, '操作失败')
