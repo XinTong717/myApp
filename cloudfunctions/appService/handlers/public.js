@@ -80,7 +80,8 @@ async function updateInterestCountAfterMutation(eventId, delta) {
     })
     return nextCount
   } catch (err) {
-    return syncInterestCount(eventId)
+    console.warn('event interest count cache update skipped:', err)
+    return null
   }
 }
 
@@ -337,8 +338,8 @@ async function getEventInterestCountsBatch(event) {
   try {
     return ok(requestId, { counts: await getCachedCounts(eventIds) })
   } catch (err) {
-    console.error('appService getEventInterestCountsBatch error:', err)
-    return fail(requestId, 'GET_EVENT_INTEREST_COUNTS_FAILED', '读取活动感兴趣人数失败', { counts: {} })
+    console.warn('appService getEventInterestCountsBatch degraded:', err)
+    return ok(requestId, { counts: {}, degraded: true })
   }
 }
 
@@ -347,27 +348,35 @@ async function getEventInterestInfo(event, wxContext) {
   const openid = wxContext.OPENID
   const eventId = Number(event.eventId || 0)
   if (!eventId) return fail(requestId, 'BAD_REQUEST', '缺少活动 ID', { count: 0, hasInterested: false })
+
+  let hasInterested = false
+  let count = 0
+  let degraded = false
+
   try {
     const stableDocId = buildInterestDocId(eventId, openid)
-    let current = null
     try {
-      current = (await db.collection('event_interest').doc(stableDocId).get()).data || null
+      const stableRes = await db.collection('event_interest').doc(stableDocId).get()
+      hasInterested = stableRes.data?.status === 'interested'
     } catch (err) {
-      current = null
-    }
-    let hasInterested = false
-    if (current) hasInterested = current.status === 'interested'
-    else {
       const mineRes = await db.collection('event_interest').where({ eventId, openid, status: _.in(['interested']) }).limit(1).get()
       hasInterested = mineRes.data.length > 0
     }
-    const cachedCount = await getCachedCount(eventId)
-    const count = cachedCount === null ? await syncInterestCount(eventId) : cachedCount
-    return ok(requestId, { count, hasInterested })
   } catch (err) {
-    console.error('appService getEventInterestInfo error:', err)
-    return fail(requestId, 'GET_EVENT_INTEREST_INFO_FAILED', '读取活动感兴趣信息失败', { count: 0, hasInterested: false })
+    degraded = true
+    console.warn('getEventInterestInfo interested state degraded:', err)
   }
+
+  try {
+    const cachedCount = await getCachedCount(eventId)
+    count = cachedCount === null ? 0 : cachedCount
+  } catch (err) {
+    degraded = true
+    count = 0
+    console.warn('getEventInterestInfo count degraded:', err)
+  }
+
+  return ok(requestId, { count, hasInterested, degraded })
 }
 
 async function toggleEventInterest(event, wxContext) {
