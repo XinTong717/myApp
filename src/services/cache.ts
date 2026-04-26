@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { callCloud } from './cloud'
 
 type CacheEnvelope<T> = {
   value: T
@@ -20,7 +21,7 @@ function normalizeScope(value: unknown) {
 }
 
 function getScopedKey(scope: string, key: string) {
-  return `${scope}:${key}`
+  return scope + ':' + key
 }
 
 export function getCachedValue<T>(key: string): T | null {
@@ -57,7 +58,7 @@ export function setCachedValue<T>(key: string, value: T, ttlMs: number) {
   try {
     Taro.setStorageSync(key, payload)
   } catch (err) {
-    console.warn(`[cache] failed to persist ${key}`, err)
+    console.warn('[cache] failed to persist ' + key, err)
   }
 }
 
@@ -66,7 +67,7 @@ export function clearCachedValue(key: string) {
   try {
     Taro.removeStorageSync(key)
   } catch (err) {
-    console.warn(`[cache] failed to clear ${key}`, err)
+    console.warn('[cache] failed to clear ' + key, err)
   }
 }
 
@@ -86,14 +87,8 @@ export async function getCacheScopePrefix() {
   if (!cacheScopePromise) {
     cacheScopePromise = (async () => {
       try {
-        const res = await Taro.cloud.callFunction({
-          name: 'getOpenId',
-          data: {
-            clientRequestId: `cache-scope-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          },
-        })
-        const result = (res?.result || {}) as { ok?: boolean; openid?: string }
-        const nextScope = normalizeScope(result?.ok ? result?.openid : '')
+        const result = await callCloud<{ openid?: string }>('getOpenId')
+        const nextScope = normalizeScope(result && result.ok ? result.openid : '')
         cacheScope = nextScope
         Taro.setStorageSync(CACHE_SCOPE_STORAGE_KEY, nextScope)
         return nextScope
