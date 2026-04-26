@@ -22,9 +22,12 @@ function requestJson(url, options = {}) {
         'Content-Type': 'application/json',
       },
     }, (res) => {
-      let body = ''
-      res.on('data', (chunk) => { body += chunk })
+      const chunks = []
+      res.on('data', (chunk) => {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+      })
       res.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8')
         if ((res.statusCode || 500) < 200 || (res.statusCode || 500) >= 300) {
           return reject(createError('UPSTREAM_HTTP_ERROR', `HTTP ${res.statusCode}: ${body}`))
         }
