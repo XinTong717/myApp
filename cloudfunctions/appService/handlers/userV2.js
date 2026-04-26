@@ -148,8 +148,10 @@ async function saveProfile(event, wxContext) {
   if (staleDocs.length > 0) {
     await Promise.all(staleDocs.map((item) => db.collection('users').doc(item._id).remove().catch(() => null)))
   }
-  const latest = await db.collection('users').doc(openid).get()
-  return ok(requestId, { mode: canonicalDoc ? 'update' : 'create', profile: normalizeProfile(latest.data || null) })
+  return ok(requestId, {
+    mode: canonicalDoc ? 'update' : 'create',
+    profile: normalizeProfile({ ...dataToSave, _id: openid }),
+  })
 }
 
 async function updatePrivacySettings(event, wxContext) {
