@@ -420,8 +420,27 @@ export default function ExplorePage() {
     await sendRequestToUser(String(selectedUser.originalId))
   }
 
-  const handleMarkerTap = useCallback((e: any) => handleTap(Number(e.detail?.markerId)), [handleTap])
-  const handleCalloutTap = useCallback((e: any) => handleTap(Number(e.detail?.markerId)), [handleTap])
+  function getMarkerIdFromMapEvent(e: any): number {
+    const raw =
+      e?.detail?.markerId ??
+      e?.markerId ??
+      e?.detail?.id ??
+      e?.target?.id
+
+    return Number(raw)
+  }
+
+  const handleMarkerTap = useCallback((e: any) => {
+    handleTap(getMarkerIdFromMapEvent(e))
+  }, [handleTap])
+
+  const handleCalloutTap = useCallback((e: any) => {
+    handleTap(getMarkerIdFromMapEvent(e))
+  }, [handleTap])
+
+  const handleLabelTap = useCallback((e: any) => {
+    handleTap(getMarkerIdFromMapEvent(e))
+  }, [handleTap])
 
   const schoolCount = filteredMarkers.filter((m) => m.type === 'school').length
   const userCount = filteredMarkers.filter((m) => m.type === 'user').length
@@ -458,11 +477,12 @@ export default function ExplorePage() {
         enableOverlooking={false}
         onMarkerTap={handleMarkerTap}
         onCalloutTap={handleCalloutTap}
+        {...({ onLabelTap: handleLabelTap } as any)}
         onError={() => {}}
         style={{ width: '100%', height: 'calc(100vh - 120px)' }}
       />
     )
-  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap])
+  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap, handleLabelTap])
 
   return (
     <View style={{ minHeight: '100vh', backgroundColor: '#FFF9F2', position: 'relative' }}>
