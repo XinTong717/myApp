@@ -1,9 +1,0 @@
-{
-  "name": "manageConnection",
-  "version": "1.0.0",
-  "description": "Withdraw pending requests and remove accepted connections",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-}

@@ -1,9 +1,0 @@
-{
-  "name": "getEventInterestCountsBatch",
-  "version": "1.0.0",
-  "description": "Read event interest counts in batch",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-}
