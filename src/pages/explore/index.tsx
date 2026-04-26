@@ -60,8 +60,23 @@ function jitter(baseLat: number, baseLng: number, index: number, total: number, 
     lng: gridLng + (h2 - 0.5) * 0.016 / safeCosLat,
   }
 }
-function shortName(name: string, max = 10): string {
-  return name.length > max ? name.slice(0, max) + '...' : name
+function sanitizeMapLabel(value: string): string {
+  return Array.from(String(value || '').normalize('NFKC'))
+    .filter((char) => {
+      const code = char.codePointAt(0) || 0
+      if (char === '\uFFFD') return false
+      if (code < 32 || code === 127) return false
+      if (code > 0xffff) return false
+      return true
+    })
+    .join('')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+function shortName(name: string, max = 8): string {
+  const clean = sanitizeMapLabel(name) || '学习社区'
+  const chars = Array.from(clean)
+  return chars.length > max ? chars.slice(0, max).join('') + '…' : clean
 }
 function normalizeRoles(roles: string[] = []) {
   return roles.map((role) => role === '其他' ? '同行者' : role)
@@ -207,7 +222,7 @@ export default function ExplorePage() {
   }, [allMarkers])
 
   const mapMarkers: any[] = useMemo(() => validMarkers.map((item) => {
-    const calloutContent = item.type === 'school' ? shortName(item.name) : (item.name + (item.city ? ' · ' + item.city : ''))
+    const calloutContent = item.type === 'school' ? shortName(item.name) : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
     return {
       id: item.id,
       latitude: item.latitude,
