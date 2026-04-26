@@ -4,6 +4,7 @@ import type { CloudResponse } from '../types/domain'
 const APP_SERVICE_NAME = 'appService'
 
 const ROUTED_ACTIONS = new Set([
+  'getOpenId',
   'getSchools',
   'getSchoolDetail',
   'getEvents',
