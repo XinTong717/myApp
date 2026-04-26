@@ -12,7 +12,13 @@ import type {
 
 const EVENT_LIST_CACHE_KEY = 'cloud-cache:events:list:v2'
 const EVENT_LIST_LEGACY_CACHE_KEY = 'cloud-cache:events:list:v1'
+const EVENT_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:events:detail:v1:'
 const EVENT_LIST_TTL_MS = 5 * 60 * 1000
+const EVENT_DETAIL_TTL_MS = 10 * 60 * 1000
+
+function getEventDetailCacheKey(eventId: number) {
+  return `${EVENT_DETAIL_CACHE_KEY_PREFIX}${eventId}`
+}
 
 async function readAnyEventListCache() {
   return (
@@ -75,8 +81,31 @@ export async function getEvents(options: { forceRefresh?: boolean; includeIntere
   return result
 }
 
-export async function getEventDetail(eventId: number) {
-  return callCloud<EventDetailResult>('getEventDetail', { eventId })
+export async function getEventDetail(eventId: number, options: { forceRefresh?: boolean } = {}) {
+  const cacheKey = getEventDetailCacheKey(eventId)
+  const cached = options.forceRefresh ? null : await getScopedCachedValue<EventDetailResult>(cacheKey)
+  if (cached) {
+    return cached
+  }
+
+  const result = await callCloud<EventDetailResult>('getEventDetail', { eventId })
+  if (result.ok) {
+    await setScopedCachedValue(cacheKey, result, EVENT_DETAIL_TTL_MS)
+    return result
+  }
+
+  const staleCached = await getScopedCachedValue<EventDetailResult>(cacheKey)
+  if (staleCached) {
+    return {
+      ...staleCached,
+      ok: true,
+      stale: true,
+      code: result.code,
+      message: result.message,
+    }
+  }
+
+  return result
 }
 
 export async function getEventInterestCountsBatch(eventIds: number[]) {
