@@ -1,9 +1,0 @@
-{
-  "name": "updatePrivacySettings",
-  "version": "1.0.0",
-  "description": "Immediately update user privacy and visibility flags",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-}
