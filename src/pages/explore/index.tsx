@@ -61,22 +61,37 @@ function jitter(baseLat: number, baseLng: number, index: number, total: number, 
   }
 }
 function sanitizeMapLabel(value: string): string {
-  return Array.from(String(value || '').normalize('NFKC'))
-    .filter((char) => {
-      const code = char.codePointAt(0) || 0
-      if (char === '\uFFFD') return false
-      if (code < 32 || code === 127) return false
-      if (code > 0xffff) return false
-      return true
-    })
-    .join('')
-    .replace(/\s+/g, ' ')
-    .trim()
+  const raw = String(value || '')
+  let result = ''
+  let previousWasSpace = false
+
+  for (let i = 0; i < raw.length; i++) {
+    const code = raw.charCodeAt(i)
+
+    if (code >= 0xd800 && code <= 0xdbff) {
+      i += 1
+      continue
+    }
+    if (code >= 0xdc00 && code <= 0xdfff) continue
+    if (code < 32 || code === 127 || code === 0xfffd) continue
+
+    const char = raw.charAt(i)
+    if (/\s/.test(char)) {
+      if (!previousWasSpace) {
+        result += ' '
+        previousWasSpace = true
+      }
+    } else {
+      result += char
+      previousWasSpace = false
+    }
+  }
+
+  return result.trim()
 }
 function shortName(name: string, max = 8): string {
   const clean = sanitizeMapLabel(name) || '学习社区'
-  const chars = Array.from(clean)
-  return chars.length > max ? chars.slice(0, max).join('') + '…' : clean
+  return clean.length > max ? clean.substring(0, max) + '…' : clean
 }
 function normalizeRoles(roles: string[] = []) {
   return roles.map((role) => role === '其他' ? '同行者' : role)
@@ -218,7 +233,9 @@ export default function ExplorePage() {
   const availableProvinces = useMemo(() => {
     const set = new Set<string>()
     allMarkers.forEach((m) => { if (m.markerProv) set.add(m.markerProv) })
-    return Array.from(set).sort()
+    const list: string[] = []
+    set.forEach((prov) => { list.push(prov) })
+    return list.sort()
   }, [allMarkers])
 
   const mapMarkers: any[] = useMemo(() => validMarkers.map((item) => {
