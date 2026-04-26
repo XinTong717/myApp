@@ -122,7 +122,10 @@ export default function ExplorePage() {
       setIsNavigatingAway(false)
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
         getSchools(),
-        getMapUsers({ forceRefresh: !!options.forceRefreshMapUsers }),
+        getMapUsers({
+          forceRefresh: !!options.forceRefreshMapUsers,
+          province: selectedProvince || undefined,
+        }),
         getMe(),
       ])
 
@@ -150,6 +153,10 @@ export default function ExplorePage() {
   }
 
   useDidShow(() => { loadData() })
+
+  useEffect(() => {
+    loadData()
+  }, [selectedProvince])
 
   const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
 
@@ -254,8 +261,8 @@ export default function ExplorePage() {
         content: labelContent,
         color: '#2F241B',
         fontSize: 11,
-        x: labelOffsetX,
-        y: -30,
+        anchorX: labelOffsetX,
+        anchorY: -30,
         borderRadius: 6,
         borderWidth: 0,
         borderColor: '#FFFFFF',
