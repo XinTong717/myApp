@@ -61,22 +61,37 @@ function jitter(baseLat: number, baseLng: number, index: number, total: number, 
   }
 }
 function sanitizeMapLabel(value: string): string {
-  return Array.from(String(value || '').normalize('NFKC'))
-    .filter((char) => {
-      const code = char.codePointAt(0) || 0
-      if (char === '\uFFFD') return false
-      if (code < 32 || code === 127) return false
-      if (code > 0xffff) return false
-      return true
-    })
-    .join('')
-    .replace(/\s+/g, ' ')
-    .trim()
+  const raw = String(value || '')
+  let result = ''
+  let previousWasSpace = false
+
+  for (let i = 0; i < raw.length; i++) {
+    const code = raw.charCodeAt(i)
+
+    if (code >= 0xd800 && code <= 0xdbff) {
+      i += 1
+      continue
+    }
+    if (code >= 0xdc00 && code <= 0xdfff) continue
+    if (code < 32 || code === 127 || code === 0xfffd) continue
+
+    const char = raw.charAt(i)
+    if (/\s/.test(char)) {
+      if (!previousWasSpace) {
+        result += ' '
+        previousWasSpace = true
+      }
+    } else {
+      result += char
+      previousWasSpace = false
+    }
+  }
+
+  return result.trim()
 }
 function shortName(name: string, max = 8): string {
   const clean = sanitizeMapLabel(name) || '学习社区'
-  const chars = Array.from(clean)
-  return chars.length > max ? chars.slice(0, max).join('') + '…' : clean
+  return clean.length > max ? clean.substring(0, max) + '…' : clean
 }
 function normalizeRoles(roles: string[] = []) {
   return roles.map((role) => role === '其他' ? '同行者' : role)
@@ -218,11 +233,14 @@ export default function ExplorePage() {
   const availableProvinces = useMemo(() => {
     const set = new Set<string>()
     allMarkers.forEach((m) => { if (m.markerProv) set.add(m.markerProv) })
-    return Array.from(set).sort()
+    const list: string[] = []
+    set.forEach((prov) => { list.push(prov) })
+    return list.sort()
   }, [allMarkers])
 
   const mapMarkers: any[] = useMemo(() => validMarkers.map((item) => {
-    const calloutContent = item.type === 'school' ? shortName(item.name) : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
+    const labelContent = item.type === 'school' ? shortName(item.name) : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
+    const labelOffsetX = item.type === 'school' ? -24 : -22
     return {
       id: item.id,
       latitude: item.latitude,
@@ -232,18 +250,17 @@ export default function ExplorePage() {
       width: item.type === 'school' ? 22 : 18,
       height: item.type === 'school' ? 22 : 18,
       anchor: { x: 0.5, y: 0.5 },
-      callout: {
-        content: calloutContent,
+      label: {
+        content: labelContent,
         color: '#2F241B',
         fontSize: 11,
-        anchorX: 0,
-        anchorY: -2,
+        x: labelOffsetX,
+        y: -30,
         borderRadius: 6,
         borderWidth: 0,
         borderColor: '#FFFFFF',
         bgColor: item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,247,238,0.92)',
         padding: 4,
-        display: 'ALWAYS',
         textAlign: 'center',
       },
     }
