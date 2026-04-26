@@ -113,6 +113,10 @@ export default function ProfilePage() {
     loadAdminAccess()
   })
 
+  const openUserAgreement = () => {
+    Taro.navigateTo({ url: '/pages/user-agreement/index' })
+  }
+
   const openPrivacyPolicy = () => {
     Taro.navigateTo({ url: '/pages/privacy-policy/index' })
   }
@@ -196,7 +200,11 @@ export default function ProfilePage() {
       <ProfileNoticeBox text='🔒 你的显示名、身份、城市和简介会在地图上公开展示。联络标识、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。' />
 
       <View style={{ marginBottom: '20px', alignItems: 'center' }}>
-        <Text onClick={openPrivacyPolicy} style={{ fontSize: '12px', color: palette.accentDeep }}>查看《用户协议与隐私政策》</Text>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Text onClick={openUserAgreement} style={{ fontSize: '12px', color: palette.accentDeep }}>用户协议</Text>
+          <Text style={{ fontSize: '12px', color: palette.subtext, marginLeft: '8px', marginRight: '8px' }}>·</Text>
+          <Text onClick={openPrivacyPolicy} style={{ fontSize: '12px', color: palette.accentDeep }}>隐私政策</Text>
+        </View>
       </View>
 
       <ProfilePrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleSave} />
