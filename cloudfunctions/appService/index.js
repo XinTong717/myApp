@@ -1,10 +1,19 @@
-const { fail, resolveRequestId } = require('./lib/response')
+const { ok, fail, resolveRequestId } = require('./lib/response')
 const { cloud } = require('./lib/cloud')
 const publicHandlers = require('./handlers/public')
 const userHandlers = require('./handlers/userV2')
 const adminHandlers = require('./handlers/admin')
 
+async function getOpenId(event, wxContext) {
+  const requestId = resolveRequestId('get-openid', event)
+  return ok(requestId, {
+    openid: wxContext.OPENID,
+    appid: wxContext.APPID,
+  })
+}
+
 const actionHandlers = {
+  getOpenId,
   ...publicHandlers,
   ...userHandlers,
   ...adminHandlers,
