@@ -80,16 +80,16 @@ export default function SchoolsPage() {
             <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>学习社区库</Text>
           </View>
           <View onClick={goToSubmit} style={{
-            padding: '7px 12px', borderRadius: '999px', backgroundColor: palette.accentSoft,
+            padding: '7px 12px', borderRadius: '999px', backgroundColor: palette.accentDeep,
           }}>
-            <Text style={{ fontSize: '12px', color: palette.accentDark, fontWeight: 'bold' }}>推荐新学习社区</Text>
+            <Text style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 'bold' }}>推荐新学习社区</Text>
           </View>
         </View>
         <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
           搜索、筛选、查看学习社区详情，也可以提交新的社区推荐，进入人工审核队列。
         </Text>
         <View style={{
-          backgroundColor: palette.surfaceWarm, borderRadius: '16px',
+          backgroundColor: palette.surface, borderRadius: '16px',
           padding: '10px 12px', marginTop: '14px', border: `1px solid ${palette.line}`,
         }}>
           <Input
@@ -103,7 +103,7 @@ export default function SchoolsPage() {
       </View>
 
       <View style={{ marginBottom: '14px' }}>
-        <Text style={{ color: palette.subtext, fontSize: '13px' }}>
+        <Text style={{ color: palette.muted, fontSize: '13px' }}>
           {loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 个学习社区`}
         </Text>
       </View>
@@ -142,7 +142,7 @@ export default function SchoolsPage() {
           }}>
             <View style={{
               width: '38px', height: '38px', borderRadius: '14px',
-              backgroundColor: palette.surfaceWarm, display: 'flex',
+              backgroundColor: palette.tag, display: 'flex',
               alignItems: 'center', justifyContent: 'center', marginRight: '10px',
               border: `1px solid ${palette.line}`,
             }}>
@@ -158,17 +158,17 @@ export default function SchoolsPage() {
           <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
             <View style={{
               padding: '5px 10px', borderRadius: '999px',
-              backgroundColor: palette.accentSoft, marginRight: '8px', marginBottom: '8px',
+              backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px',
             }}>
-              <Text style={{ fontSize: '12px', color: palette.accentDark }}>
+              <Text style={{ fontSize: '12px', color: palette.tagText }}>
                 {item.province || '未知'} {item.city || ''}
               </Text>
             </View>
             <View style={{
               padding: '5px 10px', borderRadius: '999px',
-              backgroundColor: palette.greenSoft, marginRight: '8px', marginBottom: '8px',
+              backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px',
             }}>
-              <Text style={{ fontSize: '12px', color: palette.green }}>
+              <Text style={{ fontSize: '12px', color: palette.tagText }}>
                 {item.school_type || '未填写'}
               </Text>
             </View>
@@ -190,8 +190,8 @@ export default function SchoolsPage() {
             </View>
           </View>
 
-          <Text style={{ color: palette.accentDeep, fontSize: '13px', fontWeight: 'bold' }}>
-            点击查看详情
+          <Text style={{ color: palette.link, fontSize: '13px', fontWeight: 'bold' }}>
+            查看详情 ›
           </Text>
         </View>
       ))}
