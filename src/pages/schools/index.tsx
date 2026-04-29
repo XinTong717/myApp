@@ -81,6 +81,7 @@ export default function SchoolsPage() {
           </View>
           <View onClick={goToSubmit} style={{
             padding: '7px 12px', borderRadius: '999px', background: palette.primaryGradient,
+            boxShadow: `0 4px 12px ${palette.shadow}`,
           }}>
             <Text style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 'bold' }}>推荐新学习社区</Text>
           </View>
@@ -126,75 +127,80 @@ export default function SchoolsPage() {
         </View>
       ) : null}
 
-      {filteredSchools.map((item) => (
-        <View
-          key={item.id}
-          onClick={() => goToDetail(item)}
-          style={{
-            backgroundColor: palette.card, borderRadius: '22px',
-            padding: '16px', marginBottom: '14px',
-            boxSizing: 'border-box', border: `1px solid ${palette.line}`,
-            boxShadow: `0 4px 14px ${palette.shadow}`,
-          }}
-        >
-          <View style={{
-            display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
-          }}>
-            <View style={{
-              width: '38px', height: '38px', borderRadius: '14px',
-              backgroundColor: palette.iconBg, display: 'flex',
-              alignItems: 'center', justifyContent: 'center', marginRight: '10px',
-              border: `1px solid ${palette.lineSoft}`,
-            }}>
-              <Text style={{ fontSize: '18px' }}>🏫</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: '17px', fontWeight: 'bold', color: palette.text }}>
-                {item.name}
-              </Text>
-            </View>
-          </View>
+      {filteredSchools.map((item, index) => {
+        const iconBgRotation = [palette.iconBg, palette.brandSoft, palette.accent2Soft, palette.greenSoft]
+        const iconBg = iconBgRotation[index % iconBgRotation.length]
 
-          <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
+        return (
+          <View
+            key={item.id}
+            onClick={() => goToDetail(item)}
+            style={{
+              backgroundColor: palette.card, borderRadius: '22px',
+              padding: '16px', marginBottom: '14px',
+              boxSizing: 'border-box', border: `1px solid ${palette.line}`,
+              boxShadow: `0 4px 14px ${palette.shadow}`,
+            }}
+          >
             <View style={{
-              padding: '5px 10px', borderRadius: '999px',
-              backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px',
+              display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
             }}>
-              <Text style={{ fontSize: '12px', color: palette.tagText }}>
-                {item.province || '未知'} {item.city || ''}
-              </Text>
+              <View style={{
+                width: '38px', height: '38px', borderRadius: '14px',
+                backgroundColor: iconBg, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', marginRight: '10px',
+                border: `1px solid ${palette.lineSoft}`,
+              }}>
+                <Text style={{ fontSize: '18px' }}>🏫</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: '17px', fontWeight: 'bold', color: palette.text }}>
+                  {item.name}
+                </Text>
+              </View>
             </View>
+
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
+              <View style={{
+                padding: '5px 10px', borderRadius: '999px',
+                backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px',
+              }}>
+                <Text style={{ fontSize: '12px', color: palette.tagText }}>
+                  {item.province || '未知'} {item.city || ''}
+                </Text>
+              </View>
+              <View style={{
+                padding: '5px 10px', borderRadius: '999px',
+                backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px',
+              }}>
+                <Text style={{ fontSize: '12px', color: palette.tagText }}>
+                  {item.school_type || '未填写'}
+                </Text>
+              </View>
+            </View>
+
             <View style={{
-              padding: '5px 10px', borderRadius: '999px',
-              backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px',
+              backgroundColor: palette.surface, borderRadius: '16px',
+              padding: '12px', marginBottom: '10px', border: `1px solid ${palette.line}`,
             }}>
-              <Text style={{ fontSize: '12px', color: palette.tagText }}>
-                {item.school_type || '未填写'}
-              </Text>
+              <View style={{ marginBottom: '6px' }}>
+                <Text style={{ color: palette.subtext, fontSize: '13px' }}>
+                  适合阶段：{item.age_range || '未填写'}
+                </Text>
+              </View>
+              <View>
+                <Text style={{ color: palette.subtext, fontSize: '13px' }}>
+                  费用：{item.fee || '未填写'}
+                </Text>
+              </View>
             </View>
-          </View>
 
-          <View style={{
-            backgroundColor: palette.surface, borderRadius: '16px',
-            padding: '12px', marginBottom: '10px', border: `1px solid ${palette.line}`,
-          }}>
-            <View style={{ marginBottom: '6px' }}>
-              <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-                适合阶段：{item.age_range || '未填写'}
-              </Text>
-            </View>
-            <View>
-              <Text style={{ color: palette.subtext, fontSize: '13px' }}>
-                费用：{item.fee || '未填写'}
-              </Text>
-            </View>
+            <Text style={{ color: palette.link, fontSize: '13px', fontWeight: 'bold' }}>
+              查看详情 ›
+            </Text>
           </View>
-
-          <Text style={{ color: palette.link, fontSize: '13px', fontWeight: 'bold' }}>
-            查看详情 ›
-          </Text>
-        </View>
-      ))}
+        )
+      })}
     </View>
   )
 }
