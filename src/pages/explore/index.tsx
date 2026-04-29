@@ -10,6 +10,7 @@ import { manageSafetyRelation, reportUser } from '../../services/safety'
 import { REPORT_REASON_OPTIONS } from '../../constants/safety'
 import { CITIES, PROV_FALLBACK } from '../../constants/cities'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
+import { palette } from '../../theme/palette'
 
 const markerSchoolIcon = '/assets/marker-school.png'
 const markerUserIcon = '/assets/marker-user.png'
@@ -18,9 +19,12 @@ type School = { id: number | string; name?: string; province?: string; city?: st
 type AppUser = { _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string; companionContext?: string; isSelf?: boolean }
 type MarkerItem = {
   id: number; latitude: number; longitude: number; name: string
-  type: 'school' | 'user'; markerProv: string; city?: string
+  type: 'school' | 'user' | 'user_cluster'; markerProv: string; city?: string
   originalId: number | string; bio?: string; roles?: string[]; companionContext?: string; isSelf?: boolean
+  clusterUsers?: AppUser[]
 }
+
+const USER_CLUSTER_THRESHOLD = 5
 
 type Coord = { lat: number; lng: number }
 
@@ -112,6 +116,7 @@ export default function ExplorePage() {
   const [selectedProvince, setSelectedProvince] = useState('')
   const [hasProfile, setHasProfile] = useState(true)
   const [selectedUser, setSelectedUser] = useState<MarkerItem | null>(null)
+  const [selectedCluster, setSelectedCluster] = useState<MarkerItem | null>(null)
   const [mapMountReady, setMapMountReady] = useState(false)
   const [isNavigatingAway, setIsNavigatingAway] = useState(false)
 
@@ -191,33 +196,110 @@ export default function ExplorePage() {
     }
 
     if (showUsers) {
-      appUsers.filter((u) => showEducators || u.isSelf || !isPureEducator(u)).forEach((u) => {
+      const visibleUsers = appUsers.filter((u) => showEducators || u.isSelf || !isPureEducator(u))
+
+      // Bucket users by city so we can grid-jitter small groups and cluster larger ones.
+      const usersByCity: Record<string, AppUser[]> = {}
+      const usersWithoutCity: AppUser[] = []
+      visibleUsers.forEach((u) => {
         if (!u.city || !u.province) return
         const cityInfo = CITIES[u.city]
-        const fallbackCoord = PROV_FALLBACK[u.province]
-        const coord = isValidCoord(cityInfo) ? cityInfo : fallbackCoord
+        if (!isValidCoord(cityInfo) && !isValidCoord(PROV_FALLBACK[u.province])) return
+        if (isValidCoord(cityInfo)) {
+          const key = u.city
+          if (!usersByCity[key]) usersByCity[key] = []
+          usersByCity[key].push(u)
+        } else {
+          usersWithoutCity.push(u)
+        }
+      })
+
+      Object.keys(usersByCity).forEach((cityName) => {
+        const usersInCity = usersByCity[cityName]
+        const cityInfo = CITIES[cityName]
+        if (!isValidCoord(cityInfo)) return
+
+        if (usersInCity.length >= USER_CLUSTER_THRESHOLD) {
+          items.push({
+            id: nextId++,
+            latitude: cityInfo.lat,
+            longitude: cityInfo.lng,
+            name: cityName,
+            type: 'user_cluster',
+            markerProv: cityInfo.prov,
+            city: cityName,
+            originalId: `cluster-${cityName}`,
+            clusterUsers: usersInCity,
+          })
+          return
+        }
+
+        usersInCity.forEach((u, idx) => {
+          const name = u.displayName?.trim() || '同路人'
+          const jittered = jitter(cityInfo.lat, cityInfo.lng, idx, usersInCity.length, name + u._id)
+          if (!isValidCoord(jittered)) return
+          items.push({
+            id: nextId++,
+            latitude: jittered.lat,
+            longitude: jittered.lng,
+            name,
+            type: 'user',
+            markerProv: cityInfo.prov,
+            city: u.city,
+            originalId: u._id,
+            bio: u.bio,
+            roles: normalizeRoles(u.roles || []),
+            companionContext: u.companionContext || '',
+            isSelf: !!u.isSelf,
+          })
+        })
+      })
+
+      // Users with only province granularity: scatter near province center with grid jitter.
+      const usersByProv: Record<string, AppUser[]> = {}
+      usersWithoutCity.forEach((u) => {
+        if (!u.province) return
+        if (!usersByProv[u.province]) usersByProv[u.province] = []
+        usersByProv[u.province].push(u)
+      })
+      Object.keys(usersByProv).forEach((prov) => {
+        const provUsers = usersByProv[prov]
+        const coord = PROV_FALLBACK[prov]
         if (!isValidCoord(coord)) return
-        const prov = isValidCoord(cityInfo) ? cityInfo.prov : u.province
-        const name = u.displayName?.trim() || '同路人'
-        const h = nameHash(name + u._id)
-        const offsetLat = (h - 0.5) * 0.02
-        const offsetLng = (nameHash(u._id) - 0.5) * 0.02
-        const latitude = coord.lat + offsetLat
-        const longitude = coord.lng + offsetLng
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return
-        items.push({
-          id: nextId++,
-          latitude,
-          longitude,
-          name,
-          type: 'user',
-          markerProv: prov,
-          city: u.city,
-          originalId: u._id,
-          bio: u.bio,
-          roles: normalizeRoles(u.roles || []),
-          companionContext: u.companionContext || '',
-          isSelf: !!u.isSelf,
+
+        if (provUsers.length >= USER_CLUSTER_THRESHOLD) {
+          items.push({
+            id: nextId++,
+            latitude: coord.lat,
+            longitude: coord.lng,
+            name: prov,
+            type: 'user_cluster',
+            markerProv: prov,
+            city: '',
+            originalId: `cluster-prov-${prov}`,
+            clusterUsers: provUsers,
+          })
+          return
+        }
+
+        provUsers.forEach((u, idx) => {
+          const name = u.displayName?.trim() || '同路人'
+          const jittered = jitter(coord.lat, coord.lng, idx, provUsers.length, name + u._id)
+          if (!isValidCoord(jittered)) return
+          items.push({
+            id: nextId++,
+            latitude: jittered.lat,
+            longitude: jittered.lng,
+            name,
+            type: 'user',
+            markerProv: prov,
+            city: u.city,
+            originalId: u._id,
+            bio: u.bio,
+            roles: normalizeRoles(u.roles || []),
+            companionContext: u.companionContext || '',
+            isSelf: !!u.isSelf,
+          })
         })
       })
     }
@@ -246,28 +328,37 @@ export default function ExplorePage() {
   }, [allMarkers])
 
   const mapMarkers: any[] = useMemo(() => validMarkers.map((item) => {
-    const labelContent = item.type === 'school' ? shortName(item.name) : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
-    const labelOffsetX = item.type === 'school' ? -24 : -22
+    const isCluster = item.type === 'user_cluster'
+    const clusterCount = item.clusterUsers?.length || 0
+    const labelContent = isCluster
+      ? `${shortName(item.name, 6)} · ${clusterCount}人`
+      : item.type === 'school'
+        ? shortName(item.name)
+        : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
+    const labelOffsetX = isCluster ? -32 : item.type === 'school' ? -24 : -22
+    const iconSize = isCluster ? 26 : item.type === 'school' ? 22 : 18
     return {
       id: item.id,
       latitude: item.latitude,
       longitude: item.longitude,
       title: item.name,
       iconPath: item.type === 'school' ? markerSchoolIcon : markerUserIcon,
-      width: item.type === 'school' ? 22 : 18,
-      height: item.type === 'school' ? 22 : 18,
+      width: iconSize,
+      height: iconSize,
       anchor: { x: 0.5, y: 0.5 },
       label: {
         content: labelContent,
-        color: '#2F241B',
-        fontSize: 11,
+        color: isCluster ? '#FFFFFF' : palette.text,
+        fontSize: isCluster ? 12 : 11,
         anchorX: labelOffsetX,
-        anchorY: -30,
-        borderRadius: 6,
+        anchorY: -34,
+        borderRadius: 8,
         borderWidth: 0,
         borderColor: '#FFFFFF',
-        bgColor: item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,247,238,0.92)',
-        padding: 4,
+        bgColor: isCluster
+          ? 'rgba(216,106,77,0.95)'
+          : item.type === 'school' ? 'rgba(255,255,255,0.92)' : 'rgba(238,245,232,0.94)',
+        padding: 5,
         textAlign: 'center',
       },
     }
@@ -330,7 +421,10 @@ export default function ExplorePage() {
     return m
   }, [validMarkers])
 
-  const closePopup = () => setSelectedUser(null)
+  const closePopup = () => {
+    setSelectedUser(null)
+    setSelectedCluster(null)
+  }
 
   const navigateToProfileSafely = useCallback(() => {
     setIsNavigatingAway(true)
@@ -411,6 +505,13 @@ export default function ExplorePage() {
       return
     }
 
+    if (item.type === 'user_cluster') {
+      setSelectedUser(null)
+      setSelectedCluster(item)
+      return
+    }
+
+    setSelectedCluster(null)
     setSelectedUser(item)
   }, [idToMarker])
 
@@ -450,25 +551,48 @@ export default function ExplorePage() {
   }, [handleTap])
 
   const schoolCount = filteredMarkers.filter((m) => m.type === 'school').length
-  const userCount = filteredMarkers.filter((m) => m.type === 'user').length
+  const userCount = filteredMarkers.reduce((acc, m) => {
+    if (m.type === 'user') return acc + 1
+    if (m.type === 'user_cluster') return acc + (m.clusterUsers?.length || 0)
+    return acc
+  }, 0)
   const popupRoleText = selectedUser?.roles?.join(' / ') || ''
+
+  const openUserFromCluster = (user: AppUser, prov: string) => {
+    setSelectedCluster(null)
+    const name = user.displayName?.trim() || '同路人'
+    setSelectedUser({
+      id: 0,
+      latitude: NaN,
+      longitude: NaN,
+      name,
+      type: 'user',
+      markerProv: prov,
+      city: user.city,
+      originalId: user._id,
+      bio: user.bio,
+      roles: normalizeRoles(user.roles || []),
+      companionContext: user.companionContext || '',
+      isSelf: !!user.isSelf,
+    })
+  }
 
   const mapNode = useMemo(() => {
     if (loading) {
-      return <View style={{ padding: '80px 20px', textAlign: 'center' }}><Text style={{ fontSize: '14px', color: '#7A6756' }}>加载中...</Text></View>
+      return <View style={{ padding: '80px 20px', textAlign: 'center' }}><Text style={{ fontSize: '14px', color: palette.subtext }}>加载中...</Text></View>
     }
     if (error) {
       return (
         <View style={{ padding: '40px 20px' }}>
-          <View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}>
-            <Text style={{ fontSize: '14px', color: '#CF1322' }}>{error}</Text>
-            <View onClick={() => loadData({ forceRefreshMapUsers: true })} style={{ marginTop: '16px', padding: '8px 16px', borderRadius: '999px', backgroundColor: '#FCE6D6', display: 'inline-block' }}><Text style={{ fontSize: '13px', color: '#E76F51' }}>重新加载</Text></View>
+          <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '24px', border: `1px solid ${palette.line}`, textAlign: 'center' }}>
+            <Text style={{ fontSize: '14px', color: palette.error }}>{error}</Text>
+            <View onClick={() => loadData({ forceRefreshMapUsers: true })} style={{ marginTop: '16px', padding: '8px 16px', borderRadius: '999px', backgroundColor: palette.brandSoft, display: 'inline-block' }}><Text style={{ fontSize: '13px', color: palette.brandBright }}>重新加载</Text></View>
           </View>
         </View>
       )
     }
     if (!canRenderMap || !mapMountReady || isNavigatingAway) {
-      return <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #F1DFCF', textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>{isNavigatingAway ? '页面跳转中…' : selectedProvince ? selectedProvince + '暂无数据' : canRenderMap ? '地图加载中…' : '暂无点位'}</Text></View></View>
+      return <View style={{ padding: '40px 20px' }}><View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '24px', border: `1px solid ${palette.line}`, textAlign: 'center' }}><Text style={{ fontSize: '14px', fontWeight: 'bold', color: palette.text }}>{isNavigatingAway ? '页面跳转中…' : selectedProvince ? selectedProvince + '暂无数据' : canRenderMap ? '地图加载中…' : '暂无点位'}</Text></View></View>
     }
     return (
       <TaroMap
@@ -492,34 +616,34 @@ export default function ExplorePage() {
   }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap, handleLabelTap])
 
   return (
-    <View style={{ minHeight: '100vh', backgroundColor: '#FFF9F2', position: 'relative' }}>
+    <View style={{ minHeight: '100vh', backgroundColor: palette.bg, position: 'relative' }}>
       {!loading && !hasProfile && (
-        <View onClick={goToProfile} style={{ backgroundColor: '#FFF', padding: '12px 14px', borderBottom: '1px solid #F1DFCF', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+        <View onClick={goToProfile} style={{ background: palette.brightGradient, padding: '12px 14px', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#2F241B' }}>填写资料，出现在地图上</Text>
-            <View style={{ marginTop: '2px' }}><Text style={{ fontSize: '12px', color: '#7A6756' }}>让同城家庭和同路人发现你</Text></View>
+            <Text style={{ fontSize: '14px', fontWeight: 'bold', color: '#FFF' }}>填写资料，出现在地图上</Text>
+            <View style={{ marginTop: '2px' }}><Text style={{ fontSize: '12px', color: 'rgba(255,255,255,0.88)' }}>让同城家庭和同路人发现你</Text></View>
           </View>
-          <View style={{ padding: '6px 14px', borderRadius: '999px', backgroundColor: '#E76F51' }}><Text style={{ fontSize: '12px', color: '#FFF', fontWeight: 'bold' }}>去填写</Text></View>
+          <View style={{ padding: '6px 14px', borderRadius: '999px', backgroundColor: 'rgba(255,255,255,0.95)' }}><Text style={{ fontSize: '12px', color: palette.brandBright, fontWeight: 'bold' }}>去填写</Text></View>
         </View>
       )}
 
-      <View style={{ backgroundColor: '#FFF', padding: '10px 14px 6px', borderBottom: '1px solid #F1DFCF' }}>
+      <View style={{ backgroundColor: palette.card, padding: '10px 14px 6px', borderBottom: `1px solid ${palette.line}` }}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
-          <View onClick={() => { setShowSchools(!showSchools); closePopup() }} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showSchools ? '#FCE6D6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showSchools ? '#E76F51' : '#BBB' }}>学习社区 {showSchools ? schoolCount : '—'}</Text></View>
-          <View onClick={() => { setShowUsers(!showUsers); closePopup() }} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showUsers ? '#EEF7EE' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showUsers ? '#7BAE7F' : '#BBB' }}>同路人 {showUsers ? userCount : '—'}</Text></View>
+          <View onClick={() => { setShowSchools(!showSchools); closePopup() }} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showSchools ? palette.brandSoft : palette.surfaceSoft }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showSchools ? palette.brandBright : palette.muted }}>学习社区 {showSchools ? schoolCount : '—'}</Text></View>
+          <View onClick={() => { setShowUsers(!showUsers); closePopup() }} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showUsers ? palette.greenSoft : palette.surfaceSoft }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showUsers ? palette.green : palette.muted }}>同路人 {showUsers ? userCount : '—'}</Text></View>
           {showUsers && (
-            <View onClick={() => { setShowEducators((value) => !value); closePopup() }} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showEducators ? '#FFF3E6' : '#F5F5F5' }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showEducators ? '#E76F51' : '#BBB' }}>教育者</Text></View>
+            <View onClick={() => { setShowEducators((value) => !value); closePopup() }} style={{ padding: '4px 10px', borderRadius: '999px', marginRight: '8px', marginBottom: '6px', backgroundColor: showEducators ? palette.accent2Soft : palette.surfaceSoft }}><Text style={{ fontSize: '12px', fontWeight: 'bold', color: showEducators ? palette.accent2 : palette.muted }}>教育者</Text></View>
           )}
           <View style={{ flex: 1 }} />
-          <Text style={{ fontSize: '11px', color: '#B5A08E', marginBottom: '6px' }}>{validMarkers.length} 个点位</Text>
+          <Text style={{ fontSize: '11px', color: palette.muted, marginBottom: '6px' }}>{validMarkers.length} 个点位</Text>
         </View>
 
         {availableProvinces.length > 0 && (
           <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: '26px' }}>
             <View style={{ display: 'inline-flex', flexDirection: 'row' }}>
-              <View onClick={() => { setSelectedProvince(''); closePopup() }} style={{ padding: '3px 10px', borderRadius: '999px', marginRight: '6px', backgroundColor: !selectedProvince ? '#E76F51' : '#FFF3E6' }}><Text style={{ fontSize: '11px', color: !selectedProvince ? '#FFF' : '#7A6756' }}>全国</Text></View>
+              <View onClick={() => { setSelectedProvince(''); closePopup() }} style={{ padding: '3px 10px', borderRadius: '999px', marginRight: '6px', backgroundColor: !selectedProvince ? palette.brandBright : palette.brandSoft }}><Text style={{ fontSize: '11px', color: !selectedProvince ? '#FFF' : palette.brand }}>全国</Text></View>
               {availableProvinces.map((prov) => (
-                <View key={prov} onClick={() => { setSelectedProvince(prov === selectedProvince ? '' : prov); closePopup() }} style={{ padding: '3px 10px', borderRadius: '999px', marginRight: '6px', backgroundColor: prov === selectedProvince ? '#E76F51' : '#FFF3E6' }}><Text style={{ fontSize: '11px', color: prov === selectedProvince ? '#FFF' : '#7A6756' }}>{prov}</Text></View>
+                <View key={prov} onClick={() => { setSelectedProvince(prov === selectedProvince ? '' : prov); closePopup() }} style={{ padding: '3px 10px', borderRadius: '999px', marginRight: '6px', backgroundColor: prov === selectedProvince ? palette.brandBright : palette.brandSoft }}><Text style={{ fontSize: '11px', color: prov === selectedProvince ? '#FFF' : palette.brand }}>{prov}</Text></View>
               ))}
             </View>
           </ScrollView>
@@ -528,65 +652,105 @@ export default function ExplorePage() {
 
       {mapNode}
 
-      <View style={{ backgroundColor: '#FFFDF9', padding: '5px 16px', borderTop: '1px solid #F1DFCF' }}><Text style={{ fontSize: '10px', color: '#C5B5A5' }}>近似坐标 · 仅供浏览 · 点击标记或名称查看详情</Text></View>
+      <View style={{ backgroundColor: palette.surface, padding: '5px 16px', borderTop: `1px solid ${palette.line}` }}><Text style={{ fontSize: '10px', color: palette.muted }}>近似坐标 · 仅供浏览 · 点击聚合点位展开同城同路人</Text></View>
 
-      {selectedUser && (
-        <View onClick={closePopup} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: 'rgba(47,36,27,0.22)', display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
-          <View onClick={(e: any) => e?.stopPropagation?.()} style={{ width: '100%', backgroundColor: '#FFFDF9', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '18px 16px 24px', boxSizing: 'border-box', borderTop: '1px solid #F1DFCF', boxShadow: '0 -8px 24px rgba(47,36,27,0.08)' }}>
-            <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', marginBottom: '12px' }}>
+      {selectedCluster && (
+        <View onClick={closePopup} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: palette.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
+          <View onClick={(e: any) => e?.stopPropagation?.()} style={{ width: '100%', maxHeight: '70vh', backgroundColor: palette.surface, borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '18px 16px 24px', boxSizing: 'border-box', borderTop: `1px solid ${palette.line}`, boxShadow: `0 -8px 24px ${palette.shadowStrong}`, display: 'flex', flexDirection: 'column' }}>
+            <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
               <View style={{ flex: 1, paddingRight: '12px' }}>
-                <Text style={{ fontSize: '20px', fontWeight: 'bold', color: '#2F241B' }}>{selectedUser.name}</Text>
-                <View style={{ marginTop: '6px', display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
-                  {selectedUser.city ? <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6', marginRight: '8px', marginBottom: '8px' }}><Text style={{ fontSize: '12px', color: '#E76F51' }}>{selectedUser.city}</Text></View> : null}
-                  {popupRoleText ? <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: '#EEF7EE', marginRight: '8px', marginBottom: '8px' }}><Text style={{ fontSize: '12px', color: '#7BAE7F' }}>{popupRoleText}</Text></View> : null}
-                  {selectedUser.isSelf ? <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: '#F5F0EB', marginRight: '8px', marginBottom: '8px' }}><Text style={{ fontSize: '12px', color: '#7A6756' }}>这是你自己</Text></View> : null}
+                <Text style={{ fontSize: '20px', fontWeight: 'bold', color: palette.text }}>{selectedCluster.name}</Text>
+                <View style={{ marginTop: '4px' }}>
+                  <Text style={{ fontSize: '12px', color: palette.subtext }}>{selectedCluster.clusterUsers?.length || 0} 位同路人在这个区域</Text>
                 </View>
               </View>
-              <View onClick={closePopup} style={{ width: '32px', height: '32px', borderRadius: '999px', backgroundColor: '#F5F0EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: '16px', color: '#7A6756' }}>✕</Text>
+              <View onClick={closePopup} style={{ width: '32px', height: '32px', borderRadius: '999px', backgroundColor: palette.tag, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: '16px', color: palette.tagText }}>✕</Text>
+              </View>
+            </View>
+            <ScrollView scrollY style={{ flex: 1, maxHeight: 'calc(70vh - 80px)' }}>
+              {(selectedCluster.clusterUsers || []).map((u) => {
+                const roles = normalizeRoles(u.roles || [])
+                const roleText = roles.join(' / ')
+                return (
+                  <View key={u._id} onClick={() => openUserFromCluster(u, selectedCluster.markerProv)} style={{ backgroundColor: palette.card, borderRadius: '16px', padding: '12px 14px', marginBottom: '10px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flex: 1, paddingRight: '12px' }}>
+                      <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '4px' }}>
+                        <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>{u.displayName?.trim() || '同路人'}</Text>
+                        {u.isSelf ? <View style={{ marginLeft: '8px', padding: '2px 8px', borderRadius: '999px', backgroundColor: palette.tag }}><Text style={{ fontSize: '10px', color: palette.tagText }}>你自己</Text></View> : null}
+                      </View>
+                      <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
+                        {u.city ? <Text style={{ fontSize: '12px', color: palette.subtext, marginRight: '8px' }}>{u.city}</Text> : null}
+                        {roleText ? <Text style={{ fontSize: '12px', color: palette.brandBright }}>{roleText}</Text> : null}
+                      </View>
+                      {u.bio ? <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>{u.bio.length > 40 ? u.bio.slice(0, 40) + '…' : u.bio}</Text></View> : null}
+                    </View>
+                    <Text style={{ fontSize: '14px', color: palette.brandBright }}>›</Text>
+                  </View>
+                )
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      )}
+
+      {selectedUser && (
+        <View onClick={closePopup} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: palette.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
+          <View onClick={(e: any) => e?.stopPropagation?.()} style={{ width: '100%', backgroundColor: palette.surface, borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '18px 16px 24px', boxSizing: 'border-box', borderTop: `1px solid ${palette.line}`, boxShadow: `0 -8px 24px ${palette.shadowStrong}` }}>
+            <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', marginBottom: '12px' }}>
+              <View style={{ flex: 1, paddingRight: '12px' }}>
+                <Text style={{ fontSize: '20px', fontWeight: 'bold', color: palette.text }}>{selectedUser.name}</Text>
+                <View style={{ marginTop: '6px', display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
+                  {selectedUser.city ? <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: palette.brandSoft, marginRight: '8px', marginBottom: '8px' }}><Text style={{ fontSize: '12px', color: palette.brandBright }}>{selectedUser.city}</Text></View> : null}
+                  {popupRoleText ? <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: palette.greenSoft, marginRight: '8px', marginBottom: '8px' }}><Text style={{ fontSize: '12px', color: palette.green }}>{popupRoleText}</Text></View> : null}
+                  {selectedUser.isSelf ? <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px' }}><Text style={{ fontSize: '12px', color: palette.tagText }}>这是你自己</Text></View> : null}
+                </View>
+              </View>
+              <View onClick={closePopup} style={{ width: '32px', height: '32px', borderRadius: '999px', backgroundColor: palette.tag, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: '16px', color: palette.tagText }}>✕</Text>
               </View>
             </View>
 
             {(selectedUser.companionContext || selectedUser.bio) ? (
-              <View style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', padding: '14px 12px', border: '1px solid #F1DFCF', marginBottom: '14px' }}>
+              <View style={{ backgroundColor: palette.card, borderRadius: '18px', padding: '14px 12px', border: `1px solid ${palette.line}`, marginBottom: '14px' }}>
                 {selectedUser.companionContext ? (
                   <View style={{ marginBottom: selectedUser.bio ? '10px' : '0' }}>
-                    <Text style={{ fontSize: '12px', color: '#E76F51', fontWeight: 'bold' }}>和这个生态的关系</Text>
-                    <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '14px', color: '#2F241B', lineHeight: '22px' }}>{selectedUser.companionContext}</Text></View>
+                    <Text style={{ fontSize: '12px', color: palette.brandBright, fontWeight: 'bold' }}>和这个生态的关系</Text>
+                    <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '14px', color: palette.text, lineHeight: '22px' }}>{selectedUser.companionContext}</Text></View>
                   </View>
                 ) : null}
                 {selectedUser.bio ? (
                   <View>
-                    <Text style={{ fontSize: '12px', color: '#E76F51', fontWeight: 'bold' }}>简介</Text>
-                    <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '14px', color: '#2F241B', lineHeight: '22px' }}>{selectedUser.bio}</Text></View>
+                    <Text style={{ fontSize: '12px', color: palette.brandBright, fontWeight: 'bold' }}>简介</Text>
+                    <View style={{ marginTop: '4px' }}><Text style={{ fontSize: '14px', color: palette.text, lineHeight: '22px' }}>{selectedUser.bio}</Text></View>
                   </View>
                 ) : null}
               </View>
             ) : (
-              <View style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', padding: '14px 12px', border: '1px solid #F1DFCF', marginBottom: '14px' }}>
-                <Text style={{ fontSize: '14px', color: '#7A6756', lineHeight: '22px' }}>这位同路人还没有填写更多介绍。</Text>
+              <View style={{ backgroundColor: palette.card, borderRadius: '18px', padding: '14px 12px', border: `1px solid ${palette.line}`, marginBottom: '14px' }}>
+                <Text style={{ fontSize: '14px', color: palette.subtext, lineHeight: '22px' }}>这位同路人还没有填写更多介绍。</Text>
               </View>
             )}
 
             {!hasProfile && !selectedUser.isSelf ? (
-              <View style={{ backgroundColor: '#FFF3E6', borderRadius: '14px', padding: '12px', marginBottom: '12px', border: '1px solid #F1DFCF' }}>
-                <Text style={{ fontSize: '13px', color: '#7A6756', lineHeight: '20px' }}>先填写“我的资料”，再发起联络。这样别人也能更好理解你是谁。</Text>
+              <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', marginBottom: '12px', border: `1px solid ${palette.line}` }}>
+                <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>先填写“我的资料”，再发起联络。这样别人也能更好理解你是谁。</Text>
               </View>
             ) : null}
 
-            <View onClick={handlePrimaryAction} style={{ backgroundColor: selectedUser.isSelf ? '#F5F0EB' : '#E76F51', borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '10px' }}>
-              <Text style={{ fontSize: '15px', color: selectedUser.isSelf ? '#7A6756' : '#FFF', fontWeight: 'bold' }}>
+            <View onClick={handlePrimaryAction} style={{ background: selectedUser.isSelf ? palette.tag : palette.brightGradient, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '10px' }}>
+              <Text style={{ fontSize: '15px', color: selectedUser.isSelf ? palette.subtext : '#FFF', fontWeight: 'bold' }}>
                 {selectedUser.isSelf ? '去看我的资料' : hasProfile ? '发起联络' : '去填写资料'}
               </Text>
             </View>
 
             {!selectedUser.isSelf && (
               <View style={{ display: 'flex', flexDirection: 'row' }}>
-                <View onClick={() => handleReportUser(String(selectedUser.originalId))} style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: '14px', padding: '12px', textAlign: 'center', border: '1px solid #F1DFCF', marginRight: '8px' }}>
-                  <Text style={{ fontSize: '13px', color: '#7A6756' }}>举报</Text>
+                <View onClick={() => handleReportUser(String(selectedUser.originalId))} style={{ flex: 1, backgroundColor: palette.card, borderRadius: '14px', padding: '12px', textAlign: 'center', border: `1px solid ${palette.line}`, marginRight: '8px' }}>
+                  <Text style={{ fontSize: '13px', color: palette.subtext }}>举报</Text>
                 </View>
-                <View onClick={() => handleBlockUser(String(selectedUser.originalId))} style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: '14px', padding: '12px', textAlign: 'center', border: '1px solid #F1DFCF' }}>
-                  <Text style={{ fontSize: '13px', color: '#7A6756' }}>拉黑</Text>
+                <View onClick={() => handleBlockUser(String(selectedUser.originalId))} style={{ flex: 1, backgroundColor: palette.card, borderRadius: '14px', padding: '12px', textAlign: 'center', border: `1px solid ${palette.line}` }}>
+                  <Text style={{ fontSize: '13px', color: palette.subtext }}>拉黑</Text>
                 </View>
               </View>
             )}

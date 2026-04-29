@@ -11,7 +11,7 @@ export default function ProfileNoticeBox({ text, dashed = true, marginBottom = '
   return (
     <View
       style={{
-        backgroundColor: '#FFFDF9',
+        backgroundColor: palette.surface,
         borderRadius: '16px',
         padding: '12px 14px',
         marginBottom,

@@ -65,7 +65,7 @@ export default function ProfileConnectionsSection(props: Props) {
               </View>
               <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
                 <View onClick={() => onRespond(req._id, 'accept')} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: palette.green, marginRight: '10px', marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: '#FFF', fontWeight: 'bold' }}>同意</Text></View>
-                <View onClick={() => onRespond(req._id, 'reject')} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: '#F5F0EB', marginRight: '10px', marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.subtext }}>忽略</Text></View>
+                <View onClick={() => onRespond(req._id, 'reject')} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: palette.tag, marginRight: '10px', marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.subtext }}>忽略</Text></View>
                 {req.fromUserId ? <Text onClick={() => onSafetyAction(req.fromUserId, 'block')} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '8px' }}>拉黑</Text> : null}
                 {req.fromUserId ? <Text onClick={() => onReportUser(req.fromUserId)} style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '8px' }}>举报</Text> : null}
               </View>
@@ -91,7 +91,7 @@ export default function ProfileConnectionsSection(props: Props) {
                     <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text>
                   </View>
                 </ProfileInputBox>
-              ) : <View style={{ marginTop: '8px' }}><Text style={{ fontSize: '12px', color: '#C5B5A5' }}>对方未填写微信号</Text></View>}
+              ) : <View style={{ marginTop: '8px' }}><Text style={{ fontSize: '12px', color: palette.muted }}>对方未填写微信号</Text></View>}
               {conn.otherChildInfo && (conn.otherChildInfo.ageRange.length > 0 || conn.otherChildInfo.status.length > 0 || conn.otherChildInfo.interests) ? (
                 <ProfileInputBox marginBottom='8px'>
                   <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold', marginBottom: '4px' }}>家庭教育关注</Text>
@@ -125,7 +125,7 @@ export default function ProfileConnectionsSection(props: Props) {
                   <Text style={{ fontSize: '14px', color: palette.text }}>{req.toName}</Text>
                   {req.toCity ? <Text style={{ fontSize: '12px', color: palette.subtext }}> · {req.toCity}</Text> : null}
                 </View>
-                <View style={{ padding: '3px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6' }}><Text style={{ fontSize: '11px', color: palette.accentDeep }}>等待回应</Text></View>
+                <View style={{ padding: '3px 10px', borderRadius: '999px', backgroundColor: palette.accent2Soft }}><Text style={{ fontSize: '11px', color: palette.accent2 }}>等待回应</Text></View>
               </View>
               <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '10px' }}>
                 <Text onClick={() => onWithdrawRequest(req._id)} style={{ fontSize: '12px', color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>撤回请求</Text>

@@ -1,13 +1,5 @@
 import { View, Text } from '@tarojs/components'
-
-const palette = {
-  bg: '#FFF9F2',
-  card: '#FFFFFF',
-  text: '#2F241B',
-  subtext: '#7A6756',
-  accentDeep: '#E76F51',
-  line: '#F1DFCF',
-}
+import { palette } from '../../theme/palette'
 
 function Section(props: { title: string; children: any }) {
   return (

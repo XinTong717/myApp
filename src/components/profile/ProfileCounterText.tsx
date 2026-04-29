@@ -1,4 +1,5 @@
 import { Text, View } from '@tarojs/components'
+import { profilePalette as palette } from './palette'
 
 type Props = {
   current: number
@@ -15,7 +16,7 @@ export default function ProfileCounterText({
 }: Props) {
   return (
     <View style={{ marginTop, marginBottom }}>
-      <Text style={{ fontSize: '11px', color: '#C5B5A5' }}>{current}/{max}</Text>
+      <Text style={{ fontSize: '11px', color: palette.muted }}>{current}/{max}</Text>
     </View>
   )
 }

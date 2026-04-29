@@ -32,15 +32,15 @@ export default defineAppConfig({
   ],
 
   window: {
-    navigationBarBackgroundColor: '#FAF8F4',
+    navigationBarBackgroundColor: '#FFF9F2',
     navigationBarTextStyle: 'black',
     navigationBarTitleText: '可雀',
-    backgroundColor: '#FAF8F4',
+    backgroundColor: '#FFF9F2',
     backgroundTextStyle: 'light',
   },
 
   tabBar: {
-    color: '#5F5E5A',
+    color: '#6E5F52',
     selectedColor: '#B85540',
     backgroundColor: '#FFFFFF',
     borderStyle: 'white',

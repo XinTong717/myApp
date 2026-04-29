@@ -74,13 +74,19 @@ export default function SchoolsPage() {
         backgroundColor: palette.card, borderRadius: '22px',
         padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
         boxShadow: `0 6px 20px ${palette.shadow}`,
+        position: 'relative', overflow: 'hidden',
       }}>
+        <View style={{
+          position: 'absolute', left: '0', right: '0', top: '0', height: '4px',
+          background: palette.brightGradient,
+        }} />
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '8px' }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>学习社区库</Text>
           </View>
           <View onClick={goToSubmit} style={{
-            padding: '7px 12px', borderRadius: '999px', background: palette.primaryGradient,
+            padding: '7px 12px', borderRadius: '999px', background: palette.brightGradient,
+            boxShadow: `0 4px 12px ${palette.shadow}`,
           }}>
             <Text style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 'bold' }}>推荐新学习社区</Text>
           </View>
@@ -126,7 +132,10 @@ export default function SchoolsPage() {
         </View>
       ) : null}
 
-      {filteredSchools.map((item) => (
+      {filteredSchools.map((item, idx) => {
+        const iconBgRotation = [palette.brandSoft, palette.accent2Soft, palette.greenSoft]
+        const iconBg = iconBgRotation[idx % iconBgRotation.length]
+        return (
         <View
           key={item.id}
           onClick={() => goToDetail(item)}
@@ -142,7 +151,7 @@ export default function SchoolsPage() {
           }}>
             <View style={{
               width: '38px', height: '38px', borderRadius: '14px',
-              backgroundColor: palette.iconBg, display: 'flex',
+              backgroundColor: iconBg, display: 'flex',
               alignItems: 'center', justifyContent: 'center', marginRight: '10px',
               border: `1px solid ${palette.lineSoft}`,
             }}>
@@ -194,7 +203,8 @@ export default function SchoolsPage() {
             查看详情 ›
           </Text>
         </View>
-      ))}
+        )
+      })}
     </View>
   )
 }

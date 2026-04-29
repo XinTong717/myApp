@@ -10,7 +10,7 @@ export default function ProfileInputBox({ children, marginBottom = '12px' }: Pro
   return (
     <View
       style={{
-        backgroundColor: '#FFFDF9',
+        backgroundColor: palette.surface,
         borderRadius: '14px',
         padding: '10px 12px',
         marginBottom,

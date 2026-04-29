@@ -7,6 +7,7 @@ import {
   type EventItem,
   EVENT_TYPE_LABELS,
   EVENT_TYPE_ICONS,
+  getEventIconBg,
   getEventStatusInfo,
   isEventEnded,
 } from './shared'
@@ -95,7 +96,12 @@ export default function EventsPage() {
         backgroundColor: palette.card, borderRadius: '22px',
         padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
         boxShadow: `0 6px 20px ${palette.shadow}`,
+        position: 'relative', overflow: 'hidden',
       }}>
+        <View style={{
+          position: 'absolute', left: '0', right: '0', top: '0', height: '4px',
+          background: palette.brightGradient,
+        }} />
         <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>活动</Text>
         <View style={{ marginTop: '6px' }}>
           <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
@@ -103,8 +109,9 @@ export default function EventsPage() {
           </Text>
         </View>
         <View onClick={goToSubmit} style={{
-          marginTop: '12px', background: palette.primaryGradient,
+          marginTop: '12px', background: palette.brightGradient,
           borderRadius: '16px', padding: '10px 12px', alignSelf: 'flex-start',
+          boxShadow: `0 4px 12px ${palette.shadow}`,
         }}>
           <Text style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>+ 推荐新活动</Text>
         </View>
@@ -191,7 +198,7 @@ export default function EventsPage() {
             }}>
               <View style={{
                 width: '42px', height: '42px', borderRadius: '15px',
-                backgroundColor: palette.iconBg, display: 'flex',
+                backgroundColor: getEventIconBg(item.event_type), display: 'flex',
                 alignItems: 'center', justifyContent: 'center', marginRight: '10px',
                 border: `1px solid ${palette.lineSoft}`,
               }}>

@@ -4,16 +4,7 @@ import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../../../constants/location'
 import { submitEvent } from '../../../services/event'
 import SectionTitle from '../../../components/profile/SectionTitle'
-
-const palette = {
-  bg: '#FFF9F2',
-  card: '#FFFFFF',
-  text: '#2F241B',
-  subtext: '#7A6756',
-  accentDeep: '#E76F51',
-  accentSoft: '#FCE6D6',
-  line: '#F1DFCF',
-}
+import { palette } from '../../../theme/palette'
 
 const EVENT_TYPE_OPTIONS = ['圆桌讨论', '工作坊', '线下聚会', '线上活动', '家庭活动', '项目招募', '其他']
 const AUDIENCE_WHO_OPTIONS = ['家长', '教育工作者', '儿童/青少年（需家长陪同）', '儿童/青少年（独立参加）', '开放给所有人', '其他']

@@ -77,7 +77,7 @@ export default function ProfileBasicSection(props: Props) {
       <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
         <ProfileInputBox marginBottom={cityOption === '其他' ? '8px' : '12px'}>
           <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ fontSize: '14px', flex: 1, color: province ? palette.text : '#C5B5A5' }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text>
+            <Text style={{ fontSize: '14px', flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text>
             <Text style={{ fontSize: '12px', color: palette.subtext }}>▼</Text>
           </View>
         </ProfileInputBox>

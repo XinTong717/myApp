@@ -4,16 +4,7 @@ import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../../../constants/location'
 import { submitCommunity } from '../../../services/school'
 import SectionTitle from '../../../components/profile/SectionTitle'
-
-const palette = {
-  bg: '#FFF9F2',
-  card: '#FFFFFF',
-  text: '#2F241B',
-  subtext: '#7A6756',
-  accentDeep: '#E76F51',
-  accentSoft: '#FCE6D6',
-  line: '#F1DFCF',
-}
+import { palette } from '../../../theme/palette'
 
 const COMMUNITY_TYPE_OPTIONS = ['项目制学习', '线下社区', '线上社区', '混合型', '家庭共学', '其他']
 const AGE_RANGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段', '混龄', '成人为主', '其他']
