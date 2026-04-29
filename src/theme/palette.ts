@@ -1,14 +1,24 @@
 export const palette = {
-  // Brand red from the logo. Use it sparingly: logo, primary CTA, current tab, selected state.
+  // Brand red from the logo. Use it sparingly: logo, current tab, identity accents.
   brand: '#B85540',
   brandPress: '#A04A38',
   brandDark: '#8F3C2F',
   brandLight: '#C76752',
   brandSoft: '#FBE5E1',
   brandGlow: '#FFF0ED',
+
+  // Action color is a touch brighter than brand, but not old coral-orange.
+  action: '#C76752',
+  actionPress: '#B85540',
+  actionSoft: '#FBE5E1',
   primaryGradient: 'linear-gradient(135deg, #C76752 0%, #B85540 100%)',
 
-  // Warm paper surfaces. Slightly more luminous than the previous grayish pass.
+  // Sunny secondary accent. Use sparingly for icon bubbles / soft highlights.
+  accent2: '#D99A55',
+  accent2Soft: '#FFEAD0',
+  accent2Glow: '#FFF6E6',
+
+  // Warm paper surfaces.
   bg: '#FFF9F3',
   card: '#FFFFFF',
   cardSoft: '#FFFCF8',
@@ -20,6 +30,7 @@ export const palette = {
   tag: '#F3EFEA',
   tagText: '#645B54',
   iconBg: '#FFF3EC',
+  iconBgAlt: '#FFE6E0',
 
   // Text and structure.
   text: '#1F1A17',
