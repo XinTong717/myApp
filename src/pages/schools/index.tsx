@@ -2,20 +2,7 @@ import { useMemo, useState } from 'react'
 import { View, Text, Input } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
-
-const palette = {
-  bg: '#FFF9F2',
-  card: '#FFFFFF',
-  cardSoft: '#FFF3E6',
-  text: '#2F241B',
-  subtext: '#7A6756',
-  accent: '#F4A261',
-  accentDeep: '#E76F51',
-  accentSoft: '#FCE6D6',
-  line: '#F1DFCF',
-  green: '#7BAE7F',
-  greenSoft: '#EEF7EE',
-}
+import { palette } from '../../theme/palette'
 
 type School = {
   id: number
@@ -84,8 +71,9 @@ export default function SchoolsPage() {
       minHeight: '100vh', boxSizing: 'border-box',
     }}>
       <View style={{
-        backgroundColor: palette.card, borderRadius: '20px',
-        padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
+        backgroundColor: palette.card, borderRadius: '22px',
+        padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
+        boxShadow: `0 6px 20px ${palette.shadow}`,
       }}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '8px' }}>
           <View style={{ flex: 1 }}>
@@ -94,20 +82,21 @@ export default function SchoolsPage() {
           <View onClick={goToSubmit} style={{
             padding: '7px 12px', borderRadius: '999px', backgroundColor: palette.accentSoft,
           }}>
-            <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>推荐新学习社区</Text>
+            <Text style={{ fontSize: '12px', color: palette.accentDark, fontWeight: 'bold' }}>推荐新学习社区</Text>
           </View>
         </View>
         <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
           搜索、筛选、查看学习社区详情，也可以提交新的社区推荐，进入人工审核队列。
         </Text>
         <View style={{
-          backgroundColor: palette.cardSoft, borderRadius: '14px',
-          padding: '10px 12px', marginTop: '14px',
+          backgroundColor: palette.surfaceWarm, borderRadius: '16px',
+          padding: '10px 12px', marginTop: '14px', border: `1px solid ${palette.line}`,
         }}>
           <Input
             type='text'
             value={keyword}
             placeholder='搜索学习社区名 / 城市 / 类型'
+            placeholderStyle={`color:${palette.muted}`}
             onInput={(e) => setKeyword(e.detail.value)}
           />
         </View>
@@ -121,17 +110,17 @@ export default function SchoolsPage() {
 
       {error ? (
         <View style={{
-          padding: '12px', marginBottom: '16px', backgroundColor: '#FFF1F0',
-          borderRadius: '14px', border: '1px solid #FFD8D2',
+          padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft,
+          borderRadius: '14px', border: `1px solid ${palette.brandSoft}`,
         }}>
-          <Text style={{ color: '#CF1322' }}>{error}</Text>
+          <Text style={{ color: palette.error }}>{error}</Text>
         </View>
       ) : null}
 
       {!loading && filteredSchools.length === 0 ? (
         <View style={{
           padding: '16px', backgroundColor: palette.card,
-          borderRadius: '16px', border: `1px solid ${palette.line}`,
+          borderRadius: '18px', border: `1px solid ${palette.line}`,
         }}>
           <Text style={{ color: palette.subtext }}>没有匹配结果</Text>
         </View>
@@ -142,18 +131,20 @@ export default function SchoolsPage() {
           key={item.id}
           onClick={() => goToDetail(item)}
           style={{
-            backgroundColor: palette.card, borderRadius: '20px',
+            backgroundColor: palette.card, borderRadius: '22px',
             padding: '16px', marginBottom: '14px',
             boxSizing: 'border-box', border: `1px solid ${palette.line}`,
+            boxShadow: `0 4px 14px ${palette.shadow}`,
           }}
         >
           <View style={{
             display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
           }}>
             <View style={{
-              width: '38px', height: '38px', borderRadius: '12px',
-              backgroundColor: '#FFE8D6', display: 'flex',
+              width: '38px', height: '38px', borderRadius: '14px',
+              backgroundColor: palette.surfaceWarm, display: 'flex',
               alignItems: 'center', justifyContent: 'center', marginRight: '10px',
+              border: `1px solid ${palette.line}`,
             }}>
               <Text style={{ fontSize: '18px' }}>🏫</Text>
             </View>
@@ -169,7 +160,7 @@ export default function SchoolsPage() {
               padding: '5px 10px', borderRadius: '999px',
               backgroundColor: palette.accentSoft, marginRight: '8px', marginBottom: '8px',
             }}>
-              <Text style={{ fontSize: '12px', color: palette.accentDeep }}>
+              <Text style={{ fontSize: '12px', color: palette.accentDark }}>
                 {item.province || '未知'} {item.city || ''}
               </Text>
             </View>
@@ -184,8 +175,8 @@ export default function SchoolsPage() {
           </View>
 
           <View style={{
-            backgroundColor: '#FFFDF9', borderRadius: '14px',
-            padding: '12px', marginBottom: '10px',
+            backgroundColor: palette.surface, borderRadius: '16px',
+            padding: '12px', marginBottom: '10px', border: `1px solid ${palette.line}`,
           }}>
             <View style={{ marginBottom: '6px' }}>
               <Text style={{ color: palette.subtext, fontSize: '13px' }}>
