@@ -7,6 +7,7 @@ import {
   type EventItem,
   EVENT_TYPE_LABELS,
   EVENT_TYPE_ICONS,
+  getEventIconBg,
   getEventStatusInfo,
   isEventEnded,
 } from './shared'
@@ -105,6 +106,7 @@ export default function EventsPage() {
         <View onClick={goToSubmit} style={{
           marginTop: '12px', background: palette.primaryGradient,
           borderRadius: '16px', padding: '10px 12px', alignSelf: 'flex-start',
+          boxShadow: `0 4px 12px ${palette.shadow}`,
         }}>
           <Text style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>+ 推荐新活动</Text>
         </View>
@@ -116,8 +118,8 @@ export default function EventsPage() {
           return (
             <View key={option} onClick={() => setFilter(option)} style={{
               padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
-              backgroundColor: active ? palette.accentDeep : palette.tag,
-              border: `1px solid ${active ? palette.accentDeep : palette.line}`,
+              backgroundColor: active ? palette.action : palette.tag,
+              border: `1px solid ${active ? palette.action : palette.line}`,
             }}>
               <Text style={{ fontSize: '13px', color: active ? '#FFF' : palette.tagText }}>{option}</Text>
             </View>
@@ -191,7 +193,7 @@ export default function EventsPage() {
             }}>
               <View style={{
                 width: '42px', height: '42px', borderRadius: '15px',
-                backgroundColor: palette.iconBg, display: 'flex',
+                backgroundColor: getEventIconBg(item.event_type), display: 'flex',
                 alignItems: 'center', justifyContent: 'center', marginRight: '10px',
                 border: `1px solid ${palette.lineSoft}`,
               }}>
@@ -233,9 +235,9 @@ export default function EventsPage() {
               {interestedCount > 0 ? (
                 <View style={{
                   padding: '4px 10px', borderRadius: '999px',
-                  backgroundColor: palette.tag, marginRight: '8px', marginBottom: '6px',
+                  backgroundColor: palette.accent2Soft, marginRight: '8px', marginBottom: '6px',
                 }}>
-                  <Text style={{ fontSize: '12px', color: palette.tagText }}>#{interestedCount} 人感兴趣</Text>
+                  <Text style={{ fontSize: '12px', color: palette.accent2 }}>#{interestedCount} 人感兴趣</Text>
                 </View>
               ) : null}
             </View>
