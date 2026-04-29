@@ -1,0 +1,23 @@
+page {
+  background: #FFF8F2;
+  color: #2B1D19;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', sans-serif;
+}
+
+view,
+text,
+input,
+textarea,
+button {
+  box-sizing: border-box;
+}
+
+button {
+  border-radius: 999px;
+}
+
+/* Brand texture rule: keep the product calm and paper-like; let the logo carry the rough stamp texture. */
+::selection {
+  background: #F2C7B7;
+  color: #2B1D19;
+}
