@@ -27,10 +27,10 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
 }
 
 export const EVENT_STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
-  recurring: { text: '每周进行', color: palette.green, bg: palette.greenSoft },
-  recruiting: { text: '招募中', color: palette.accentDeep, bg: palette.accentSoft },
+  recurring: { text: '每周进行', color: palette.tagText, bg: palette.tag },
+  recruiting: { text: '招募中', color: palette.brand, bg: palette.brandSoft },
   upcoming: { text: '即将开始', color: palette.info, bg: palette.infoSoft },
-  ongoing: { text: '进行中', color: palette.green, bg: palette.greenSoft },
+  ongoing: { text: '进行中', color: palette.tagText, bg: palette.tag },
   ended: { text: '已结束', color: palette.muted, bg: palette.surfaceSoft },
 }
 
