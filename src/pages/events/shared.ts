@@ -1,3 +1,5 @@
+import { palette } from '../../theme/palette'
+
 export type EventItem = {
   id: number
   title: string
@@ -25,11 +27,11 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
 }
 
 export const EVENT_STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
-  recurring: { text: '每周进行', color: '#7BAE7F', bg: '#EEF7EE' },
-  recruiting: { text: '招募中', color: '#E76F51', bg: '#FCE6D6' },
-  upcoming: { text: '即将开始', color: '#5B8EBF', bg: '#E8F0F8' },
-  ongoing: { text: '进行中', color: '#7BAE7F', bg: '#EEF7EE' },
-  ended: { text: '已结束', color: '#999', bg: '#F0F0F0' },
+  recurring: { text: '每周进行', color: palette.green, bg: palette.greenSoft },
+  recruiting: { text: '招募中', color: palette.accentDeep, bg: palette.accentSoft },
+  upcoming: { text: '即将开始', color: palette.info, bg: palette.infoSoft },
+  ongoing: { text: '进行中', color: palette.green, bg: palette.greenSoft },
+  ended: { text: '已结束', color: palette.muted, bg: palette.surfaceSoft },
 }
 
 export const EVENT_TYPE_ICONS: Record<string, string> = {
@@ -68,8 +70,8 @@ export function getEventStatusInfo(event: Pick<EventItem, 'status' | 'start_time
 
   return EVENT_STATUS_LABELS[statusKey] || {
     text: statusKey,
-    color: '#7A6756',
-    bg: '#F5F5F5',
+    color: palette.subtext,
+    bg: palette.surfaceSoft,
   }
 }
 
