@@ -258,32 +258,45 @@ export default function ExplorePage() {
     return Array.from(set).sort()
   }, [allMarkers])
 
+  const userMarkerCount = validMarkers.filter((m) => m.type === 'user').length
+  const schoolMarkerCount = validMarkers.filter((m) => m.type === 'school').length
+  const isDenseMap = validMarkers.length > 120 || (!selectedProvince && userMarkerCount > 12)
+  const shouldShowUserLabels = selectedProvince ? userMarkerCount <= 60 : userMarkerCount <= 8
+  const shouldShowSchoolLabels = selectedProvince || schoolMarkerCount <= 180
+
   const mapMarkers: any[] = useMemo(() => validMarkers.map((item) => {
+    const shouldShowLabel = item.type === 'school' ? shouldShowSchoolLabels : shouldShowUserLabels
     const labelContent = item.type === 'school' ? shortName(item.name) : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
+    const markerSize = item.type === 'school'
+      ? (isDenseMap ? 18 : 22)
+      : (isDenseMap ? 12 : 18)
+
     return {
       id: item.id,
       latitude: item.latitude,
       longitude: item.longitude,
       title: item.name,
       iconPath: item.type === 'school' ? markerSchoolIcon : markerUserIcon,
-      width: item.type === 'school' ? 22 : 18,
-      height: item.type === 'school' ? 22 : 18,
+      width: markerSize,
+      height: markerSize,
       anchor: { x: 0.5, y: 0.5 },
-      label: {
-        content: labelContent,
-        color: palette.text,
-        fontSize: 11,
-        anchorX: item.type === 'school' ? -24 : -22,
-        anchorY: -30,
-        borderRadius: 6,
-        borderWidth: 0,
-        borderColor: '#FFFFFF',
-        bgColor: item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,245,232,0.92)',
-        padding: 4,
-        textAlign: 'center',
-      },
+      ...(shouldShowLabel ? {
+        label: {
+          content: labelContent,
+          color: palette.text,
+          fontSize: 11,
+          anchorX: item.type === 'school' ? -24 : -22,
+          anchorY: -30,
+          borderRadius: 6,
+          borderWidth: 0,
+          borderColor: '#FFFFFF',
+          bgColor: item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,245,232,0.92)',
+          padding: 4,
+          textAlign: 'center',
+        },
+      } : {}),
     }
-  }).filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude)), [validMarkers])
+  }).filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude)), [validMarkers, isDenseMap, shouldShowSchoolLabels, shouldShowUserLabels])
 
   const { center, scale } = useMemo(() => {
     if (validMarkers.length === 0) return { center: { latitude: 33.0, longitude: 108.0 }, scale: 5 }
@@ -445,7 +458,7 @@ export default function ExplorePage() {
     }
     return (
       <TaroMap
-        key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}`}
+        key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}`}
         latitude={center.latitude}
         longitude={center.longitude}
         scale={scale}
@@ -462,7 +475,7 @@ export default function ExplorePage() {
         style={{ width: '100%', height: 'calc(100vh - 120px)' }}
       />
     )
-  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap, handleLabelTap])
+  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap, handleLabelTap, shouldShowUserLabels])
 
   return (
     <View style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
@@ -484,7 +497,6 @@ export default function ExplorePage() {
           <FilterChip active={showUsers} tone='user' text={`同路人 ${showUsers ? userCount : '—'}`} onClick={() => { setShowUsers(!showUsers); closePopup() }} />
           {showUsers && <FilterChip active={showEducators} tone='educator' text='教育者' onClick={() => { setShowEducators((value) => !value); closePopup() }} />}
           <View style={{ flex: 1 }} />
-          <Text style={{ fontSize: '11px', color: exploreTheme.muted, marginBottom: '6px' }}>{validMarkers.length} 个点位</Text>
         </View>
 
         {availableProvinces.length > 0 && (
@@ -502,7 +514,9 @@ export default function ExplorePage() {
       {mapNode}
 
       <View style={{ backgroundColor: exploreTheme.surface, padding: '5px 16px', borderTop: `1px solid ${exploreTheme.border}` }}>
-        <Text style={{ fontSize: '10px', color: exploreTheme.muted }}>近似坐标 · 仅供浏览 · 点击标记或名称查看详情</Text>
+        <Text style={{ fontSize: '10px', color: exploreTheme.muted }}>
+          {isDenseMap ? '近似坐标 · 全国视图会自动隐藏部分名称 · 点击标记查看详情' : '近似坐标 · 仅供浏览 · 点击标记或名称查看详情'}
+        </Text>
       </View>
 
       {selectedUser && (
