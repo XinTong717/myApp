@@ -103,7 +103,7 @@ export default function EventsPage() {
           </Text>
         </View>
         <View onClick={goToSubmit} style={{
-          marginTop: '12px', backgroundColor: palette.accentDeep,
+          marginTop: '12px', background: palette.primaryGradient,
           borderRadius: '16px', padding: '10px 12px', alignSelf: 'flex-start',
         }}>
           <Text style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>+ 推荐新活动</Text>
@@ -191,9 +191,9 @@ export default function EventsPage() {
             }}>
               <View style={{
                 width: '42px', height: '42px', borderRadius: '15px',
-                backgroundColor: palette.tag, display: 'flex',
+                backgroundColor: palette.iconBg, display: 'flex',
                 alignItems: 'center', justifyContent: 'center', marginRight: '10px',
-                border: `1px solid ${palette.line}`,
+                border: `1px solid ${palette.lineSoft}`,
               }}>
                 <Text style={{ fontSize: '20px' }}>{icon}</Text>
               </View>
