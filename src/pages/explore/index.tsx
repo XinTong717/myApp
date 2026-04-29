@@ -24,13 +24,15 @@ import {
 
 const markerSchoolIcon = '/assets/marker-school.png'
 const markerUserIcon = '/assets/marker-user.png'
+const USER_CLUSTER_THRESHOLD = 5
 
 type School = { id: number | string; name?: string; province?: string; city?: string }
 type AppUser = { _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string; companionContext?: string; isSelf?: boolean }
 type MarkerItem = {
   id: number; latitude: number; longitude: number; name: string
-  type: 'school' | 'user'; markerProv: string; city?: string
+  type: 'school' | 'user' | 'user_cluster'; markerProv: string; city?: string
   originalId: number | string; bio?: string; roles?: string[]; companionContext?: string; isSelf?: boolean
+  clusterUsers?: AppUser[]
 }
 type Coord = { lat: number; lng: number }
 
@@ -158,6 +160,7 @@ export default function ExplorePage() {
   const [selectedProvince, setSelectedProvince] = useState('')
   const [hasProfile, setHasProfile] = useState(true)
   const [selectedUser, setSelectedUser] = useState<MarkerItem | null>(null)
+  const [selectedCluster, setSelectedCluster] = useState<MarkerItem | null>(null)
   const [mapMountReady, setMapMountReady] = useState(false)
   const [isNavigatingAway, setIsNavigatingAway] = useState(false)
 
@@ -223,21 +226,86 @@ export default function ExplorePage() {
     }
 
     if (showUsers) {
-      appUsers.filter((u) => showEducators || u.isSelf || !isPureEducator(u)).forEach((u) => {
-        if (!u.city || !u.province) return
-        const cityInfo = CITIES[u.city]
+      const visibleUsers = appUsers.filter((u) => showEducators || u.isSelf || !isPureEducator(u))
+      const usersByCity: Record<string, AppUser[]> = {}
+      const usersByProvince: Record<string, AppUser[]> = {}
+
+      visibleUsers.forEach((u) => {
+        if (!u.province) return
+        const cityInfo = u.city ? CITIES[u.city] : null
+        if (u.city && isValidCoord(cityInfo)) {
+          if (!usersByCity[u.city]) usersByCity[u.city] = []
+          usersByCity[u.city].push(u)
+          return
+        }
+
         const fallbackCoord = PROV_FALLBACK[u.province]
-        const coord = isValidCoord(cityInfo) ? cityInfo : fallbackCoord
+        if (!isValidCoord(fallbackCoord)) return
+        if (!usersByProvince[u.province]) usersByProvince[u.province] = []
+        usersByProvince[u.province].push(u)
+      })
+
+      Object.keys(usersByCity).forEach((cityName) => {
+        const usersInCity = usersByCity[cityName]
+        const info = CITIES[cityName]
+        if (!isValidCoord(info)) return
+
+        if (usersInCity.length >= USER_CLUSTER_THRESHOLD) {
+          items.push({
+            id: nextId++,
+            latitude: info.lat,
+            longitude: info.lng,
+            name: cityName,
+            type: 'user_cluster',
+            markerProv: info.prov,
+            city: cityName,
+            originalId: `cluster-${cityName}`,
+            clusterUsers: usersInCity,
+          })
+          return
+        }
+
+        usersInCity.forEach((u, idx) => {
+          const name = u.displayName?.trim() || '同路人'
+          const jittered = jitter(info.lat, info.lng, idx, usersInCity.length, name + u._id)
+          if (!isValidCoord(jittered)) return
+          items.push({
+            id: nextId++, latitude: jittered.lat, longitude: jittered.lng, name, type: 'user', markerProv: info.prov, city: u.city,
+            originalId: u._id, bio: u.bio, roles: normalizeRoles(u.roles || []),
+            companionContext: u.companionContext || '', isSelf: !!u.isSelf,
+          })
+        })
+      })
+
+      Object.keys(usersByProvince).forEach((province) => {
+        const usersInProvince = usersByProvince[province]
+        const coord = PROV_FALLBACK[province]
         if (!isValidCoord(coord)) return
-        const prov = isValidCoord(cityInfo) ? cityInfo.prov : u.province
-        const name = u.displayName?.trim() || '同路人'
-        const latitude = coord.lat + (nameHash(name + u._id) - 0.5) * 0.02
-        const longitude = coord.lng + (nameHash(u._id) - 0.5) * 0.02
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return
-        items.push({
-          id: nextId++, latitude, longitude, name, type: 'user', markerProv: prov, city: u.city,
-          originalId: u._id, bio: u.bio, roles: normalizeRoles(u.roles || []),
-          companionContext: u.companionContext || '', isSelf: !!u.isSelf,
+
+        if (usersInProvince.length >= USER_CLUSTER_THRESHOLD) {
+          items.push({
+            id: nextId++,
+            latitude: coord.lat,
+            longitude: coord.lng,
+            name: province,
+            type: 'user_cluster',
+            markerProv: province,
+            city: '',
+            originalId: `cluster-province-${province}`,
+            clusterUsers: usersInProvince,
+          })
+          return
+        }
+
+        usersInProvince.forEach((u, idx) => {
+          const name = u.displayName?.trim() || '同路人'
+          const jittered = jitter(coord.lat, coord.lng, idx, usersInProvince.length, name + u._id)
+          if (!isValidCoord(jittered)) return
+          items.push({
+            id: nextId++, latitude: jittered.lat, longitude: jittered.lng, name, type: 'user', markerProv: province, city: u.city,
+            originalId: u._id, bio: u.bio, roles: normalizeRoles(u.roles || []),
+            companionContext: u.companionContext || '', isSelf: !!u.isSelf,
+          })
         })
       })
     }
@@ -258,18 +326,33 @@ export default function ExplorePage() {
     return Array.from(set).sort()
   }, [allMarkers])
 
-  const userMarkerCount = validMarkers.filter((m) => m.type === 'user').length
+  const userCount = useMemo(() => filteredMarkers.reduce((sum, m) => {
+    if (m.type === 'user') return sum + 1
+    if (m.type === 'user_cluster') return sum + (m.clusterUsers?.length || 0)
+    return sum
+  }, 0), [filteredMarkers])
+  const schoolCount = filteredMarkers.filter((m) => m.type === 'school').length
+  const userVisualMarkerCount = validMarkers.filter((m) => m.type === 'user' || m.type === 'user_cluster').length
   const schoolMarkerCount = validMarkers.filter((m) => m.type === 'school').length
-  const isDenseMap = validMarkers.length > 120 || (!selectedProvince && userMarkerCount > 12)
-  const shouldShowUserLabels = selectedProvince ? userMarkerCount <= 60 : userMarkerCount <= 8
+  const hasUserClusters = validMarkers.some((m) => m.type === 'user_cluster')
+  const isDenseMap = validMarkers.length > 120 || hasUserClusters || (!selectedProvince && userVisualMarkerCount > 12)
+  const shouldShowUserLabels = selectedProvince ? userVisualMarkerCount <= 60 : userVisualMarkerCount <= 8
   const shouldShowSchoolLabels = selectedProvince || schoolMarkerCount <= 180
 
   const mapMarkers: any[] = useMemo(() => validMarkers.map((item) => {
-    const shouldShowLabel = item.type === 'school' ? shouldShowSchoolLabels : shouldShowUserLabels
-    const labelContent = item.type === 'school' ? shortName(item.name) : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
-    const markerSize = item.type === 'school'
-      ? (isDenseMap ? 18 : 22)
-      : (isDenseMap ? 12 : 18)
+    const isCluster = item.type === 'user_cluster'
+    const clusterCount = item.clusterUsers?.length || 0
+    const shouldShowLabel = isCluster || (item.type === 'school' ? shouldShowSchoolLabels : shouldShowUserLabels)
+    const labelContent = isCluster
+      ? `${shortName(item.name, 6)} · ${clusterCount}人`
+      : item.type === 'school'
+        ? shortName(item.name)
+        : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
+    const markerSize = isCluster
+      ? 26
+      : item.type === 'school'
+        ? (isDenseMap ? 18 : 22)
+        : (isDenseMap ? 12 : 18)
 
     return {
       id: item.id,
@@ -283,15 +366,17 @@ export default function ExplorePage() {
       ...(shouldShowLabel ? {
         label: {
           content: labelContent,
-          color: palette.text,
-          fontSize: 11,
-          anchorX: item.type === 'school' ? -24 : -22,
-          anchorY: -30,
-          borderRadius: 6,
+          color: isCluster ? '#FFFFFF' : palette.text,
+          fontSize: isCluster ? 12 : 11,
+          anchorX: isCluster ? -32 : item.type === 'school' ? -24 : -22,
+          anchorY: isCluster ? -34 : -30,
+          borderRadius: isCluster ? 8 : 6,
           borderWidth: 0,
           borderColor: '#FFFFFF',
-          bgColor: item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,245,232,0.92)',
-          padding: 4,
+          bgColor: isCluster
+            ? 'rgba(184,85,64,0.95)'
+            : item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,245,232,0.92)',
+          padding: isCluster ? 5 : 4,
           textAlign: 'center',
         },
       } : {}),
@@ -333,12 +418,16 @@ export default function ExplorePage() {
     return m
   }, [validMarkers])
 
-  const closePopup = () => setSelectedUser(null)
+  const closePopup = () => {
+    setSelectedUser(null)
+    setSelectedCluster(null)
+  }
 
   const navigateToProfileSafely = useCallback(() => {
     setIsNavigatingAway(true)
     setMapMountReady(false)
     setSelectedUser(null)
+    setSelectedCluster(null)
     setTimeout(() => goToProfile(), 60)
   }, [])
 
@@ -405,6 +494,14 @@ export default function ExplorePage() {
       Taro.navigateTo({ url: '/pages/school-detail/index?id=' + item.originalId })
       return
     }
+
+    if (item.type === 'user_cluster') {
+      setSelectedUser(null)
+      setSelectedCluster(item)
+      return
+    }
+
+    setSelectedCluster(null)
     setSelectedUser(item)
   }, [idToMarker])
 
@@ -425,9 +522,26 @@ export default function ExplorePage() {
   const handleCalloutTap = useCallback((e: any) => handleTap(getMarkerIdFromMapEvent(e)), [handleTap])
   const handleLabelTap = useCallback((e: any) => handleTap(getMarkerIdFromMapEvent(e)), [handleTap])
 
-  const schoolCount = filteredMarkers.filter((m) => m.type === 'school').length
-  const userCount = filteredMarkers.filter((m) => m.type === 'user').length
   const popupRoleText = selectedUser?.roles?.join(' / ') || ''
+
+  const openUserFromCluster = (user: AppUser, cluster: MarkerItem) => {
+    const name = user.displayName?.trim() || '同路人'
+    setSelectedCluster(null)
+    setSelectedUser({
+      id: 0,
+      latitude: cluster.latitude,
+      longitude: cluster.longitude,
+      name,
+      type: 'user',
+      markerProv: cluster.markerProv,
+      city: user.city || cluster.city,
+      originalId: user._id,
+      bio: user.bio,
+      roles: normalizeRoles(user.roles || []),
+      companionContext: user.companionContext || '',
+      isSelf: !!user.isSelf,
+    })
+  }
 
   const mapNode = useMemo(() => {
     if (loading) {
@@ -458,7 +572,7 @@ export default function ExplorePage() {
     }
     return (
       <TaroMap
-        key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}`}
+        key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${hasUserClusters ? 'cluster' : 'plain'}`}
         latitude={center.latitude}
         longitude={center.longitude}
         scale={scale}
@@ -475,7 +589,7 @@ export default function ExplorePage() {
         style={{ width: '100%', height: 'calc(100vh - 120px)' }}
       />
     )
-  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap, handleLabelTap, shouldShowUserLabels])
+  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap, handleLabelTap, shouldShowUserLabels, hasUserClusters])
 
   return (
     <View style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
@@ -515,9 +629,49 @@ export default function ExplorePage() {
 
       <View style={{ backgroundColor: exploreTheme.surface, padding: '5px 16px', borderTop: `1px solid ${exploreTheme.border}` }}>
         <Text style={{ fontSize: '10px', color: exploreTheme.muted }}>
-          {isDenseMap ? '近似坐标 · 全国视图会自动隐藏部分名称 · 点击标记查看详情' : '近似坐标 · 仅供浏览 · 点击标记或名称查看详情'}
+          {hasUserClusters
+            ? '近似坐标 · 点击聚合点位展开同城同路人 · 点击学校名称查看详情'
+            : isDenseMap ? '近似坐标 · 全国视图会自动隐藏部分名称 · 点击标记查看详情' : '近似坐标 · 仅供浏览 · 点击标记或名称查看详情'}
         </Text>
       </View>
+
+      {selectedCluster && (
+        <View onClick={closePopup} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: exploreTheme.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
+          <View onClick={(e: any) => e?.stopPropagation?.()} style={{ ...sheetStyle, maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
+            <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', marginBottom: '12px' }}>
+              <View style={{ flex: 1, paddingRight: '12px' }}>
+                <Text style={{ fontSize: '20px', fontWeight: 'bold', color: exploreTheme.text }}>{selectedCluster.name}</Text>
+                <View style={{ marginTop: '4px' }}>
+                  <Text style={{ fontSize: '12px', color: exploreTheme.subtext }}>{selectedCluster.clusterUsers?.length || 0} 位同路人在这个区域</Text>
+                </View>
+              </View>
+              <View onClick={closePopup} style={{ width: '32px', height: '32px', borderRadius: '999px', backgroundColor: exploreTheme.tag, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: '16px', color: exploreTheme.tagText }}>✕</Text>
+              </View>
+            </View>
+
+            <ScrollView scrollY style={{ maxHeight: '48vh' }}>
+              {(selectedCluster.clusterUsers || []).map((user) => {
+                const name = user.displayName?.trim() || '同路人'
+                const roles = normalizeRoles(user.roles || []).join(' / ')
+                return (
+                  <View key={user._id} onClick={() => openUserFromCluster(user, selectedCluster)} style={{ ...panelStyle, marginBottom: '10px' }}>
+                    <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: '15px', fontWeight: 'bold', color: exploreTheme.text }}>{name}</Text>
+                        <View style={{ marginTop: '4px' }}>
+                          <Text style={{ fontSize: '12px', color: exploreTheme.subtext }}>{[roles, user.city].filter(Boolean).join(' · ') || '同路人'}</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: '12px', color: palette.brand, fontWeight: 'bold' }}>查看 ›</Text>
+                    </View>
+                  </View>
+                )
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      )}
 
       {selectedUser && (
         <View onClick={closePopup} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: exploreTheme.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
