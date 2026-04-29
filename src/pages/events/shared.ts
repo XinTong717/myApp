@@ -45,6 +45,21 @@ export const EVENT_TYPE_ICONS: Record<string, string> = {
   online: '💻',
 }
 
+const EVENT_TYPE_ICON_BG: Record<string, string> = {
+  night_chat: palette.brandSoft,
+  parent_observer: palette.accent2Soft,
+  community_program: palette.brandSoft,
+  workshop: palette.accent2Soft,
+  meetup: palette.greenSoft,
+  discussion: palette.iconBgAlt,
+  family: palette.greenSoft,
+  online: palette.accent2Soft,
+}
+
+export function getEventIconBg(eventType: string) {
+  return EVENT_TYPE_ICON_BG[eventType] || palette.iconBg
+}
+
 function parseEventDate(value?: string) {
   if (!value) return null
   const date = new Date(value)
