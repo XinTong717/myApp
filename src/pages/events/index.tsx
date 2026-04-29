@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
+import { palette } from '../../theme/palette'
 import {
   type EventItem,
   EVENT_TYPE_LABELS,
@@ -9,19 +10,6 @@ import {
   getEventStatusInfo,
   isEventEnded,
 } from './shared'
-
-const palette = {
-  bg: '#FFF9F2',
-  card: '#FFFFFF',
-  cardSoft: '#FFF3E6',
-  text: '#2F241B',
-  subtext: '#7A6756',
-  accentDeep: '#E76F51',
-  accentSoft: '#FCE6D6',
-  line: '#F1DFCF',
-  green: '#7BAE7F',
-  greenSoft: '#EEF7EE',
-}
 
 const FILTER_OPTIONS = ['全部', '线上', '线下'] as const
 
@@ -104,8 +92,9 @@ export default function EventsPage() {
       minHeight: '100vh', boxSizing: 'border-box',
     }}>
       <View style={{
-        backgroundColor: palette.card, borderRadius: '20px',
-        padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
+        backgroundColor: palette.card, borderRadius: '22px',
+        padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
+        boxShadow: `0 6px 20px ${palette.shadow}`,
       }}>
         <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>活动</Text>
         <View style={{ marginTop: '6px' }}>
@@ -115,9 +104,9 @@ export default function EventsPage() {
         </View>
         <View onClick={goToSubmit} style={{
           marginTop: '12px', backgroundColor: palette.accentSoft,
-          borderRadius: '14px', padding: '10px 12px', alignSelf: 'flex-start',
+          borderRadius: '16px', padding: '10px 12px', alignSelf: 'flex-start',
         }}>
-          <Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>+ 推荐新活动</Text>
+          <Text style={{ fontSize: '13px', color: palette.accentDark, fontWeight: 'bold' }}>+ 推荐新活动</Text>
         </View>
       </View>
 
@@ -127,7 +116,7 @@ export default function EventsPage() {
           return (
             <View key={option} onClick={() => setFilter(option)} style={{
               padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
-              backgroundColor: active ? palette.accentDeep : '#F5F0EB',
+              backgroundColor: active ? palette.accentDeep : palette.surfaceSoft,
               border: `1px solid ${active ? palette.accentDeep : palette.line}`,
             }}>
               <Text style={{ fontSize: '13px', color: active ? '#FFF' : palette.subtext }}>{option}</Text>
@@ -160,16 +149,16 @@ export default function EventsPage() {
 
       {error ? (
         <View style={{
-          padding: '12px', marginBottom: '16px', backgroundColor: '#FFF1F0',
-          borderRadius: '14px', border: '1px solid #FFD8D2',
+          padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft,
+          borderRadius: '14px', border: `1px solid ${palette.brandSoft}`,
         }}>
-          <Text style={{ color: '#CF1322' }}>{error}</Text>
+          <Text style={{ color: palette.error }}>{error}</Text>
         </View>
       ) : null}
 
       {!loading && !error && visibleEvents.length === 0 ? (
         <View style={{
-          backgroundColor: palette.card, borderRadius: '20px',
+          backgroundColor: palette.card, borderRadius: '22px',
           padding: '18px 16px', border: `1px solid ${palette.line}`,
         }}>
           <Text style={{ fontSize: '14px', color: palette.subtext, lineHeight: '22px' }}>
@@ -192,17 +181,19 @@ export default function EventsPage() {
             key={item.id}
             onClick={() => goToDetail(item)}
             style={{
-              backgroundColor: palette.card, borderRadius: '20px',
+              backgroundColor: palette.card, borderRadius: '22px',
               padding: '16px', marginBottom: '14px',
               boxSizing: 'border-box', border: `1px solid ${palette.line}`,
+              boxShadow: `0 4px 14px ${palette.shadow}`,
             }}>
             <View style={{
               display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
             }}>
               <View style={{
-                width: '42px', height: '42px', borderRadius: '14px',
-                backgroundColor: '#FFEFD8', display: 'flex',
+                width: '42px', height: '42px', borderRadius: '15px',
+                backgroundColor: palette.surfaceWarm, display: 'flex',
                 alignItems: 'center', justifyContent: 'center', marginRight: '10px',
+                border: `1px solid ${palette.line}`,
               }}>
                 <Text style={{ fontSize: '20px' }}>{icon}</Text>
               </View>
@@ -218,7 +209,7 @@ export default function EventsPage() {
                 padding: '4px 10px', borderRadius: '999px',
                 backgroundColor: palette.accentSoft, marginRight: '8px', marginBottom: '6px',
               }}>
-                <Text style={{ fontSize: '12px', color: palette.accentDeep }}>{typeLabel}</Text>
+                <Text style={{ fontSize: '12px', color: palette.accentDark }}>{typeLabel}</Text>
               </View>
 
               {statusInfo ? (
@@ -242,7 +233,7 @@ export default function EventsPage() {
               {interestedCount > 0 ? (
                 <View style={{
                   padding: '4px 10px', borderRadius: '999px',
-                  backgroundColor: '#FFF3E6', marginRight: '8px', marginBottom: '6px',
+                  backgroundColor: palette.surfaceWarm, marginRight: '8px', marginBottom: '6px',
                 }}>
                   <Text style={{ fontSize: '12px', color: palette.accentDeep }}>#{interestedCount} 人感兴趣</Text>
                 </View>
@@ -250,8 +241,8 @@ export default function EventsPage() {
             </View>
 
             <View style={{
-              backgroundColor: '#FFFDF9', borderRadius: '14px',
-              padding: '12px', marginBottom: '10px',
+              backgroundColor: palette.surface, borderRadius: '16px',
+              padding: '12px', marginBottom: '10px', border: `1px solid ${palette.line}`,
             }}>
               {summary ? (
                 <View style={{ marginBottom: '6px' }}>
