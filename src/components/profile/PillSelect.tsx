@@ -1,4 +1,5 @@
 import { View, Text } from '@tarojs/components'
+import { palette } from './palette'
 
 type Props = {
   options: readonly string[] | string[]
@@ -33,11 +34,11 @@ export default function PillSelect(props: Props) {
               borderRadius: '999px',
               marginRight: '8px',
               marginBottom: '8px',
-              backgroundColor: active ? '#E76F51' : '#F5F0EB',
-              border: `1px solid ${active ? '#E76F51' : '#F1DFCF'}`,
+              backgroundColor: active ? palette.brand : palette.tag,
+              border: `1px solid ${active ? palette.brand : palette.line}`,
             }}
           >
-            <Text style={{ fontSize: '13px', color: active ? '#FFF' : '#7A6756' }}>{opt}</Text>
+            <Text style={{ fontSize: '13px', color: active ? '#FFF' : palette.tagText }}>{opt}</Text>
           </View>
         )
       })}
