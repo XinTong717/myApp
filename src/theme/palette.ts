@@ -3,38 +3,41 @@ export const palette = {
   brand: '#B85540',
   brandPress: '#A04A38',
   brandDark: '#8F3C2F',
-  brandLight: '#D9826A',
-  brandSoft: '#F8E6DD',
+  brandLight: '#C76752',
+  brandSoft: '#FBE5E1',
+  brandGlow: '#FFF0ED',
+  primaryGradient: 'linear-gradient(135deg, #C76752 0%, #B85540 100%)',
 
-  // Warm paper surfaces.
-  bg: '#FAF8F4',
+  // Warm paper surfaces. Slightly more luminous than the previous grayish pass.
+  bg: '#FFF9F3',
   card: '#FFFFFF',
-  cardSoft: '#FAF8F4',
-  surface: '#FFFFFF',
-  surfaceSoft: '#F0EFEB',
-  surfaceWarm: '#FAF8F4',
+  cardSoft: '#FFFCF8',
+  surface: '#FFFCF8',
+  surfaceSoft: '#F6F0EA',
+  surfaceWarm: '#FFF3EC',
 
-  // Neutral information tags. Most metadata should live here, not in brand red.
-  tag: '#F0EFEB',
-  tagText: '#5F5E5A',
+  // Neutral information tags. Warm-gray instead of dead gray.
+  tag: '#F3EFEA',
+  tagText: '#645B54',
+  iconBg: '#FFF3EC',
 
   // Text and structure.
-  text: '#1A1A1A',
-  subtext: '#5F5E5A',
-  muted: '#888780',
-  link: '#5F5E5A',
-  line: '#E8E6DE',
-  lineSoft: '#F0EFEB',
+  text: '#1F1A17',
+  subtext: '#5F5A55',
+  muted: '#928880',
+  link: '#5F5A55',
+  line: '#E9DED5',
+  lineSoft: '#F1E8E0',
 
   // Backward-compatible aliases used by older pages/components.
   accent: '#B85540',
   accentDeep: '#B85540',
   accentDark: '#A04A38',
-  accentLight: '#D9826A',
-  accentSoft: '#F8E6DD',
+  accentLight: '#C76752',
+  accentSoft: '#FBE5E1',
 
   // Functional colors, kept earthy instead of default app-blue.
-  green: '#5F7A5C',
+  green: '#6F7D62',
   greenSoft: '#EEF3EA',
   info: '#5F7A8C',
   infoSoft: '#E8F1F2',
@@ -44,8 +47,8 @@ export const palette = {
   errorSoft: '#FFF1EF',
 
   // Atmosphere.
-  shadow: 'rgba(80, 43, 30, 0.06)',
-  shadowStrong: 'rgba(80, 43, 30, 0.10)',
+  shadow: 'rgba(80, 43, 30, 0.07)',
+  shadowStrong: 'rgba(80, 43, 30, 0.11)',
   overlay: 'rgba(43, 29, 25, 0.24)',
 }
 
