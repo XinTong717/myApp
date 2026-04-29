@@ -80,7 +80,7 @@ export default function SchoolsPage() {
             <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>学习社区库</Text>
           </View>
           <View onClick={goToSubmit} style={{
-            padding: '7px 12px', borderRadius: '999px', backgroundColor: palette.accentDeep,
+            padding: '7px 12px', borderRadius: '999px', background: palette.primaryGradient,
           }}>
             <Text style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 'bold' }}>推荐新学习社区</Text>
           </View>
@@ -142,9 +142,9 @@ export default function SchoolsPage() {
           }}>
             <View style={{
               width: '38px', height: '38px', borderRadius: '14px',
-              backgroundColor: palette.tag, display: 'flex',
+              backgroundColor: palette.iconBg, display: 'flex',
               alignItems: 'center', justifyContent: 'center', marginRight: '10px',
-              border: `1px solid ${palette.line}`,
+              border: `1px solid ${palette.lineSoft}`,
             }}>
               <Text style={{ fontSize: '18px' }}>🏫</Text>
             </View>
