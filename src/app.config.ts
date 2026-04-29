@@ -32,42 +32,42 @@ export default defineAppConfig({
   ],
 
   window: {
-    navigationBarBackgroundColor: '#FFF8F2',
+    navigationBarBackgroundColor: '#FAF8F4',
     navigationBarTextStyle: 'black',
     navigationBarTitleText: '可雀',
-    backgroundColor: '#FFF8F2',
+    backgroundColor: '#FAF8F4',
     backgroundTextStyle: 'light',
   },
 
   tabBar: {
-    color: '#8C776A',
+    color: '#5F5E5A',
     selectedColor: '#B85540',
-    backgroundColor: '#FFFCF8',
+    backgroundColor: '#FFFFFF',
     borderStyle: 'white',
     list: [
       {
         pagePath: 'pages/explore/index',
         text: '探索',
         iconPath: 'assets/tab-explore.png',
-        selectedIconPath: 'assets/tab-explore-active.png',
+        selectedIconPath: 'assets/tab-explore.png',
       },
       {
         pagePath: 'pages/schools/index',
         text: '学习社区',
         iconPath: 'assets/tab-school.png',
-        selectedIconPath: 'assets/tab-school-active.png',
+        selectedIconPath: 'assets/tab-school.png',
       },
       {
         pagePath: 'pages/events/index',
         text: '活动',
         iconPath: 'assets/tab-event.png',
-        selectedIconPath: 'assets/tab-event-active.png',
+        selectedIconPath: 'assets/tab-event.png',
       },
       {
         pagePath: 'pages/profile/index',
         text: '我的',
         iconPath: 'assets/tab-profile.png',
-        selectedIconPath: 'assets/tab-profile-active.png',
+        selectedIconPath: 'assets/tab-profile.png',
       },
     ],
   },
