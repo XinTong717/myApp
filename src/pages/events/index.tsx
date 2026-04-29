@@ -103,10 +103,10 @@ export default function EventsPage() {
           </Text>
         </View>
         <View onClick={goToSubmit} style={{
-          marginTop: '12px', backgroundColor: palette.accentSoft,
+          marginTop: '12px', backgroundColor: palette.accentDeep,
           borderRadius: '16px', padding: '10px 12px', alignSelf: 'flex-start',
         }}>
-          <Text style={{ fontSize: '13px', color: palette.accentDark, fontWeight: 'bold' }}>+ 推荐新活动</Text>
+          <Text style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>+ 推荐新活动</Text>
         </View>
       </View>
 
@@ -116,10 +116,10 @@ export default function EventsPage() {
           return (
             <View key={option} onClick={() => setFilter(option)} style={{
               padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
-              backgroundColor: active ? palette.accentDeep : palette.surfaceSoft,
+              backgroundColor: active ? palette.accentDeep : palette.tag,
               border: `1px solid ${active ? palette.accentDeep : palette.line}`,
             }}>
-              <Text style={{ fontSize: '13px', color: active ? '#FFF' : palette.subtext }}>{option}</Text>
+              <Text style={{ fontSize: '13px', color: active ? '#FFF' : palette.tagText }}>{option}</Text>
             </View>
           )
         })}
@@ -129,7 +129,7 @@ export default function EventsPage() {
         marginBottom: '14px', display: 'flex',
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
       }}>
-        <Text style={{ color: palette.subtext, fontSize: '13px', flex: 1, marginRight: '12px' }}>
+        <Text style={{ color: palette.muted, fontSize: '13px', flex: 1, marginRight: '12px' }}>
           {loading
             ? '加载中...'
             : hiddenEndedCount > 0
@@ -140,7 +140,7 @@ export default function EventsPage() {
         {events.length > 0 && (
           <Text
             onClick={() => setShowEnded((value) => !value)}
-            style={{ color: palette.accentDeep, fontSize: '13px', fontWeight: 'bold' }}
+            style={{ color: palette.link, fontSize: '13px', fontWeight: 'bold' }}
           >
             {showEnded ? '隐藏已结束' : '显示已结束'}
           </Text>
@@ -191,7 +191,7 @@ export default function EventsPage() {
             }}>
               <View style={{
                 width: '42px', height: '42px', borderRadius: '15px',
-                backgroundColor: palette.surfaceWarm, display: 'flex',
+                backgroundColor: palette.tag, display: 'flex',
                 alignItems: 'center', justifyContent: 'center', marginRight: '10px',
                 border: `1px solid ${palette.line}`,
               }}>
@@ -207,9 +207,9 @@ export default function EventsPage() {
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
               <View style={{
                 padding: '4px 10px', borderRadius: '999px',
-                backgroundColor: palette.accentSoft, marginRight: '8px', marginBottom: '6px',
+                backgroundColor: palette.tag, marginRight: '8px', marginBottom: '6px',
               }}>
-                <Text style={{ fontSize: '12px', color: palette.accentDark }}>{typeLabel}</Text>
+                <Text style={{ fontSize: '12px', color: palette.tagText }}>{typeLabel}</Text>
               </View>
 
               {statusInfo ? (
@@ -223,9 +223,9 @@ export default function EventsPage() {
 
               <View style={{
                 padding: '4px 10px', borderRadius: '999px',
-                backgroundColor: palette.greenSoft, marginRight: '8px', marginBottom: '6px',
+                backgroundColor: palette.tag, marginRight: '8px', marginBottom: '6px',
               }}>
-                <Text style={{ fontSize: '12px', color: palette.green }}>
+                <Text style={{ fontSize: '12px', color: palette.tagText }}>
                   {item.is_online ? '线上' : '线下'}
                 </Text>
               </View>
@@ -233,9 +233,9 @@ export default function EventsPage() {
               {interestedCount > 0 ? (
                 <View style={{
                   padding: '4px 10px', borderRadius: '999px',
-                  backgroundColor: palette.surfaceWarm, marginRight: '8px', marginBottom: '6px',
+                  backgroundColor: palette.tag, marginRight: '8px', marginBottom: '6px',
                 }}>
-                  <Text style={{ fontSize: '12px', color: palette.accentDeep }}>#{interestedCount} 人感兴趣</Text>
+                  <Text style={{ fontSize: '12px', color: palette.tagText }}>#{interestedCount} 人感兴趣</Text>
                 </View>
               ) : null}
             </View>
@@ -256,8 +256,8 @@ export default function EventsPage() {
               </Text>
             </View>
 
-            <Text style={{ color: palette.accentDeep, fontSize: '13px', fontWeight: 'bold' }}>
-              点击查看详情
+            <Text style={{ color: palette.link, fontSize: '13px', fontWeight: 'bold' }}>
+              查看详情 ›
             </Text>
           </View>
         )
