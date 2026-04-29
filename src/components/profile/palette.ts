@@ -1,1 +1,1 @@
-export { palette as profilePalette } from '../../theme/palette'
+export { palette, palette as profilePalette } from '../../theme/palette'
