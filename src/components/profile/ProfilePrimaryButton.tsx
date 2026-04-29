@@ -20,11 +20,12 @@ export default function ProfilePrimaryButton({
     <View
       onClick={loading ? undefined : onClick}
       style={{
-        backgroundColor: loading ? '#DDD' : palette.accentDeep,
+        background: loading ? palette.muted : palette.primaryGradient,
         borderRadius: '16px',
         padding: '14px',
         textAlign: 'center',
         marginBottom,
+        boxShadow: loading ? 'none' : `0 6px 16px ${palette.shadow}`,
       }}
     >
       <Text style={{ fontSize: '16px', color: '#FFF', fontWeight: 'bold' }}>{loading ? loadingText : text}</Text>
