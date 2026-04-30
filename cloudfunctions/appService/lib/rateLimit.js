@@ -1,4 +1,4 @@
-const { db } = require('./cloud')
+const { db, _ } = require('./cloud')
 
 const RATE_LIMIT_COLLECTION = 'rate_limits'
 
@@ -6,6 +6,35 @@ function sanitizeDocPart(value) {
   return String(value || '')
     .replace(/[^a-zA-Z0-9_-]/g, '_')
     .slice(0, 80)
+}
+
+async function readLimitDoc(docId) {
+  try {
+    return (await db.collection(RATE_LIMIT_COLLECTION).doc(docId).get()).data || null
+  } catch (err) {
+    return null
+  }
+}
+
+async function resetLimitWindow(docId, payload) {
+  await db.collection(RATE_LIMIT_COLLECTION).doc(docId).set({
+    data: {
+      ...payload,
+      count: 0,
+      updatedAt: db.serverDate(),
+    },
+  })
+}
+
+async function incrementLimitCounter(docId) {
+  await db.collection(RATE_LIMIT_COLLECTION).doc(docId).update({
+    data: {
+      count: _.inc(1),
+      updatedAt: db.serverDate(),
+    },
+  })
+
+  return readLimitDoc(docId)
 }
 
 async function rateLimit(openid, action, options = {}) {
@@ -17,36 +46,44 @@ async function rateLimit(openid, action, options = {}) {
   const now = Date.now()
 
   try {
-    let current = null
-    try {
-      current = (await db.collection(RATE_LIMIT_COLLECTION).doc(docId).get()).data || null
-    } catch (err) {
-      current = null
-    }
-
+    const current = await readLimitDoc(docId)
     const windowStart = Number(current?.windowStart || 0)
-    const count = Number(current?.count || 0)
     const shouldReset = !windowStart || now - windowStart >= windowMs
-    const nextCount = shouldReset ? 1 : count + 1
+    const effectiveWindowStart = shouldReset ? now : windowStart
 
-    await db.collection(RATE_LIMIT_COLLECTION).doc(docId).set({
-      data: {
+    if (shouldReset || !current) {
+      await resetLimitWindow(docId, {
         openid: openid || '',
         action,
-        windowStart: shouldReset ? now : windowStart,
-        count: nextCount,
+        windowStart: effectiveWindowStart,
         limit,
         windowMs,
-        updatedAt: db.serverDate(),
-      },
-    })
+      })
+    }
+
+    let fresh = null
+    try {
+      fresh = await incrementLimitCounter(docId)
+    } catch (err) {
+      await resetLimitWindow(docId, {
+        openid: openid || '',
+        action,
+        windowStart: now,
+        limit,
+        windowMs,
+      })
+      fresh = await incrementLimitCounter(docId)
+    }
+
+    const nextCount = Number(fresh?.count || 1)
+    const freshWindowStart = Number(fresh?.windowStart || effectiveWindowStart || now)
 
     if (nextCount > limit) {
       return {
         ok: false,
         code: 'RATE_LIMITED',
         message: '操作过于频繁，请稍后再试',
-        retryAfterMs: windowMs - (now - (shouldReset ? now : windowStart)),
+        retryAfterMs: Math.max(0, windowMs - (now - freshWindowStart)),
       }
     }
 
