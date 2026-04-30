@@ -3,6 +3,7 @@ import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
 import { palette } from '../../theme/palette'
+import { ListSkeleton } from '../../components/common/Skeleton'
 import {
   type EventItem,
   EVENT_TYPE_LABELS,
@@ -95,7 +96,6 @@ export default function EventsPage() {
       <View style={{
         backgroundColor: palette.card, borderRadius: '22px',
         padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-        boxShadow: `0 6px 20px ${palette.shadow}`,
       }}>
         <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>活动</Text>
         <View style={{ marginTop: '6px' }}>
@@ -106,7 +106,6 @@ export default function EventsPage() {
         <View onClick={goToSubmit} style={{
           marginTop: '12px', background: palette.primaryGradient,
           borderRadius: '16px', padding: '10px 12px', alignSelf: 'flex-start',
-          boxShadow: `0 4px 12px ${palette.shadow}`,
         }}>
           <Text style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>+ 推荐新活动</Text>
         </View>
@@ -149,12 +148,17 @@ export default function EventsPage() {
         )}
       </View>
 
-      {error ? (
+      {loading ? <ListSkeleton count={3} rows={3} /> : null}
+
+      {!loading && error ? (
         <View style={{
           padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft,
           borderRadius: '14px', border: `1px solid ${palette.brandSoft}`,
         }}>
           <Text style={{ color: palette.error }}>{error}</Text>
+          <View onClick={() => loadEvents({ forceRefresh: true })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
+            <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
+          </View>
         </View>
       ) : null}
 
@@ -169,7 +173,7 @@ export default function EventsPage() {
         </View>
       ) : null}
 
-      {visibleEvents.map((item) => {
+      {!loading && !error && visibleEvents.map((item) => {
         const typeLabel = EVENT_TYPE_LABELS[item.event_type] || item.event_type
         const statusInfo = getEventStatusInfo(item)
         const icon = EVENT_TYPE_ICONS[item.event_type] || '📌'
@@ -186,7 +190,6 @@ export default function EventsPage() {
               backgroundColor: palette.card, borderRadius: '22px',
               padding: '16px', marginBottom: '14px',
               boxSizing: 'border-box', border: `1px solid ${palette.line}`,
-              boxShadow: `0 4px 14px ${palette.shadow}`,
             }}>
             <View style={{
               display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
