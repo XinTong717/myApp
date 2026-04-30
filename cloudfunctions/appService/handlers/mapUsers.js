@@ -88,7 +88,7 @@ async function getProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, 
       displayName: _.neq(''),
       isVisibleOnMap: _.neq(false),
     })
-    .field({ province: true, city: true, openid: true, roles: true, childAgeRange: true })
+    .field({ province: true, openid: true, roles: true, childAgeRange: true })
     .limit(MAP_USERS_SUMMARY_SCAN_LIMIT)
     .get()
 
@@ -100,11 +100,8 @@ async function getProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, 
 
     const province = normalizeProvince(user.province)
     if (!province) return
-    const current = provinceMap.get(province) || { province, count: 0, sampleCities: [] }
+    const current = provinceMap.get(province) || { province, count: 0 }
     current.count += 1
-    if (user.city && current.sampleCities.length < 5 && !current.sampleCities.includes(user.city)) {
-      current.sampleCities.push(user.city)
-    }
     provinceMap.set(province, current)
   })
 
