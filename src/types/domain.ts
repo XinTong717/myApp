@@ -32,11 +32,25 @@ export type EventInterestCountsBatchResult = CloudResponse<{
   counts?: Record<number, number>
 }>
 
+export type SchoolLocationItem = {
+  school_id: number
+  province?: string
+  city?: string
+  address_note?: string
+  contact_note?: string
+  status?: string
+  source?: string
+}
+
 export type SchoolItem = {
   id: number
   name: string
+  canonical_name?: string
+  description?: string
   province?: string
   city?: string
+  locations?: SchoolLocationItem[]
+  location_count?: number
   age_range?: string
   school_type?: string
   has_xuji?: boolean
