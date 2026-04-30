@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Input, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
@@ -7,6 +7,7 @@ import { ListSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
 const ALL_FILTER = '全部'
+const SCHOOL_LIST_LIMIT = 200
 
 type School = SchoolItem
 
@@ -63,18 +64,27 @@ function getLocationHaystack(item: School) {
 
 export default function SchoolsPage() {
   const [schools, setSchools] = useState<School[]>([])
+  const [filterSourceSchools, setFilterSourceSchools] = useState<School[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [keyword, setKeyword] = useState('')
   const [selectedProvince, setSelectedProvince] = useState(ALL_FILTER)
   const [selectedType, setSelectedType] = useState(ALL_FILTER)
   const [selectedAgeRange, setSelectedAgeRange] = useState(ALL_FILTER)
+  const didInitRef = useRef(false)
 
-  const loadSchools = async (options: { forceRefresh?: boolean } = {}) => {
+  const loadSchools = async (options: { forceRefresh?: boolean; useFilters?: boolean } = {}) => {
     try {
       setLoading(true)
       setError('')
-      const result = await getSchools({ forceRefresh: !!options.forceRefresh, limit: 200 })
+      const useFilters = options.useFilters !== false
+      const result = await getSchools({
+        forceRefresh: !!options.forceRefresh,
+        limit: SCHOOL_LIST_LIMIT,
+        ...(useFilters && selectedProvince !== ALL_FILTER ? { province: selectedProvince } : {}),
+        ...(useFilters && selectedType !== ALL_FILTER ? { schoolType: selectedType } : {}),
+        ...(useFilters && selectedAgeRange !== ALL_FILTER ? { ageRange: selectedAgeRange } : {}),
+      })
       const nextSchools = Array.isArray(result.schools) ? result.schools : []
       setSchools(nextSchools)
       if (!result?.ok && nextSchools.length === 0) {
@@ -89,18 +99,43 @@ export default function SchoolsPage() {
     }
   }
 
-  useDidShow(() => { loadSchools() })
+  const loadFilterOptions = async (forceRefresh = false) => {
+    const result = await getSchools({ forceRefresh, limit: SCHOOL_LIST_LIMIT })
+    const list = Array.isArray(result.schools) ? result.schools : []
+    setFilterSourceSchools(list)
+  }
+
+  useDidShow(() => {
+    if (didInitRef.current) return
+    didInitRef.current = true
+    Promise.all([
+      loadFilterOptions(false),
+      loadSchools({ useFilters: true }),
+    ]).catch((err) => {
+      console.error('load schools page init error:', err)
+    })
+  })
+
+  useEffect(() => {
+    if (!didInitRef.current) return
+    loadSchools({ useFilters: true })
+  }, [selectedProvince, selectedType, selectedAgeRange])
 
   usePullDownRefresh(async () => {
-    await loadSchools({ forceRefresh: true })
+    await Promise.all([
+      loadFilterOptions(true),
+      loadSchools({ forceRefresh: true, useFilters: true }),
+    ])
     Taro.stopPullDownRefresh()
   })
 
+  const optionSource = filterSourceSchools.length > 0 ? filterSourceSchools : schools
+
   const provinceOptions = useMemo(() => {
-    return [ALL_FILTER, ...uniqueValues(schools.flatMap((item) => getLocations(item).map((location) => location.province || '')))]
-  }, [schools])
-  const typeOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(schools.flatMap((item) => splitTokens(item.school_type)))], [schools])
-  const ageOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(schools.flatMap((item) => splitTokens(item.age_range)))], [schools])
+    return [ALL_FILTER, ...uniqueValues(optionSource.flatMap((item) => getLocations(item).map((location) => location.province || '')))]
+  }, [optionSource])
+  const typeOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(optionSource.flatMap((item) => splitTokens(item.school_type)))], [optionSource])
+  const ageOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(optionSource.flatMap((item) => splitTokens(item.age_range)))], [optionSource])
 
   const filteredSchools = useMemo(() => {
     const q = keyword.trim().toLowerCase()
@@ -108,12 +143,9 @@ export default function SchoolsPage() {
       const haystack = [item.name, item.canonical_name, item.province, item.city, getLocationHaystack(item), item.school_type, item.age_range, item.fee]
         .filter(Boolean).join(' ').toLowerCase()
       if (q && !haystack.includes(q)) return false
-      if (selectedProvince !== ALL_FILTER && !getLocations(item).some((location) => location.province === selectedProvince)) return false
-      if (selectedType !== ALL_FILTER && !splitTokens(item.school_type).includes(selectedType)) return false
-      if (selectedAgeRange !== ALL_FILTER && !splitTokens(item.age_range).includes(selectedAgeRange)) return false
       return true
     })
-  }, [schools, keyword, selectedProvince, selectedType, selectedAgeRange])
+  }, [schools, keyword])
 
   const resetFilters = () => {
     setKeyword('')
@@ -159,7 +191,7 @@ export default function SchoolsPage() {
           <Input
             type='text'
             value={keyword}
-            placeholder='搜索学习社区名 / 城市 / 类型'
+            placeholder='搜索当前结果里的学习社区名 / 城市 / 类型'
             placeholderStyle={`color:${palette.muted}`}
             onInput={(e) => setKeyword(e.detail.value)}
           />
@@ -211,7 +243,7 @@ export default function SchoolsPage() {
           borderRadius: '14px', border: `1px solid ${palette.brandSoft}`,
         }}>
           <Text style={{ color: palette.error }}>{error}</Text>
-          <View onClick={() => loadSchools({ forceRefresh: true })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
+          <View onClick={() => loadSchools({ forceRefresh: true, useFilters: true })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
             <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
           </View>
         </View>
