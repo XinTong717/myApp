@@ -9,6 +9,7 @@ import { sendRequest } from '../../services/connection'
 import { manageSafetyRelation, reportUser } from '../../services/safety'
 import { REPORT_REASON_OPTIONS } from '../../constants/safety'
 import { CITIES, PROV_FALLBACK } from '../../constants/cities'
+import { CHILD_AGE_OPTIONS } from '../../constants/profile'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import { palette } from '../../theme/palette'
 import {
@@ -30,9 +31,10 @@ type School = { id: number | string; name?: string; province?: string; city?: st
 type AppUser = { _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string; companionContext?: string; isSelf?: boolean }
 type MarkerItem = {
   id: number; latitude: number; longitude: number; name: string
-  type: 'school' | 'user' | 'user_cluster'; markerProv: string; city?: string
+  type: 'school' | 'school_cluster' | 'user' | 'user_cluster'; markerProv: string; city?: string
   originalId: number | string; bio?: string; roles?: string[]; companionContext?: string; isSelf?: boolean
   clusterUsers?: AppUser[]
+  clusterSchools?: School[]
 }
 type Coord = { lat: number; lng: number }
 
@@ -163,6 +165,11 @@ export default function ExplorePage() {
   const [selectedCluster, setSelectedCluster] = useState<MarkerItem | null>(null)
   const [mapMountReady, setMapMountReady] = useState(false)
   const [isNavigatingAway, setIsNavigatingAway] = useState(false)
+  const [showUserFilterSheet, setShowUserFilterSheet] = useState(false)
+  const [selectedUserRole, setSelectedUserRole] = useState<'全部' | '家长' | '教育者' | '同行者'>('全部')
+  const [selectedProfileCompleteness, setSelectedProfileCompleteness] = useState<'全部' | '有简介' | '有联络说明'>('全部')
+  const [selectedUserCity, setSelectedUserCity] = useState('全部')
+  const [selectedChildAgeRange, setSelectedChildAgeRange] = useState('全部')
 
   const loadData = async (options: { forceRefreshMapUsers?: boolean } = {}) => {
     try {
@@ -171,7 +178,11 @@ export default function ExplorePage() {
       setIsNavigatingAway(false)
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
         getSchools(),
-        getMapUsers({ forceRefresh: !!options.forceRefreshMapUsers, province: selectedProvince || undefined }),
+        getMapUsers({
+          forceRefresh: !!options.forceRefreshMapUsers,
+          province: selectedProvince || undefined,
+          childAgeRange: selectedUserRole === '家长' && selectedChildAgeRange !== '全部' ? selectedChildAgeRange : undefined,
+        }),
         getMe(),
       ])
 
@@ -191,9 +202,43 @@ export default function ExplorePage() {
   }
 
   useDidShow(() => { loadData() })
-  useEffect(() => { loadData() }, [selectedProvince])
+  useEffect(() => { loadData() }, [selectedProvince, selectedUserRole, selectedChildAgeRange])
 
   const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
+
+  const userCityOptions = useMemo(() => {
+    const citySet = new Set<string>()
+    appUsers.forEach((user) => {
+      if (selectedProvince && user.province !== selectedProvince) return
+      if (user.city) citySet.add(user.city)
+    })
+    return ['全部', ...Array.from(citySet).sort()]
+  }, [appUsers, selectedProvince])
+
+  const activeUserFilterCount = [
+    selectedUserRole !== '全部',
+    selectedProfileCompleteness !== '全部',
+    selectedUserCity !== '全部',
+    selectedUserRole === '家长' && selectedChildAgeRange !== '全部',
+  ].filter(Boolean).length
+
+  const resetUserFilters = () => {
+    setSelectedUserRole('全部')
+    setSelectedProfileCompleteness('全部')
+    setSelectedUserCity('全部')
+    setSelectedChildAgeRange('全部')
+  }
+
+  const applyClientUserFilters = (user: AppUser) => {
+    const roles = normalizeRoles(user.roles || [])
+
+    if (selectedUserRole !== '全部' && !roles.includes(selectedUserRole)) return false
+    if (selectedProfileCompleteness === '有简介' && !String(user.bio || '').trim()) return false
+    if (selectedProfileCompleteness === '有联络说明' && !String(user.companionContext || '').trim()) return false
+    if (selectedUserCity !== '全部' && user.city !== selectedUserCity) return false
+
+    return true
+  }
 
   const allMarkers = useMemo(() => {
     const items: MarkerItem[] = []
@@ -202,10 +247,18 @@ export default function ExplorePage() {
     const cityIndex: Record<string, number> = {}
 
     if (showSchools) {
-      schools.forEach((s) => { parseCities(s.city).forEach((c) => { cityCount[c] = (cityCount[c] || 0) + 1 }) })
+      const schoolMarkerItems: MarkerItem[] = []
+
+      schools.forEach((s) => {
+        parseCities(s.city).forEach((c) => {
+          cityCount[c] = (cityCount[c] || 0) + 1
+        })
+      })
+
       schools.forEach((s) => {
         const cities = parseCities(s.city)
         const schoolName = s.name?.trim() || '未知学习社区'
+
         if (cities.length > 0) {
           cities.forEach((cityName) => {
             const info = CITIES[cityName]
@@ -214,19 +267,82 @@ export default function ExplorePage() {
             cityIndex[cityName] = idx + 1
             const jittered = jitter(info.lat, info.lng, idx, cityCount[cityName] || 1, schoolName)
             if (!isValidCoord(jittered)) return
-            items.push({ id: nextId++, latitude: jittered.lat, longitude: jittered.lng, name: schoolName, type: 'school', markerProv: info.prov, city: cityName, originalId: s.id })
+
+            schoolMarkerItems.push({
+              id: nextId++,
+              latitude: jittered.lat,
+              longitude: jittered.lng,
+              name: schoolName,
+              type: 'school',
+              markerProv: info.prov,
+              city: cityName,
+              originalId: s.id,
+            })
           })
-        } else {
-          const prov = firstProvince(s.province)
-          const coord = PROV_FALLBACK[prov]
-          if (!isValidCoord(coord)) return
-          items.push({ id: nextId++, latitude: coord.lat, longitude: coord.lng, name: schoolName, type: 'school', markerProv: prov, city: '', originalId: s.id })
+          return
         }
+
+        const prov = firstProvince(s.province)
+        const coord = PROV_FALLBACK[prov]
+        if (!isValidCoord(coord)) return
+
+        schoolMarkerItems.push({
+          id: nextId++,
+          latitude: coord.lat,
+          longitude: coord.lng,
+          name: schoolName,
+          type: 'school',
+          markerProv: prov,
+          city: '',
+          originalId: s.id,
+        })
       })
+
+      if (!selectedProvince) {
+        const schoolsByProvince: Record<string, MarkerItem[]> = {}
+
+        schoolMarkerItems.forEach((item) => {
+          if (!item.markerProv) return
+          if (!schoolsByProvince[item.markerProv]) schoolsByProvince[item.markerProv] = []
+          schoolsByProvince[item.markerProv].push(item)
+        })
+
+        Object.keys(schoolsByProvince).forEach((province) => {
+          const group = schoolsByProvince[province]
+          const fallback = PROV_FALLBACK[province]
+          const lat = isValidCoord(fallback)
+            ? fallback.lat
+            : group.reduce((sum, item) => sum + item.latitude, 0) / group.length
+          const lng = isValidCoord(fallback)
+            ? fallback.lng
+            : group.reduce((sum, item) => sum + item.longitude, 0) / group.length
+
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+
+          items.push({
+            id: nextId++,
+            latitude: lat,
+            longitude: lng,
+            name: province,
+            type: 'school_cluster',
+            markerProv: province,
+            city: '',
+            originalId: `school-cluster-${province}`,
+            clusterSchools: group.map((item) => ({
+              id: item.originalId,
+              name: item.name,
+              province,
+              city: item.city,
+            })),
+          })
+        })
+      } else {
+        items.push(...schoolMarkerItems)
+      }
     }
 
     if (showUsers) {
-      const visibleUsers = appUsers.filter((u) => showEducators || u.isSelf || !isPureEducator(u))
+      const visibleUsers = appUsers.filter((u) => (showEducators || u.isSelf || !isPureEducator(u)) && applyClientUserFilters(u))
       const usersByCity: Record<string, AppUser[]> = {}
       const usersByProvince: Record<string, AppUser[]> = {}
 
@@ -311,7 +427,7 @@ export default function ExplorePage() {
     }
 
     return items
-  }, [schools, appUsers, showSchools, showUsers, showEducators])
+  }, [schools, appUsers, showSchools, showUsers, showEducators, selectedProvince, selectedUserRole, selectedProfileCompleteness, selectedUserCity])
 
   const filteredMarkers = useMemo(() => {
     if (!selectedProvince) return allMarkers
@@ -331,24 +447,33 @@ export default function ExplorePage() {
     if (m.type === 'user_cluster') return sum + (m.clusterUsers?.length || 0)
     return sum
   }, 0), [filteredMarkers])
-  const schoolCount = filteredMarkers.filter((m) => m.type === 'school').length
+  const schoolCount = filteredMarkers.reduce((sum, m) => {
+    if (m.type === 'school') return sum + 1
+    if (m.type === 'school_cluster') return sum + (m.clusterSchools?.length || 0)
+    return sum
+  }, 0)
   const userVisualMarkerCount = validMarkers.filter((m) => m.type === 'user' || m.type === 'user_cluster').length
-  const schoolMarkerCount = validMarkers.filter((m) => m.type === 'school').length
+  const schoolMarkerCount = validMarkers.filter((m) => m.type === 'school' || m.type === 'school_cluster').length
   const hasUserClusters = validMarkers.some((m) => m.type === 'user_cluster')
+  const hasSchoolClusters = validMarkers.some((m) => m.type === 'school_cluster')
   const isDenseMap = validMarkers.length > 120 || hasUserClusters || (!selectedProvince && userVisualMarkerCount > 12)
   const shouldShowUserLabels = selectedProvince ? userVisualMarkerCount <= 60 : userVisualMarkerCount <= 8
-  const shouldShowSchoolLabels = selectedProvince || schoolMarkerCount <= 180
+  const shouldShowSchoolLabels = !!selectedProvince || schoolMarkerCount <= 60
 
   const mapMarkers: any[] = useMemo(() => validMarkers.map((item) => {
-    const isCluster = item.type === 'user_cluster'
+    const isUserCluster = item.type === 'user_cluster'
+    const isSchoolCluster = item.type === 'school_cluster'
     const clusterCount = item.clusterUsers?.length || 0
-    const shouldShowLabel = isCluster || (item.type === 'school' ? shouldShowSchoolLabels : shouldShowUserLabels)
-    const labelContent = isCluster
+    const schoolClusterCount = item.clusterSchools?.length || 0
+    const shouldShowLabel = isUserCluster || isSchoolCluster || (item.type === 'school' ? shouldShowSchoolLabels : shouldShowUserLabels)
+    const labelContent = isUserCluster
       ? `${shortName(item.name, 6)} · ${clusterCount}人`
-      : item.type === 'school'
-        ? shortName(item.name)
-        : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
-    const markerSize = isCluster
+      : isSchoolCluster
+        ? `${shortName(item.name, 6)} · ${schoolClusterCount}校`
+        : item.type === 'school'
+          ? shortName(item.name)
+          : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
+    const markerSize = isUserCluster || isSchoolCluster
       ? 26
       : item.type === 'school'
         ? (isDenseMap ? 18 : 22)
@@ -359,24 +484,26 @@ export default function ExplorePage() {
       latitude: item.latitude,
       longitude: item.longitude,
       title: item.name,
-      iconPath: item.type === 'school' ? markerSchoolIcon : markerUserIcon,
+      iconPath: item.type === 'school' || item.type === 'school_cluster' ? markerSchoolIcon : markerUserIcon,
       width: markerSize,
       height: markerSize,
       anchor: { x: 0.5, y: 0.5 },
       ...(shouldShowLabel ? {
         label: {
           content: labelContent,
-          color: isCluster ? '#FFFFFF' : palette.text,
-          fontSize: isCluster ? 12 : 11,
-          anchorX: isCluster ? -32 : item.type === 'school' ? -24 : -22,
-          anchorY: isCluster ? -34 : -30,
-          borderRadius: isCluster ? 8 : 6,
+          color: isUserCluster || isSchoolCluster ? '#FFFFFF' : palette.text,
+          fontSize: isUserCluster || isSchoolCluster ? 12 : 11,
+          anchorX: isUserCluster || isSchoolCluster ? -32 : item.type === 'school' ? -24 : -22,
+          anchorY: isUserCluster || isSchoolCluster ? -34 : -30,
+          borderRadius: isUserCluster || isSchoolCluster ? 8 : 6,
           borderWidth: 0,
           borderColor: '#FFFFFF',
-          bgColor: isCluster
+          bgColor: isUserCluster
             ? 'rgba(184,85,64,0.95)'
-            : item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,245,232,0.92)',
-          padding: isCluster ? 5 : 4,
+            : isSchoolCluster
+              ? 'rgba(199,103,82,0.95)'
+              : item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,245,232,0.92)',
+          padding: isUserCluster || isSchoolCluster ? 5 : 4,
           textAlign: 'center',
         },
       } : {}),
@@ -490,6 +617,13 @@ export default function ExplorePage() {
     const item = idToMarker[markerId]
     if (!item) return
 
+    if (item.type === 'school_cluster') {
+      setSelectedUser(null)
+      setSelectedCluster(null)
+      setSelectedProvince(item.markerProv)
+      return
+    }
+
     if (item.type === 'school') {
       Taro.navigateTo({ url: '/pages/school-detail/index?id=' + item.originalId })
       return
@@ -572,7 +706,7 @@ export default function ExplorePage() {
     }
     return (
       <TaroMap
-        key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${hasUserClusters ? 'cluster' : 'plain'}`}
+        key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${shouldShowSchoolLabels ? 'school-label' : 'school-dot'}-${hasUserClusters ? 'cluster' : 'plain'}`}
         latitude={center.latitude}
         longitude={center.longitude}
         scale={scale}
@@ -589,7 +723,7 @@ export default function ExplorePage() {
         style={{ width: '100%', height: 'calc(100vh - 120px)' }}
       />
     )
-  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap, handleLabelTap, shouldShowUserLabels, hasUserClusters])
+  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap, handleLabelTap, shouldShowUserLabels, shouldShowSchoolLabels, hasUserClusters])
 
   return (
     <View style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
@@ -610,6 +744,23 @@ export default function ExplorePage() {
           <FilterChip active={showSchools} tone='brand' text={`学习社区 ${showSchools ? schoolCount : '—'}`} onClick={() => { setShowSchools(!showSchools); closePopup() }} />
           <FilterChip active={showUsers} tone='user' text={`同路人 ${showUsers ? userCount : '—'}`} onClick={() => { setShowUsers(!showUsers); closePopup() }} />
           {showUsers && <FilterChip active={showEducators} tone='educator' text='教育者' onClick={() => { setShowEducators((value) => !value); closePopup() }} />}
+          {showUsers && (
+            <View
+              onClick={() => setShowUserFilterSheet(true)}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '999px',
+                marginRight: '8px',
+                marginBottom: '6px',
+                backgroundColor: activeUserFilterCount > 0 ? palette.brandSoft : palette.tag,
+                border: `1px solid ${activeUserFilterCount > 0 ? palette.brandSoft : palette.lineSoft}`,
+              }}
+            >
+              <Text style={{ fontSize: '12px', fontWeight: 'bold', color: activeUserFilterCount > 0 ? palette.brand : palette.muted }}>
+                筛选{activeUserFilterCount > 0 ? ` ${activeUserFilterCount}` : ''}
+              </Text>
+            </View>
+          )}
           <View style={{ flex: 1 }} />
         </View>
 
@@ -630,10 +781,103 @@ export default function ExplorePage() {
       <View style={{ backgroundColor: exploreTheme.surface, padding: '5px 16px', borderTop: `1px solid ${exploreTheme.border}` }}>
         <Text style={{ fontSize: '10px', color: exploreTheme.muted }}>
           {hasUserClusters
-            ? '近似坐标 · 点击聚合点位展开同城同路人 · 点击学校名称查看详情'
+            ? '近似坐标 · 点击聚合点位展开同城同路人 · 点击学校聚合点进入省份视图'
             : isDenseMap ? '近似坐标 · 全国视图会自动隐藏部分名称 · 点击标记查看详情' : '近似坐标 · 仅供浏览 · 点击标记或名称查看详情'}
         </Text>
       </View>
+
+      {showUserFilterSheet && (
+        <View onClick={() => setShowUserFilterSheet(false)} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: exploreTheme.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
+          <View onClick={(event: any) => event?.stopPropagation?.()} style={sheetStyle}>
+            <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '14px' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: '20px', fontWeight: 'bold', color: exploreTheme.text }}>筛选同路人</Text>
+                <View style={{ marginTop: '4px' }}>
+                  <Text style={{ fontSize: '12px', color: exploreTheme.subtext }}>只影响地图上的同路人，不影响学习社区点位</Text>
+                </View>
+              </View>
+              <View onClick={() => setShowUserFilterSheet(false)} style={{ width: '32px', height: '32px', borderRadius: '999px', backgroundColor: exploreTheme.tag, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: '16px', color: exploreTheme.tagText }}>✕</Text>
+              </View>
+            </View>
+
+            <View style={{ marginBottom: '14px' }}>
+              <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.brand }}>身份</Text>
+              <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '8px' }}>
+                {(['全部', '家长', '教育者', '同行者'] as const).map((role) => (
+                  <FilterChip
+                    key={role}
+                    active={selectedUserRole === role}
+                    tone={role === '教育者' ? 'educator' : role === '家长' ? 'brand' : role === '同行者' ? 'user' : 'neutral'}
+                    text={role}
+                    onClick={() => {
+                      setSelectedUserRole(role)
+                      if (role !== '家长') setSelectedChildAgeRange('全部')
+                    }}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {selectedUserRole === '家长' && (
+              <View style={{ marginBottom: '14px' }}>
+                <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.brand }}>孩子学段</Text>
+                <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '8px' }}>
+                  {(['全部', ...CHILD_AGE_OPTIONS] as const).map((stage) => (
+                    <FilterChip
+                      key={stage}
+                      active={selectedChildAgeRange === stage}
+                      tone='brand'
+                      text={stage}
+                      onClick={() => setSelectedChildAgeRange(stage)}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={{ marginBottom: '14px' }}>
+              <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.brand }}>资料完整度</Text>
+              <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '8px' }}>
+                {(['全部', '有简介', '有联络说明'] as const).map((item) => (
+                  <FilterChip
+                    key={item}
+                    active={selectedProfileCompleteness === item}
+                    tone='neutral'
+                    text={item}
+                    onClick={() => setSelectedProfileCompleteness(item)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={{ marginBottom: '18px' }}>
+              <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.brand }}>城市</Text>
+              <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: '34px', marginTop: '8px' }}>
+                <View style={{ display: 'inline-flex', flexDirection: 'row' }}>
+                  {userCityOptions.map((city) => (
+                    <ProvinceChip
+                      key={city}
+                      active={selectedUserCity === city}
+                      text={city}
+                      onClick={() => setSelectedUserCity(city)}
+                    />
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+
+            <View style={{ display: 'flex', flexDirection: 'row' }}>
+              <View onClick={resetUserFilters} style={{ ...ghostButtonStyle, flex: 1, marginRight: '10px' }}>
+                <Text style={{ fontSize: '14px', color: exploreTheme.tagText, fontWeight: 'bold' }}>重置</Text>
+              </View>
+              <View onClick={() => setShowUserFilterSheet(false)} style={{ ...primaryButtonStyle, flex: 1 }}>
+                <Text style={{ fontSize: '14px', color: '#FFF', fontWeight: 'bold' }}>完成</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
 
       {selectedCluster && (
         <View onClick={closePopup} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: exploreTheme.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>

@@ -186,9 +186,10 @@ async function getSafetyOverview(event, wxContext) {
 async function getMapUsers(event, wxContext) {
   const requestId = resolveRequestId('get-map-users', event)
   const openid = wxContext.OPENID
+  const childAgeRangeFilter = String(event.childAgeRange || '').trim()
   try {
     const [usersRes, mySafetyRes, blockedByRes] = await Promise.all([
-      db.collection('users').where({ province: _.neq(''), city: _.neq(''), displayName: _.neq(''), isVisibleOnMap: _.neq(false) }).field({ displayName: true, roles: true, province: true, city: true, bio: true, companionContext: true, openid: true }).limit(500).get(),
+      db.collection('users').where({ province: _.neq(''), city: _.neq(''), displayName: _.neq(''), isVisibleOnMap: _.neq(false) }).field({ displayName: true, roles: true, province: true, city: true, bio: true, companionContext: true, childAgeRange: true, openid: true }).limit(500).get(),
       openid ? db.collection('safety_relations').where({ ownerOpenid: openid }).field({ targetOpenid: true, isBlocked: true, isMuted: true }).limit(500).get() : Promise.resolve({ data: [] }),
       openid ? db.collection('safety_relations').where({ targetOpenid: openid, isBlocked: true }).field({ ownerOpenid: true }).limit(500).get() : Promise.resolve({ data: [] }),
     ])
@@ -198,6 +199,12 @@ async function getMapUsers(event, wxContext) {
       if (user.openid !== openid && hiddenOpenids.has(user.openid)) return false
       if (user.openid !== openid && blockedByOpenids.has(user.openid)) return false
       return true
+    }).filter((user) => {
+      if (!childAgeRangeFilter) return true
+      const roles = normalizeRoles(user.roles || [])
+      if (!roles.includes('家长')) return false
+      const childAgeRange = normalizeStringArray(user.childAgeRange)
+      return childAgeRange.includes(childAgeRangeFilter)
     }).map((user) => ({ _id: user._id, displayName: user.displayName, roles: normalizeRoles(user.roles), province: user.province, city: user.city, bio: user.bio, companionContext: user.companionContext || '', isSelf: user.openid === openid }))
     return ok(requestId, { users })
   } catch (err) {

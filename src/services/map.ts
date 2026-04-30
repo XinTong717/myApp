@@ -10,13 +10,18 @@ function normalizeProvince(value?: string) {
   return String(value || '').trim()
 }
 
-function getMapUsersCacheKey(province?: string) {
-  return `${MAP_USERS_CACHE_KEY_PREFIX}${normalizeProvince(province) || 'all'}`
+function normalizeFilter(value?: string) {
+  return String(value || '').trim()
 }
 
-export async function getMapUsers(options: { forceRefresh?: boolean; province?: string } = {}) {
+function getMapUsersCacheKey(province?: string, childAgeRange?: string) {
+  return `${MAP_USERS_CACHE_KEY_PREFIX}${normalizeProvince(province) || 'all'}:${normalizeFilter(childAgeRange) || 'all-child-stage'}`
+}
+
+export async function getMapUsers(options: { forceRefresh?: boolean; province?: string; childAgeRange?: string } = {}) {
   const province = normalizeProvince(options.province)
-  const cacheKey = getMapUsersCacheKey(province)
+  const childAgeRange = normalizeFilter(options.childAgeRange)
+  const cacheKey = getMapUsersCacheKey(province, childAgeRange)
 
   if (!options.forceRefresh) {
     const cached = await getScopedCachedValue<GetMapUsersResult>(cacheKey)
@@ -25,7 +30,10 @@ export async function getMapUsers(options: { forceRefresh?: boolean; province?: 
     }
   }
 
-  const result = await callCloud<GetMapUsersResult>('getMapUsers', province ? { province } : {})
+  const result = await callCloud<GetMapUsersResult>('getMapUsers', {
+    ...(province ? { province } : {}),
+    ...(childAgeRange ? { childAgeRange } : {}),
+  })
   if (result.ok) {
     await setScopedCachedValue(cacheKey, result, MAP_USERS_TTL_MS)
     return result
