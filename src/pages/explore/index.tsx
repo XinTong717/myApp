@@ -5,7 +5,7 @@ import { REPORT_CODE_MESSAGES, REQUEST_CODE_MESSAGES, SAFETY_CODE_MESSAGES } fro
 import { getSchools } from '../../services/school'
 import { getMe } from '../../services/profile'
 import { clearMapUsersCache, getMapUsers } from '../../services/map'
-import type { MapProvinceStat } from '../../types/domain'
+import type { MapProvinceStat, SchoolLocationItem } from '../../types/domain'
 import { sendRequest } from '../../services/connection'
 import { manageSafetyRelation, reportUser } from '../../services/safety'
 import { REPORT_REASON_OPTIONS } from '../../constants/safety'
@@ -29,7 +29,7 @@ const markerUserIcon = '/assets/marker-user.png'
 const USER_CLUSTER_THRESHOLD = 5
 const EXPLORE_REFRESH_TTL = 30 * 1000
 
-type School = { id: number | string; name?: string; province?: string; city?: string }
+type School = { id: number | string; name?: string; canonical_name?: string; province?: string; city?: string; locations?: SchoolLocationItem[]; location_count?: number }
 type AppUser = { _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string; companionContext?: string; isSelf?: boolean }
 type MarkerItem = {
     id: number; latitude: number; longitude: number; name: string
@@ -37,6 +37,7 @@ type MarkerItem = {
     originalId: number | string; bio?: string; roles?: string[]; companionContext?: string; isSelf?: boolean
     clusterUsers?: AppUser[]
     clusterSchools?: School[]
+    schoolPointCount?: number
     provinceStat?: MapProvinceStat
 }
 type Coord = { lat: number; lng: number }
@@ -128,6 +129,49 @@ function uniqueSchoolsById(items: School[]) {
     if (!map.has(key)) map.set(key, item)
   })
   return Array.from(map.values())
+}
+
+function splitLocationLabels(value?: string): string[] {
+  return String(value || '')
+    .split(/[、,，/|｜]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function getSchoolDisplayName(school: School): string {
+  return (school.canonical_name || school.name || '').trim() || '未知学习社区'
+}
+
+function getSchoolLocations(school: School): SchoolLocationItem[] {
+  if (Array.isArray(school.locations) && school.locations.length > 0) {
+    return school.locations
+      .filter((location) => location.status !== 'deleted')
+      .map((location) => ({
+        ...location,
+        province: String(location.province || '').trim(),
+        city: String(location.city || '').trim(),
+      }))
+      .filter((location) => location.province || location.city)
+  }
+
+  const provinces = splitLocationLabels(school.province)
+  const cities = parseCities(school.city)
+
+  if (cities.length > 0) {
+    return cities.map((city, index) => ({
+      school_id: Number(school.id),
+      province: provinces[index] || provinces[0] || CITIES[city]?.prov || '',
+      city,
+      status: 'legacy',
+    }))
+  }
+
+  return provinces.map((province) => ({
+    school_id: Number(school.id),
+    province,
+    city: '',
+    status: 'legacy',
+  }))
 }
 
 
@@ -291,22 +335,29 @@ export default function ExplorePage() {
       const schoolMarkerItems: MarkerItem[] = []
 
       schools.forEach((s) => {
-        parseCities(s.city).forEach((c) => {
-          cityCount[c] = (cityCount[c] || 0) + 1
+        getSchoolLocations(s).forEach((location) => {
+          const cityName = String(location.city || '').trim()
+          if (!cityName || !CITIES[cityName]) return
+          cityCount[cityName] = (cityCount[cityName] || 0) + 1
         })
       })
 
       schools.forEach((s) => {
-        const cities = parseCities(s.city)
-        const schoolName = s.name?.trim() || '未知学习社区'
+        const locations = getSchoolLocations(s)
+        const schoolName = getSchoolDisplayName(s)
+        const cityLocations = locations.filter((location) => {
+          const cityName = String(location.city || '').trim()
+          return !!cityName && isValidCoord(CITIES[cityName])
+        })
 
-        if (cities.length > 0) {
-          cities.forEach((cityName) => {
+        if (cityLocations.length > 0) {
+          cityLocations.forEach((location) => {
+            const cityName = String(location.city || '').trim()
             const info = CITIES[cityName]
             if (!isValidCoord(info)) return
             const idx = cityIndex[cityName] || 0
             cityIndex[cityName] = idx + 1
-            const jittered = jitter(info.lat, info.lng, idx, cityCount[cityName] || 1, schoolName)
+            const jittered = jitter(info.lat, info.lng, idx, cityCount[cityName] || 1, `${schoolName}-${cityName}`)
             if (!isValidCoord(jittered)) return
 
             schoolMarkerItems.push({
@@ -315,7 +366,7 @@ export default function ExplorePage() {
               longitude: jittered.lng,
               name: schoolName,
               type: 'school',
-              markerProv: info.prov,
+              markerProv: String(location.province || '').trim() || info.prov,
               city: cityName,
               originalId: s.id,
             })
@@ -323,8 +374,8 @@ export default function ExplorePage() {
           return
         }
 
-        const prov = firstProvince(s.province)
-        const coord = PROV_FALLBACK[prov]
+        const fallbackProvince = locations.find((location) => location.province)?.province || firstProvince(s.province)
+        const coord = PROV_FALLBACK[fallbackProvince]
         if (!isValidCoord(coord)) return
 
         schoolMarkerItems.push({
@@ -333,7 +384,7 @@ export default function ExplorePage() {
           longitude: coord.lng,
           name: schoolName,
           type: 'school',
-          markerProv: prov,
+          markerProv: fallbackProvince,
           city: '',
           originalId: s.id,
         })
@@ -375,6 +426,7 @@ export default function ExplorePage() {
               province,
               city: item.city,
             }))),
+            schoolPointCount: group.length,
           })
         })
       } else {
@@ -521,6 +573,19 @@ export default function ExplorePage() {
     })
     return ids.size
   }, [schools, filteredMarkers, selectedProvince])
+
+  const schoolLocationCount = useMemo(() => {
+    return filteredMarkers.reduce((sum, marker) => {
+      if (marker.type === 'school') return sum + 1
+      if (marker.type === 'school_cluster') return sum + (marker.schoolPointCount || marker.clusterSchools?.length || 0)
+      return sum
+    }, 0)
+  }, [filteredMarkers])
+
+  const schoolFilterText = schoolLocationCount === schoolCount
+    ? `学习社区 ${schoolCount}`
+    : `学习社区 ${schoolCount}｜地点 ${schoolLocationCount}`
+
   const userVisualMarkerCount = validMarkers.filter((m) => m.type === 'user' || m.type === 'user_cluster').length
   const schoolMarkerCount = validMarkers.filter((m) => m.type === 'school' || m.type === 'school_cluster').length
   const hasUserClusters = validMarkers.some((m) => m.type === 'user_cluster')
@@ -823,7 +888,7 @@ export default function ExplorePage() {
 
       <View style={{ backgroundColor: exploreTheme.card, padding: '10px 14px 6px', borderBottom: `1px solid ${exploreTheme.border}` }}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
-          <FilterChip active={showSchools} tone='brand' text={`学习社区 ${showSchools ? schoolCount : '—'}`} onClick={() => { setShowSchools(!showSchools); closePopup() }} />
+          <FilterChip active={showSchools} tone='brand' text={schoolFilterText} onClick={() => { setShowSchools(!showSchools); closePopup() }} />
           <FilterChip active={showUsers} tone='user' text={`同路人 ${showUsers ? userCount : '—'}`} onClick={() => { setShowUsers(!showUsers); closePopup() }} />
           {showUsers && (
             <View
