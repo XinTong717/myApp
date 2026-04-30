@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Map as TaroMap, Text, View, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { REPORT_CODE_MESSAGES, REQUEST_CODE_MESSAGES, SAFETY_CODE_MESSAGES } from '../../constants/cloudMessages'
@@ -26,6 +26,7 @@ import {
 const markerSchoolIcon = '/assets/marker-school.png'
 const markerUserIcon = '/assets/marker-user.png'
 const USER_CLUSTER_THRESHOLD = 5
+const EXPLORE_REFRESH_TTL = 30 * 1000
 
 type School = { id: number | string; name?: string; province?: string; city?: string }
 type AppUser = { _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string; companionContext?: string; isSelf?: boolean }
@@ -170,6 +171,8 @@ export default function ExplorePage() {
   const [selectedProfileCompleteness, setSelectedProfileCompleteness] = useState<'全部' | '有简介' | '有联络说明'>('全部')
   const [selectedUserCity, setSelectedUserCity] = useState('全部')
   const [selectedChildAgeRange, setSelectedChildAgeRange] = useState('全部')
+  const hasLoadedOnceRef = useRef(false)
+  const lastAutoRefreshAtRef = useRef(0)
 
   const loadData = async (options: { forceRefreshMapUsers?: boolean } = {}) => {
     try {
@@ -201,8 +204,27 @@ export default function ExplorePage() {
     }
   }
 
-  useDidShow(() => { loadData() })
-  useEffect(() => { loadData() }, [selectedProvince, selectedUserRole, selectedChildAgeRange])
+  const refreshData = (options: { force?: boolean; forceRefreshMapUsers?: boolean } = {}) => {
+    const now = Date.now()
+    const shouldSkip =
+      !options.force &&
+      hasLoadedOnceRef.current &&
+      now - lastAutoRefreshAtRef.current < EXPLORE_REFRESH_TTL
+  
+    if (shouldSkip) return
+  
+    hasLoadedOnceRef.current = true
+    lastAutoRefreshAtRef.current = now
+    loadData({ forceRefreshMapUsers: !!options.forceRefreshMapUsers })
+  }
+  
+  useDidShow(() => {
+    refreshData()
+  })
+  
+  useEffect(() => {
+    refreshData({ force: true })
+  }, [selectedProvince, selectedUserRole, selectedChildAgeRange])
 
   const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
 
@@ -595,7 +617,7 @@ export default function ExplorePage() {
       if (result?.ok) {
         await clearMapUsersCache()
         closePopup()
-        loadData({ forceRefreshMapUsers: true })
+        refreshData({ force: true, forceRefreshMapUsers: true })
       } else {
         logCloudFailure('blockUserFromExplore', result)
       }
