@@ -2,6 +2,9 @@ const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
 const { normalizeRoles } = require('../lib/normalize')
 
+const MAP_USERS_DEFAULT_LIMIT = 120
+const MAP_USERS_PROVINCE_LIMIT = 300
+
 function normalizeProvince(value) {
   return String(value || '').trim()
 }
@@ -10,6 +13,7 @@ async function getMapUsers(event, wxContext) {
   const requestId = resolveRequestId('get-map-users', event)
   const openid = wxContext.OPENID
   const province = normalizeProvince(event.province)
+  const limit = province ? MAP_USERS_PROVINCE_LIMIT : MAP_USERS_DEFAULT_LIMIT
 
   try {
     const userWhere = {
@@ -23,7 +27,7 @@ async function getMapUsers(event, wxContext) {
       db.collection('users')
         .where(userWhere)
         .field({ displayName: true, roles: true, province: true, city: true, bio: true, companionContext: true, openid: true })
-        .limit(500)
+        .limit(limit)
         .get(),
       openid
         ? db.collection('safety_relations')
@@ -70,7 +74,7 @@ async function getMapUsers(event, wxContext) {
         isSelf: user.openid === openid,
       }))
 
-    return ok(requestId, { users, province: province || '' })
+    return ok(requestId, { users, province: province || '', limit })
   } catch (err) {
     console.error('appService getMapUsers error:', err)
     return fail(requestId, 'GET_MAP_USERS_FAILED', '读取地图用户失败', { users: [], province: province || '' })
