@@ -61,6 +61,30 @@ async function getCachedCount(eventId) {
   }
 }
 
+async function adjustInterestCountCache(eventId, delta) {
+  if (!delta) {
+    const cached = await getCachedCount(eventId)
+    return cached === null ? syncInterestCount(eventId) : cached
+  }
+
+  try {
+    await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).update({
+      data: {
+        eventId,
+        count: _.inc(delta),
+        updatedAt: db.serverDate(),
+      },
+    })
+
+    const cached = await getCachedCount(eventId)
+    if (cached !== null) return Math.max(0, cached)
+  } catch (err) {
+    console.warn('event interest count atomic update degraded:', err)
+  }
+
+  return syncInterestCount(eventId)
+}
+
 async function getCachedCounts(eventIds) {
   const counts = {}
   const countDocIds = eventIds.map((eventId) => buildCountDocId(eventId))
@@ -92,8 +116,8 @@ function attachInterestCounts(events, counts = {}) {
   }))
 }
 
-async function updateInterestCountAfterMutation(eventId) {
-  return syncInterestCount(eventId)
+async function updateInterestCountAfterMutation(eventId, delta) {
+  return adjustInterestCountCache(eventId, delta)
 }
 
 async function getSchools(event) {
@@ -399,11 +423,11 @@ async function toggleEventInterest(event, wxContext) {
       const nextStatus = wasInterested ? 'cancelled' : 'interested'
       const delta = wasInterested ? -1 : 1
       await db.collection('event_interest').doc(stableDocId).update({ data: { status: nextStatus, updatedAt: db.serverDate() } })
-      const count = await updateInterestCountAfterMutation(eventId)
+      const count = await updateInterestCountAfterMutation(eventId, delta)
       return ok(requestId, { hasInterested: nextStatus === 'interested', count, delta, message: nextStatus === 'interested' ? '已标记为感兴趣' : '已取消感兴趣' })
     }
     await db.collection('event_interest').doc(stableDocId).set({ data: { eventId, openid, status: 'interested', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
-    const count = await updateInterestCountAfterMutation(eventId)
+    const count = await updateInterestCountAfterMutation(eventId, 1)
     return ok(requestId, { hasInterested: true, count, delta: 1, message: '已标记为感兴趣' })
   } catch (err) {
     console.error('appService toggleEventInterest error:', err)
