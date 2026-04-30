@@ -1,7 +1,12 @@
 const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
 const { runMsgSecCheck } = require('../lib/security')
-const { API_BASE_URL, API_KEY, requestJson } = require('../lib/memfire')
+const {
+  listSchools,
+  getSchoolById,
+  listEvents,
+  getEventById,
+} = require('../lib/contentRepo')
 const {
   normalizeStringArray,
   mergeOtherOption,
@@ -12,13 +17,6 @@ const { getUserProfileByOpenid } = require('../lib/userRepo')
 
 const COUNT_COLLECTION = 'event_interest_counts'
 const DAILY_SUBMISSION_LIMIT = 5
-const SCHOOL_LIST_LIMIT = 200
-const EVENT_LIST_LIMIT = 50
-
-const SCHOOL_LIST_FIELDS = ['id', 'name', 'province', 'city', 'age_range', 'school_type'].join(',')
-const SCHOOL_DETAIL_FIELDS = ['id', 'name', 'province', 'city', 'age_range', 'school_type', 'has_xuji', 'xuji_note', 'residency_req', 'admission_req', 'fee', 'output_direction', 'official_url'].join(',')
-const EVENT_LIST_FIELDS = ['id', 'title', 'event_type', 'description', 'start_time', 'end_time', 'location', 'fee', 'status', 'organizer', 'is_online'].join(',')
-const EVENT_DETAIL_FIELDS = EVENT_LIST_FIELDS
 
 function buildInterestDocId(eventId, openid) {
   return `event_${eventId}_${openid}`
@@ -26,16 +24,6 @@ function buildInterestDocId(eventId, openid) {
 
 function buildCountDocId(eventId) {
   return String(eventId)
-}
-
-function toUpstreamFailure(requestId, err, emptyField, fallbackValue) {
-  const isTimeout = err?.code === 'UPSTREAM_TIMEOUT'
-  return fail(
-    requestId,
-    isTimeout ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_UNAVAILABLE',
-    isTimeout ? '加载超时，请重试' : '暂时无法加载，请稍后重试',
-    { [emptyField]: fallbackValue, stale: true }
-  )
 }
 
 async function countInterestedFromSource(eventId) {
@@ -111,64 +99,56 @@ async function updateInterestCountAfterMutation(eventId) {
 async function getSchools(event) {
   const requestId = resolveRequestId('get-schools', event)
   try {
-    if (!API_KEY) return fail(requestId, 'MEMFIRE_API_KEY_MISSING', 'MEMFIRE_API_KEY 未配置', { schools: [] })
-    const limit = Math.min(Math.max(Number(event?.limit || SCHOOL_LIST_LIMIT), 1), SCHOOL_LIST_LIMIT)
-    const url = `${API_BASE_URL}/schools?select=${encodeURIComponent(SCHOOL_LIST_FIELDS)}&order=id.asc&limit=${limit}`
-    const data = await requestJson(url)
-    return ok(requestId, { schools: Array.isArray(data) ? data : [] })
+    const schools = await listSchools(event?.limit)
+    return ok(requestId, { schools })
   } catch (err) {
     console.error('appService getSchools error:', err)
-    return toUpstreamFailure(requestId, err, 'schools', [])
+    return fail(requestId, 'GET_SCHOOLS_FAILED', '读取学习社区失败，请稍后重试', { schools: [] })
   }
 }
 
 async function getSchoolDetail(event) {
   const requestId = resolveRequestId('get-school-detail', event)
   try {
-    if (!API_KEY) return fail(requestId, 'MEMFIRE_API_KEY_MISSING', 'MEMFIRE_API_KEY 未配置', { school: null })
     const schoolId = Number(event?.schoolId || 0)
     if (!schoolId) return fail(requestId, 'BAD_REQUEST', 'schoolId 无效', { school: null })
-    const url = `${API_BASE_URL}/schools?select=${encodeURIComponent(SCHOOL_DETAIL_FIELDS)}&id=eq.${schoolId}&limit=1`
-    const data = await requestJson(url)
-    return ok(requestId, { school: Array.isArray(data) ? (data[0] || null) : null })
+
+    const school = await getSchoolById(schoolId)
+    return ok(requestId, { school })
   } catch (err) {
     console.error('appService getSchoolDetail error:', err)
-    return toUpstreamFailure(requestId, err, 'school', null)
+    return fail(requestId, 'GET_SCHOOL_DETAIL_FAILED', '读取学习社区详情失败，请稍后重试', { school: null })
   }
 }
 
 async function getEvents(event) {
   const requestId = resolveRequestId('get-events', event)
   try {
-    if (!API_KEY) return fail(requestId, 'MEMFIRE_API_KEY_MISSING', 'MEMFIRE_API_KEY 未配置', { events: [] })
-    const limit = Math.min(Math.max(Number(event?.limit || EVENT_LIST_LIMIT), 1), EVENT_LIST_LIMIT)
-    const url = `${API_BASE_URL}/events?select=${encodeURIComponent(EVENT_LIST_FIELDS)}&order=start_time.asc&limit=${limit}`
-    const data = await requestJson(url)
-    const events = Array.isArray(data) ? data : []
+    const events = await listEvents(event?.limit)
     if (event?.includeInterestCounts === false || events.length === 0) {
       return ok(requestId, { events })
     }
+
     const eventIds = events.map((item) => Number(item.id)).filter((id) => Number.isFinite(id) && id > 0)
     const counts = await getCachedCounts(eventIds)
     return ok(requestId, { events: attachInterestCounts(events, counts) })
   } catch (err) {
     console.error('appService getEvents error:', err)
-    return toUpstreamFailure(requestId, err, 'events', [])
+    return fail(requestId, 'GET_EVENTS_FAILED', '读取活动失败，请稍后重试', { events: [] })
   }
 }
 
 async function getEventDetail(event) {
   const requestId = resolveRequestId('get-event-detail', event)
   try {
-    if (!API_KEY) return fail(requestId, 'MEMFIRE_API_KEY_MISSING', 'MEMFIRE_API_KEY 未配置', { event: null })
     const eventId = Number(event?.eventId || 0)
     if (!eventId) return fail(requestId, 'BAD_REQUEST', 'eventId 无效', { event: null })
-    const url = `${API_BASE_URL}/events?select=${encodeURIComponent(EVENT_DETAIL_FIELDS)}&id=eq.${eventId}&limit=1`
-    const data = await requestJson(url)
-    return ok(requestId, { event: Array.isArray(data) ? (data[0] || null) : null })
+
+    const event = await getEventById(eventId)
+    return ok(requestId, { event })
   } catch (err) {
     console.error('appService getEventDetail error:', err)
-    return toUpstreamFailure(requestId, err, 'event', null)
+    return fail(requestId, 'GET_EVENT_DETAIL_FAILED', '读取活动详情失败，请稍后重试', { event: null })
   }
 }
 
