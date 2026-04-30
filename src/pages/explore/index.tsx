@@ -179,6 +179,7 @@ export default function ExplorePage() {
   const [selectedUserCity, setSelectedUserCity] = useState('全部')
   const [selectedChildAgeRange, setSelectedChildAgeRange] = useState('全部')
   const hasLoadedOnceRef = useRef(false)
+  const isFirstRunRef = useRef(true)
   const lastAutoRefreshAtRef = useRef(0)
 
   const loadData = async (options: { forceRefreshMapUsers?: boolean } = {}) => {
@@ -237,6 +238,10 @@ export default function ExplorePage() {
   })
   
   useEffect(() => {
+    if (isFirstRunRef.current) {
+      isFirstRunRef.current = false
+      return
+    }
     refreshData({ force: true })
   }, [selectedProvince, selectedUserRole, selectedChildAgeRange])
 
