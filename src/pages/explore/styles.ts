@@ -71,7 +71,6 @@ export const cardStyle = {
   borderRadius: '20px',
   padding: '18px 16px',
   border: `1px solid ${exploreTheme.border}`,
-  boxShadow: `0 6px 20px ${exploreTheme.shadow}`,
 } as const
 
 export const panelStyle = {
@@ -86,7 +85,6 @@ export const primaryButtonStyle = {
   borderRadius: '16px',
   padding: '14px',
   textAlign: 'center',
-  boxShadow: `0 6px 16px ${exploreTheme.shadow}`,
 } as const
 
 export const ghostButtonStyle = {
@@ -104,5 +102,4 @@ export const sheetStyle = {
   padding: '18px 16px 24px',
   boxSizing: 'border-box',
   borderTop: `1px solid ${exploreTheme.border}`,
-  boxShadow: `0 -8px 24px ${exploreTheme.shadow}`,
 } as const
