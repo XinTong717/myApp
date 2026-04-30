@@ -1,5 +1,7 @@
 const { db } = require('./cloud')
 
+const RATE_LIMIT_COLLECTION = 'rate_limits'
+
 function sanitizeDocPart(value) {
   return String(value || '')
     .replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -17,7 +19,7 @@ async function rateLimit(openid, action, options = {}) {
   try {
     let current = null
     try {
-      current = (await db.collection('_rate_limits').doc(docId).get()).data || null
+      current = (await db.collection(RATE_LIMIT_COLLECTION).doc(docId).get()).data || null
     } catch (err) {
       current = null
     }
@@ -27,7 +29,7 @@ async function rateLimit(openid, action, options = {}) {
     const shouldReset = !windowStart || now - windowStart >= windowMs
     const nextCount = shouldReset ? 1 : count + 1
 
-    await db.collection('_rate_limits').doc(docId).set({
+    await db.collection(RATE_LIMIT_COLLECTION).doc(docId).set({
       data: {
         openid: openid || '',
         action,
@@ -55,4 +57,4 @@ async function rateLimit(openid, action, options = {}) {
   }
 }
 
-module.exports = { rateLimit }
+module.exports = { rateLimit, RATE_LIMIT_COLLECTION }
