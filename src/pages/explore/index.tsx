@@ -119,10 +119,6 @@ function normalizeRoles(roles: string[] = []) {
   return roles.map((role) => role === '其他' ? '同行者' : role)
 }
 
-function isPureEducator(user: AppUser) {
-  const roles = normalizeRoles(user.roles || [])
-  return roles.includes('教育者') && !roles.includes('家长')
-}
 
 function FilterChip(props: { active: boolean; tone?: 'brand' | 'user' | 'educator' | 'neutral'; text: string; onClick: () => void }) {
   const styles = chip(props.active, props.tone || 'brand')
@@ -159,7 +155,6 @@ export default function ExplorePage() {
   const [error, setError] = useState('')
   const [showSchools, setShowSchools] = useState(true)
   const [showUsers, setShowUsers] = useState(true)
-  const [showEducators, setShowEducators] = useState(false)
   const [selectedProvince, setSelectedProvince] = useState('')
   const [hasProfile, setHasProfile] = useState(true)
   const [selectedUser, setSelectedUser] = useState<MarkerItem | null>(null)
