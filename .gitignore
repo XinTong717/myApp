@@ -7,3 +7,6 @@ node_modules/
 .swc
 *.local
 /.claude
+scripts/migration-data/
+scripts/migration-output/
+cloudfunctions/migrateContent/migration-data/

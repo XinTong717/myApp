@@ -53,6 +53,7 @@
     "@types/react": "^18.0.0",
     "@types/webpack-env": "^1.13.6",
     "babel-preset-taro": "4.1.11",
+    "csv-parse": "^6.2.1",
     "eslint": "^8.57.0",
     "eslint-config-taro": "4.1.11",
     "eslint-plugin-react": "^7.34.1",
