@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
-import { View, Text, Input } from '@tarojs/components'
+import { View, Text, Input, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
 import { palette } from '../../theme/palette'
+import { ListSkeleton } from '../../components/common/Skeleton'
+
+const ALL_FILTER = '全部'
 
 type School = {
   id: number
@@ -15,11 +18,40 @@ type School = {
   fee?: string
 }
 
+function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <View onClick={props.onClick} style={{
+      padding: '6px 12px',
+      borderRadius: '999px',
+      marginRight: '8px',
+      marginBottom: '8px',
+      backgroundColor: props.active ? palette.accentDeep : palette.tag,
+      border: `1px solid ${props.active ? palette.accentDeep : palette.line}`,
+    }}>
+      <Text style={{ fontSize: '12px', color: props.active ? '#FFF' : palette.tagText }}>{props.label}</Text>
+    </View>
+  )
+}
+
+function splitTokens(value?: string) {
+  return String(value || '')
+    .split(/[、,，/|｜\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function uniqueValues(values: string[], max = 12) {
+  return Array.from(new Set(values.filter(Boolean))).slice(0, max)
+}
+
 export default function SchoolsPage() {
   const [schools, setSchools] = useState<School[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [keyword, setKeyword] = useState('')
+  const [selectedProvince, setSelectedProvince] = useState(ALL_FILTER)
+  const [selectedType, setSelectedType] = useState(ALL_FILTER)
+  const [selectedAgeRange, setSelectedAgeRange] = useState(ALL_FILTER)
 
   const loadSchools = async (options: { forceRefresh?: boolean } = {}) => {
     try {
@@ -47,15 +79,29 @@ export default function SchoolsPage() {
     Taro.stopPullDownRefresh()
   })
 
+  const provinceOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(schools.map((item) => item.province || ''))], [schools])
+  const typeOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(schools.flatMap((item) => splitTokens(item.school_type)))], [schools])
+  const ageOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(schools.flatMap((item) => splitTokens(item.age_range)))], [schools])
+
   const filteredSchools = useMemo(() => {
     const q = keyword.trim().toLowerCase()
-    if (!q) return schools
     return schools.filter((item) => {
       const haystack = [item.name, item.province, item.city, item.school_type, item.age_range, item.fee]
         .filter(Boolean).join(' ').toLowerCase()
-      return haystack.includes(q)
+      if (q && !haystack.includes(q)) return false
+      if (selectedProvince !== ALL_FILTER && item.province !== selectedProvince) return false
+      if (selectedType !== ALL_FILTER && !splitTokens(item.school_type).includes(selectedType)) return false
+      if (selectedAgeRange !== ALL_FILTER && !splitTokens(item.age_range).includes(selectedAgeRange)) return false
+      return true
     })
-  }, [schools, keyword])
+  }, [schools, keyword, selectedProvince, selectedType, selectedAgeRange])
+
+  const resetFilters = () => {
+    setKeyword('')
+    setSelectedProvince(ALL_FILTER)
+    setSelectedType(ALL_FILTER)
+    setSelectedAgeRange(ALL_FILTER)
+  }
 
   const goToDetail = (item: School) => {
     Taro.navigateTo({ url: `/pages/school-detail/index?id=${item.id}` })
@@ -73,7 +119,6 @@ export default function SchoolsPage() {
       <View style={{
         backgroundColor: palette.card, borderRadius: '22px',
         padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-        boxShadow: `0 6px 20px ${palette.shadow}`,
       }}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '8px' }}>
           <View style={{ flex: 1 }}>
@@ -81,7 +126,6 @@ export default function SchoolsPage() {
           </View>
           <View onClick={goToSubmit} style={{
             padding: '7px 12px', borderRadius: '999px', background: palette.primaryGradient,
-            boxShadow: `0 4px 12px ${palette.shadow}`,
           }}>
             <Text style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 'bold' }}>推荐新学习社区</Text>
           </View>
@@ -103,11 +147,44 @@ export default function SchoolsPage() {
         </View>
       </View>
 
+      <View style={{ backgroundColor: palette.card, borderRadius: '18px', padding: '12px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+        <View style={{ marginBottom: '8px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.text }}>筛选</Text>
+          <Text onClick={resetFilters} style={{ fontSize: '12px', color: palette.link }}>重置</Text>
+        </View>
+
+        <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: '6px' }}>
+          <View style={{ display: 'flex', flexDirection: 'row' }}>
+            {provinceOptions.map((option) => (
+              <FilterChip key={option} label={option} active={selectedProvince === option} onClick={() => setSelectedProvince(option)} />
+            ))}
+          </View>
+        </ScrollView>
+
+        <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: '6px' }}>
+          <View style={{ display: 'flex', flexDirection: 'row' }}>
+            {typeOptions.map((option) => (
+              <FilterChip key={option} label={option} active={selectedType === option} onClick={() => setSelectedType(option)} />
+            ))}
+          </View>
+        </ScrollView>
+
+        <ScrollView scrollX style={{ whiteSpace: 'nowrap' }}>
+          <View style={{ display: 'flex', flexDirection: 'row' }}>
+            {ageOptions.map((option) => (
+              <FilterChip key={option} label={option} active={selectedAgeRange === option} onClick={() => setSelectedAgeRange(option)} />
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+
       <View style={{ marginBottom: '14px' }}>
         <Text style={{ color: palette.muted, fontSize: '13px' }}>
           {loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 个学习社区`}
         </Text>
       </View>
+
+      {loading ? <ListSkeleton count={3} rows={3} /> : null}
 
       {error ? (
         <View style={{
@@ -115,6 +192,9 @@ export default function SchoolsPage() {
           borderRadius: '14px', border: `1px solid ${palette.brandSoft}`,
         }}>
           <Text style={{ color: palette.error }}>{error}</Text>
+          <View onClick={() => loadSchools({ forceRefresh: true })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
+            <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
+          </View>
         </View>
       ) : null}
 
@@ -127,7 +207,7 @@ export default function SchoolsPage() {
         </View>
       ) : null}
 
-      {filteredSchools.map((item, index) => {
+      {!loading && filteredSchools.map((item, index) => {
         const iconBgRotation = [palette.iconBg, palette.brandSoft, palette.accent2Soft, palette.greenSoft]
         const iconBg = iconBgRotation[index % iconBgRotation.length]
 
@@ -139,7 +219,6 @@ export default function SchoolsPage() {
               backgroundColor: palette.card, borderRadius: '22px',
               padding: '16px', marginBottom: '14px',
               boxSizing: 'border-box', border: `1px solid ${palette.line}`,
-              boxShadow: `0 4px 14px ${palette.shadow}`,
             }}
           >
             <View style={{
