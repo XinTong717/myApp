@@ -49,7 +49,7 @@ export const chip = (active: boolean, tone: 'brand' | 'user' | 'educator' | 'neu
       fontWeight: 'bold',
       color: active ? activeColor : exploreTheme.muted,
     },
-  }
+  } as const
 }
 
 export const provinceChip = (active: boolean) => ({
@@ -64,7 +64,7 @@ export const provinceChip = (active: boolean) => ({
     fontSize: '11px',
     color: active ? '#FFF' : exploreTheme.tagText,
   },
-})
+} as const)
 
 export const cardStyle = {
   backgroundColor: exploreTheme.card,
@@ -72,14 +72,14 @@ export const cardStyle = {
   padding: '18px 16px',
   border: `1px solid ${exploreTheme.border}`,
   boxShadow: `0 6px 20px ${exploreTheme.shadow}`,
-}
+} as const
 
 export const panelStyle = {
   backgroundColor: exploreTheme.surface,
   borderRadius: '18px',
   padding: '14px 12px',
   border: `1px solid ${exploreTheme.border}`,
-}
+} as const
 
 export const primaryButtonStyle = {
   background: exploreTheme.gradient,
@@ -87,14 +87,14 @@ export const primaryButtonStyle = {
   padding: '14px',
   textAlign: 'center',
   boxShadow: `0 6px 16px ${exploreTheme.shadow}`,
-}
+} as const
 
 export const ghostButtonStyle = {
   backgroundColor: exploreTheme.tag,
   borderRadius: '16px',
   padding: '14px',
   textAlign: 'center',
-}
+} as const
 
 export const sheetStyle = {
   width: '100%',
@@ -105,4 +105,4 @@ export const sheetStyle = {
   boxSizing: 'border-box',
   borderTop: `1px solid ${exploreTheme.border}`,
   boxShadow: `0 -8px 24px ${exploreTheme.shadow}`,
-}
+} as const
