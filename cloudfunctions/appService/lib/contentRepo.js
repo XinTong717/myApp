@@ -21,7 +21,14 @@ function splitLabels(value) {
 }
 
 function uniqueLabels(values) {
-  return Array.from(new Set((values || []).map((item) => normalizeString(item)).filter(Boolean)))
+  return Array.from(new Set((values || []).map((item) => normalizeString(item)).filter((item) => item && item !== '全部')))
+}
+
+function normalizeFilterList(...values) {
+  return uniqueLabels(values.flatMap((value) => {
+    if (Array.isArray(value)) return value.flatMap((item) => splitLabels(item))
+    return splitLabels(value)
+  }))
 }
 
 function uniqueNumbers(values) {
@@ -47,15 +54,22 @@ function getCanonicalName(school) {
   return normalizeString(school.canonical_name || school.name || school.title)
 }
 
+function matchesAnyText(value, filters) {
+  if (!filters || filters.length === 0) return true
+  const text = normalizeString(value)
+  const tokens = splitLabels(value)
+  return filters.some((filter) => tokens.includes(filter) || text.includes(filter))
+}
+
 function buildSchoolWhere(options = {}) {
   const where = { status: _.neq('deleted') }
-  const schoolType = normalizeString(options.schoolType || options.type)
-  const ageRange = normalizeString(options.ageRange)
+  const schoolTypes = normalizeFilterList(options.schoolType || options.type, options.schoolTypes || options.types)
+  const ageRanges = normalizeFilterList(options.ageRange, options.ageRanges)
   const schoolIds = uniqueNumbers(options.schoolIds || [])
 
   if (schoolIds.length > 0) where.id = _.in(schoolIds)
-  if (schoolType) where.school_type = containsRegExp(schoolType)
-  if (ageRange) where.age_range = containsRegExp(ageRange)
+  if (schoolTypes.length === 1) where.school_type = containsRegExp(schoolTypes[0])
+  if (ageRanges.length === 1) where.age_range = containsRegExp(ageRanges[0])
 
   return where
 }
@@ -119,14 +133,16 @@ async function listSchoolLocationsByIds(schoolIds) {
 }
 
 async function listSchoolIdsByLocation(options = {}) {
-  const province = normalizeString(options.province)
-  const city = normalizeString(options.city)
-  if (!province && !city) return null
+  const provinces = normalizeFilterList(options.province, options.provinces)
+  const cities = normalizeFilterList(options.city, options.cities)
+  if (provinces.length === 0 && cities.length === 0) return null
 
   try {
     const where = { status: _.neq('deleted') }
-    if (province) where.province = province
-    if (city) where.city = city
+    if (provinces.length === 1) where.province = provinces[0]
+    if (provinces.length > 1) where.province = _.in(provinces)
+    if (cities.length === 1) where.city = cities[0]
+    if (cities.length > 1) where.city = _.in(cities)
 
     const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
       .where(where)
@@ -180,17 +196,29 @@ function attachSchoolLocations(schools, locations) {
 }
 
 function filterSchoolsByLocation(schools, options = {}) {
-  const province = normalizeString(options.province)
-  const city = normalizeString(options.city)
-  if (!province && !city) return schools
+  const provinces = normalizeFilterList(options.province, options.provinces)
+  const cities = normalizeFilterList(options.city, options.cities)
+  if (provinces.length === 0 && cities.length === 0) return schools
 
   return schools.filter((school) => {
     const locations = Array.isArray(school.locations) ? school.locations : []
     return locations.some((location) => {
-      if (province && location.province !== province) return false
-      if (city && location.city !== city) return false
+      if (provinces.length > 0 && !provinces.includes(location.province)) return false
+      if (cities.length > 0 && !cities.includes(location.city)) return false
       return true
     })
+  })
+}
+
+function filterSchoolsByFacets(schools, options = {}) {
+  const schoolTypes = normalizeFilterList(options.schoolType || options.type, options.schoolTypes || options.types)
+  const ageRanges = normalizeFilterList(options.ageRange, options.ageRanges)
+  if (schoolTypes.length === 0 && ageRanges.length === 0) return schools
+
+  return schools.filter((school) => {
+    if (!matchesAnyText(school.school_type, schoolTypes)) return false
+    if (!matchesAnyText(school.age_range, ageRanges)) return false
+    return true
   })
 }
 
@@ -205,9 +233,15 @@ async function listSchools(options = {}) {
     ? { ...normalizedOptions, schoolIds: locationSchoolIds }
     : normalizedOptions
 
+  const hasMultiFacetFilter =
+    normalizeFilterList(queryOptions.schoolType || queryOptions.type, queryOptions.schoolTypes || queryOptions.types).length > 1 ||
+    normalizeFilterList(queryOptions.ageRange, queryOptions.ageRanges).length > 1
+
   const queryLimit = Array.isArray(locationSchoolIds)
     ? Math.min(Math.max(locationSchoolIds.length, 1), SCHOOL_LIST_MAX_LIMIT)
-    : limit
+    : hasMultiFacetFilter
+      ? SCHOOL_LIST_MAX_LIMIT
+      : limit
 
   const res = await db.collection('schools')
     .where(buildSchoolWhere(queryOptions))
@@ -232,7 +266,7 @@ async function listSchools(options = {}) {
   const locations = await listSchoolLocationsByIds(rawSchools.map((school) => school.id))
   const schoolsWithLocations = attachSchoolLocations(rawSchools, locations)
 
-  return filterSchoolsByLocation(schoolsWithLocations, normalizedOptions).slice(0, limit)
+  return filterSchoolsByFacets(filterSchoolsByLocation(schoolsWithLocations, normalizedOptions), normalizedOptions).slice(0, limit)
 }
 
 async function getSchoolById(schoolId) {
