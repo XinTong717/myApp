@@ -3,6 +3,7 @@ import { View, Text, Textarea } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { getSchoolDetail, submitCorrection } from '../../services/school'
 import { palette } from '../../theme/palette'
+import { DetailSkeleton } from '../../components/common/Skeleton'
 
 type School = {
   id: number
@@ -56,13 +57,17 @@ export default function SchoolDetailPage() {
   const [correctionSubmitting, setCorrectionSubmitting] = useState(false)
   const [correctionDone, setCorrectionDone] = useState(false)
 
-  const loadDetail = async () => {
+  const loadDetail = async (options: { forceRefresh?: boolean } = {}) => {
     try {
       setLoading(true)
       setError('')
       const id = Number(getCurrentInstance().router?.params?.id || 0)
-      const result = await getSchoolDetail(id)
-      setSchool(result?.school || null)
+      const result = await getSchoolDetail(id, { forceRefresh: !!options.forceRefresh })
+      const nextSchool = result?.school || null
+      setSchool(nextSchool)
+      if (!result?.ok || !nextSchool) {
+        setError(result?.message || '未找到该学习社区')
+      }
     } catch (err: any) {
       console.error('loadDetail error:', err)
       setError(err?.message || '读取学习社区详情失败')
@@ -88,10 +93,14 @@ export default function SchoolDetailPage() {
 
     try {
       setCorrectionSubmitting(true)
-      await submitCorrection(school.id, school.name, text)
-      setCorrectionDone(true)
-      setCorrectionText('')
-      Taro.showToast({ title: '提交成功，感谢反馈', icon: 'success' })
+      const result = await submitCorrection(school.id, school.name, text)
+      if (result?.ok) {
+        setCorrectionDone(true)
+        setCorrectionText('')
+        Taro.showToast({ title: '提交成功，感谢反馈', icon: 'success' })
+      } else {
+        Taro.showToast({ title: result?.message || '提交失败，请稍后重试', icon: 'none' })
+      }
     } catch (err: any) {
       console.error('submitCorrection error:', err)
       Taro.showToast({ title: '提交失败，请稍后重试', icon: 'none' })
@@ -102,19 +111,22 @@ export default function SchoolDetailPage() {
 
   return (
     <View style={{ padding: '16px', backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
-      {loading && <Text style={{ color: palette.subtext }}>加载中...</Text>}
+      {loading && <DetailSkeleton />}
 
-      {error && (
+      {!loading && error && (
         <View style={{ padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.line}` }}>
           <Text style={{ color: palette.error }}>{error}</Text>
+          <View onClick={() => loadDetail({ forceRefresh: true })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
+            <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
+          </View>
         </View>
       )}
 
       {!loading && !error && !school && <Text style={{ color: palette.subtext }}>未找到该学习社区</Text>}
 
-      {!loading && school && (
+      {!loading && !error && school && (
         <>
-          <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`, boxShadow: `0 4px 14px ${palette.shadow}` }}>
+          <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
             <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
               <View style={{ width: '42px', height: '42px', borderRadius: '15px', backgroundColor: palette.tag, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '10px', border: `1px solid ${palette.line}` }}>
                 <Text style={{ fontSize: '20px' }}>🏫</Text>
@@ -149,7 +161,7 @@ export default function SchoolDetailPage() {
           <InfoRow label='参考费用' value={school.fee} />
           <InfoRow label='相关说明' value={school.output_direction} />
 
-          <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '16px', marginTop: '6px', marginBottom: '14px', border: `1px solid ${palette.line}`, boxShadow: `0 4px 14px ${palette.shadow}` }}>
+          <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '16px', marginTop: '6px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
             {!showCorrectionForm && !correctionDone && (
               <View onClick={() => setShowCorrectionForm(true)} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={{ fontSize: '16px', marginRight: '8px' }}>✏️</Text>
