@@ -27,9 +27,14 @@ function App({ children }: PropsWithChildren<any>) {
       console.log(`[cloud] runtime env = ${__WEAPP_CLOUD_ENV_ID__}`)
       console.log(`[cloud] runtime mode = ${__WEAPP_RUNTIME_ENV__}`)
 
-      Taro.cloud.init({
-        env: __WEAPP_CLOUD_ENV_ID__,
-      })
+      try {
+        Taro.cloud.init({
+          env: __WEAPP_CLOUD_ENV_ID__,
+        })
+      } catch (err) {
+        console.error('[cloud] init failed:', err)
+        Taro.showToast({ title: '云服务初始化失败，请稍后重试', icon: 'none' })
+      }
 
       if (__WEAPP_IS_FALLBACK_CLOUD_ENV__) {
         console.warn(`[cloud] ${__WEAPP_RUNTIME_ENV} build is using the fallback cloud env. Set TARO_APP_CLOUD_ENV in .env.development and .env.production to isolate test and production data.`)
