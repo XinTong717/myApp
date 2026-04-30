@@ -237,9 +237,10 @@ async function listSchools(options = {}) {
   const limit = normalizeLimit(normalizedOptions.limit, SCHOOL_LIST_DEFAULT_LIMIT, SCHOOL_LIST_MAX_LIMIT)
   const locationSchoolIds = await listSchoolIdsByLocation(normalizedOptions)
 
-  if (Array.isArray(locationSchoolIds) && locationSchoolIds.length === 0) return []
+  const shouldUseLocationIds = Array.isArray(locationSchoolIds) && locationSchoolIds.length > 0
+  const shouldLegacyScanForLocationFilter = Array.isArray(locationSchoolIds) && locationSchoolIds.length === 0
 
-  const queryOptions = Array.isArray(locationSchoolIds)
+  const queryOptions = shouldUseLocationIds
     ? { ...normalizedOptions, schoolIds: locationSchoolIds }
     : normalizedOptions
 
@@ -247,11 +248,15 @@ async function listSchools(options = {}) {
     normalizeFilterList(queryOptions.schoolType || queryOptions.type, queryOptions.schoolTypes || queryOptions.types).length > 1 ||
     normalizeFilterList(queryOptions.ageRange, queryOptions.ageRanges).length > 1
 
-  const queryLimit = Array.isArray(locationSchoolIds)
+  const queryLimit = shouldUseLocationIds
     ? Math.min(Math.max(locationSchoolIds.length, 1), SCHOOL_LIST_MAX_LIMIT)
-    : hasMultiFacetFilter
+    : (hasMultiFacetFilter || shouldLegacyScanForLocationFilter)
       ? SCHOOL_LIST_MAX_LIMIT
       : limit
+
+  if (shouldLegacyScanForLocationFilter) {
+    console.warn('school_locations returned no ids for location filter, scanning schools legacy fields as fallback')
+  }
 
   const res = await db.collection('schools')
     .where(buildSchoolWhere(queryOptions))
