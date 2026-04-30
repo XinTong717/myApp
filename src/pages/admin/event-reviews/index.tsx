@@ -3,18 +3,7 @@ import { View, Text, Input, Textarea, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { checkAdminAccess } from '../../../services/profile'
 import { listEventSubmissions, getEventPublishPayload, reviewEventSubmission } from '../../../services/admin'
-
-const palette = {
-  bg: '#FFF9F2',
-  card: '#FFFFFF',
-  text: '#2F241B',
-  subtext: '#7A6756',
-  accentDeep: '#E76F51',
-  accentSoft: '#FCE6D6',
-  line: '#F1DFCF',
-  green: '#7BAE7F',
-  greenSoft: '#EEF7EE',
-}
+import { palette } from '../../../theme/palette'
 
 const STATUS_OPTIONS = ['pending', 'merged', 'rejected'] as const
 
@@ -49,7 +38,7 @@ function Pill(props: { label: string; active: boolean; onClick: () => void }) {
   return (
     <View onClick={props.onClick} style={{
       padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
-      backgroundColor: props.active ? palette.accentDeep : '#F5F0EB',
+      backgroundColor: props.active ? palette.accentDeep : palette.tag,
       border: `1px solid ${props.active ? palette.accentDeep : palette.line}`,
     }}>
       <Text style={{ fontSize: '13px', color: props.active ? '#FFF' : palette.subtext }}>{props.label}</Text>
@@ -237,10 +226,10 @@ export default function AdminEventReviewsPage() {
           <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>活动审核台</Text>
           <View style={{ marginTop: '6px' }}>
             <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-              这里是管理员专用页面。你可以查看 event_submissions，生成建议版 events payload，并在手动发布到 MemFire 后回写审核状态。
+              这里是管理员专用页面。你可以查看 event_submissions，生成建议版 events payload，并在手动发布到云数据库 events 集合后回写审核状态。
             </Text>
           </View>
-          <View style={{ marginTop: '10px', backgroundColor: '#FFFDF9', borderRadius: '12px', padding: '10px 12px' }}>
+          <View style={{ marginTop: '10px', backgroundColor: palette.cardSoft, borderRadius: '12px', padding: '10px 12px' }}>
             <Text style={{ fontSize: '12px', color: palette.subtext }}>当前管理员：{adminName}</Text>
           </View>
         </View>
@@ -266,8 +255,8 @@ export default function AdminEventReviewsPage() {
         </View>
 
         {error ? (
-          <View style={{ padding: '12px', marginBottom: '14px', backgroundColor: '#FFF1F0', borderRadius: '14px', border: '1px solid #FFD8D2' }}>
-            <Text style={{ color: '#CF1322', fontSize: '13px' }}>{error}</Text>
+          <View style={{ padding: '12px', marginBottom: '14px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.accentSoft}` }}>
+            <Text style={{ color: palette.error, fontSize: '13px' }}>{error}</Text>
           </View>
         ) : null}
 
@@ -311,7 +300,7 @@ export default function AdminEventReviewsPage() {
                     <Text style={{ fontSize: '12px', color: palette.green }}>{item.isOnline ? '线上' : '线下'}</Text>
                   </View>
                   {item.publishedEventId ? (
-                    <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6', marginBottom: '6px' }}>
+                    <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: palette.surfaceWarm, marginBottom: '6px' }}>
                       <Text style={{ fontSize: '12px', color: palette.accentDeep }}>event #{item.publishedEventId}</Text>
                     </View>
                   ) : null}
@@ -338,7 +327,7 @@ export default function AdminEventReviewsPage() {
 
             <View style={{ marginBottom: '10px' }}>
               <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>发布时间建议 payload</Text>
-              <View style={{ marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', border: `1px solid ${palette.line}` }}>
+              <View style={{ marginTop: '8px', backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', border: `1px solid ${palette.line}` }}>
                 <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px', whiteSpace: 'pre-wrap' }}>
                   {detailLoading ? '生成中...' : payloadText}
                 </Text>
@@ -351,7 +340,7 @@ export default function AdminEventReviewsPage() {
             {(payloadResponse.warnings || []).length > 0 ? (
               <View style={{ marginBottom: '12px' }}>
                 <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>Warnings</Text>
-                <View style={{ marginTop: '8px', backgroundColor: '#FFF7E8', borderRadius: '14px', padding: '12px', border: `1px solid ${palette.line}` }}>
+                <View style={{ marginTop: '8px', backgroundColor: palette.warningSoft, borderRadius: '14px', padding: '12px', border: `1px solid ${palette.line}` }}>
                   {(payloadResponse.warnings || []).map((warning, idx) => (
                     <View key={`${idx}-${warning}`} style={{ marginBottom: idx === (payloadResponse.warnings || []).length - 1 ? '0' : '6px' }}>
                       <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>• {warning}</Text>
@@ -362,15 +351,15 @@ export default function AdminEventReviewsPage() {
             ) : null}
 
             <View style={{ marginBottom: '12px' }}>
-              <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>publishedEventId（发布到 MemFire 后填写）</Text>
-              <View style={{ marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+              <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>publishedEventId（发布到云数据库 events 后填写）</Text>
+              <View style={{ marginTop: '8px', backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
                 <Input value={publishedEventId} placeholder='例如：123' onInput={(e) => setPublishedEventId(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
               </View>
             </View>
 
             <View style={{ marginBottom: '12px' }}>
               <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>adminNote</Text>
-              <View style={{ marginTop: '8px', backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
+              <View style={{ marginTop: '8px', backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
                 <Textarea value={adminNote} placeholder='补充审核备注，比如已发布、重复、拒绝原因等' maxlength={300} onInput={(e) => setAdminNote(e.detail.value)} style={{ width: '100%', minHeight: '80px', fontSize: '14px', color: palette.text }} />
               </View>
             </View>
@@ -379,10 +368,10 @@ export default function AdminEventReviewsPage() {
               <View onClick={() => handleReview('mark_published')} style={{ backgroundColor: reviewLoading ? '#DDD' : palette.green, borderRadius: '14px', padding: '10px 14px', marginRight: '8px', marginBottom: '8px' }}>
                 <Text style={{ fontSize: '13px', color: '#FFF', fontWeight: 'bold' }}>{reviewLoading ? '处理中...' : '发布完成'}</Text>
               </View>
-              <View onClick={() => handleReview('reject')} style={{ backgroundColor: reviewLoading ? '#DDD' : '#F6C1B6', borderRadius: '14px', padding: '10px 14px', marginRight: '8px', marginBottom: '8px' }}>
-                <Text style={{ fontSize: '13px', color: '#7A3023', fontWeight: 'bold' }}>拒绝</Text>
+              <View onClick={() => handleReview('reject')} style={{ backgroundColor: reviewLoading ? '#DDD' : palette.errorSoft, borderRadius: '14px', padding: '10px 14px', marginRight: '8px', marginBottom: '8px' }}>
+                <Text style={{ fontSize: '13px', color: palette.error, fontWeight: 'bold' }}>拒绝</Text>
               </View>
-              <View onClick={() => handleReview('reset_pending')} style={{ backgroundColor: '#F5F0EB', borderRadius: '14px', padding: '10px 14px', marginBottom: '8px' }}>
+              <View onClick={() => handleReview('reset_pending')} style={{ backgroundColor: palette.tag, borderRadius: '14px', padding: '10px 14px', marginBottom: '8px' }}>
                 <Text style={{ fontSize: '13px', color: palette.subtext, fontWeight: 'bold' }}>重置待审核</Text>
               </View>
             </View>
