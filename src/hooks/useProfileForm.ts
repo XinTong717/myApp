@@ -3,10 +3,13 @@ import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../constants/location'
 import { getMe, saveProfile, updatePrivacySettings } from '../services/profile'
 import { clearMapUsersCache } from '../services/map'
+import { clearScopedCachedValue, getScopedCachedValue, setScopedCachedValue } from '../services/cache'
+import { CACHE_KEY_PREFIXES } from '../constants/cacheKeys'
 import type { UserProfile } from '../types/domain'
 
-const PROFILE_DRAFT_KEY = 'profile-draft:v1'
+const PROFILE_DRAFT_KEY = CACHE_KEY_PREFIXES.profileDraft
 const PROFILE_DRAFT_DEBOUNCE_MS = 600
+const PROFILE_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 type ProfileDraft = {
   updatedAt: number
@@ -139,7 +142,7 @@ export function useProfileForm() {
 
       if (!remoteProfile?.displayName && !remoteProfile?.province) {
         try {
-          const draft = Taro.getStorageSync(PROFILE_DRAFT_KEY) as Partial<ProfileDraft> | ''
+          const draft = await getScopedCachedValue<Partial<ProfileDraft>>(PROFILE_DRAFT_KEY)
           if (draft && hasDraftContent(draft)) {
             setTimeout(() => applyDraft(draft), 0)
           }
@@ -178,7 +181,7 @@ export function useProfileForm() {
       }
 
       if (!hasDraftContent(draft)) return
-      Taro.setStorage({ key: PROFILE_DRAFT_KEY, data: draft }).catch((err) => {
+      setScopedCachedValue(PROFILE_DRAFT_KEY, draft, PROFILE_DRAFT_TTL_MS).catch((err) => {
         console.warn('save profile draft skipped:', err)
       })
     }, PROFILE_DRAFT_DEBOUNCE_MS)
@@ -220,7 +223,7 @@ export function useProfileForm() {
       })
       if (r?.ok) {
         await clearMapUsersCache()
-        Taro.removeStorage({ key: PROFILE_DRAFT_KEY }).catch(() => null)
+        clearScopedCachedValue(PROFILE_DRAFT_KEY).catch(() => null)
         if (r.profile) {
           applyProfile(r.profile)
         } else {
