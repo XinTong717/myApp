@@ -172,7 +172,29 @@ export default function ProfilePage() {
     Taro.navigateTo({ url: '/pages/admin/event-reviews/index' })
   }
 
+  const validateBasicStep = () => {
+    if (!displayName.trim()) {
+      Taro.showToast({ title: '请先填写显示名', icon: 'none' })
+      return false
+    }
+    if (!roles.length) {
+      Taro.showToast({ title: '请至少选择一个身份', icon: 'none' })
+      return false
+    }
+    if (!province || !currentCity) {
+      Taro.showToast({ title: '请先选择所在城市', icon: 'none' })
+      return false
+    }
+    if (cityOption === '其他' && !customCity.trim()) {
+      Taro.showToast({ title: '请输入真实城市名', icon: 'none' })
+      return false
+    }
+    return true
+  }
+
   const goNextStep = () => {
+    if (activeStep === 'basic' && !validateBasicStep()) return
+
     const currentIndex = PROFILE_STEPS.findIndex((item) => item.key === activeStep)
     const next = PROFILE_STEPS[Math.min(currentIndex + 1, PROFILE_STEPS.length - 1)]
     setActiveStep(next.key)
@@ -279,6 +301,8 @@ export default function ProfilePage() {
           />
 
           <ProfileNoticeBox text='🔒 你的显示名、身份、城市和简介会在地图上公开展示。联络标识、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。' />
+
+          <ProfilePrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleSave} />
         </>
       )}
 
@@ -289,8 +313,6 @@ export default function ProfilePage() {
           <Text onClick={openPrivacyPolicy} style={{ fontSize: '12px', color: palette.accentDeep }}>隐私政策</Text>
         </View>
       </View>
-
-      <ProfilePrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleSave} />
 
       <ProfileConnectionsSection
         pendingRequests={pendingRequests}
