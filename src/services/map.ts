@@ -2,8 +2,11 @@ import { callCloud } from './cloud'
 import { clearScopedCachedValue, getScopedCachedValue, setScopedCachedValue } from './cache'
 import type { GetMapUsersResult } from '../types/domain'
 
-const MAP_USERS_CACHE_KEY_PREFIX = 'cloud-cache:map-users:list:v2:'
-const MAP_USERS_LEGACY_CACHE_KEY = 'cloud-cache:map-users:list:v1'
+const MAP_USERS_CACHE_KEY_PREFIX = 'cloud-cache:map-users:list:v3:'
+const MAP_USERS_LEGACY_CACHE_KEYS = [
+  'cloud-cache:map-users:list:v1',
+  'cloud-cache:map-users:list:v2:all:all-child-stage',
+]
 const MAP_USERS_TTL_MS = 2 * 60 * 1000
 
 function normalizeProvince(value?: string) {
@@ -14,14 +17,15 @@ function normalizeFilter(value?: string) {
   return String(value || '').trim()
 }
 
-function getMapUsersCacheKey(province?: string, childAgeRange?: string) {
-  return `${MAP_USERS_CACHE_KEY_PREFIX}${normalizeProvince(province) || 'all'}:${normalizeFilter(childAgeRange) || 'all-child-stage'}`
+function getMapUsersCacheKey(province?: string, childAgeRange?: string, role?: string) {
+  return `${MAP_USERS_CACHE_KEY_PREFIX}${normalizeProvince(province) || 'all'}:${normalizeFilter(role) || 'all-role'}:${normalizeFilter(childAgeRange) || 'all-child-stage'}`
 }
 
-export async function getMapUsers(options: { forceRefresh?: boolean; province?: string; childAgeRange?: string } = {}) {
+export async function getMapUsers(options: { forceRefresh?: boolean; province?: string; childAgeRange?: string; role?: string } = {}) {
   const province = normalizeProvince(options.province)
   const childAgeRange = normalizeFilter(options.childAgeRange)
-  const cacheKey = getMapUsersCacheKey(province, childAgeRange)
+  const role = normalizeFilter(options.role)
+  const cacheKey = getMapUsersCacheKey(province, childAgeRange, role)
 
   if (!options.forceRefresh) {
     const cached = await getScopedCachedValue<GetMapUsersResult>(cacheKey)
@@ -32,6 +36,7 @@ export async function getMapUsers(options: { forceRefresh?: boolean; province?: 
 
   const result = await callCloud<GetMapUsersResult>('getMapUsers', {
     ...(province ? { province } : {}),
+    ...(role && role !== '全部' ? { role } : {}),
     ...(childAgeRange ? { childAgeRange } : {}),
   })
   if (result.ok) {
@@ -55,7 +60,7 @@ export async function getMapUsers(options: { forceRefresh?: boolean; province?: 
 
 export async function clearMapUsersCache() {
   await Promise.all([
-    clearScopedCachedValue(MAP_USERS_LEGACY_CACHE_KEY),
+    ...MAP_USERS_LEGACY_CACHE_KEYS.map((key) => clearScopedCachedValue(key)),
     clearScopedCachedValue(getMapUsersCacheKey()),
   ])
 }
