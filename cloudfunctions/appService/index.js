@@ -5,6 +5,7 @@ const publicHandlers = require('./handlers/public')
 const userHandlers = require('./handlers/userV2')
 const mapUserHandlers = require('./handlers/mapUsers')
 const adminHandlers = require('./handlers/admin')
+const schoolMigrationHandlers = require('./handlers/schoolMigration')
 
 const READ_ACTION_RATE_LIMITS = {
   getMapUsers: { limit: 30, windowMs: 60 * 1000 },
@@ -28,6 +29,7 @@ const actionHandlers = {
   ...userHandlers,
   ...mapUserHandlers,
   ...adminHandlers,
+  ...schoolMigrationHandlers,
 }
 
 exports.main = async (event = {}) => {
