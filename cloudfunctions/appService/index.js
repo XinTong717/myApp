@@ -2,10 +2,13 @@ const { ok, fail, resolveRequestId } = require('./lib/response')
 const { cloud } = require('./lib/cloud')
 const { rateLimit } = require('./lib/rateLimit')
 const publicHandlers = require('./handlers/public')
-const userHandlers = require('./handlers/userV2')
+const userHandlerModule = require('./handlers/userV2')
+const { getMapUsers: legacyUserGetMapUsers, ...userHandlers } = userHandlerModule
 const mapUserHandlers = require('./handlers/mapUsers')
 const adminHandlers = require('./handlers/admin')
 const schoolMigrationHandlers = require('./handlers/schoolMigration')
+
+void legacyUserGetMapUsers
 
 const DEFAULT_READ_ACTION_RATE_LIMITS = {
   getMapUsers: { limit: 30, windowMs: 60 * 1000 },
