@@ -126,8 +126,13 @@ async function getSchools(event) {
     const schools = await listSchools({
       limit: event?.limit,
       province: event?.province,
+      provinces: event?.provinces,
+      city: event?.city,
+      cities: event?.cities,
       schoolType: event?.schoolType || event?.type,
+      schoolTypes: event?.schoolTypes || event?.types,
       ageRange: event?.ageRange,
+      ageRanges: event?.ageRanges,
     })
     return ok(requestId, { schools })
   } catch (err) {
