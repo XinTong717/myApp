@@ -143,8 +143,18 @@ export type MapUser = {
   isSelf?: boolean
 }
 
+export type MapProvinceStat = {
+  province: string
+  count: number
+  sampleCities?: string[]
+}
+
 export type GetMapUsersResult = CloudResponse<{
   users?: MapUser[]
+  provinceStats?: MapProvinceStat[]
+  province?: string
+  mode?: 'province_summary' | 'province_detail'
+  limit?: number
 }>
 
 export type PendingRequest = {
