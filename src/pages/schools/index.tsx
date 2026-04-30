@@ -21,7 +21,9 @@ function FilterChip(props: { label: string; active: boolean; onClick: () => void
       backgroundColor: props.active ? palette.accentDeep : palette.tag,
       border: `1px solid ${props.active ? palette.accentDeep : palette.line}`,
     }}>
-      <Text style={{ fontSize: '12px', color: props.active ? '#FFF' : palette.tagText }}>{props.label}</Text>
+      <Text style={{ fontSize: '12px', color: props.active ? '#FFF' : palette.tagText }}>
+        {props.label}{props.active && props.label !== ALL_FILTER ? ' ✓' : ''}
+      </Text>
     </View>
   )
 }
@@ -62,15 +64,30 @@ function getLocationHaystack(item: School) {
   return getLocations(item).map(formatLocation).join(' ')
 }
 
+function toggleMultiFilter(current: string[], option: string) {
+  if (option === ALL_FILTER) return []
+  if (current.includes(option)) return current.filter((item) => item !== option)
+  return [...current, option]
+}
+
+function isMultiActive(current: string[], option: string) {
+  return option === ALL_FILTER ? current.length === 0 : current.includes(option)
+}
+
+function formatSelectedSummary(values: string[], label: string) {
+  if (values.length === 0) return ''
+  return `${label}${values.length}项`
+}
+
 export default function SchoolsPage() {
   const [schools, setSchools] = useState<School[]>([])
   const [filterSourceSchools, setFilterSourceSchools] = useState<School[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [keyword, setKeyword] = useState('')
-  const [selectedProvince, setSelectedProvince] = useState(ALL_FILTER)
-  const [selectedType, setSelectedType] = useState(ALL_FILTER)
-  const [selectedAgeRange, setSelectedAgeRange] = useState(ALL_FILTER)
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>([])
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+  const [selectedAgeRanges, setSelectedAgeRanges] = useState<string[]>([])
   const didInitRef = useRef(false)
 
   const loadSchools = async (options: { forceRefresh?: boolean; useFilters?: boolean } = {}) => {
@@ -81,9 +98,9 @@ export default function SchoolsPage() {
       const result = await getSchools({
         forceRefresh: !!options.forceRefresh,
         limit: SCHOOL_LIST_LIMIT,
-        ...(useFilters && selectedProvince !== ALL_FILTER ? { province: selectedProvince } : {}),
-        ...(useFilters && selectedType !== ALL_FILTER ? { schoolType: selectedType } : {}),
-        ...(useFilters && selectedAgeRange !== ALL_FILTER ? { ageRange: selectedAgeRange } : {}),
+        ...(useFilters && selectedProvinces.length > 0 ? { province: selectedProvinces } : {}),
+        ...(useFilters && selectedTypes.length > 0 ? { schoolType: selectedTypes } : {}),
+        ...(useFilters && selectedAgeRanges.length > 0 ? { ageRange: selectedAgeRanges } : {}),
       })
       const nextSchools = Array.isArray(result.schools) ? result.schools : []
       setSchools(nextSchools)
@@ -119,7 +136,7 @@ export default function SchoolsPage() {
   useEffect(() => {
     if (!didInitRef.current) return
     loadSchools({ useFilters: true })
-  }, [selectedProvince, selectedType, selectedAgeRange])
+  }, [selectedProvinces, selectedTypes, selectedAgeRanges])
 
   usePullDownRefresh(async () => {
     await Promise.all([
@@ -147,11 +164,17 @@ export default function SchoolsPage() {
     })
   }, [schools, keyword])
 
+  const activeFilterSummary = [
+    formatSelectedSummary(selectedProvinces, '地区'),
+    formatSelectedSummary(selectedTypes, '类型'),
+    formatSelectedSummary(selectedAgeRanges, '阶段'),
+  ].filter(Boolean).join(' · ')
+
   const resetFilters = () => {
     setKeyword('')
-    setSelectedProvince(ALL_FILTER)
-    setSelectedType(ALL_FILTER)
-    setSelectedAgeRange(ALL_FILTER)
+    setSelectedProvinces([])
+    setSelectedTypes([])
+    setSelectedAgeRanges([])
   }
 
   const goToDetail = (item: School) => {
@@ -200,14 +223,21 @@ export default function SchoolsPage() {
 
       <View style={{ backgroundColor: palette.card, borderRadius: '18px', padding: '12px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
         <View style={{ marginBottom: '8px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.text }}>筛选</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.text }}>筛选</Text>
+            {!!activeFilterSummary && (
+              <View style={{ marginTop: '4px' }}>
+                <Text style={{ fontSize: '11px', color: palette.subtext }}>{activeFilterSummary}</Text>
+              </View>
+            )}
+          </View>
           <Text onClick={resetFilters} style={{ fontSize: '12px', color: palette.link }}>重置</Text>
         </View>
 
         <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: '6px' }}>
           <View style={{ display: 'flex', flexDirection: 'row' }}>
             {provinceOptions.map((option) => (
-              <FilterChip key={option} label={option} active={selectedProvince === option} onClick={() => setSelectedProvince(option)} />
+              <FilterChip key={option} label={option} active={isMultiActive(selectedProvinces, option)} onClick={() => setSelectedProvinces((current) => toggleMultiFilter(current, option))} />
             ))}
           </View>
         </ScrollView>
@@ -215,7 +245,7 @@ export default function SchoolsPage() {
         <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: '6px' }}>
           <View style={{ display: 'flex', flexDirection: 'row' }}>
             {typeOptions.map((option) => (
-              <FilterChip key={option} label={option} active={selectedType === option} onClick={() => setSelectedType(option)} />
+              <FilterChip key={option} label={option} active={isMultiActive(selectedTypes, option)} onClick={() => setSelectedTypes((current) => toggleMultiFilter(current, option))} />
             ))}
           </View>
         </ScrollView>
@@ -223,7 +253,7 @@ export default function SchoolsPage() {
         <ScrollView scrollX style={{ whiteSpace: 'nowrap' }}>
           <View style={{ display: 'flex', flexDirection: 'row' }}>
             {ageOptions.map((option) => (
-              <FilterChip key={option} label={option} active={selectedAgeRange === option} onClick={() => setSelectedAgeRange(option)} />
+              <FilterChip key={option} label={option} active={isMultiActive(selectedAgeRanges, option)} onClick={() => setSelectedAgeRanges((current) => toggleMultiFilter(current, option))} />
             ))}
           </View>
         </ScrollView>
