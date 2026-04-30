@@ -90,6 +90,20 @@ function jitter(baseLat: number, baseLng: number, index: number, total: number, 
   }
 }
 
+function offsetUserClusterCoord(province: string, coord: Coord): Coord {
+  const cosLat = Math.cos(coord.lat * Math.PI / 180)
+  const safeCosLat = Math.abs(cosLat) < 1e-6 ? 1e-6 : cosLat
+
+  // 全国视图里，同一个省的学校聚合和同路人聚合都落在省级 fallback 坐标。
+  // 用户聚合轻微右下偏移，避免盖住学校聚合。
+  const direction = nameHash(`${province}-user-cluster`) > 0.5 ? 1 : -1
+
+  return {
+    lat: coord.lat - 0.32,
+    lng: coord.lng + direction * (0.48 / safeCosLat),
+  }
+}
+
 function sanitizeMapLabel(value: string): string {
   const raw = String(value || '')
   let result = ''
@@ -440,10 +454,12 @@ export default function ExplorePage() {
         const coord = PROV_FALLBACK[province]
         if (!province || !isValidCoord(coord) || !stat.count) return
 
+        const userClusterCoord = offsetUserClusterCoord(province, coord)
+
         items.push({
           id: nextId++,
-          latitude: coord.lat,
-          longitude: coord.lng,
+          latitude: userClusterCoord.lat,
+          longitude: userClusterCoord.lng,
           name: province,
           type: 'user_cluster',
           markerProv: province,
@@ -628,6 +644,7 @@ export default function ExplorePage() {
       width: markerSize,
       height: markerSize,
       anchor: { x: 0.5, y: 0.5 },
+      zIndex: isSchoolCluster ? 40 : isUserCluster ? 30 : item.type === 'school' ? 20 : 10,
       ...(shouldShowLabel ? {
         label: {
           content: labelContent,
