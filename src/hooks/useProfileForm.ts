@@ -1,14 +1,48 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../constants/location'
 import { getMe, saveProfile, updatePrivacySettings } from '../services/profile'
 import { clearMapUsersCache } from '../services/map'
 import type { UserProfile } from '../types/domain'
 
+const PROFILE_DRAFT_KEY = 'profile-draft:v1'
+const PROFILE_DRAFT_DEBOUNCE_MS = 600
+
+type ProfileDraft = {
+  updatedAt: number
+  displayName: string
+  gender: string
+  ageRange: string
+  roles: string[]
+  province: string
+  cityOption: string
+  customCity: string
+  wechatId: string
+  childAgeRange: string[]
+  childDropoutStatus: string[]
+  childInterests: string
+  eduServices: string
+  companionContext: string
+  bio: string
+}
+
+function hasDraftContent(draft: Partial<ProfileDraft> | null) {
+  if (!draft) return false
+  return !!(
+    draft.displayName || draft.gender || draft.ageRange || draft.province || draft.cityOption || draft.customCity ||
+    draft.wechatId || draft.childInterests || draft.eduServices || draft.companionContext || draft.bio ||
+    (Array.isArray(draft.roles) && draft.roles.length > 0) ||
+    (Array.isArray(draft.childAgeRange) && draft.childAgeRange.length > 0) ||
+    (Array.isArray(draft.childDropoutStatus) && draft.childDropoutStatus.length > 0)
+  )
+}
+
 export function useProfileForm() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [privacySaving, setPrivacySaving] = useState(false)
+  const draftReadyRef = useRef(false)
+  const applyingRemoteRef = useRef(false)
 
   const [displayName, setDisplayName] = useState('')
   const [gender, setGender] = useState('')
@@ -34,8 +68,26 @@ export function useProfileForm() {
   const isCompanion = roles.includes('同行者')
   const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
 
+  const applyDraft = (draft: Partial<ProfileDraft>) => {
+    setDisplayName(draft.displayName || '')
+    setGender(draft.gender || '')
+    setAgeRange(draft.ageRange || '')
+    setRoles(Array.isArray(draft.roles) ? draft.roles : [])
+    setProvince(draft.province || '')
+    setCityOption(draft.cityOption || '')
+    setCustomCity(draft.customCity || '')
+    setWechatId(draft.wechatId || '')
+    setChildAgeRange(Array.isArray(draft.childAgeRange) ? draft.childAgeRange : [])
+    setChildDropoutStatus(Array.isArray(draft.childDropoutStatus) ? draft.childDropoutStatus : [])
+    setChildInterests(draft.childInterests || '')
+    setEduServices(draft.eduServices || '')
+    setCompanionContext(draft.companionContext || '')
+    setBio(draft.bio || '')
+  }
+
   const applyProfile = (p: UserProfile | null) => {
     if (!p) return
+    applyingRemoteRef.current = true
     setDisplayName(p.displayName || '')
     setGender(p.gender || '')
     setAgeRange(p.ageRange || '')
@@ -63,6 +115,7 @@ export function useProfileForm() {
     setEduServices(p.eduServices || '')
     setCompanionContext(p.companionContext || '')
     setBio(p.bio || '')
+    setTimeout(() => { applyingRemoteRef.current = false }, 0)
   }
 
   const pickerRange = useMemo(() => {
@@ -81,13 +134,57 @@ export function useProfileForm() {
     try {
       setLoading(true)
       const res = await getMe()
-      applyProfile(res.profile)
+      const remoteProfile = res.profile
+      applyProfile(remoteProfile)
+
+      if (!remoteProfile?.displayName && !remoteProfile?.province) {
+        try {
+          const draft = Taro.getStorageSync(PROFILE_DRAFT_KEY) as Partial<ProfileDraft> | ''
+          if (draft && hasDraftContent(draft)) {
+            setTimeout(() => applyDraft(draft), 0)
+          }
+        } catch (draftErr) {
+          console.warn('load profile draft skipped:', draftErr)
+        }
+      }
     } catch (err) {
       console.error('loadProfile error:', err)
     } finally {
+      draftReadyRef.current = true
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!draftReadyRef.current || applyingRemoteRef.current || saving) return
+
+    const timer = setTimeout(() => {
+      const draft: ProfileDraft = {
+        updatedAt: Date.now(),
+        displayName,
+        gender,
+        ageRange,
+        roles,
+        province,
+        cityOption,
+        customCity,
+        wechatId,
+        childAgeRange,
+        childDropoutStatus,
+        childInterests,
+        eduServices,
+        companionContext,
+        bio,
+      }
+
+      if (!hasDraftContent(draft)) return
+      Taro.setStorage({ key: PROFILE_DRAFT_KEY, data: draft }).catch((err) => {
+        console.warn('save profile draft skipped:', err)
+      })
+    }, PROFILE_DRAFT_DEBOUNCE_MS)
+
+    return () => clearTimeout(timer)
+  }, [displayName, gender, ageRange, roles, province, cityOption, customCity, wechatId, childAgeRange, childDropoutStatus, childInterests, eduServices, companionContext, bio, saving])
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -123,6 +220,7 @@ export function useProfileForm() {
       })
       if (r?.ok) {
         await clearMapUsersCache()
+        Taro.removeStorage({ key: PROFILE_DRAFT_KEY }).catch(() => null)
         if (r.profile) {
           applyProfile(r.profile)
         } else {
