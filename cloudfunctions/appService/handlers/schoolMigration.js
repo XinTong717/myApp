@@ -9,9 +9,19 @@ const DEFAULT_DRY_RUN_LIMIT = 300
 const DEFAULT_WRITE_LIMIT = 40
 const MAX_DRY_RUN_LIMIT = 500
 const MAX_WRITE_LIMIT = 80
+const DELETED_STATUSES = new Set(['deleted', 'removed', 'archived'])
 
 function normalizeString(value) {
   return String(value || '').trim()
+}
+
+function normalizeStatus(value) {
+  return normalizeString(value).toLowerCase()
+}
+
+function isReadableStatus(value) {
+  const status = normalizeStatus(value)
+  return !status || !DELETED_STATUSES.has(status)
 }
 
 function splitLabels(value) {
@@ -81,7 +91,7 @@ async function listLegacySchools(limit, startAfterId = 0) {
     .limit(limit)
     .get()
 
-  return res.data || []
+  return (res.data || []).filter((school) => isReadableStatus(school.status))
 }
 
 async function upsertLocation(location) {
@@ -97,6 +107,23 @@ async function upsertLocation(location) {
   } catch (err) {
     return { ok: false, _id, message: err && err.message ? err.message : String(err) }
   }
+}
+
+async function listActualLocationsBySchoolIds(schoolIds) {
+  const ids = Array.from(new Set((schoolIds || []).map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)))
+  if (ids.length === 0) return []
+
+  const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
+    .where({ school_id: _.in(ids) })
+    .field({ school_id: true, province: true, city: true, status: true, source: true })
+    .limit(MAX_DRY_RUN_LIMIT * 3)
+    .get()
+
+  return (res.data || []).filter((location) => isReadableStatus(location.status))
+}
+
+function makeLocationKey(location) {
+  return stableLocationId(location.school_id, location.province, location.city)
 }
 
 async function migrateSchoolLocations(event, wxContext) {
@@ -163,6 +190,49 @@ async function migrateSchoolLocations(event, wxContext) {
   }
 }
 
+async function validateSchoolLocationsMigration(event, wxContext) {
+  const requestId = resolveRequestId('validate-school-locations', event)
+  const limit = Math.min(Math.max(Number(event.limit || MAX_DRY_RUN_LIMIT), 1), MAX_DRY_RUN_LIMIT)
+  const startAfterId = Math.max(Number(event.startAfterId || 0), 0)
+
+  try {
+    const admin = await getActiveAdmin(wxContext.OPENID)
+    if (!admin) return fail(requestId, 'FORBIDDEN', '无权限校验学校地点迁移')
+
+    const schools = await listLegacySchools(limit, startAfterId)
+    const expectedLocations = schools.flatMap((school) => buildLocationsForSchool(school))
+    const actualLocations = await listActualLocationsBySchoolIds(schools.map((school) => school.id))
+    const actualKeys = new Set(actualLocations.map((location) => makeLocationKey(location)))
+    const expectedKeys = new Set(expectedLocations.map((location) => location._id))
+
+    const missing = expectedLocations.filter((location) => !actualKeys.has(location._id))
+    const extra = actualLocations.filter((location) => !expectedKeys.has(makeLocationKey(location)))
+    const lastSchoolId = schools.length > 0 ? Number(schools[schools.length - 1].id || 0) : startAfterId
+    const hasMore = schools.length === limit
+
+    return ok(requestId, {
+      startAfterId,
+      nextStartAfterId: lastSchoolId,
+      hasMore,
+      schoolCount: schools.length,
+      expectedLocationCount: expectedLocations.length,
+      actualLocationCount: actualLocations.length,
+      missingCount: missing.length,
+      extraCount: extra.length,
+      readyForStrictLocations: missing.length === 0,
+      missing: missing.slice(0, 20),
+      extra: extra.slice(0, 20),
+      message: missing.length === 0
+        ? '当前批次 school_locations 已覆盖 legacy 地点，可以进入严格读取阶段'
+        : '还有地点未迁移，请先补跑 migrateSchoolLocations',
+    })
+  } catch (err) {
+    console.error('appService validateSchoolLocationsMigration error:', err)
+    return fail(requestId, 'VALIDATE_SCHOOL_LOCATIONS_FAILED', '校验 school_locations 迁移失败，请稍后重试')
+  }
+}
+
 module.exports = {
   migrateSchoolLocations,
+  validateSchoolLocationsMigration,
 }
