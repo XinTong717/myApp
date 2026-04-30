@@ -71,6 +71,18 @@ function matchesAnyText(value, filters) {
   return filters.some((filter) => tokens.includes(filter) || text.includes(filter))
 }
 
+function getLocationFilters(options = {}) {
+  return {
+    provinces: normalizeFilterList(options.province, options.provinces),
+    cities: normalizeFilterList(options.city, options.cities),
+  }
+}
+
+function hasLocationFilters(options = {}) {
+  const filters = getLocationFilters(options)
+  return filters.provinces.length > 0 || filters.cities.length > 0
+}
+
 function buildSchoolWhere(options = {}) {
   const where = {}
   const schoolTypes = normalizeFilterList(options.schoolType || options.type, options.schoolTypes || options.types)
@@ -118,7 +130,7 @@ function fallbackLocationsFromSchool(school) {
 
 async function listSchoolLocationsByIds(schoolIds) {
   const ids = uniqueNumbers(schoolIds)
-  if (ids.length === 0) return null
+  if (ids.length === 0) return []
 
   try {
     const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
@@ -137,14 +149,13 @@ async function listSchoolLocationsByIds(schoolIds) {
 
     return (res.data || []).filter((item) => isReadableStatus(item.status))
   } catch (err) {
-    console.warn('school_locations read skipped, using legacy fields:', err && err.message ? err.message : err)
-    return null
+    console.warn('school_locations read failed:', err && err.message ? err.message : err)
+    return []
   }
 }
 
 async function listSchoolIdsByLocation(options = {}) {
-  const provinces = normalizeFilterList(options.province, options.provinces)
-  const cities = normalizeFilterList(options.city, options.cities)
+  const { provinces, cities } = getLocationFilters(options)
   if (provinces.length === 0 && cities.length === 0) return null
 
   try {
@@ -162,12 +173,13 @@ async function listSchoolIdsByLocation(options = {}) {
 
     return uniqueNumbers((res.data || []).filter((item) => isReadableStatus(item.status)).map((item) => item.school_id)).slice(0, SCHOOL_LIST_MAX_LIMIT)
   } catch (err) {
-    console.warn('school_locations filter skipped, falling back to legacy school fields:', err && err.message ? err.message : err)
-    return null
+    console.warn('school_locations filter failed:', err && err.message ? err.message : err)
+    return []
   }
 }
 
-function attachSchoolLocations(schools, locations) {
+function attachSchoolLocations(schools, locations, options = {}) {
+  const allowLegacyFallback = options.allowLegacyFallback === true
   const locationMap = new Map()
   if (Array.isArray(locations)) {
     locations.forEach((location) => {
@@ -188,7 +200,7 @@ function attachSchoolLocations(schools, locations) {
 
   return (schools || []).filter((school) => isReadableStatus(school.status)).map((school) => {
     const schoolId = Number(school.id)
-    const normalizedLocations = locationMap.get(schoolId) || fallbackLocationsFromSchool(school)
+    const normalizedLocations = locationMap.get(schoolId) || (allowLegacyFallback ? fallbackLocationsFromSchool(school) : [])
     const provinces = uniqueLabels(normalizedLocations.map((item) => item.province))
     const cities = uniqueLabels(normalizedLocations.map((item) => item.city))
 
@@ -206,8 +218,7 @@ function attachSchoolLocations(schools, locations) {
 }
 
 function filterSchoolsByLocation(schools, options = {}) {
-  const provinces = normalizeFilterList(options.province, options.provinces)
-  const cities = normalizeFilterList(options.city, options.cities)
+  const { provinces, cities } = getLocationFilters(options)
   if (provinces.length === 0 && cities.length === 0) return schools
 
   return schools.filter((school) => {
@@ -236,11 +247,11 @@ async function listSchools(options = {}) {
   const normalizedOptions = typeof options === 'object' && options !== null ? options : { limit: options }
   const limit = normalizeLimit(normalizedOptions.limit, SCHOOL_LIST_DEFAULT_LIMIT, SCHOOL_LIST_MAX_LIMIT)
   const locationSchoolIds = await listSchoolIdsByLocation(normalizedOptions)
+  const hasLocationFilter = hasLocationFilters(normalizedOptions)
 
-  const shouldUseLocationIds = Array.isArray(locationSchoolIds) && locationSchoolIds.length > 0
-  const shouldLegacyScanForLocationFilter = Array.isArray(locationSchoolIds) && locationSchoolIds.length === 0
+  if (hasLocationFilter && (!Array.isArray(locationSchoolIds) || locationSchoolIds.length === 0)) return []
 
-  const queryOptions = shouldUseLocationIds
+  const queryOptions = Array.isArray(locationSchoolIds) && locationSchoolIds.length > 0
     ? { ...normalizedOptions, schoolIds: locationSchoolIds }
     : normalizedOptions
 
@@ -248,15 +259,11 @@ async function listSchools(options = {}) {
     normalizeFilterList(queryOptions.schoolType || queryOptions.type, queryOptions.schoolTypes || queryOptions.types).length > 1 ||
     normalizeFilterList(queryOptions.ageRange, queryOptions.ageRanges).length > 1
 
-  const queryLimit = shouldUseLocationIds
+  const queryLimit = Array.isArray(locationSchoolIds) && locationSchoolIds.length > 0
     ? Math.min(Math.max(locationSchoolIds.length, 1), SCHOOL_LIST_MAX_LIMIT)
-    : (hasMultiFacetFilter || shouldLegacyScanForLocationFilter)
+    : hasMultiFacetFilter
       ? SCHOOL_LIST_MAX_LIMIT
       : limit
-
-  if (shouldLegacyScanForLocationFilter) {
-    console.warn('school_locations returned no ids for location filter, scanning schools legacy fields as fallback')
-  }
 
   const res = await db.collection('schools')
     .where(buildSchoolWhere(queryOptions))
@@ -280,7 +287,7 @@ async function listSchools(options = {}) {
 
   const rawSchools = (res.data || []).filter((school) => isReadableStatus(school.status))
   const locations = await listSchoolLocationsByIds(rawSchools.map((school) => school.id))
-  const schoolsWithLocations = attachSchoolLocations(rawSchools, locations)
+  const schoolsWithLocations = attachSchoolLocations(rawSchools, locations, { allowLegacyFallback: false })
 
   return filterSchoolsByFacets(filterSchoolsByLocation(schoolsWithLocations, normalizedOptions), normalizedOptions).slice(0, limit)
 }
@@ -297,7 +304,7 @@ async function getSchoolById(schoolId) {
   if (!school) return null
 
   const locations = await listSchoolLocationsByIds([Number(schoolId)])
-  return attachSchoolLocations([school], locations)[0] || null
+  return attachSchoolLocations([school], locations, { allowLegacyFallback: true })[0] || null
 }
 
 async function listEvents(limit = EVENT_LIST_LIMIT) {
