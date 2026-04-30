@@ -5,7 +5,10 @@ const { writeAdminAuditLog } = require('../lib/adminAudit')
 
 const SCHOOL_LOCATION_COLLECTION = 'school_locations'
 const MIGRATION_SOURCE = 'legacy_schools_city_migration'
-const DEFAULT_LIMIT = 300
+const DEFAULT_DRY_RUN_LIMIT = 300
+const DEFAULT_WRITE_LIMIT = 40
+const MAX_DRY_RUN_LIMIT = 500
+const MAX_WRITE_LIMIT = 80
 
 function normalizeString(value) {
   return String(value || '').trim()
@@ -67,9 +70,12 @@ function buildLocationsForSchool(school) {
   return []
 }
 
-async function listLegacySchools(limit) {
+async function listLegacySchools(limit, startAfterId = 0) {
+  const where = { status: _.neq('deleted') }
+  if (Number(startAfterId) > 0) where.id = _.gt(Number(startAfterId))
+
   const res = await db.collection('schools')
-    .where({ status: _.neq('deleted') })
+    .where(where)
     .field({ id: true, name: true, canonical_name: true, province: true, city: true, status: true })
     .orderBy('id', 'asc')
     .limit(limit)
@@ -96,38 +102,42 @@ async function upsertLocation(location) {
 async function migrateSchoolLocations(event, wxContext) {
   const requestId = resolveRequestId('migrate-school-locations', event)
   const dryRun = event.dryRun !== false
-  const limit = Math.min(Math.max(Number(event.limit || DEFAULT_LIMIT), 1), 500)
+  const requestedLimit = Math.min(Math.max(Number(event.limit || (dryRun ? DEFAULT_DRY_RUN_LIMIT : DEFAULT_WRITE_LIMIT)), 1), dryRun ? MAX_DRY_RUN_LIMIT : MAX_WRITE_LIMIT)
+  const startAfterId = Math.max(Number(event.startAfterId || 0), 0)
 
   try {
     const admin = await getActiveAdmin(wxContext.OPENID)
     if (!admin) return fail(requestId, 'FORBIDDEN', '无权限执行学校地点迁移')
 
-    const schools = await listLegacySchools(limit)
+    const schools = await listLegacySchools(requestedLimit, startAfterId)
     const locations = schools.flatMap((school) => buildLocationsForSchool(school))
+    const lastSchoolId = schools.length > 0 ? Number(schools[schools.length - 1].id || 0) : startAfterId
+    const hasMore = schools.length === requestedLimit
 
     if (dryRun) {
       return ok(requestId, {
         dryRun: true,
+        startAfterId,
+        nextStartAfterId: lastSchoolId,
+        hasMore,
         schoolCount: schools.length,
         locationCount: locations.length,
         sample: locations.slice(0, 10),
       })
     }
 
-    const results = []
-    for (const location of locations) {
-      // eslint-disable-next-line no-await-in-loop
-      results.push(await upsertLocation(location))
-    }
-
+    const results = await Promise.all(locations.map((location) => upsertLocation(location)))
     const failed = results.filter((item) => !item.ok)
     await writeAdminAuditLog({
       admin,
       openid: wxContext.OPENID,
       action: 'school_locations_migrated',
       targetType: 'school_locations',
-      targetId: 'legacy_schools_city',
+      targetId: `legacy_schools_city_after_${startAfterId}`,
       metadata: {
+        startAfterId,
+        nextStartAfterId: lastSchoolId,
+        hasMore,
         schoolCount: schools.length,
         locationCount: locations.length,
         successCount: results.length - failed.length,
@@ -137,11 +147,15 @@ async function migrateSchoolLocations(event, wxContext) {
 
     return ok(requestId, {
       dryRun: false,
+      startAfterId,
+      nextStartAfterId: lastSchoolId,
+      hasMore,
       schoolCount: schools.length,
       locationCount: locations.length,
       successCount: results.length - failed.length,
       failedCount: failed.length,
       failed: failed.slice(0, 20),
+      message: hasMore ? `本批迁移完成，请继续用 startAfterId=${lastSchoolId} 跑下一批` : '学校地点迁移完成',
     })
   } catch (err) {
     console.error('appService migrateSchoolLocations error:', err)
