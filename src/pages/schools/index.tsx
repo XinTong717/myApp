@@ -4,19 +4,11 @@ import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
 import { palette } from '../../theme/palette'
 import { ListSkeleton } from '../../components/common/Skeleton'
+import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
 const ALL_FILTER = '全部'
 
-type School = {
-  id: number
-  name: string
-  province?: string
-  city?: string
-  age_range?: string
-  school_type?: string
-  has_xuji?: boolean
-  fee?: string
-}
+type School = SchoolItem
 
 function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
   return (
@@ -40,8 +32,33 @@ function splitTokens(value?: string) {
     .filter(Boolean)
 }
 
-function uniqueValues(values: string[], max = 12) {
+function uniqueValues(values: string[], max = 16) {
   return Array.from(new Set(values.filter(Boolean))).slice(0, max)
+}
+
+function getLocations(item: School): SchoolLocationItem[] {
+  if (Array.isArray(item.locations) && item.locations.length > 0) return item.locations
+  return splitTokens(item.city).map((city, index) => ({
+    school_id: Number(item.id),
+    province: splitTokens(item.province)[index] || splitTokens(item.province)[0] || '',
+    city,
+    status: 'legacy',
+  }))
+}
+
+function formatLocation(location: SchoolLocationItem) {
+  return [location.province, location.city].filter(Boolean).join(' · ') || '地点未填写'
+}
+
+function getLocationSummary(item: School) {
+  const locations = getLocations(item)
+  if (locations.length === 0) return [item.province, item.city].filter(Boolean).join(' ') || '未知地点'
+  const first = formatLocation(locations[0])
+  return locations.length > 1 ? `${first} 等 ${locations.length} 个地点` : first
+}
+
+function getLocationHaystack(item: School) {
+  return getLocations(item).map(formatLocation).join(' ')
 }
 
 export default function SchoolsPage() {
@@ -57,7 +74,7 @@ export default function SchoolsPage() {
     try {
       setLoading(true)
       setError('')
-      const result = await getSchools({ forceRefresh: !!options.forceRefresh })
+      const result = await getSchools({ forceRefresh: !!options.forceRefresh, limit: 200 })
       const nextSchools = Array.isArray(result.schools) ? result.schools : []
       setSchools(nextSchools)
       if (!result?.ok && nextSchools.length === 0) {
@@ -79,17 +96,19 @@ export default function SchoolsPage() {
     Taro.stopPullDownRefresh()
   })
 
-  const provinceOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(schools.map((item) => item.province || ''))], [schools])
+  const provinceOptions = useMemo(() => {
+    return [ALL_FILTER, ...uniqueValues(schools.flatMap((item) => getLocations(item).map((location) => location.province || '')))]
+  }, [schools])
   const typeOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(schools.flatMap((item) => splitTokens(item.school_type)))], [schools])
   const ageOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(schools.flatMap((item) => splitTokens(item.age_range)))], [schools])
 
   const filteredSchools = useMemo(() => {
     const q = keyword.trim().toLowerCase()
     return schools.filter((item) => {
-      const haystack = [item.name, item.province, item.city, item.school_type, item.age_range, item.fee]
+      const haystack = [item.name, item.canonical_name, item.province, item.city, getLocationHaystack(item), item.school_type, item.age_range, item.fee]
         .filter(Boolean).join(' ').toLowerCase()
       if (q && !haystack.includes(q)) return false
-      if (selectedProvince !== ALL_FILTER && item.province !== selectedProvince) return false
+      if (selectedProvince !== ALL_FILTER && !getLocations(item).some((location) => location.province === selectedProvince)) return false
       if (selectedType !== ALL_FILTER && !splitTokens(item.school_type).includes(selectedType)) return false
       if (selectedAgeRange !== ALL_FILTER && !splitTokens(item.age_range).includes(selectedAgeRange)) return false
       return true
@@ -210,6 +229,7 @@ export default function SchoolsPage() {
       {!loading && filteredSchools.map((item, index) => {
         const iconBgRotation = [palette.iconBg, palette.brandSoft, palette.accent2Soft, palette.greenSoft]
         const iconBg = iconBgRotation[index % iconBgRotation.length]
+        const locationCount = getLocations(item).length
 
         return (
           <View
@@ -234,7 +254,7 @@ export default function SchoolsPage() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: '17px', fontWeight: 'bold', color: palette.text }}>
-                  {item.name}
+                  {item.canonical_name || item.name}
                 </Text>
               </View>
             </View>
@@ -245,9 +265,14 @@ export default function SchoolsPage() {
                 backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px',
               }}>
                 <Text style={{ fontSize: '12px', color: palette.tagText }}>
-                  {item.province || '未知'} {item.city || ''}
+                  {getLocationSummary(item)}
                 </Text>
               </View>
+              {locationCount > 1 ? (
+                <View style={{ padding: '5px 10px', borderRadius: '999px', backgroundColor: palette.brandSoft, marginRight: '8px', marginBottom: '8px' }}>
+                  <Text style={{ fontSize: '12px', color: palette.brand }}>{locationCount} 个地点</Text>
+                </View>
+              ) : null}
               <View style={{
                 padding: '5px 10px', borderRadius: '999px',
                 backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px',
