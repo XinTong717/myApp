@@ -2,25 +2,37 @@
 
 This project routes business actions through `cloudfunctions/appService` via `src/services/cloud.ts`.
 
-After the legacy-function cleanup, only this cloud function should remain deployed in each environment:
+Current backend function model:
 
-- `appService`
+```text
+appService
+```
 
-`getOpenId` is now an `appService` action, not a standalone cloud function.
+`getOpenId`, `getSchools`, `getSchoolDetail`, `getEvents`, `getEventDetail`, `getMe`, `saveProfile`, `getMapUsers`, `submitCommunity`, `submitEvent`, and admin actions are `appService` actions, not required standalone cloud functions.
+
+Public structured content is CloudBase-first:
+
+```text
+schools
+school_locations
+events
+```
+
+`school_locations` is the source of truth for learning-community display/filter/map locations.
+
+---
 
 ## Manual CloudBase cleanup
 
-The repository cleanup removes legacy function source files only. You still need to delete old deployed functions in each CloudBase environment manually.
-
-Do this separately for dev and prod:
+The repository cleanup removes legacy function source files only. You may still see old deployed functions in CloudBase. Clean dev and prod separately.
 
 1. Open WeChat DevTools.
 2. Open CloudBase / 云开发 console.
-3. Confirm the current environment.
+3. Confirm the current environment: dev or prod.
 4. Go to Cloud Functions / 云函数.
-5. Keep only:
+5. Keep:
    - `appService`
-6. Delete legacy standalone functions such as:
+6. Legacy standalone functions can be deleted after confirming no compatibility need:
    - `getOpenId`
    - `getEvents`
    - `getSchools`
@@ -39,133 +51,541 @@ Do this separately for dev and prod:
    - `manageSafetyRelation`
    - `reportUser`
 
-## Recommended indexes
+Do not delete `appService`.
 
-Add these indexes in both dev and prod. The goal is to avoid slow scans as the user base grows.
+---
 
-### `users`
+## How to create indexes in CloudBase console
 
-| Query path | Index fields |
-|---|---|
-| Profile lookup | `openid` |
-| Duplicate display-name check | `displayName`, `openid` |
-| Map user province summary | `isVisibleOnMap`, `province`, `city`, `displayName` |
-| Province detail map users | `province`, `isVisibleOnMap`, `city`, `displayName` |
+Do this separately in **dev** and **prod**.
+
+For each collection:
+
+1. Open CloudBase console.
+2. Confirm the current environment.
+3. Go to Database / 数据库.
+4. Open the collection.
+5. Open Index / 索引.
+6. Click Create index / 新建索引.
+7. Add fields in the exact order shown below.
+8. Direction: use ascending / 升序 unless this document explicitly says descending.
+9. Save and wait until the index status is ready / 已生效.
+
+Naming convention suggestion:
+
+```text
+idx_<collection>_<field1>_<field2>_<field3>
+```
+
+CloudBase console may generate names automatically. That is fine. The important part is field order.
+
+---
+
+## Priority A indexes: create first
+
+These are required for current public browsing, map, submissions, admin review, and rate limiting.
 
 ### `schools`
 
-| Query path | Index fields |
-|---|---|
-| Public list | `status`, `id` |
-| Detail lookup | `id`, `status` |
-| Type filter | `status`, `school_type`, `id` |
-| Age filter | `status`, `age_range`, `id` |
+#### `idx_schools_status_id`
 
-Note: `school_type` and `age_range` currently use fuzzy matching in code, so indexes may not fully eliminate scans for regex-like filters. Keep the fields normalized where possible.
+```text
+status: ascending
+id: ascending
+```
+
+Used by public list.
+
+#### `idx_schools_id_status`
+
+```text
+id: ascending
+status: ascending
+```
+
+Used by detail lookup.
+
+#### `idx_schools_status_school_type_id`
+
+```text
+status: ascending
+school_type: ascending
+id: ascending
+```
+
+Used by type filter. Note: current code uses fuzzy matching for `school_type`, so this index may not fully eliminate scans until values are normalized.
+
+#### `idx_schools_status_age_range_id`
+
+```text
+status: ascending
+age_range: ascending
+id: ascending
+```
+
+Used by age/stage filter. Note: current code uses fuzzy matching for `age_range`, so this index may not fully eliminate scans until values are normalized.
 
 ### `school_locations`
 
-| Query path | Index fields |
-|---|---|
-| Locations for school list/detail | `school_id`, `status` |
-| Province filter / future admin review | `province`, `status` |
-| City filter / future admin review | `province`, `city`, `status` |
-| Migration idempotency | `_id` |
+#### `idx_school_locations_school_id_status`
 
-`school_locations` is the source of truth for map/display locations. Legacy `schools.province/city` should remain only as backward-compatible fields during the migration window.
+```text
+school_id: ascending
+status: ascending
+```
+
+Used by list/detail location attachment.
+
+#### `idx_school_locations_province_status`
+
+```text
+province: ascending
+status: ascending
+```
+
+Used by province filter and map/admin review flows.
+
+#### `idx_school_locations_province_city_status`
+
+```text
+province: ascending
+city: ascending
+status: ascending
+```
+
+Used by city filter and future community review merge flows.
 
 ### `events`
 
-| Query path | Index fields |
-|---|---|
-| Public list | `status`, `start_time` |
-| Detail lookup | `id`, `status` |
+#### `idx_events_status_start_time`
+
+```text
+status: ascending
+start_time: ascending
+```
+
+Used by public event list.
+
+#### `idx_events_id_status`
+
+```text
+id: ascending
+status: ascending
+```
+
+Used by event detail lookup.
+
+### `users`
+
+#### `idx_users_openid`
+
+```text
+openid: ascending
+```
+
+Used by profile lookup. If `_id = openid` is consistently used everywhere, `_id` lookup is already primary, but this index is useful for compatibility queries.
+
+#### `idx_users_displayName_openid`
+
+```text
+displayName: ascending
+openid: ascending
+```
+
+Used by duplicate display-name check.
+
+#### `idx_users_visible_province_city_displayName`
+
+```text
+isVisibleOnMap: ascending
+province: ascending
+city: ascending
+displayName: ascending
+```
+
+Used by map user summary / visible users.
+
+#### `idx_users_province_visible_city_displayName`
+
+```text
+province: ascending
+isVisibleOnMap: ascending
+city: ascending
+displayName: ascending
+```
+
+Used by province detail map users.
 
 ### `connections`
 
-| Query path | Index fields |
-|---|---|
-| Sent requests | `fromOpenid`, `status`, `createdAt` |
-| Received requests | `toOpenid`, `status`, `createdAt` |
-| Existing connection checks | `fromOpenid`, `toOpenid`, `status` |
-| Daily rate limit | `fromOpenid`, `createdAt` |
+#### `idx_connections_from_status_createdAt`
 
-### `safety_relations`
+```text
+fromOpenid: ascending
+status: ascending
+createdAt: descending
+```
 
-| Query path | Index fields |
-|---|---|
-| My safety overview | `ownerOpenid`, `updatedAt` |
-| Pair lookup | `ownerOpenid`, `targetOpenid` |
-| Hidden-by-target lookup | `targetOpenid`, `isBlocked` |
+Used by sent requests and sender-side request list.
 
-### `event_interest`
+#### `idx_connections_to_status_createdAt`
 
-| Query path | Index fields |
-|---|---|
-| Count interested users | `eventId`, `status` |
-| User interest state | `eventId`, `openid`, `status` |
+```text
+toOpenid: ascending
+status: ascending
+createdAt: descending
+```
 
-### `event_interest_counts`
+Used by received requests.
 
-| Query path | Index fields |
-|---|---|
-| Count cache lookup | `eventId` |
+#### `idx_connections_pair_status`
 
-### `rate_limits`
+```text
+fromOpenid: ascending
+toOpenid: ascending
+status: ascending
+```
 
-| Query path | Index fields |
-|---|---|
-| Direct document lookup | `_id` |
-| Future cleanup | `updatedAt` |
+Used by existing connection checks.
 
-Current rate-limit documents use stable `_id = openid_action`, so `_id` lookup is the primary path.
+#### `idx_connections_from_createdAt`
 
-### `event_submissions`
+```text
+fromOpenid: ascending
+createdAt: descending
+```
 
-| Query path | Index fields |
-|---|---|
-| Admin review list | `status`, `createdAt` |
-| Duplicate check | `normalizedKey`, `status` |
-| User rate limit | `openid`, `createdAt` |
-| Published contact lookup | `publishedEventId`, `status` |
+Used by daily send-request rate checks.
 
 ### `community_submissions`
 
-| Query path | Index fields |
-|---|---|
-| Duplicate check | `normalizedKey`, `status` |
-| User rate limit | `openid`, `createdAt` |
-| Future admin review list | `status`, `createdAt` |
+#### `idx_community_submissions_status_createdAt`
 
-### `user_reports`
+```text
+status: ascending
+createdAt: descending
+```
 
-| Query path | Index fields |
-|---|---|
-| Duplicate report check | `reporterOpenid`, `targetOpenid`, `createdAt` |
+Used by future admin review list.
+
+#### `idx_community_submissions_normalizedKey_status`
+
+```text
+normalizedKey: ascending
+status: ascending
+```
+
+Used by duplicate check.
+
+#### `idx_community_submissions_openid_createdAt`
+
+```text
+openid: ascending
+createdAt: descending
+```
+
+Used by submitter 24h rate limit.
+
+### `event_submissions`
+
+#### `idx_event_submissions_status_createdAt`
+
+```text
+status: ascending
+createdAt: descending
+```
+
+Used by admin event review list.
+
+#### `idx_event_submissions_normalizedKey_status`
+
+```text
+normalizedKey: ascending
+status: ascending
+```
+
+Used by duplicate check.
+
+#### `idx_event_submissions_openid_createdAt`
+
+```text
+openid: ascending
+createdAt: descending
+```
+
+Used by submitter 24h rate limit.
+
+#### `idx_event_submissions_publishedEventId_status`
+
+```text
+publishedEventId: ascending
+status: ascending
+```
+
+Used by published event contact lookup.
+
+### `rate_limits`
+
+#### `idx_rate_limits_updatedAt`
+
+```text
+updatedAt: ascending
+```
+
+Used by future cleanup.
+
+Note: current rate-limit docs use stable `_id = openid_action`; direct doc lookup by `_id` does not need a custom index.
 
 ### `admin_users`
 
-| Query path | Index fields |
-|---|---|
-| Admin access check | `openid`, `isActive` |
+#### `idx_admin_users_openid_isActive`
+
+```text
+openid: ascending
+isActive: ascending
+```
+
+Used by admin access check.
 
 ### `admin_audit_logs`
 
-| Query path | Index fields |
-|---|---|
-| Admin history | `adminOpenid`, `createdAt` |
-| Target history | `targetType`, `targetId`, `createdAt` |
-| Action history | `action`, `createdAt` |
+#### `idx_admin_audit_logs_adminOpenid_createdAt`
+
+```text
+adminOpenid: ascending
+createdAt: descending
+```
+
+Used by admin history.
+
+#### `idx_admin_audit_logs_targetType_targetId_createdAt`
+
+```text
+targetType: ascending
+targetId: ascending
+createdAt: descending
+```
+
+Used by target history.
+
+#### `idx_admin_audit_logs_action_createdAt`
+
+```text
+action: ascending
+createdAt: descending
+```
+
+Used by action history.
+
+---
+
+## Priority B indexes: create after A
+
+### `safety_relations`
+
+#### `idx_safety_relations_owner_updatedAt`
+
+```text
+ownerOpenid: ascending
+updatedAt: descending
+```
+
+Used by my safety overview.
+
+#### `idx_safety_relations_owner_target`
+
+```text
+ownerOpenid: ascending
+targetOpenid: ascending
+```
+
+Used by pair lookup.
+
+#### `idx_safety_relations_target_isBlocked`
+
+```text
+targetOpenid: ascending
+isBlocked: ascending
+```
+
+Used by hidden-by-target lookup.
+
+### `event_interest`
+
+#### `idx_event_interest_eventId_status`
+
+```text
+eventId: ascending
+status: ascending
+```
+
+Used by interest count source fallback.
+
+#### `idx_event_interest_eventId_openid_status`
+
+```text
+eventId: ascending
+openid: ascending
+status: ascending
+```
+
+Used by user interest state fallback.
+
+Note: current stable doc id is `event_${eventId}_${openid}`, so direct doc lookup is primary. These indexes support fallback / legacy data.
+
+### `event_interest_counts`
+
+#### `idx_event_interest_counts_eventId`
+
+```text
+eventId: ascending
+```
+
+Used by count cache lookup. If `_id = eventId` is consistently used, `_id` lookup is already primary, but this index helps compatibility queries.
+
+### `user_reports`
+
+#### `idx_user_reports_reporter_target_createdAt`
+
+```text
+reporterOpenid: ascending
+targetOpenid: ascending
+createdAt: descending
+```
+
+Used by duplicate report checks.
+
+### `corrections`
+
+#### `idx_corrections_status_createdAt`
+
+```text
+status: ascending
+createdAt: descending
+```
+
+Used by future corrections review queue.
+
+#### `idx_corrections_schoolId_createdAt`
+
+```text
+schoolId: ascending
+createdAt: descending
+```
+
+Used by school-specific correction history.
+
+---
+
+## Copy checklist
+
+Use this as the console checklist. Tick each row in dev, then repeat in prod.
+
+```text
+[ ] schools: status + id
+[ ] schools: id + status
+[ ] schools: status + school_type + id
+[ ] schools: status + age_range + id
+
+[ ] school_locations: school_id + status
+[ ] school_locations: province + status
+[ ] school_locations: province + city + status
+
+[ ] events: status + start_time
+[ ] events: id + status
+
+[ ] users: openid
+[ ] users: displayName + openid
+[ ] users: isVisibleOnMap + province + city + displayName
+[ ] users: province + isVisibleOnMap + city + displayName
+
+[ ] connections: fromOpenid + status + createdAt(desc)
+[ ] connections: toOpenid + status + createdAt(desc)
+[ ] connections: fromOpenid + toOpenid + status
+[ ] connections: fromOpenid + createdAt(desc)
+
+[ ] community_submissions: status + createdAt(desc)
+[ ] community_submissions: normalizedKey + status
+[ ] community_submissions: openid + createdAt(desc)
+
+[ ] event_submissions: status + createdAt(desc)
+[ ] event_submissions: normalizedKey + status
+[ ] event_submissions: openid + createdAt(desc)
+[ ] event_submissions: publishedEventId + status
+
+[ ] rate_limits: updatedAt
+
+[ ] admin_users: openid + isActive
+
+[ ] admin_audit_logs: adminOpenid + createdAt(desc)
+[ ] admin_audit_logs: targetType + targetId + createdAt(desc)
+[ ] admin_audit_logs: action + createdAt(desc)
+
+[ ] safety_relations: ownerOpenid + updatedAt(desc)
+[ ] safety_relations: ownerOpenid + targetOpenid
+[ ] safety_relations: targetOpenid + isBlocked
+
+[ ] event_interest: eventId + status
+[ ] event_interest: eventId + openid + status
+
+[ ] event_interest_counts: eventId
+
+[ ] user_reports: reporterOpenid + targetOpenid + createdAt(desc)
+
+[ ] corrections: status + createdAt(desc)
+[ ] corrections: schoolId + createdAt(desc)
+```
+
+---
+
+## Collection permission recommendation
+
+For current app-managed collections, use:
+
+```text
+所有用户不可读写
+仅云函数可读写
+```
+
+Apply to:
+
+```text
+users
+connections
+corrections
+community_submissions
+event_submissions
+event_interest
+event_interest_counts
+admin_users
+admin_audit_logs
+safety_relations
+user_reports
+rate_limits
+schools
+school_locations
+events
+```
+
+---
 
 ## Data hygiene notes
 
-- New documents in `schools`, `school_locations`, and `events` should explicitly set `status: 'published'` or a similar non-deleted value. Avoid relying on missing `status` fields with `_.neq('deleted')`.
-- `school_locations` should be updated through admin actions when a known school expands to a new city. Do not append comma-separated cities to `schools.city` for new data.
+- New documents in `schools`, `school_locations`, and `events` should explicitly set `status: 'published'` or a similar non-deleted value.
+- Current `contentRepo` filters deleted-like statuses after reads. Still, explicit status is safer than relying on missing fields.
+- Deleted-like statuses hidden from public reads:
+  - `deleted`
+  - `removed`
+  - `archived`
+- `school_locations` should be updated through admin actions when a known school expands to a new city.
+- Do not append comma-separated cities to `schools.city` for new data.
 - Keep `schools.name` for backward compatibility, but prefer `schools.canonical_name` in new reads and admin workflows.
+
+---
 
 ## Future local-only optimization patches
 
-These are intentionally not applied in the current PR because they touch large files or require lockfile regeneration.
+These are intentionally not applied in the current doc update because they touch runtime code or require lockfile regeneration.
 
 ### Remove non-WeApp Taro dependencies
 
