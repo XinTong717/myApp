@@ -24,6 +24,15 @@ function getScopedKey(scope: string, key: string) {
   return scope + ':' + key
 }
 
+function readAllStorageKeys() {
+  try {
+    return Taro.getStorageInfoSync().keys || []
+  } catch (err) {
+    console.warn('[cache] failed to read storage keys', err)
+    return []
+  }
+}
+
 export function getCachedValue<T>(key: string): T | null {
   const memoryHit = memoryCache.get(key) as CacheEnvelope<T> | undefined
   if (memoryHit) {
@@ -69,6 +78,21 @@ export function clearCachedValue(key: string) {
   } catch (err) {
     console.warn('[cache] failed to clear ' + key, err)
   }
+}
+
+export function clearCachedValuesByPrefix(prefix: string) {
+  Array.from(memoryCache.keys()).forEach((key) => {
+    if (key.includes(prefix)) memoryCache.delete(key)
+  })
+
+  readAllStorageKeys().forEach((key) => {
+    if (!String(key).includes(prefix)) return
+    try {
+      Taro.removeStorageSync(key)
+    } catch (err) {
+      console.warn('[cache] failed to clear prefix key ' + key, err)
+    }
+  })
 }
 
 export async function getCacheScopePrefix() {
@@ -118,4 +142,9 @@ export async function setScopedCachedValue<T>(key: string, value: T, ttlMs: numb
 export async function clearScopedCachedValue(key: string): Promise<void> {
   const scope = await getCacheScopePrefix()
   clearCachedValue(getScopedKey(scope, key))
+}
+
+export async function clearScopedCachedValuesByPrefix(prefix: string): Promise<void> {
+  const scope = await getCacheScopePrefix()
+  clearCachedValuesByPrefix(getScopedKey(scope, prefix))
 }
