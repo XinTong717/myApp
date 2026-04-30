@@ -4,22 +4,9 @@ import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { getSchoolDetail, submitCorrection } from '../../services/school'
 import { palette } from '../../theme/palette'
 import { DetailSkeleton } from '../../components/common/Skeleton'
+import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
-type School = {
-  id: number
-  name: string
-  province?: string
-  city?: string
-  age_range?: string
-  school_type?: string
-  has_xuji?: boolean
-  xuji_note?: string
-  residency_req?: string
-  admission_req?: string
-  fee?: string
-  output_direction?: string
-  official_url?: string
-}
+type School = SchoolItem
 
 function InfoRow(props: { label: string; value?: string }) {
   return (
@@ -46,6 +33,27 @@ function Tag(props: { text: string }) {
       <Text style={{ fontSize: '12px', color: palette.tagText }}>{props.text}</Text>
     </View>
   )
+}
+
+function splitTokens(value?: string) {
+  return String(value || '')
+    .split(/[、,，/|｜\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function getLocations(school: School): SchoolLocationItem[] {
+  if (Array.isArray(school.locations) && school.locations.length > 0) return school.locations
+  return splitTokens(school.city).map((city, index) => ({
+    school_id: Number(school.id),
+    province: splitTokens(school.province)[index] || splitTokens(school.province)[0] || '',
+    city,
+    status: 'legacy',
+  }))
+}
+
+function formatLocation(location: SchoolLocationItem) {
+  return [location.province, location.city].filter(Boolean).join(' · ') || '地点未填写'
 }
 
 export default function SchoolDetailPage() {
@@ -109,6 +117,8 @@ export default function SchoolDetailPage() {
     }
   }
 
+  const locations = school ? getLocations(school) : []
+
   return (
     <View style={{ padding: '16px', backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
       {loading && <DetailSkeleton />}
@@ -132,12 +142,12 @@ export default function SchoolDetailPage() {
                 <Text style={{ fontSize: '20px' }}>🏫</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text, lineHeight: '30px' }}>{school.name}</Text>
+                <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text, lineHeight: '30px' }}>{school.canonical_name || school.name}</Text>
               </View>
             </View>
 
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: school.official_url ? '10px' : '0' }}>
-              <Tag text={[school.province, school.city].filter(Boolean).join(' ') || '地区未填写'} />
+              <Tag text={locations.length > 0 ? `${locations.length} 个地点` : '地点未填写'} />
               {!!school.school_type && <Tag text={school.school_type} />}
               {!!school.age_range && <Tag text={school.age_range} />}
             </View>
@@ -152,6 +162,25 @@ export default function SchoolDetailPage() {
                 </View>
                 <Text style={{ fontSize: '11px', color: palette.muted }}>点击复制</Text>
               </View>
+            )}
+          </View>
+
+          <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+            <View style={{ marginBottom: '10px' }}>
+              <Text style={{ fontSize: '15px', color: palette.text, fontWeight: 'bold' }}>地点列表</Text>
+            </View>
+            {locations.length > 0 ? locations.map((location, index) => (
+              <View key={`${location.province}-${location.city}-${index}`} style={{ backgroundColor: palette.surface, borderRadius: '16px', padding: '12px', marginBottom: index === locations.length - 1 ? '0' : '10px', border: `1px solid ${palette.line}` }}>
+                <Text style={{ fontSize: '14px', color: palette.text, fontWeight: 'bold' }}>{formatLocation(location)}</Text>
+                {!!location.address_note && (
+                  <View style={{ marginTop: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>地址说明：{location.address_note}</Text></View>
+                )}
+                {!!location.contact_note && (
+                  <View style={{ marginTop: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>联系说明：{location.contact_note}</Text></View>
+                )}
+              </View>
+            )) : (
+              <Text style={{ fontSize: '13px', color: palette.subtext }}>暂无地点信息</Text>
             )}
           </View>
 
