@@ -24,6 +24,10 @@ function uniqueLabels(values) {
   return Array.from(new Set((values || []).map((item) => normalizeString(item)).filter(Boolean)))
 }
 
+function uniqueNumbers(values) {
+  return Array.from(new Set((values || []).map((item) => Number(item)).filter((item) => Number.isFinite(item) && item > 0)))
+}
+
 function escapeRegExp(value) {
   return normalizeString(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -47,7 +51,9 @@ function buildSchoolWhere(options = {}) {
   const where = { status: _.neq('deleted') }
   const schoolType = normalizeString(options.schoolType || options.type)
   const ageRange = normalizeString(options.ageRange)
+  const schoolIds = uniqueNumbers(options.schoolIds || [])
 
+  if (schoolIds.length > 0) where.id = _.in(schoolIds)
   if (schoolType) where.school_type = containsRegExp(schoolType)
   if (ageRange) where.age_range = containsRegExp(ageRange)
 
@@ -87,7 +93,7 @@ function fallbackLocationsFromSchool(school) {
 }
 
 async function listSchoolLocationsByIds(schoolIds) {
-  const ids = uniqueLabels(schoolIds.map((id) => String(Number(id))).filter((id) => Number(id) > 0)).map(Number)
+  const ids = uniqueNumbers(schoolIds)
   if (ids.length === 0) return null
 
   try {
@@ -108,6 +114,29 @@ async function listSchoolLocationsByIds(schoolIds) {
     return res.data || []
   } catch (err) {
     console.warn('school_locations read skipped, using legacy fields:', err && err.message ? err.message : err)
+    return null
+  }
+}
+
+async function listSchoolIdsByLocation(options = {}) {
+  const province = normalizeString(options.province)
+  const city = normalizeString(options.city)
+  if (!province && !city) return null
+
+  try {
+    const where = { status: _.neq('deleted') }
+    if (province) where.province = province
+    if (city) where.city = city
+
+    const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
+      .where(where)
+      .field({ school_id: true })
+      .limit(SCHOOL_LIST_MAX_LIMIT * 3)
+      .get()
+
+    return uniqueNumbers((res.data || []).map((item) => item.school_id)).slice(0, SCHOOL_LIST_MAX_LIMIT)
+  } catch (err) {
+    console.warn('school_locations filter skipped, falling back to legacy school fields:', err && err.message ? err.message : err)
     return null
   }
 }
@@ -168,12 +197,20 @@ function filterSchoolsByLocation(schools, options = {}) {
 async function listSchools(options = {}) {
   const normalizedOptions = typeof options === 'object' && options !== null ? options : { limit: options }
   const limit = normalizeLimit(normalizedOptions.limit, SCHOOL_LIST_DEFAULT_LIMIT, SCHOOL_LIST_MAX_LIMIT)
-  const queryLimit = normalizeString(normalizedOptions.province || normalizedOptions.city)
-    ? SCHOOL_LIST_MAX_LIMIT
+  const locationSchoolIds = await listSchoolIdsByLocation(normalizedOptions)
+
+  if (Array.isArray(locationSchoolIds) && locationSchoolIds.length === 0) return []
+
+  const queryOptions = Array.isArray(locationSchoolIds)
+    ? { ...normalizedOptions, schoolIds: locationSchoolIds }
+    : normalizedOptions
+
+  const queryLimit = Array.isArray(locationSchoolIds)
+    ? Math.min(Math.max(locationSchoolIds.length, 1), SCHOOL_LIST_MAX_LIMIT)
     : limit
 
   const res = await db.collection('schools')
-    .where(buildSchoolWhere(normalizedOptions))
+    .where(buildSchoolWhere(queryOptions))
     .field({
       id: true,
       name: true,
