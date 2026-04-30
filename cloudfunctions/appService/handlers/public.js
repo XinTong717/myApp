@@ -144,8 +144,8 @@ async function getEventDetail(event) {
     const eventId = Number(event?.eventId || 0)
     if (!eventId) return fail(requestId, 'BAD_REQUEST', 'eventId 无效', { event: null })
 
-    const event = await getEventById(eventId)
-    return ok(requestId, { event })
+    const eventDetail = await getEventById(eventId)
+    return ok(requestId, { event: eventDetail })
   } catch (err) {
     console.error('appService getEventDetail error:', err)
     return fail(requestId, 'GET_EVENT_DETAIL_FAILED', '读取活动详情失败，请稍后重试', { event: null })
