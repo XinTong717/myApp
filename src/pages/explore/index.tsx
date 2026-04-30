@@ -656,9 +656,9 @@ export default function ExplorePage() {
           borderWidth: 0,
           borderColor: '#FFFFFF',
           bgColor: isUserCluster
-            ? 'rgba(184,85,64,0.95)'
+            ? 'rgba(92,128,98,0.95)'
             : isSchoolCluster
-              ? 'rgba(199,103,82,0.95)'
+              ? 'rgba(184,85,64,0.95)'
               : item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,245,232,0.92)',
           padding: isUserCluster || isSchoolCluster ? 5 : 4,
           textAlign: 'center',
