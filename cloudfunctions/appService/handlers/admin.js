@@ -1,6 +1,7 @@
 const { db } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
 const { getActiveAdmin } = require('../lib/userRepo')
+const { writeAdminAuditLog } = require('../lib/adminAudit')
 
 const EVENT_TYPE_MAP = {
   '工作坊': 'workshop',
@@ -170,6 +171,18 @@ async function getEventPublishPayload(event, wxContext) {
       contact_info: buildContactInfo(submission),
     }
     const warnings = buildWarnings(submission, payload)
+    await writeAdminAuditLog({
+      admin,
+      openid: wxContext.OPENID,
+      action: 'event_submission_publish_payload_viewed',
+      targetType: 'event_submission',
+      targetId: submissionId,
+      metadata: {
+        title: submission.title || '',
+        currentStatus: submission.status || 'pending',
+        warnings,
+      },
+    })
     return ok(requestId, {
       admin: { name: admin.name || '', role: admin.role || 'admin' },
       submission: {
@@ -216,13 +229,53 @@ async function reviewEventSubmission(event, wxContext) {
       const publishedEventId = Number(publishedEventIdRaw || 0)
       if (!publishedEventId) return fail(requestId, 'PUBLISHED_EVENT_ID_REQUIRED', 'mark_published 需要有效的 publishedEventId')
       await db.collection('event_submissions').doc(submissionId).update({ data: { status: 'merged', publishedEventId, publishedAt: db.serverDate(), reviewedAt: db.serverDate(), reviewedBy: reviewerName, adminNote: adminNote || '已发布到 events', updatedAt: db.serverDate() } })
+      await writeAdminAuditLog({
+        admin,
+        openid: wxContext.OPENID,
+        action: 'event_submission_mark_published',
+        targetType: 'event_submission',
+        targetId: submissionId,
+        metadata: {
+          title: submission.title || '',
+          previousStatus: submission.status || 'pending',
+          nextStatus: 'merged',
+          publishedEventId,
+          adminNote: adminNote || '已发布到 events',
+        },
+      })
       return ok(requestId, { message: '已标记为已发布', nextStatus: 'merged', publishedEventId })
     }
     if (action === 'reject') {
       await db.collection('event_submissions').doc(submissionId).update({ data: { status: 'rejected', reviewedAt: db.serverDate(), reviewedBy: reviewerName, adminNote: adminNote || '未通过审核', updatedAt: db.serverDate() } })
+      await writeAdminAuditLog({
+        admin,
+        openid: wxContext.OPENID,
+        action: 'event_submission_rejected',
+        targetType: 'event_submission',
+        targetId: submissionId,
+        metadata: {
+          title: submission.title || '',
+          previousStatus: submission.status || 'pending',
+          nextStatus: 'rejected',
+          adminNote: adminNote || '未通过审核',
+        },
+      })
       return ok(requestId, { message: '已标记为拒绝', nextStatus: 'rejected' })
     }
     await db.collection('event_submissions').doc(submissionId).update({ data: { status: 'pending', publishedEventId: db.command.remove(), publishedAt: db.command.remove(), reviewedAt: db.serverDate(), reviewedBy: reviewerName, adminNote: adminNote || '已重置为待审核', updatedAt: db.serverDate() } })
+    await writeAdminAuditLog({
+      admin,
+      openid: wxContext.OPENID,
+      action: 'event_submission_reset_pending',
+      targetType: 'event_submission',
+      targetId: submissionId,
+      metadata: {
+        title: submission.title || '',
+        previousStatus: submission.status || 'pending',
+        nextStatus: 'pending',
+        adminNote: adminNote || '已重置为待审核',
+      },
+    })
     return ok(requestId, { message: '已重置为待审核', nextStatus: 'pending' })
   } catch (err) {
     console.error('appService reviewEventSubmission error:', err)
