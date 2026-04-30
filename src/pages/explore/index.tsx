@@ -342,7 +342,7 @@ export default function ExplorePage() {
     }
 
     if (showUsers) {
-      const visibleUsers = appUsers.filter((u) => (showEducators || u.isSelf || !isPureEducator(u)) && applyClientUserFilters(u))
+      const visibleUsers = appUsers.filter((u) => applyClientUserFilters(u))
       const usersByCity: Record<string, AppUser[]> = {}
       const usersByProvince: Record<string, AppUser[]> = {}
 
@@ -427,7 +427,7 @@ export default function ExplorePage() {
     }
 
     return items
-  }, [schools, appUsers, showSchools, showUsers, showEducators, selectedProvince, selectedUserRole, selectedProfileCompleteness, selectedUserCity])
+  }, [schools, appUsers, showSchools, showUsers, selectedProvince, selectedUserRole, selectedProfileCompleteness, selectedUserCity])
 
   const filteredMarkers = useMemo(() => {
     if (!selectedProvince) return allMarkers
@@ -461,6 +461,12 @@ export default function ExplorePage() {
   const shouldShowSchoolLabels = !!selectedProvince || schoolMarkerCount <= 60
 
   const mapMarkers: any[] = useMemo(() => validMarkers.map((item) => {
+    const latitude = Number(item.latitude)
+    const longitude = Number(item.longitude)
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+    if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null
+
     const isUserCluster = item.type === 'user_cluster'
     const isSchoolCluster = item.type === 'school_cluster'
     const clusterCount = item.clusterUsers?.length || 0
@@ -481,8 +487,8 @@ export default function ExplorePage() {
 
     return {
       id: item.id,
-      latitude: item.latitude,
-      longitude: item.longitude,
+      latitude,
+      longitude,
       title: item.name,
       iconPath: item.type === 'school' || item.type === 'school_cluster' ? markerSchoolIcon : markerUserIcon,
       width: markerSize,
@@ -508,7 +514,7 @@ export default function ExplorePage() {
         },
       } : {}),
     }
-  }).filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude)), [validMarkers, isDenseMap, shouldShowSchoolLabels, shouldShowUserLabels])
+  }).filter((item) => item && Number.isFinite(item.latitude) && Number.isFinite(item.longitude)), [validMarkers, isDenseMap, shouldShowSchoolLabels, shouldShowUserLabels])
 
   const { center, scale } = useMemo(() => {
     if (validMarkers.length === 0) return { center: { latitude: 33.0, longitude: 108.0 }, scale: 5 }
@@ -706,7 +712,7 @@ export default function ExplorePage() {
     }
     return (
       <TaroMap
-        key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${shouldShowSchoolLabels ? 'school-label' : 'school-dot'}-${hasUserClusters ? 'cluster' : 'plain'}`}
+        key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${shouldShowSchoolLabels ? 'school-label' : 'school-dot'}-${hasUserClusters ? 'user-cluster' : 'user-plain'}-${hasSchoolClusters ? 'school-cluster' : 'school-plain'}`}
         latitude={center.latitude}
         longitude={center.longitude}
         scale={scale}
@@ -723,7 +729,7 @@ export default function ExplorePage() {
         style={{ width: '100%', height: 'calc(100vh - 120px)' }}
       />
     )
-  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap, handleLabelTap, shouldShowUserLabels, shouldShowSchoolLabels, hasUserClusters])
+  }, [loading, error, canRenderMap, mapMountReady, isNavigatingAway, selectedProvince, mapMarkers, center.latitude, center.longitude, scale, handleMarkerTap, handleCalloutTap, handleLabelTap, shouldShowUserLabels, shouldShowSchoolLabels, hasUserClusters, hasSchoolClusters])
 
   return (
     <View style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
@@ -743,7 +749,6 @@ export default function ExplorePage() {
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
           <FilterChip active={showSchools} tone='brand' text={`学习社区 ${showSchools ? schoolCount : '—'}`} onClick={() => { setShowSchools(!showSchools); closePopup() }} />
           <FilterChip active={showUsers} tone='user' text={`同路人 ${showUsers ? userCount : '—'}`} onClick={() => { setShowUsers(!showUsers); closePopup() }} />
-          {showUsers && <FilterChip active={showEducators} tone='educator' text='教育者' onClick={() => { setShowEducators((value) => !value); closePopup() }} />}
           {showUsers && (
             <View
               onClick={() => setShowUserFilterSheet(true)}
