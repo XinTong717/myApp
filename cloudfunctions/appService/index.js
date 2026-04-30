@@ -1,19 +1,12 @@
 const { ok, fail, resolveRequestId } = require('./lib/response')
 const { cloud } = require('./lib/cloud')
 const { rateLimit } = require('./lib/rateLimit')
+const { READ_ACTION_RATE_LIMITS } = require('./lib/rateLimits.config')
 const publicHandlers = require('./handlers/public')
 const userHandlers = require('./handlers/userV2')
 const mapUserHandlers = require('./handlers/mapUsers')
 const adminHandlers = require('./handlers/admin')
 const schoolMigrationHandlers = require('./handlers/schoolMigration')
-
-const READ_ACTION_RATE_LIMITS = {
-  getMapUsers: { limit: 30, windowMs: 60 * 1000 },
-  getMyRequests: { limit: 30, windowMs: 60 * 1000 },
-  getEventInterestInfo: { limit: 60, windowMs: 60 * 1000 },
-  getEvents: { limit: 60, windowMs: 60 * 1000 },
-  getSchools: { limit: 60, windowMs: 60 * 1000 },
-}
 
 async function getOpenId(event, wxContext) {
   const requestId = resolveRequestId('get-openid', event)
