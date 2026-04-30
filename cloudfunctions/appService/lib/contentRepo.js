@@ -96,38 +96,6 @@ function buildSchoolWhere(options = {}) {
   return where
 }
 
-function fallbackLocationsFromSchool(school) {
-  const cities = splitLabels(school.city)
-  const provinces = splitLabels(school.province)
-  const schoolId = Number(school.id)
-
-  if (cities.length > 0) {
-    return cities.map((city, index) => ({
-      school_id: schoolId,
-      province: provinces[index] || provinces[0] || '',
-      city,
-      address_note: '',
-      contact_note: '',
-      status: 'published',
-      source: 'legacy_schools_city',
-    }))
-  }
-
-  if (provinces.length > 0) {
-    return provinces.map((province) => ({
-      school_id: schoolId,
-      province,
-      city: '',
-      address_note: '',
-      contact_note: '',
-      status: 'published',
-      source: 'legacy_schools_province',
-    }))
-  }
-
-  return []
-}
-
 async function listSchoolLocationsByIds(schoolIds) {
   const ids = uniqueNumbers(schoolIds)
   if (ids.length === 0) return []
@@ -178,8 +146,7 @@ async function listSchoolIdsByLocation(options = {}) {
   }
 }
 
-function attachSchoolLocations(schools, locations, options = {}) {
-  const allowLegacyFallback = options.allowLegacyFallback === true
+function attachSchoolLocations(schools, locations) {
   const locationMap = new Map()
   if (Array.isArray(locations)) {
     locations.forEach((location) => {
@@ -200,7 +167,7 @@ function attachSchoolLocations(schools, locations, options = {}) {
 
   return (schools || []).filter((school) => isReadableStatus(school.status)).map((school) => {
     const schoolId = Number(school.id)
-    const normalizedLocations = locationMap.get(schoolId) || (allowLegacyFallback ? fallbackLocationsFromSchool(school) : [])
+    const normalizedLocations = locationMap.get(schoolId) || []
     const provinces = uniqueLabels(normalizedLocations.map((item) => item.province))
     const cities = uniqueLabels(normalizedLocations.map((item) => item.city))
 
@@ -272,8 +239,6 @@ async function listSchools(options = {}) {
       name: true,
       canonical_name: true,
       description: true,
-      province: true,
-      city: true,
       age_range: true,
       school_type: true,
       fee: true,
@@ -287,7 +252,7 @@ async function listSchools(options = {}) {
 
   const rawSchools = (res.data || []).filter((school) => isReadableStatus(school.status))
   const locations = await listSchoolLocationsByIds(rawSchools.map((school) => school.id))
-  const schoolsWithLocations = attachSchoolLocations(rawSchools, locations, { allowLegacyFallback: false })
+  const schoolsWithLocations = attachSchoolLocations(rawSchools, locations)
 
   return filterSchoolsByFacets(filterSchoolsByLocation(schoolsWithLocations, normalizedOptions), normalizedOptions).slice(0, limit)
 }
@@ -304,7 +269,7 @@ async function getSchoolById(schoolId) {
   if (!school) return null
 
   const locations = await listSchoolLocationsByIds([Number(schoolId)])
-  return attachSchoolLocations([school], locations, { allowLegacyFallback: true })[0] || null
+  return attachSchoolLocations([school], locations)[0] || null
 }
 
 async function listEvents(limit = EVENT_LIST_LIMIT) {
