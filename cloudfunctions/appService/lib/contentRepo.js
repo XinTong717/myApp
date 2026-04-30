@@ -4,6 +4,7 @@ const SCHOOL_LIST_DEFAULT_LIMIT = 80
 const SCHOOL_LIST_MAX_LIMIT = 200
 const EVENT_LIST_LIMIT = 50
 const SCHOOL_LOCATION_COLLECTION = 'school_locations'
+const DELETED_STATUSES = new Set(['deleted', 'removed', 'archived'])
 
 function normalizeLimit(value, fallback, max) {
   return Math.min(Math.max(Number(value || fallback), 1), max)
@@ -11,6 +12,15 @@ function normalizeLimit(value, fallback, max) {
 
 function normalizeString(value) {
   return String(value || '').trim()
+}
+
+function normalizeStatus(value) {
+  return normalizeString(value).toLowerCase()
+}
+
+function isReadableStatus(value) {
+  const status = normalizeStatus(value)
+  return !status || !DELETED_STATUSES.has(status)
 }
 
 function splitLabels(value) {
@@ -62,7 +72,7 @@ function matchesAnyText(value, filters) {
 }
 
 function buildSchoolWhere(options = {}) {
-  const where = { status: _.neq('deleted') }
+  const where = {}
   const schoolTypes = normalizeFilterList(options.schoolType || options.type, options.schoolTypes || options.types)
   const ageRanges = normalizeFilterList(options.ageRange, options.ageRanges)
   const schoolIds = uniqueNumbers(options.schoolIds || [])
@@ -112,7 +122,7 @@ async function listSchoolLocationsByIds(schoolIds) {
 
   try {
     const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
-      .where({ school_id: _.in(ids), status: _.neq('deleted') })
+      .where({ school_id: _.in(ids) })
       .field({
         school_id: true,
         province: true,
@@ -125,7 +135,7 @@ async function listSchoolLocationsByIds(schoolIds) {
       .limit(SCHOOL_LIST_MAX_LIMIT * 3)
       .get()
 
-    return res.data || []
+    return (res.data || []).filter((item) => isReadableStatus(item.status))
   } catch (err) {
     console.warn('school_locations read skipped, using legacy fields:', err && err.message ? err.message : err)
     return null
@@ -138,7 +148,7 @@ async function listSchoolIdsByLocation(options = {}) {
   if (provinces.length === 0 && cities.length === 0) return null
 
   try {
-    const where = { status: _.neq('deleted') }
+    const where = {}
     if (provinces.length === 1) where.province = provinces[0]
     if (provinces.length > 1) where.province = _.in(provinces)
     if (cities.length === 1) where.city = cities[0]
@@ -146,11 +156,11 @@ async function listSchoolIdsByLocation(options = {}) {
 
     const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
       .where(where)
-      .field({ school_id: true })
+      .field({ school_id: true, status: true })
       .limit(SCHOOL_LIST_MAX_LIMIT * 3)
       .get()
 
-    return uniqueNumbers((res.data || []).map((item) => item.school_id)).slice(0, SCHOOL_LIST_MAX_LIMIT)
+    return uniqueNumbers((res.data || []).filter((item) => isReadableStatus(item.status)).map((item) => item.school_id)).slice(0, SCHOOL_LIST_MAX_LIMIT)
   } catch (err) {
     console.warn('school_locations filter skipped, falling back to legacy school fields:', err && err.message ? err.message : err)
     return null
@@ -176,7 +186,7 @@ function attachSchoolLocations(schools, locations) {
     })
   }
 
-  return (schools || []).map((school) => {
+  return (schools || []).filter((school) => isReadableStatus(school.status)).map((school) => {
     const schoolId = Number(school.id)
     const normalizedLocations = locationMap.get(schoolId) || fallbackLocationsFromSchool(school)
     const provinces = uniqueLabels(normalizedLocations.map((item) => item.province))
@@ -257,12 +267,13 @@ async function listSchools(options = {}) {
       fee: true,
       has_xuji: true,
       official_url: true,
+      status: true,
     })
     .orderBy('id', 'asc')
     .limit(queryLimit)
     .get()
 
-  const rawSchools = res.data || []
+  const rawSchools = (res.data || []).filter((school) => isReadableStatus(school.status))
   const locations = await listSchoolLocationsByIds(rawSchools.map((school) => school.id))
   const schoolsWithLocations = attachSchoolLocations(rawSchools, locations)
 
@@ -273,11 +284,11 @@ async function getSchoolById(schoolId) {
   if (!isFinitePositiveNumber(schoolId)) return null
 
   const res = await db.collection('schools')
-    .where({ id: Number(schoolId), status: _.neq('deleted') })
+    .where({ id: Number(schoolId) })
     .limit(1)
     .get()
 
-  const school = res.data?.[0] || null
+  const school = (res.data || []).find((item) => isReadableStatus(item.status)) || null
   if (!school) return null
 
   const locations = await listSchoolLocationsByIds([Number(schoolId)])
@@ -285,8 +296,8 @@ async function getSchoolById(schoolId) {
 }
 
 async function listEvents(limit = EVENT_LIST_LIMIT) {
+  const queryLimit = normalizeLimit(limit, EVENT_LIST_LIMIT, EVENT_LIST_LIMIT)
   const res = await db.collection('events')
-    .where({ status: _.neq('deleted') })
     .field({
       id: true,
       title: true,
@@ -301,21 +312,21 @@ async function listEvents(limit = EVENT_LIST_LIMIT) {
       is_online: true,
     })
     .orderBy('start_time', 'asc')
-    .limit(normalizeLimit(limit, EVENT_LIST_LIMIT, EVENT_LIST_LIMIT))
+    .limit(queryLimit)
     .get()
 
-  return res.data || []
+  return (res.data || []).filter((event) => isReadableStatus(event.status)).slice(0, queryLimit)
 }
 
 async function getEventById(eventId) {
   if (!isFinitePositiveNumber(eventId)) return null
 
   const res = await db.collection('events')
-    .where({ id: Number(eventId), status: _.neq('deleted') })
+    .where({ id: Number(eventId) })
     .limit(1)
     .get()
 
-  return res.data?.[0] || null
+  return (res.data || []).find((event) => isReadableStatus(event.status)) || null
 }
 
 module.exports = {
