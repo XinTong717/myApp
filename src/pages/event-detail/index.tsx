@@ -6,6 +6,7 @@ import { clearEventListCache, getEventDetail, getEventInterestInfo, getEventCont
 import { getMe } from '../../services/profile'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import { palette } from '../../theme/palette'
+import { DetailSkeleton } from '../../components/common/Skeleton'
 import type { EventItem } from '../events/shared'
 import {
   EVENT_TYPE_LABELS,
@@ -146,6 +147,7 @@ export default function EventDetailPage() {
           loadContactInfo(detail.id),
         ])
       }
+      if (!detail) setError(found?.message || '未找到该活动')
     } catch (err: any) {
       console.error('loadDetail error:', err)
       setError(err?.message || '读取活动详情失败')
@@ -160,17 +162,20 @@ export default function EventDetailPage() {
 
   return (
     <View style={{ padding: '16px', backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
-      {loading ? <Text style={{ color: palette.subtext }}>加载中...</Text> : null}
+      {loading ? <DetailSkeleton /> : null}
 
-      {error ? (
+      {!loading && error ? (
         <View style={{ padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.accentSoft}` }}>
           <Text style={{ color: palette.error }}>{error}</Text>
+          <View onClick={loadDetail} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
+            <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
+          </View>
         </View>
       ) : null}
 
       {!loading && !error && !event ? <Text style={{ color: palette.subtext }}>未找到该活动</Text> : null}
 
-      {!loading && event ? (
+      {!loading && !error && event ? (
         <>
           <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
             <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
