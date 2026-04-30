@@ -2,10 +2,11 @@
 
 This project routes business actions through `cloudfunctions/appService` via `src/services/cloud.ts`.
 
-After merging the legacy-function cleanup PR, only these cloud functions should remain deployed:
+After the legacy-function cleanup, only this cloud function should remain deployed in each environment:
 
 - `appService`
-- `getOpenId`
+
+`getOpenId` is now an `appService` action, not a standalone cloud function.
 
 ## Manual CloudBase cleanup
 
@@ -19,8 +20,8 @@ Do this separately for dev and prod:
 4. Go to Cloud Functions / 云函数.
 5. Keep only:
    - `appService`
+6. Delete legacy standalone functions such as:
    - `getOpenId`
-6. Delete legacy functions such as:
    - `getEvents`
    - `getSchools`
    - `getEventDetail`
@@ -48,7 +49,37 @@ Add these indexes in both dev and prod. The goal is to avoid slow scans as the u
 |---|---|
 | Profile lookup | `openid` |
 | Duplicate display-name check | `displayName`, `openid` |
-| Map users | `isVisibleOnMap`, `province`, `city`, `displayName` |
+| Map user province summary | `isVisibleOnMap`, `province`, `city`, `displayName` |
+| Province detail map users | `province`, `isVisibleOnMap`, `city`, `displayName` |
+
+### `schools`
+
+| Query path | Index fields |
+|---|---|
+| Public list | `status`, `id` |
+| Detail lookup | `id`, `status` |
+| Type filter | `status`, `school_type`, `id` |
+| Age filter | `status`, `age_range`, `id` |
+
+Note: `school_type` and `age_range` currently use fuzzy matching in code, so indexes may not fully eliminate scans for regex-like filters. Keep the fields normalized where possible.
+
+### `school_locations`
+
+| Query path | Index fields |
+|---|---|
+| Locations for school list/detail | `school_id`, `status` |
+| Province filter / future admin review | `province`, `status` |
+| City filter / future admin review | `province`, `city`, `status` |
+| Migration idempotency | `_id` |
+
+`school_locations` is the source of truth for map/display locations. Legacy `schools.province/city` should remain only as backward-compatible fields during the migration window.
+
+### `events`
+
+| Query path | Index fields |
+|---|---|
+| Public list | `status`, `start_time` |
+| Detail lookup | `id`, `status` |
 
 ### `connections`
 
@@ -80,6 +111,15 @@ Add these indexes in both dev and prod. The goal is to avoid slow scans as the u
 |---|---|
 | Count cache lookup | `eventId` |
 
+### `rate_limits`
+
+| Query path | Index fields |
+|---|---|
+| Direct document lookup | `_id` |
+| Future cleanup | `updatedAt` |
+
+Current rate-limit documents use stable `_id = openid_action`, so `_id` lookup is the primary path.
+
 ### `event_submissions`
 
 | Query path | Index fields |
@@ -95,6 +135,7 @@ Add these indexes in both dev and prod. The goal is to avoid slow scans as the u
 |---|---|
 | Duplicate check | `normalizedKey`, `status` |
 | User rate limit | `openid`, `createdAt` |
+| Future admin review list | `status`, `createdAt` |
 
 ### `user_reports`
 
@@ -107,6 +148,20 @@ Add these indexes in both dev and prod. The goal is to avoid slow scans as the u
 | Query path | Index fields |
 |---|---|
 | Admin access check | `openid`, `isActive` |
+
+### `admin_audit_logs`
+
+| Query path | Index fields |
+|---|---|
+| Admin history | `adminOpenid`, `createdAt` |
+| Target history | `targetType`, `targetId`, `createdAt` |
+| Action history | `action`, `createdAt` |
+
+## Data hygiene notes
+
+- New documents in `schools`, `school_locations`, and `events` should explicitly set `status: 'published'` or a similar non-deleted value. Avoid relying on missing `status` fields with `_.neq('deleted')`.
+- `school_locations` should be updated through admin actions when a known school expands to a new city. Do not append comma-separated cities to `schools.city` for new data.
+- Keep `schools.name` for backward compatibility, but prefer `schools.canonical_name` in new reads and admin workflows.
 
 ## Future local-only optimization patches
 
