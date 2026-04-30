@@ -5,6 +5,7 @@ import { REPORT_CODE_MESSAGES, REQUEST_CODE_MESSAGES, SAFETY_CODE_MESSAGES } fro
 import { getSchools } from '../../services/school'
 import { getMe } from '../../services/profile'
 import { clearMapUsersCache, getMapUsers } from '../../services/map'
+import type { MapProvinceStat } from '../../types/domain'
 import { sendRequest } from '../../services/connection'
 import { manageSafetyRelation, reportUser } from '../../services/safety'
 import { REPORT_REASON_OPTIONS } from '../../constants/safety'
@@ -31,11 +32,12 @@ const EXPLORE_REFRESH_TTL = 30 * 1000
 type School = { id: number | string; name?: string; province?: string; city?: string }
 type AppUser = { _id: string; displayName?: string; roles?: string[]; province?: string; city?: string; bio?: string; companionContext?: string; isSelf?: boolean }
 type MarkerItem = {
-  id: number; latitude: number; longitude: number; name: string
-  type: 'school' | 'school_cluster' | 'user' | 'user_cluster'; markerProv: string; city?: string
-  originalId: number | string; bio?: string; roles?: string[]; companionContext?: string; isSelf?: boolean
-  clusterUsers?: AppUser[]
-  clusterSchools?: School[]
+    id: number; latitude: number; longitude: number; name: string
+    type: 'school' | 'school_cluster' | 'user' | 'user_cluster'; markerProv: string; city?: string
+    originalId: number | string; bio?: string; roles?: string[]; companionContext?: string; isSelf?: boolean
+    clusterUsers?: AppUser[]
+    clusterSchools?: School[]
+    provinceStat?: MapProvinceStat
 }
 type Coord = { lat: number; lng: number }
 
@@ -151,6 +153,7 @@ function Tag(props: { text: string; tone?: 'brand' | 'user' | 'neutral' }) {
 export default function ExplorePage() {
   const [schools, setSchools] = useState<School[]>([])
   const [appUsers, setAppUsers] = useState<AppUser[]>([])
+  const [provinceStats, setProvinceStats] = useState<MapProvinceStat[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showSchools, setShowSchools] = useState(true)
@@ -177,18 +180,25 @@ export default function ExplorePage() {
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
         getSchools(),
         getMapUsers({
-          forceRefresh: !!options.forceRefreshMapUsers,
-          province: selectedProvince || undefined,
-          childAgeRange: selectedUserRole === '家长' && selectedChildAgeRange !== '全部' ? selectedChildAgeRange : undefined,
-        }),
+            forceRefresh: !!options.forceRefreshMapUsers,
+            province: selectedProvince || undefined,
+            role: selectedUserRole !== '全部' ? selectedUserRole : undefined,
+            childAgeRange: selectedUserRole === '家长' && selectedChildAgeRange !== '全部' ? selectedChildAgeRange : undefined,
+          }),
         getMe(),
       ])
 
       if (schoolRes?.ok && Array.isArray(schoolRes.schools)) setSchools(schoolRes.schools)
       else { setSchools([]); logCloudFailure('getSchoolsInExplore', schoolRes) }
 
-      if (mapUsersRes?.ok && Array.isArray(mapUsersRes.users)) setAppUsers(mapUsersRes.users)
-      else { setAppUsers([]); logCloudFailure('getMapUsersInExplore', mapUsersRes) }
+      if (mapUsersRes?.ok) {
+        setAppUsers(Array.isArray(mapUsersRes.users) ? mapUsersRes.users : [])
+        setProvinceStats(Array.isArray(mapUsersRes.provinceStats) ? mapUsersRes.provinceStats : [])
+      } else {
+        setAppUsers([])
+        setProvinceStats([])
+        logCloudFailure('getMapUsersInExplore', mapUsersRes)
+      }
 
       const myProfile = myRes?.profile
       setHasProfile(!!(myProfile && myProfile.displayName && myProfile.province && myProfile.city))
@@ -358,7 +368,27 @@ export default function ExplorePage() {
       }
     }
 
-    if (showUsers) {
+    if (showUsers && selectedProvince) {
+        if (showUsers && !selectedProvince) {
+            provinceStats.forEach((stat) => {
+              const province = String(stat.province || '').trim()
+              const coord = PROV_FALLBACK[province]
+              if (!province || !isValidCoord(coord) || !stat.count) return
+          
+              items.push({
+                id: nextId++,
+                latitude: coord.lat,
+                longitude: coord.lng,
+                name: province,
+                type: 'user_cluster',
+                markerProv: province,
+                city: '',
+                originalId: `province-summary-${province}`,
+                clusterUsers: [],
+                provinceStat: stat,
+              })
+            })
+          }
       const visibleUsers = appUsers.filter((u) => applyClientUserFilters(u))
       const usersByCity: Record<string, AppUser[]> = {}
       const usersByProvince: Record<string, AppUser[]> = {}
@@ -444,7 +474,7 @@ export default function ExplorePage() {
     }
 
     return items
-  }, [schools, appUsers, showSchools, showUsers, selectedProvince, selectedUserRole, selectedProfileCompleteness, selectedUserCity])
+}, [schools, appUsers, provinceStats, showSchools, showUsers, selectedProvince, selectedUserRole, selectedProfileCompleteness, selectedUserCity])
 
   const filteredMarkers = useMemo(() => {
     if (!selectedProvince) return allMarkers
@@ -461,7 +491,7 @@ export default function ExplorePage() {
 
   const userCount = useMemo(() => filteredMarkers.reduce((sum, m) => {
     if (m.type === 'user') return sum + 1
-    if (m.type === 'user_cluster') return sum + (m.clusterUsers?.length || 0)
+    if (m.type === 'user_cluster') return sum + (m.provinceStat?.count || m.clusterUsers?.length || 0)
     return sum
   }, 0), [filteredMarkers])
   const schoolCount = filteredMarkers.reduce((sum, m) => {
@@ -486,7 +516,7 @@ export default function ExplorePage() {
 
     const isUserCluster = item.type === 'user_cluster'
     const isSchoolCluster = item.type === 'school_cluster'
-    const clusterCount = item.clusterUsers?.length || 0
+    const clusterCount = item.provinceStat?.count || item.clusterUsers?.length || 0
     const schoolClusterCount = item.clusterSchools?.length || 0
     const shouldShowLabel = isUserCluster || isSchoolCluster || (item.type === 'school' ? shouldShowSchoolLabels : shouldShowUserLabels)
     const labelContent = isUserCluster
@@ -652,11 +682,18 @@ export default function ExplorePage() {
       return
     }
 
-    if (item.type === 'user_cluster') {
-      setSelectedUser(null)
-      setSelectedCluster(item)
-      return
-    }
+    if (item.type === 'user_cluster' && item.provinceStat) {
+        setSelectedUser(null)
+        setSelectedCluster(null)
+        setSelectedProvince(item.markerProv)
+        return
+      }
+      
+      if (item.type === 'user_cluster') {
+        setSelectedUser(null)
+        setSelectedCluster(item)
+        return
+      }
 
     setSelectedCluster(null)
     setSelectedUser(item)
