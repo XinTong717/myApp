@@ -5,6 +5,7 @@ import { EVENT_CODE_MESSAGES } from '../../constants/cloudMessages'
 import { clearEventListCache, getEventDetail, getEventInterestInfo, getEventContactInfo, toggleEventInterest } from '../../services/event'
 import { getMe } from '../../services/profile'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
+import { palette } from '../../theme/palette'
 import type { EventItem } from '../events/shared'
 import {
   EVENT_TYPE_LABELS,
@@ -12,19 +13,6 @@ import {
   formatEventTime,
   getEventStatusInfo,
 } from '../events/shared'
-
-const palette = {
-  bg: '#FFF9F2',
-  card: '#FFFFFF',
-  cardSoft: '#FFF3E6',
-  text: '#2F241B',
-  subtext: '#7A6756',
-  accentDeep: '#E76F51',
-  accentSoft: '#FCE6D6',
-  line: '#F1DFCF',
-  green: '#7BAE7F',
-  greenSoft: '#EEF7EE',
-}
 
 function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
   const handleCopy = () => {
@@ -34,7 +22,7 @@ function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
   }
 
   return (
-    <View onClick={props.copyable ? handleCopy : undefined} style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', marginBottom: '10px' }}>
+    <View onClick={props.copyable ? handleCopy : undefined} style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', marginBottom: '10px' }}>
       <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '4px' }}>
         <Text style={{ fontSize: '12px', color: palette.accentDeep, flex: 1 }}>{props.label}</Text>
         {props.copyable && props.value ? <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text> : null}
@@ -175,8 +163,8 @@ export default function EventDetailPage() {
       {loading ? <Text style={{ color: palette.subtext }}>加载中...</Text> : null}
 
       {error ? (
-        <View style={{ padding: '12px', marginBottom: '16px', backgroundColor: '#FFF1F0', borderRadius: '14px', border: '1px solid #FFD8D2' }}>
-          <Text style={{ color: '#CF1322' }}>{error}</Text>
+        <View style={{ padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.accentSoft}` }}>
+          <Text style={{ color: palette.error }}>{error}</Text>
         </View>
       ) : null}
 
@@ -186,7 +174,7 @@ export default function EventDetailPage() {
         <>
           <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
             <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
-              <View style={{ width: '42px', height: '42px', borderRadius: '14px', backgroundColor: '#FFEFD8', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '10px' }}>
+              <View style={{ width: '42px', height: '42px', borderRadius: '14px', backgroundColor: palette.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '10px' }}>
                 <Text style={{ fontSize: '20px' }}>{EVENT_TYPE_ICONS[event.event_type] || '📌'}</Text>
               </View>
               <View style={{ flex: 1 }}>
@@ -213,14 +201,14 @@ export default function EventDetailPage() {
               </View>
 
               {interestCount > 0 ? (
-                <View style={{ padding: '5px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6', marginRight: '8px', marginBottom: '8px' }}>
+                <View style={{ padding: '5px 10px', borderRadius: '999px', backgroundColor: palette.surfaceWarm, marginRight: '8px', marginBottom: '8px' }}>
                   <Text style={{ fontSize: '12px', color: palette.accentDeep }}>{interestCount} 人感兴趣</Text>
                 </View>
               ) : null}
             </View>
           </View>
 
-          <View onClick={handleToggleInterest} style={{ backgroundColor: hasInterested ? '#F5F0EB' : palette.accentDeep, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '14px' }}>
+          <View onClick={handleToggleInterest} style={{ backgroundColor: hasInterested ? palette.surfaceSoft : palette.accentDeep, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '14px' }}>
             <Text style={{ fontSize: '15px', color: hasInterested ? palette.subtext : '#FFF', fontWeight: 'bold' }}>{interestLoading ? '处理中...' : hasInterested ? '已感兴趣，再点一次取消' : '我感兴趣'}</Text>
           </View>
 
@@ -232,13 +220,13 @@ export default function EventDetailPage() {
           {publicSignupText ? <InfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}
 
           {contactLoading ? (
-            <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', marginBottom: '10px', border: `1px dashed ${palette.line}` }}>
+            <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', marginBottom: '10px', border: `1px dashed ${palette.line}` }}>
               <Text style={{ fontSize: '13px', color: palette.subtext }}>正在读取组织者联系方式...</Text>
             </View>
           ) : contactInfo ? (
             <InfoRow label='组织者联系方式' value={contactInfo} copyable />
           ) : (
-            <View style={{ backgroundColor: '#FFFDF9', borderRadius: '14px', padding: '12px', marginBottom: '10px', border: `1px dashed ${palette.line}` }}>
+            <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', marginBottom: '10px', border: `1px dashed ${palette.line}` }}>
               <Text style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '4px' }}>组织者联系方式</Text>
               <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '21px' }}>
                 {contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者联系方式。')}
