@@ -123,7 +123,12 @@ async function updateInterestCountAfterMutation(eventId, delta) {
 async function getSchools(event) {
   const requestId = resolveRequestId('get-schools', event)
   try {
-    const schools = await listSchools(event?.limit)
+    const schools = await listSchools({
+      limit: event?.limit,
+      province: event?.province,
+      schoolType: event?.schoolType || event?.type,
+      ageRange: event?.ageRange,
+    })
     return ok(requestId, { schools })
   } catch (err) {
     console.error('appService getSchools error:', err)
