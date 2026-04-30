@@ -121,6 +121,15 @@ function normalizeRoles(roles: string[] = []) {
   return roles.map((role) => role === '其他' ? '同行者' : role)
 }
 
+function uniqueSchoolsById(items: School[]) {
+  const map = new Map<string, School>()
+  items.forEach((item) => {
+    const key = String(item.id)
+    if (!map.has(key)) map.set(key, item)
+  })
+  return Array.from(map.values())
+}
+
 
 function FilterChip(props: { active: boolean; tone?: 'brand' | 'user' | 'educator' | 'neutral'; text: string; onClick: () => void }) {
   const styles = chip(props.active, props.tone || 'brand')
@@ -178,7 +187,7 @@ export default function ExplorePage() {
       setError('')
       setIsNavigatingAway(false)
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
-        getSchools(),
+        getSchools({ limit: 200 }),
         getMapUsers({
             forceRefresh: !!options.forceRefreshMapUsers,
             province: selectedProvince || undefined,
@@ -355,12 +364,12 @@ export default function ExplorePage() {
             markerProv: province,
             city: '',
             originalId: `school-cluster-${province}`,
-            clusterSchools: group.map((item) => ({
+            clusterSchools: uniqueSchoolsById(group.map((item) => ({
               id: item.originalId,
               name: item.name,
               province,
               city: item.city,
-            })),
+            }))),
           })
         })
       } else {
@@ -368,27 +377,28 @@ export default function ExplorePage() {
       }
     }
 
+    if (showUsers && !selectedProvince) {
+      provinceStats.forEach((stat) => {
+        const province = String(stat.province || '').trim()
+        const coord = PROV_FALLBACK[province]
+        if (!province || !isValidCoord(coord) || !stat.count) return
+
+        items.push({
+          id: nextId++,
+          latitude: coord.lat,
+          longitude: coord.lng,
+          name: province,
+          type: 'user_cluster',
+          markerProv: province,
+          city: '',
+          originalId: `province-summary-${province}`,
+          clusterUsers: [],
+          provinceStat: stat,
+        })
+      })
+    }
+
     if (showUsers && selectedProvince) {
-        if (showUsers && !selectedProvince) {
-            provinceStats.forEach((stat) => {
-              const province = String(stat.province || '').trim()
-              const coord = PROV_FALLBACK[province]
-              if (!province || !isValidCoord(coord) || !stat.count) return
-          
-              items.push({
-                id: nextId++,
-                latitude: coord.lat,
-                longitude: coord.lng,
-                name: province,
-                type: 'user_cluster',
-                markerProv: province,
-                city: '',
-                originalId: `province-summary-${province}`,
-                clusterUsers: [],
-                provinceStat: stat,
-              })
-            })
-          }
       const visibleUsers = appUsers.filter((u) => applyClientUserFilters(u))
       const usersByCity: Record<string, AppUser[]> = {}
       const usersByProvince: Record<string, AppUser[]> = {}
@@ -494,11 +504,18 @@ export default function ExplorePage() {
     if (m.type === 'user_cluster') return sum + (m.provinceStat?.count || m.clusterUsers?.length || 0)
     return sum
   }, 0), [filteredMarkers])
-  const schoolCount = filteredMarkers.reduce((sum, m) => {
-    if (m.type === 'school') return sum + 1
-    if (m.type === 'school_cluster') return sum + (m.clusterSchools?.length || 0)
-    return sum
-  }, 0)
+  const schoolCount = useMemo(() => {
+    if (!selectedProvince) return uniqueSchoolsById(schools).length
+
+    const ids = new Set<string>()
+    filteredMarkers.forEach((m) => {
+      if (m.type === 'school') ids.add(String(m.originalId))
+      if (m.type === 'school_cluster') {
+        ;(m.clusterSchools || []).forEach((school) => ids.add(String(school.id)))
+      }
+    })
+    return ids.size
+  }, [schools, filteredMarkers, selectedProvince])
   const userVisualMarkerCount = validMarkers.filter((m) => m.type === 'user' || m.type === 'user_cluster').length
   const schoolMarkerCount = validMarkers.filter((m) => m.type === 'school' || m.type === 'school_cluster').length
   const hasUserClusters = validMarkers.some((m) => m.type === 'user_cluster')
