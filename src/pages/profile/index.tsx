@@ -19,7 +19,9 @@ import ProfileCompanionSection from '../../components/profile/ProfileCompanionSe
 import ProfileBioSection from '../../components/profile/ProfileBioSection'
 import ProfileNoticeBox from '../../components/profile/ProfileNoticeBox'
 import ProfilePrimaryButton from '../../components/profile/ProfilePrimaryButton'
+import AppIcon from '../../components/common/AppIcon'
 import { profilePalette as palette } from '../../components/profile/palette'
+import { typography } from '../../theme/typography'
 import { checkAdminAccess } from '../../services/profile'
 import { useConnections } from '../../hooks/useConnections'
 import { useSafety } from '../../hooks/useSafety'
@@ -53,12 +55,33 @@ function StepTabs(props: { activeStep: ProfileStep; onChange: (step: ProfileStep
               boxShadow: active ? '0 4px 12px rgba(184,85,64,0.16)' : 'none',
             }}
           >
-            <Text style={{ fontSize: '12px', fontWeight: active ? 'bold' : 'normal', color: active ? '#FFFFFF' : palette.subtext }}>
+            <Text style={{ ...typography.caption, fontWeight: active ? 'bold' : 'normal', color: active ? '#FFFFFF' : palette.subtext }}>
               {index + 1}. {step.label}
             </Text>
           </View>
         )
       })}
+    </View>
+  )
+}
+
+function PrivacyDisclosureNotice() {
+  return (
+    <View style={{
+      display: 'flex',
+      flexDirection: 'row',
+      gap: '10px',
+      alignItems: 'flex-start',
+      backgroundColor: palette.card,
+      borderRadius: '16px',
+      border: `1px solid ${palette.line}`,
+      padding: '12px',
+      marginBottom: '12px',
+    }}>
+      <AppIcon name='lock' size={24} bordered />
+      <Text style={{ ...typography.caption, color: palette.subtext, flex: 1 }}>
+        你的显示名、身份、城市和简介会在地图上公开展示。联络标识、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。
+      </Text>
     </View>
   )
 }
@@ -208,7 +231,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '40px 20px', textAlign: 'center' }}>
-        <Text style={{ fontSize: '14px', color: palette.subtext }}>加载中...</Text>
+        <Text style={{ ...typography.body, color: palette.subtext }}>加载中...</Text>
       </View>
     )
   }
@@ -253,7 +276,7 @@ export default function ProfilePage() {
           <ProfileNoticeBox text='先完成显示名、身份和城市，就可以被地图正确识别。简介会公开展示，请避免填写孩子姓名、具体学校、住址等敏感细节。' />
 
           <View onClick={goNextStep} style={{ marginBottom: '20px', padding: '12px 16px', borderRadius: '999px', backgroundColor: '#FFFFFF', border: `1px solid ${palette.line}`, textAlign: 'center' }}>
-            <Text style={{ color: palette.accentDeep, fontSize: '14px', fontWeight: 'bold' }}>下一步：身份补充</Text>
+            <Text style={{ ...typography.bodyStrong, color: palette.accentDeep }}>下一步：身份补充</Text>
           </View>
         </>
       )}
@@ -288,7 +311,7 @@ export default function ProfilePage() {
           <ProfileNoticeBox text='身份补充信息默认不会在地图卡片直接展示；仅在你同意联络后，对特定联络人开放更完整信息。' />
 
           <View onClick={goNextStep} style={{ marginBottom: '20px', padding: '12px 16px', borderRadius: '999px', backgroundColor: '#FFFFFF', border: `1px solid ${palette.line}`, textAlign: 'center' }}>
-            <Text style={{ color: palette.accentDeep, fontSize: '14px', fontWeight: 'bold' }}>下一步：隐私与联络</Text>
+            <Text style={{ ...typography.bodyStrong, color: palette.accentDeep }}>下一步：隐私与联络</Text>
           </View>
         </>
       )}
@@ -305,7 +328,7 @@ export default function ProfilePage() {
             onSafetyAction={(targetUserId, action) => handleSafetyAction(targetUserId, action, () => { refreshRelations(); loadProfile() })}
           />
 
-          <ProfileNoticeBox text='🔒 你的显示名、身份、城市和简介会在地图上公开展示。联络标识、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。' />
+          <PrivacyDisclosureNotice />
 
           <ProfilePrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleSave} />
         </>
@@ -313,9 +336,9 @@ export default function ProfilePage() {
 
       <View style={{ marginBottom: '20px', alignItems: 'center' }}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Text onClick={openUserAgreement} style={{ fontSize: '12px', color: palette.accentDeep }}>用户协议</Text>
-          <Text style={{ fontSize: '12px', color: palette.subtext, marginLeft: '8px', marginRight: '8px' }}>·</Text>
-          <Text onClick={openPrivacyPolicy} style={{ fontSize: '12px', color: palette.accentDeep }}>隐私政策</Text>
+          <Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>用户协议</Text>
+          <Text style={{ ...typography.caption, color: palette.subtext, marginLeft: '8px', marginRight: '8px' }}>·</Text>
+          <Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>隐私政策</Text>
         </View>
       </View>
 
