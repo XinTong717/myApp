@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { View, Text, Textarea } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { getSchoolDetail, submitCorrection } from '../../services/school'
+import { getDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
@@ -56,8 +57,155 @@ function formatLocation(location: SchoolLocationItem) {
   return [location.province, location.city].filter(Boolean).join(' · ') || '地点未填写'
 }
 
+function SchoolContent(props: {
+  school: School
+  preview?: boolean
+  showCorrectionForm: boolean
+  correctionText: string
+  correctionSubmitting: boolean
+  correctionDone: boolean
+  onShowCorrectionForm: () => void
+  onCancelCorrection: () => void
+  onCorrectionTextChange: (value: string) => void
+  onSubmitCorrection: () => void
+}) {
+  const {
+    school,
+    preview,
+    showCorrectionForm,
+    correctionText,
+    correctionSubmitting,
+    correctionDone,
+    onShowCorrectionForm,
+    onCancelCorrection,
+    onCorrectionTextChange,
+    onSubmitCorrection,
+  } = props
+  const locations = getLocations(school)
+
+  return (
+    <>
+      {preview ? (
+        <View style={{ backgroundColor: palette.warningSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}` }}>
+          <Text style={{ fontSize: '12px', color: palette.subtext }}>正在加载完整详情，先显示列表中的基础信息。</Text>
+        </View>
+      ) : null}
+
+      <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
+          <View style={{ width: '42px', height: '42px', borderRadius: '15px', backgroundColor: palette.tag, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '10px', border: `1px solid ${palette.line}` }}>
+            <Text style={{ fontSize: '20px' }}>🏫</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text, lineHeight: '30px' }}>{school.canonical_name || school.name}</Text>
+          </View>
+        </View>
+
+        <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: school.official_url ? '10px' : '0' }}>
+          <Tag text={locations.length > 0 ? `${locations.length} 个地点` : '地点未填写'} />
+          {!!school.school_type && <Tag text={school.school_type} />}
+          {!!school.age_range && <Tag text={school.age_range} />}
+        </View>
+
+        {!!school.official_url && (
+          <View onClick={() => Taro.setClipboardData({ data: school.official_url || '' })} style={{ backgroundColor: palette.surface, borderRadius: '16px', padding: '12px', display: 'flex', flexDirection: 'row', alignItems: 'center', border: `1px solid ${palette.line}` }}>
+            <View style={{ flex: 1, paddingRight: '10px' }}>
+              <Text style={{ fontSize: '12px', color: palette.brand, fontWeight: 'bold' }}>官方/说明链接</Text>
+              <View style={{ marginTop: '4px' }}>
+                <Text style={{ fontSize: '13px', color: palette.text, lineHeight: '20px' }}>{school.official_url}</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: '11px', color: palette.muted }}>点击复制</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+        <View style={{ marginBottom: '10px' }}>
+          <Text style={{ fontSize: '15px', color: palette.text, fontWeight: 'bold' }}>地点列表</Text>
+        </View>
+        {locations.length > 0 ? locations.map((location, index) => (
+          <View key={`${location.province}-${location.city}-${index}`} style={{ backgroundColor: palette.surface, borderRadius: '16px', padding: '12px', marginBottom: index === locations.length - 1 ? '0' : '10px', border: `1px solid ${palette.line}` }}>
+            <Text style={{ fontSize: '14px', color: palette.text, fontWeight: 'bold' }}>{formatLocation(location)}</Text>
+            {!!location.address_note && (
+              <View style={{ marginTop: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>地址说明：{location.address_note}</Text></View>
+            )}
+            {!!location.contact_note && (
+              <View style={{ marginTop: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>联系说明：{location.contact_note}</Text></View>
+            )}
+          </View>
+        )) : (
+          <Text style={{ fontSize: '13px', color: palette.subtext }}>暂无地点信息</Text>
+        )}
+      </View>
+
+      <InfoRow label='公开说明' value={school.xuji_note} />
+      <InfoRow label='参与前了解' value={school.residency_req} />
+      <InfoRow label='参与方式参考' value={school.admission_req} />
+      <InfoRow label='参考费用' value={school.fee} />
+      <InfoRow label='相关说明' value={school.output_direction} />
+
+      {!preview ? (
+        <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '16px', marginTop: '6px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+          {!showCorrectionForm && !correctionDone && (
+            <View onClick={onShowCorrectionForm} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ fontSize: '16px', marginRight: '8px' }}>✏️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: '14px', color: palette.text, fontWeight: 'bold' }}>信息有误？帮我们完善</Text>
+                <View style={{ marginTop: '2px' }}>
+                  <Text style={{ fontSize: '12px', color: palette.subtext }}>补充、修正或更新这个学习社区的信息</Text>
+                </View>
+              </View>
+              <View style={{ padding: '7px 14px', borderRadius: '999px', backgroundColor: palette.brandSoft }}>
+                <Text style={{ fontSize: '12px', color: palette.brand, fontWeight: 'bold' }}>填写</Text>
+              </View>
+            </View>
+          )}
+
+          {showCorrectionForm && !correctionDone && (
+            <View>
+              <View style={{ marginBottom: '10px' }}>
+                <Text style={{ fontSize: '14px', fontWeight: 'bold', color: palette.text }}>✏️ 补充或修正信息</Text>
+              </View>
+              <View style={{ marginBottom: '8px' }}>
+                <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>请描述需要修正或补充的内容，例如：费用有调整、参与方式有变化、名称已更新、官网地址有误等。提交后我们会核实更新。</Text>
+              </View>
+              <Textarea
+                value={correctionText}
+                onInput={(e) => onCorrectionTextChange(e.detail.value)}
+                placeholder='请输入需要修正或补充的信息...'
+                maxlength={500}
+                style={{ width: '100%', minHeight: '100px', padding: '12px', backgroundColor: palette.surface, borderRadius: '14px', border: `1px solid ${palette.line}`, fontSize: '14px', color: palette.text, lineHeight: '21px', boxSizing: 'border-box' }}
+              />
+              <View style={{ marginTop: '4px', marginBottom: '12px' }}>
+                <Text style={{ fontSize: '11px', color: palette.muted }}>{correctionText.length}/500</Text>
+              </View>
+              <View style={{ display: 'flex', flexDirection: 'row' }}>
+                <View onClick={onCancelCorrection} style={{ padding: '8px 16px', borderRadius: '999px', backgroundColor: palette.tag, marginRight: '10px' }}>
+                  <Text style={{ fontSize: '13px', color: palette.tagText }}>取消</Text>
+                </View>
+                <View onClick={correctionSubmitting ? undefined : onSubmitCorrection} style={{ padding: '8px 20px', borderRadius: '999px', backgroundColor: correctionSubmitting ? palette.muted : palette.brand }}>
+                  <Text style={{ fontSize: '13px', color: '#FFF', fontWeight: 'bold' }}>{correctionSubmitting ? '提交中...' : '提交'}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {correctionDone && (
+            <View style={{ textAlign: 'center', padding: '8px 0' }}>
+              <Text style={{ fontSize: '16px', marginBottom: '6px' }}>✅</Text>
+              <View><Text style={{ fontSize: '14px', color: palette.green, fontWeight: 'bold' }}>感谢反馈！我们会尽快核实</Text></View>
+            </View>
+          )}
+        </View>
+      ) : null}
+    </>
+  )
+}
+
 export default function SchoolDetailPage() {
   const [school, setSchool] = useState<School | null>(null)
+  const [previewSchool, setPreviewSchool] = useState<School | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showCorrectionForm, setShowCorrectionForm] = useState(false)
@@ -66,10 +214,13 @@ export default function SchoolDetailPage() {
   const [correctionDone, setCorrectionDone] = useState(false)
 
   const loadDetail = async (options: { forceRefresh?: boolean } = {}) => {
+    const id = Number(getCurrentInstance().router?.params?.id || 0)
+    const preview = getDetailPreview<School>('school', id)
+    if (preview) setPreviewSchool(preview)
+
     try {
       setLoading(true)
       setError('')
-      const id = Number(getCurrentInstance().router?.params?.id || 0)
       const result = await getSchoolDetail(id, { forceRefresh: !!options.forceRefresh })
       const nextSchool = result?.school || null
       setSchool(nextSchool)
@@ -117,11 +268,27 @@ export default function SchoolDetailPage() {
     }
   }
 
-  const locations = school ? getLocations(school) : []
+  const displaySchool = school || previewSchool
+  const isPreview = !school && !!previewSchool
 
   return (
     <View style={{ padding: '16px', backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
-      {loading && <DetailSkeleton />}
+      {loading && !displaySchool && <DetailSkeleton />}
+
+      {loading && displaySchool ? (
+        <SchoolContent
+          school={displaySchool}
+          preview={isPreview}
+          showCorrectionForm={showCorrectionForm}
+          correctionText={correctionText}
+          correctionSubmitting={correctionSubmitting}
+          correctionDone={correctionDone}
+          onShowCorrectionForm={() => setShowCorrectionForm(true)}
+          onCancelCorrection={() => { setShowCorrectionForm(false); setCorrectionText('') }}
+          onCorrectionTextChange={setCorrectionText}
+          onSubmitCorrection={handleSubmitCorrection}
+        />
+      ) : null}
 
       {!loading && error && (
         <View style={{ padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.line}` }}>
@@ -132,117 +299,21 @@ export default function SchoolDetailPage() {
         </View>
       )}
 
-      {!loading && !error && !school && <Text style={{ color: palette.subtext }}>未找到该学习社区</Text>}
+      {!loading && !error && !displaySchool && <Text style={{ color: palette.subtext }}>未找到该学习社区</Text>}
 
-      {!loading && !error && school && (
-        <>
-          <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
-            <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
-              <View style={{ width: '42px', height: '42px', borderRadius: '15px', backgroundColor: palette.tag, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '10px', border: `1px solid ${palette.line}` }}>
-                <Text style={{ fontSize: '20px' }}>🏫</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text, lineHeight: '30px' }}>{school.canonical_name || school.name}</Text>
-              </View>
-            </View>
-
-            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: school.official_url ? '10px' : '0' }}>
-              <Tag text={locations.length > 0 ? `${locations.length} 个地点` : '地点未填写'} />
-              {!!school.school_type && <Tag text={school.school_type} />}
-              {!!school.age_range && <Tag text={school.age_range} />}
-            </View>
-
-            {!!school.official_url && (
-              <View onClick={() => Taro.setClipboardData({ data: school.official_url || '' })} style={{ backgroundColor: palette.surface, borderRadius: '16px', padding: '12px', display: 'flex', flexDirection: 'row', alignItems: 'center', border: `1px solid ${palette.line}` }}>
-                <View style={{ flex: 1, paddingRight: '10px' }}>
-                  <Text style={{ fontSize: '12px', color: palette.brand, fontWeight: 'bold' }}>官方/说明链接</Text>
-                  <View style={{ marginTop: '4px' }}>
-                    <Text style={{ fontSize: '13px', color: palette.text, lineHeight: '20px' }}>{school.official_url}</Text>
-                  </View>
-                </View>
-                <Text style={{ fontSize: '11px', color: palette.muted }}>点击复制</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
-            <View style={{ marginBottom: '10px' }}>
-              <Text style={{ fontSize: '15px', color: palette.text, fontWeight: 'bold' }}>地点列表</Text>
-            </View>
-            {locations.length > 0 ? locations.map((location, index) => (
-              <View key={`${location.province}-${location.city}-${index}`} style={{ backgroundColor: palette.surface, borderRadius: '16px', padding: '12px', marginBottom: index === locations.length - 1 ? '0' : '10px', border: `1px solid ${palette.line}` }}>
-                <Text style={{ fontSize: '14px', color: palette.text, fontWeight: 'bold' }}>{formatLocation(location)}</Text>
-                {!!location.address_note && (
-                  <View style={{ marginTop: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>地址说明：{location.address_note}</Text></View>
-                )}
-                {!!location.contact_note && (
-                  <View style={{ marginTop: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>联系说明：{location.contact_note}</Text></View>
-                )}
-              </View>
-            )) : (
-              <Text style={{ fontSize: '13px', color: palette.subtext }}>暂无地点信息</Text>
-            )}
-          </View>
-
-          <InfoRow label='公开说明' value={school.xuji_note} />
-          <InfoRow label='参与前了解' value={school.residency_req} />
-          <InfoRow label='参与方式参考' value={school.admission_req} />
-          <InfoRow label='参考费用' value={school.fee} />
-          <InfoRow label='相关说明' value={school.output_direction} />
-
-          <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '16px', marginTop: '6px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
-            {!showCorrectionForm && !correctionDone && (
-              <View onClick={() => setShowCorrectionForm(true)} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: '16px', marginRight: '8px' }}>✏️</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: '14px', color: palette.text, fontWeight: 'bold' }}>信息有误？帮我们完善</Text>
-                  <View style={{ marginTop: '2px' }}>
-                    <Text style={{ fontSize: '12px', color: palette.subtext }}>补充、修正或更新这个学习社区的信息</Text>
-                  </View>
-                </View>
-                <View style={{ padding: '7px 14px', borderRadius: '999px', backgroundColor: palette.brandSoft }}>
-                  <Text style={{ fontSize: '12px', color: palette.brand, fontWeight: 'bold' }}>填写</Text>
-                </View>
-              </View>
-            )}
-
-            {showCorrectionForm && !correctionDone && (
-              <View>
-                <View style={{ marginBottom: '10px' }}>
-                  <Text style={{ fontSize: '14px', fontWeight: 'bold', color: palette.text }}>✏️ 补充或修正信息</Text>
-                </View>
-                <View style={{ marginBottom: '8px' }}>
-                  <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>请描述需要修正或补充的内容，例如：费用有调整、参与方式有变化、名称已更新、官网地址有误等。提交后我们会核实更新。</Text>
-                </View>
-                <Textarea
-                  value={correctionText}
-                  onInput={(e) => setCorrectionText(e.detail.value)}
-                  placeholder='请输入需要修正或补充的信息...'
-                  maxlength={500}
-                  style={{ width: '100%', minHeight: '100px', padding: '12px', backgroundColor: palette.surface, borderRadius: '14px', border: `1px solid ${palette.line}`, fontSize: '14px', color: palette.text, lineHeight: '21px', boxSizing: 'border-box' }}
-                />
-                <View style={{ marginTop: '4px', marginBottom: '12px' }}>
-                  <Text style={{ fontSize: '11px', color: palette.muted }}>{correctionText.length}/500</Text>
-                </View>
-                <View style={{ display: 'flex', flexDirection: 'row' }}>
-                  <View onClick={() => { setShowCorrectionForm(false); setCorrectionText('') }} style={{ padding: '8px 16px', borderRadius: '999px', backgroundColor: palette.tag, marginRight: '10px' }}>
-                    <Text style={{ fontSize: '13px', color: palette.tagText }}>取消</Text>
-                  </View>
-                  <View onClick={correctionSubmitting ? undefined : handleSubmitCorrection} style={{ padding: '8px 20px', borderRadius: '999px', backgroundColor: correctionSubmitting ? palette.muted : palette.brand }}>
-                    <Text style={{ fontSize: '13px', color: '#FFF', fontWeight: 'bold' }}>{correctionSubmitting ? '提交中...' : '提交'}</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {correctionDone && (
-              <View style={{ textAlign: 'center', padding: '8px 0' }}>
-                <Text style={{ fontSize: '16px', marginBottom: '6px' }}>✅</Text>
-                <View><Text style={{ fontSize: '14px', color: palette.green, fontWeight: 'bold' }}>感谢反馈！我们会尽快核实</Text></View>
-              </View>
-            )}
-          </View>
-        </>
+      {!loading && !error && displaySchool && (
+        <SchoolContent
+          school={displaySchool}
+          preview={isPreview}
+          showCorrectionForm={showCorrectionForm}
+          correctionText={correctionText}
+          correctionSubmitting={correctionSubmitting}
+          correctionDone={correctionDone}
+          onShowCorrectionForm={() => setShowCorrectionForm(true)}
+          onCancelCorrection={() => { setShowCorrectionForm(false); setCorrectionText('') }}
+          onCorrectionTextChange={setCorrectionText}
+          onSubmitCorrection={handleSubmitCorrection}
+        />
       )}
     </View>
   )
