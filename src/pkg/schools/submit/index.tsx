@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { View, Text, Input, Textarea, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../../../constants/location'
@@ -28,6 +28,7 @@ type FocusField =
 
 export default function SubmitCommunityPage() {
   const [submitting, setSubmitting] = useState(false)
+  const submitLockRef = useRef(false)
   const [focusedField, setFocusedField] = useState<FocusField>('')
   const [name, setName] = useState('')
   const [province, setProvince] = useState('')
@@ -77,6 +78,8 @@ export default function SubmitCommunityPage() {
   }
 
   const handleSubmit = async () => {
+    if (submitLockRef.current || submitting) return
+
     if (!name.trim()) {
       Taro.showToast({ title: '请填写学习社区名称', icon: 'none' })
       return
@@ -98,13 +101,18 @@ export default function SubmitCommunityPage() {
       return
     }
 
+    submitLockRef.current = true
+
     const confirm = await Taro.showModal({
       title: '提交推荐',
       content: '提交后将进入人工审核队列，审核通过后才会出现在学习社区列表中。',
       confirmText: '确认提交',
       cancelText: '再看看',
     })
-    if (!confirm.confirm) return
+    if (!confirm.confirm) {
+      submitLockRef.current = false
+      return
+    }
 
     try {
       setSubmitting(true)
@@ -135,6 +143,7 @@ export default function SubmitCommunityPage() {
       Taro.showToast({ title: '提交失败，请稍后重试', icon: 'none' })
     } finally {
       setSubmitting(false)
+      submitLockRef.current = false
     }
   }
 
