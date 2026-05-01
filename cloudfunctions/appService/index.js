@@ -50,12 +50,12 @@ exports.main = async (event = {}) => {
   const requestId = resolveRequestId('app-service', event)
 
   if (!action) {
-    return fail(requestId, 'ACTION_REQUIRED', 'Missing action')
+    return fail(requestId, 'ACTION_REQUIRED', '缺少 action 参数')
   }
 
   const handler = actionHandlers[action]
   if (!handler) {
-    return fail(requestId, 'UNKNOWN_ACTION', `Unknown action: ${action}`)
+    return fail(requestId, 'UNKNOWN_ACTION', `未知 action: ${action}`)
   }
 
   try {
@@ -65,13 +65,13 @@ exports.main = async (event = {}) => {
     if (limitConfig) {
       const limitRes = await rateLimit(wxContext.OPENID, action, limitConfig)
       if (!limitRes.ok) {
-        return fail(requestId, limitRes.code || 'RATE_LIMITED', limitRes.message || 'Too many requests, please try again later')
+        return fail(requestId, limitRes.code || 'RATE_LIMITED', limitRes.message || '操作过于频繁，请稍后再试')
       }
     }
 
     return await handler(event, wxContext)
   } catch (err) {
     console.error(`appService ${action} error:`, err)
-    return fail(requestId, 'APP_SERVICE_FAILED', 'Service failed, please try again later')
+    return fail(requestId, 'APP_SERVICE_FAILED', '服务处理失败，请稍后重试')
   }
 }
