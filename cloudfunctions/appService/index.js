@@ -6,6 +6,7 @@ const userHandlers = require('./handlers/userV2')
 const requestHandlers = require('./handlers/requests')
 const mapUserHandlers = require('./handlers/mapUsers')
 const adminHandlers = require('./handlers/admin')
+const adminPublishHandlers = require('./handlers/adminPublish')
 const schoolMigrationHandlers = require('./handlers/schoolMigration')
 
 const DEFAULT_READ_ACTION_RATE_LIMITS = {
@@ -42,6 +43,7 @@ const actionHandlers = {
   ...requestHandlers,
   ...mapUserHandlers,
   ...adminHandlers,
+  ...adminPublishHandlers,
   ...schoolMigrationHandlers,
 }
 
