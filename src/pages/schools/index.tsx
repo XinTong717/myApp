@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Input, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
+import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
@@ -178,6 +179,7 @@ export default function SchoolsPage() {
   }
 
   const goToDetail = (item: School) => {
+    setDetailPreview('school', item.id, item)
     Taro.navigateTo({ url: `/pages/school-detail/index?id=${item.id}` })
   }
 
