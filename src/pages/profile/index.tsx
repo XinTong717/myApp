@@ -19,6 +19,7 @@ import ProfileCompanionSection from '../../components/profile/ProfileCompanionSe
 import ProfileBioSection from '../../components/profile/ProfileBioSection'
 import ProfileNoticeBox from '../../components/profile/ProfileNoticeBox'
 import ProfilePrimaryButton from '../../components/profile/ProfilePrimaryButton'
+import ProfileSecondaryButton from '../../components/profile/ProfileSecondaryButton'
 import AppIcon from '../../components/common/AppIcon'
 import { profilePalette as palette } from '../../components/profile/palette'
 import { typography } from '../../theme/typography'
@@ -275,9 +276,7 @@ export default function ProfilePage() {
 
           <ProfileNoticeBox text='先完成显示名、身份和城市，就可以被地图正确识别。简介会公开展示，请避免填写孩子姓名、具体学校、住址等敏感细节。' />
 
-          <View onClick={goNextStep} style={{ marginBottom: '20px', padding: '12px 16px', borderRadius: '999px', backgroundColor: '#FFFFFF', border: `1px solid ${palette.line}`, textAlign: 'center' }}>
-            <Text style={{ ...typography.bodyStrong, color: palette.accentDeep }}>下一步：身份补充</Text>
-          </View>
+          <ProfileSecondaryButton text='下一步：身份补充' onClick={goNextStep} />
         </>
       )}
 
@@ -310,9 +309,7 @@ export default function ProfilePage() {
 
           <ProfileNoticeBox text='身份补充信息默认不会在地图卡片直接展示；仅在你同意联络后，对特定联络人开放更完整信息。' />
 
-          <View onClick={goNextStep} style={{ marginBottom: '20px', padding: '12px 16px', borderRadius: '999px', backgroundColor: '#FFFFFF', border: `1px solid ${palette.line}`, textAlign: 'center' }}>
-            <Text style={{ ...typography.bodyStrong, color: palette.accentDeep }}>下一步：隐私与联络</Text>
-          </View>
+          <ProfileSecondaryButton text='下一步：隐私与联络' onClick={goNextStep} />
         </>
       )}
 
