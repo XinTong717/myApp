@@ -105,7 +105,9 @@ export default function SchoolsPage() {
   useShareAppMessage(() => SCHOOL_SHARE.appMessage)
   useShareTimeline(() => SCHOOL_SHARE.timeline)
 
-  const loadSchools = async (options: { forceRefresh?: boolean; useFilters?: boolean } = {}) => {
+  const hasActiveFilters = () => selectedProvinces.length > 0 || selectedTypes.length > 0 || selectedAgeRanges.length > 0
+
+  const loadSchools = async (options: { forceRefresh?: boolean; useFilters?: boolean; syncFilterSource?: boolean } = {}) => {
     try {
       setLoading(true)
       setError('')
@@ -119,13 +121,18 @@ export default function SchoolsPage() {
       })
       const nextSchools = Array.isArray(result.schools) ? result.schools : []
       setSchools(nextSchools)
+      if (options.syncFilterSource) {
+        setFilterSourceSchools(nextSchools)
+      }
       if (!result?.ok && nextSchools.length === 0) {
         setError(result?.message || '读取学习社区数据失败')
       }
+      return nextSchools
     } catch (err: any) {
       console.error('loadSchools error:', err)
       setError(err?.message || '读取学习社区数据失败')
       Taro.showToast({ title: '学习社区数据读取失败', icon: 'none' })
+      return []
     } finally {
       setLoading(false)
     }
@@ -135,30 +142,32 @@ export default function SchoolsPage() {
     const result = await getSchools({ forceRefresh, limit: SCHOOL_LIST_LIMIT })
     const list = Array.isArray(result.schools) ? result.schools : []
     setFilterSourceSchools(list)
+    return list
   }
 
   useDidShow(() => {
     registerCurrentPageShare(SCHOOL_SHARE)
     if (didInitRef.current) return
     didInitRef.current = true
-    Promise.all([
-      loadFilterOptions(false),
-      loadSchools({ useFilters: true }),
-    ]).catch((err) => {
+    loadSchools({ useFilters: false, syncFilterSource: true }).catch((err) => {
       console.error('load schools page init error:', err)
     })
   })
 
   useEffect(() => {
     if (!didInitRef.current) return
-    loadSchools({ useFilters: true })
+    loadSchools({ useFilters: hasActiveFilters(), syncFilterSource: !hasActiveFilters() })
   }, [selectedProvinces, selectedTypes, selectedAgeRanges])
 
   usePullDownRefresh(async () => {
-    await Promise.all([
-      loadFilterOptions(true),
-      loadSchools({ forceRefresh: true, useFilters: true }),
-    ])
+    if (hasActiveFilters()) {
+      await Promise.all([
+        loadFilterOptions(true),
+        loadSchools({ forceRefresh: true, useFilters: true }),
+      ])
+    } else {
+      await loadSchools({ forceRefresh: true, useFilters: false, syncFilterSource: true })
+    }
     Taro.stopPullDownRefresh()
   })
 
@@ -290,7 +299,7 @@ export default function SchoolsPage() {
           borderRadius: '14px', border: `1px solid ${palette.brandSoft}`,
         }}>
           <Text style={{ color: palette.error }}>{error}</Text>
-          <View onClick={() => loadSchools({ forceRefresh: true, useFilters: true })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
+          <View onClick={() => loadSchools({ forceRefresh: true, useFilters: hasActiveFilters(), syncFilterSource: !hasActiveFilters() })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
             <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
           </View>
         </View>

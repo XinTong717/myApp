@@ -1,41 +1,51 @@
+import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
+import { typography } from '../../theme/typography'
 
 type PillTone = 'brand' | 'neutral'
 
 type BaseProps = {
-  options: string[]
+  options: readonly string[] | string[]
   tone?: PillTone
+  marginBottom?: string
 }
 
-function getPillColors(active: boolean, tone: PillTone = 'brand') {
+function getPillColors(active: boolean, pressed: boolean, tone: PillTone = 'brand') {
   if (active) {
     return {
-      backgroundColor: palette.accentDeep,
-      borderColor: palette.accentDeep,
+      backgroundColor: pressed ? palette.brandPress : palette.brand,
+      borderColor: palette.brand,
       color: '#FFFFFF',
+      boxShadow: `0 3px 10px ${palette.shadow}`,
     }
   }
 
   return {
-    backgroundColor: tone === 'brand' ? palette.surfaceSoft : palette.tag,
-    borderColor: palette.line,
-    color: palette.subtext,
+    backgroundColor: pressed ? palette.activeBg : tone === 'brand' ? palette.surfaceSoft : palette.tag,
+    borderColor: pressed ? palette.focus : palette.line,
+    color: palette.tagText,
+    boxShadow: 'none',
   }
 }
 
 export function MultiPillSelect(props: BaseProps & { selected: string[]; onChange: (value: string[]) => void }) {
-  const { options, selected, onChange, tone = 'brand' } = props
+  const { options, selected, onChange, tone = 'brand', marginBottom = '12px' } = props
+  const [pressedOption, setPressedOption] = useState('')
 
   return (
-    <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '12px' }}>
+    <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom }}>
       {options.map((option) => {
         const active = selected.includes(option)
-        const colors = getPillColors(active, tone)
+        const pressed = pressedOption === option
+        const colors = getPillColors(active, pressed, tone)
 
         return (
           <View
             key={option}
+            onTouchStart={() => setPressedOption(option)}
+            onTouchEnd={() => setPressedOption('')}
+            onTouchCancel={() => setPressedOption('')}
             onClick={() => onChange(active ? selected.filter((value) => value !== option) : [...selected, option])}
             style={{
               padding: '6px 14px',
@@ -44,9 +54,11 @@ export function MultiPillSelect(props: BaseProps & { selected: string[]; onChang
               marginBottom: '8px',
               backgroundColor: colors.backgroundColor,
               border: `1px solid ${colors.borderColor}`,
+              boxShadow: colors.boxShadow,
+              transform: pressed ? 'scale(0.98)' : 'scale(1)',
             }}
           >
-            <Text style={{ fontSize: '13px', color: colors.color }}>{option}</Text>
+            <Text style={{ ...typography.meta, color: colors.color, fontWeight: active ? '700' : '400' }}>{option}</Text>
           </View>
         )
       })}
@@ -55,17 +67,22 @@ export function MultiPillSelect(props: BaseProps & { selected: string[]; onChang
 }
 
 export function SinglePillSelect(props: BaseProps & { selected: string; onChange: (value: string) => void; allowClear?: boolean }) {
-  const { options, selected, onChange, tone = 'brand', allowClear = true } = props
+  const { options, selected, onChange, tone = 'brand', allowClear = true, marginBottom = '12px' } = props
+  const [pressedOption, setPressedOption] = useState('')
 
   return (
-    <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '12px' }}>
+    <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom }}>
       {options.map((option) => {
         const active = selected === option
-        const colors = getPillColors(active, tone)
+        const pressed = pressedOption === option
+        const colors = getPillColors(active, pressed, tone)
 
         return (
           <View
             key={option}
+            onTouchStart={() => setPressedOption(option)}
+            onTouchEnd={() => setPressedOption('')}
+            onTouchCancel={() => setPressedOption('')}
             onClick={() => onChange(active && allowClear ? '' : option)}
             style={{
               padding: '6px 14px',
@@ -74,9 +91,11 @@ export function SinglePillSelect(props: BaseProps & { selected: string; onChange
               marginBottom: '8px',
               backgroundColor: colors.backgroundColor,
               border: `1px solid ${colors.borderColor}`,
+              boxShadow: colors.boxShadow,
+              transform: pressed ? 'scale(0.98)' : 'scale(1)',
             }}
           >
-            <Text style={{ fontSize: '13px', color: colors.color }}>{option}</Text>
+            <Text style={{ ...typography.meta, color: colors.color, fontWeight: active ? '700' : '400' }}>{option}</Text>
           </View>
         )
       })}

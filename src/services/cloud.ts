@@ -70,7 +70,7 @@ export async function callCloud<T = Record<string, unknown>>(name: string, data:
       ok: false,
       code: 'CLOUD_CALL_FAILED',
       requestId: clientRequestId,
-      message: err?.errMsg || err?.message || '云函数调用失败',
+      message: '网络异常，请稍后重试',
     } as CloudResponse<T>
   }
 }

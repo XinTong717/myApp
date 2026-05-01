@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
+import { typography } from '../../theme/typography'
 
 type AppPrimaryButtonProps = {
   text: string
@@ -7,25 +9,39 @@ type AppPrimaryButtonProps = {
   loading?: boolean
   disabled?: boolean
   onClick?: () => void
+  marginBottom?: string
 }
 
-export default function AppPrimaryButton(props: AppPrimaryButtonProps) {
-  const disabled = !!props.disabled || !!props.loading
+export default function AppPrimaryButton({
+  text,
+  loadingText = '处理中...',
+  loading = false,
+  disabled: disabledProp = false,
+  onClick,
+  marginBottom = '30px',
+}: AppPrimaryButtonProps) {
+  const [pressed, setPressed] = useState(false)
+  const disabled = !!disabledProp || !!loading
 
   return (
     <View
-      onClick={disabled ? undefined : props.onClick}
+      onTouchStart={() => !disabled && setPressed(true)}
+      onTouchEnd={() => setPressed(false)}
+      onTouchCancel={() => setPressed(false)}
+      onClick={disabled ? undefined : onClick}
       style={{
-        backgroundColor: disabled ? '#DDD' : palette.accentDeep,
+        background: disabled ? palette.disabledBg : pressed ? palette.brandPress : palette.primaryGradient,
         borderRadius: '16px',
         padding: '14px',
         textAlign: 'center',
-        marginBottom: '30px',
-        boxShadow: disabled ? 'none' : '0 8px 20px rgba(184,85,64,0.16)',
+        marginBottom,
+        boxShadow: disabled ? 'none' : pressed ? `0 3px 10px ${palette.shadow}` : `0 6px 16px ${palette.shadow}`,
+        transform: pressed ? 'scale(0.99)' : 'scale(1)',
+        opacity: disabled ? 0.9 : 1,
       }}
     >
-      <Text style={{ fontSize: '16px', color: '#FFF', fontWeight: 'bold' }}>
-        {props.loading ? (props.loadingText || '处理中...') : props.text}
+      <Text style={{ ...typography.button, color: disabled ? palette.disabledText : '#FFF' }}>
+        {loading ? loadingText : text}
       </Text>
     </View>
   )
