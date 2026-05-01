@@ -118,6 +118,8 @@ export default function ProfilePage() {
     acceptedConnections,
     sentRequests,
     loadRequests,
+    loadRequestSection,
+    refreshLoadedRequests,
     handleRespond,
     handleWithdrawRequest,
     handleRemoveConnection,
@@ -146,13 +148,13 @@ export default function ProfilePage() {
     if (!force && now - lastAutoRefreshAtRef.current < PROFILE_REFRESH_TTL) return
     lastAutoRefreshAtRef.current = now
     loadProfile()
-    loadRequests()
+    loadRequests('pending')
     loadSafetyOverview()
     loadAdminAccess()
   }
 
   const refreshRelations = () => {
-    loadRequests()
+    refreshLoadedRequests()
     loadSafetyOverview()
   }
 
@@ -318,6 +320,7 @@ export default function ProfilePage() {
         pendingRequests={pendingRequests}
         acceptedConnections={acceptedConnections}
         sentRequests={sentRequests}
+        onLoadSection={loadRequestSection}
         onRespond={(requestId, action) => handleRespond(requestId, action, refreshRelations)}
         onWithdrawRequest={(connectionId) => handleWithdrawRequest(connectionId, refreshRelations)}
         onRemoveConnection={(connectionId) => handleRemoveConnection(connectionId, refreshRelations)}
