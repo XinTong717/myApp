@@ -2,11 +2,18 @@ const MINUTE = 60 * 1000
 const DAY = 24 * 60 * MINUTE
 
 const READ_ACTION_RATE_LIMITS = {
+  getOpenId: { limit: 30, windowMs: MINUTE },
+  getMe: { limit: 60, windowMs: MINUTE },
   getMapUsers: { limit: 30, windowMs: MINUTE },
   getMyRequests: { limit: 30, windowMs: MINUTE },
+  getSafetyOverview: { limit: 30, windowMs: MINUTE },
   getEventInterestInfo: { limit: 60, windowMs: MINUTE },
+  getEventInterestCountsBatch: { limit: 60, windowMs: MINUTE },
+  getEventContactInfo: { limit: 30, windowMs: MINUTE },
   getEvents: { limit: 60, windowMs: MINUTE },
+  getEventDetail: { limit: 120, windowMs: MINUTE },
   getSchools: { limit: 60, windowMs: MINUTE },
+  getSchoolDetail: { limit: 120, windowMs: MINUTE },
 }
 
 const WRITE_ACTION_RATE_LIMITS = {
@@ -24,10 +31,13 @@ const WRITE_ACTION_RATE_LIMITS = {
 }
 
 const ADMIN_ACTION_RATE_LIMITS = {
+  checkAdminAccess: { limit: 30, windowMs: MINUTE },
   publishEventDirect: { limit: 30, windowMs: MINUTE },
   reviewEventSubmission: { limit: 60, windowMs: MINUTE },
   getEventPublishPayload: { limit: 120, windowMs: MINUTE },
   listEventSubmissions: { limit: 120, windowMs: MINUTE },
+  migrateSchoolLocations: { limit: 10, windowMs: MINUTE },
+  validateSchoolLocationsMigration: { limit: 30, windowMs: MINUTE },
 }
 
 const ACTION_RATE_LIMITS = {
