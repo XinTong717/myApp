@@ -14,6 +14,8 @@ const EVENT_TYPE_MAP = {
   '其他': 'meetup',
 }
 
+const EVENT_ID_ALLOCATION_MAX_RETRIES = 5
+
 function parseDate(value) {
   if (!value) return null
   const date = new Date(value)
@@ -132,19 +134,44 @@ async function getEventSubmissionById(submissionId) {
   }
 }
 
+async function getCurrentMaxEventId() {
+  const res = await db.collection('events')
+    .field({ id: true })
+    .orderBy('id', 'desc')
+    .limit(1)
+    .get()
+  const maxId = Number((res.data || [])[0]?.id || 0)
+  return Number.isFinite(maxId) && maxId > 0 ? maxId : 0
+}
+
+async function eventIdExists(eventId) {
+  const res = await db.collection('events')
+    .where({ id: eventId })
+    .field({ id: true })
+    .limit(1)
+    .get()
+  return (res.data || []).length > 0
+}
+
 async function allocateEventId() {
   try {
-    const res = await db.collection('events')
-      .field({ id: true })
-      .orderBy('id', 'desc')
-      .limit(1)
-      .get()
-    const maxId = Number((res.data || [])[0]?.id || 0)
-    if (Number.isFinite(maxId) && maxId > 0) return maxId + 1
+    const maxId = await getCurrentMaxEventId()
+    let candidate = maxId + 1
+
+    for (let i = 0; i < EVENT_ID_ALLOCATION_MAX_RETRIES; i += 1) {
+      const exists = await eventIdExists(candidate)
+      if (!exists) return candidate
+      candidate += 1
+    }
+
+    const fallback = Date.now()
+    console.warn('allocateEventId exhausted sequential retries, using timestamp fallback:', fallback)
+    return fallback
   } catch (err) {
-    console.warn('allocateEventId max-id lookup failed, using timestamp id:', err && err.message ? err.message : err)
+    const fallback = Date.now()
+    console.warn('allocateEventId lookup failed, using timestamp fallback:', err && err.message ? err.message : err, fallback)
+    return fallback
   }
-  return Date.now()
 }
 
 async function publishEventDirect(event, wxContext) {
