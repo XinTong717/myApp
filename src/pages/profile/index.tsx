@@ -87,9 +87,46 @@ function PrivacyDisclosureNotice() {
   )
 }
 
+function AdultConfirmation(props: { checked: boolean; onToggle: () => void }) {
+  return (
+    <View
+      onClick={props.onToggle}
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: props.checked ? '#FFF7F3' : palette.card,
+        borderRadius: '16px',
+        border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`,
+        padding: '12px',
+        marginBottom: '12px',
+      }}
+    >
+      <View style={{
+        width: '20px',
+        height: '20px',
+        borderRadius: '6px',
+        marginRight: '10px',
+        marginTop: '1px',
+        backgroundColor: props.checked ? palette.accentDeep : '#FFFFFF',
+        border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <Text style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>{props.checked ? '✓' : ''}</Text>
+      </View>
+      <Text style={{ ...typography.caption, color: palette.subtext, flex: 1 }}>
+        我确认本人已满18周岁，并理解地图公开展示范围；不会填写可直接识别未成年人的姓名、学校、住址、联系方式或精确行程。
+      </Text>
+    </View>
+  )
+}
+
 export default function ProfilePage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [activeStep, setActiveStep] = useState<ProfileStep>('basic')
+  const [adultConfirmed, setAdultConfirmed] = useState(false)
   const lastAutoRefreshAtRef = useRef(0)
 
   const {
@@ -229,6 +266,14 @@ export default function ProfilePage() {
     setActiveStep(next.key)
   }
 
+  const handleConfirmedSave = async () => {
+    if (!adultConfirmed) {
+      Taro.showToast({ title: '请先确认已满18周岁', icon: 'none' })
+      return
+    }
+    await handleSave()
+  }
+
   if (loading) {
     return (
       <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '40px 20px', textAlign: 'center' }}>
@@ -261,8 +306,6 @@ export default function ProfilePage() {
             currentCity={currentCity}
             customCity={customCity}
             setCustomCity={setCustomCity}
-            wechatId={wechatId}
-            setWechatId={setWechatId}
             pickerRange={pickerRange}
             pickerValue={pickerValue}
             handlePickerChange={handlePickerChange}
@@ -327,7 +370,9 @@ export default function ProfilePage() {
 
           <PrivacyDisclosureNotice />
 
-          <ProfilePrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleSave} />
+          <AdultConfirmation checked={adultConfirmed} onToggle={() => setAdultConfirmed((value) => !value)} />
+
+          <ProfilePrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
         </>
       )}
 
