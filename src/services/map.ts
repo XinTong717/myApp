@@ -27,7 +27,7 @@ function normalizeOffset(value?: number) {
 }
 
 function getMapUsersCacheKey(province?: string, childAgeRange?: string, role?: string, offset?: number, limit?: number, autoPage?: boolean) {
-  return `${MAP_USERS_CACHE_KEY_PREFIX}${normalizeProvince(province) || 'all'}:${normalizeFilter(role) || 'all-role'}:${normalizeFilter(childAgeRange) || 'all-child-stage'}:${normalizeOffset(offset)}:${limit || 'default-limit'}:${autoPage === false ? 'single-page' : 'auto-page'}`
+  return `${MAP_USERS_CACHE_KEY_PREFIX}${normalizeProvince(province) || 'all'}:${normalizeFilter(role) || 'all-role'}:${normalizeFilter(childAgeRange) || 'all-child-stage'}:${normalizeOffset(offset)}:${limit || 'default-limit'}:${autoPage === true ? 'auto-page' : 'single-page'}`
 }
 
 async function fetchMapUsersPage(params: { province?: string; role?: string; childAgeRange?: string; offset?: number; limit?: number }) {
@@ -84,7 +84,7 @@ export async function getMapUsers(options: { forceRefresh?: boolean; province?: 
   const childAgeRange = normalizeFilter(options.childAgeRange)
   const role = normalizeFilter(options.role)
   const offset = normalizeOffset(options.offset)
-  const shouldAutoPage = !!province && offset === 0 && options.autoPage !== false
+  const shouldAutoPage = !!province && offset === 0 && options.autoPage === true
   const pageLimit = options.limit || (shouldAutoPage ? MAP_USERS_AUTO_PAGE_LIMIT : undefined)
   const cacheKey = getMapUsersCacheKey(province, childAgeRange, role, offset, pageLimit, shouldAutoPage)
 
