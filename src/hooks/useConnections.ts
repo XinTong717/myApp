@@ -1,22 +1,46 @@
 import { useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { getMyRequests, manageConnection, respondRequest, type RequestSection } from '../services/connection'
-import type { AcceptedConnection, PendingRequest, SentRequest } from '../types/domain'
+import type { AcceptedConnection, PendingRequest, RequestPages, SentRequest } from '../types/domain'
 import { CONNECTION_CODE_MESSAGES } from '../constants/cloudMessages'
 import { logCloudFailure, resolveCloudMessage } from '../utils/cloudFeedback'
 
-const SECTION_KEYS: RequestSection[] = ['pending', 'accepted', 'sent']
+const SECTION_KEYS: Exclude<RequestSection, 'all'>[] = ['pending', 'accepted', 'sent']
+const PAGE_LIMIT = 50
+
+function mergeById<T extends { _id: string }>(oldItems: T[], newItems: T[]) {
+  const seen = new Set<string>()
+  return [...oldItems, ...newItems].filter((item) => {
+    if (!item?._id || seen.has(item._id)) return false
+    seen.add(item._id)
+    return true
+  })
+}
 
 export function useConnections() {
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([])
   const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConnection[]>([])
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([])
+  const [requestPages, setRequestPages] = useState<RequestPages>({})
+  const [loadingMoreSection, setLoadingMoreSection] = useState<RequestSection | ''>('')
   const loadedSectionsRef = useRef<Record<string, boolean>>({})
 
-  const applyRequestResult = (section: RequestSection, r: any) => {
-    if (section === 'pending' || section === 'all') setPendingRequests(r.pending || [])
-    if (section === 'accepted' || section === 'all') setAcceptedConnections(r.accepted || [])
-    if (section === 'sent' || section === 'all') setSentRequests(r.sent || [])
+  const applyRequestResult = (section: RequestSection, r: any, mode: 'replace' | 'append' = 'replace') => {
+    const append = mode === 'append'
+
+    if (section === 'pending' || section === 'all') {
+      setPendingRequests((prev) => append ? mergeById(prev, r.pending || []) : (r.pending || []))
+    }
+    if (section === 'accepted' || section === 'all') {
+      setAcceptedConnections((prev) => append ? mergeById(prev, r.accepted || []) : (r.accepted || []))
+    }
+    if (section === 'sent' || section === 'all') {
+      setSentRequests((prev) => append ? mergeById(prev, r.sent || []) : (r.sent || []))
+    }
+
+    if (r.pages) {
+      setRequestPages((prev) => ({ ...prev, ...r.pages }))
+    }
   }
 
   const markLoaded = (section: RequestSection) => {
@@ -27,13 +51,13 @@ export function useConnections() {
     loadedSectionsRef.current[section] = true
   }
 
-  const loadRequests = async (section: RequestSection = 'pending', options: { force?: boolean } = {}) => {
-    if (!options.force && section !== 'all' && loadedSectionsRef.current[section]) return
+  const loadRequests = async (section: RequestSection = 'pending', options: { force?: boolean; offset?: number; append?: boolean } = {}) => {
+    if (!options.force && !options.append && section !== 'all' && loadedSectionsRef.current[section]) return
 
     try {
-      const r = await getMyRequests(section)
+      const r = await getMyRequests(section, { offset: options.offset || 0, limit: PAGE_LIMIT })
       if (r?.ok) {
-        applyRequestResult(section, r)
+        applyRequestResult(section, r, options.append ? 'append' : 'replace')
         markLoaded(section)
       } else {
         logCloudFailure('getMyRequests', r)
@@ -44,6 +68,18 @@ export function useConnections() {
   }
 
   const loadRequestSection = (section: RequestSection) => loadRequests(section)
+
+  const loadMoreRequests = async (section: Exclude<RequestSection, 'all'>) => {
+    const page = requestPages[section]
+    if (!page?.hasMore || page.nextOffset === null || loadingMoreSection) return
+
+    setLoadingMoreSection(section)
+    try {
+      await loadRequests(section, { offset: page.nextOffset || 0, append: true, force: true })
+    } finally {
+      setLoadingMoreSection('')
+    }
+  }
 
   const refreshLoadedRequests = async () => {
     const loaded = SECTION_KEYS.filter((key) => loadedSectionsRef.current[key])
@@ -119,8 +155,11 @@ export function useConnections() {
     pendingRequests,
     acceptedConnections,
     sentRequests,
+    requestPages,
+    loadingMoreSection,
     loadRequests,
     loadRequestSection,
+    loadMoreRequests,
     refreshLoadedRequests,
     refreshAllRequests,
     handleRespond,
