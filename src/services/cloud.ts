@@ -30,6 +30,7 @@ const ROUTED_ACTIONS = new Set([
   'checkAdminAccess',
   'listEventSubmissions',
   'getEventPublishPayload',
+  'publishEventDirect',
   'reviewEventSubmission',
 ])
 
