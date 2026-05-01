@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { EVENT_CODE_MESSAGES } from '../../constants/cloudMessages'
@@ -105,7 +105,7 @@ function EventContent(props: {
         </View>
       </View>
 
-      <View onClick={preview ? undefined : onToggleInterest} style={{ backgroundColor: hasInterested ? palette.surfaceSoft : preview ? palette.disabledBg : palette.accentDeep, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '14px' }}>
+      <View onClick={preview || interestLoading ? undefined : onToggleInterest} style={{ backgroundColor: hasInterested ? palette.surfaceSoft : preview ? palette.disabledBg : palette.accentDeep, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '14px' }}>
         <Text style={{ fontSize: '15px', color: hasInterested || preview ? palette.subtext : '#FFF', fontWeight: 'bold' }}>{preview ? '完整详情加载后可标记感兴趣' : interestLoading ? '处理中...' : hasInterested ? '已感兴趣，再点一次取消' : '我感兴趣'}</Text>
       </View>
 
@@ -154,6 +154,7 @@ export default function EventDetailPage() {
   const [contactMessage, setContactMessage] = useState('')
   const [contactLoading, setContactLoading] = useState(false)
   const [publicSignupText, setPublicSignupText] = useState('')
+  const toggleLockRef = useRef(false)
 
   const loadInterestInfo = async (eventId: number) => {
     try {
@@ -209,8 +210,9 @@ export default function EventDetailPage() {
   }
 
   const handleToggleInterest = async () => {
-    if (!event || interestLoading) return
+    if (!event || interestLoading || toggleLockRef.current) return
 
+    toggleLockRef.current = true
     try {
       setInterestLoading(true)
       const result = await toggleEventInterest(event.id)
@@ -233,6 +235,7 @@ export default function EventDetailPage() {
       console.error('toggleEventInterest error:', err)
       Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
     } finally {
+      toggleLockRef.current = false
       setInterestLoading(false)
     }
   }

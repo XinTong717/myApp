@@ -10,18 +10,46 @@ const adminPublishHandlers = require('./handlers/adminPublish')
 const schoolMigrationHandlers = require('./handlers/schoolMigration')
 
 const DEFAULT_ACTION_RATE_LIMITS = {
+  getOpenId: { limit: 30, windowMs: 60 * 1000 },
+  getMe: { limit: 60, windowMs: 60 * 1000 },
   getMapUsers: { limit: 30, windowMs: 60 * 1000 },
   getMyRequests: { limit: 30, windowMs: 60 * 1000 },
+  getSafetyOverview: { limit: 30, windowMs: 60 * 1000 },
   getEventInterestInfo: { limit: 60, windowMs: 60 * 1000 },
+  getEventInterestCountsBatch: { limit: 60, windowMs: 60 * 1000 },
+  getEventContactInfo: { limit: 30, windowMs: 60 * 1000 },
   getEvents: { limit: 60, windowMs: 60 * 1000 },
+  getEventDetail: { limit: 120, windowMs: 60 * 1000 },
   getSchools: { limit: 60, windowMs: 60 * 1000 },
+  getSchoolDetail: { limit: 120, windowMs: 60 * 1000 },
+  checkAdminAccess: { limit: 30, windowMs: 60 * 1000 },
   submitCorrection: { limit: 5, windowMs: 24 * 60 * 60 * 1000 },
   submitCommunity: { limit: 5, windowMs: 24 * 60 * 60 * 1000 },
   submitEvent: { limit: 5, windowMs: 24 * 60 * 60 * 1000 },
   sendRequest: { limit: 20, windowMs: 24 * 60 * 60 * 1000 },
   reportUser: { limit: 10, windowMs: 24 * 60 * 60 * 1000 },
   toggleEventInterest: { limit: 60, windowMs: 60 * 1000 },
+  publishEventDirect: { limit: 30, windowMs: 60 * 1000 },
+  reviewEventSubmission: { limit: 60, windowMs: 60 * 1000 },
+  getEventPublishPayload: { limit: 120, windowMs: 60 * 1000 },
+  listEventSubmissions: { limit: 120, windowMs: 60 * 1000 },
+  migrateSchoolLocations: { limit: 10, windowMs: 60 * 1000 },
+  validateSchoolLocationsMigration: { limit: 30, windowMs: 60 * 1000 },
 }
+
+const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
+  'submitEvent',
+  'submitCommunity',
+  'submitCorrection',
+  'sendRequest',
+  'reportUser',
+  'toggleEventInterest',
+  'getEventContactInfo',
+  'publishEventDirect',
+  'reviewEventSubmission',
+  'migrateSchoolLocations',
+  'validateSchoolLocationsMigration',
+])
 
 function loadRateLimitConfig() {
   try {
@@ -86,6 +114,9 @@ exports.main = async (event = {}) => {
       const limitRes = await rateLimit(wxContext.OPENID, action, limitConfig)
       if (!limitRes.ok) {
         return fail(requestId, limitRes.code || 'RATE_LIMITED', limitRes.message || '操作过于频繁，请稍后再试')
+      }
+      if (limitRes.degraded && FAIL_CLOSED_RATE_LIMIT_ACTIONS.has(action)) {
+        return fail(requestId, 'RATE_LIMIT_UNAVAILABLE', '风控校验暂时不可用，请稍后再试')
       }
     }
 

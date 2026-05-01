@@ -32,6 +32,8 @@ const ROUTED_ACTIONS = new Set([
   'getEventPublishPayload',
   'publishEventDirect',
   'reviewEventSubmission',
+  'migrateSchoolLocations',
+  'validateSchoolLocationsMigration',
 ])
 
 function createClientRequestId(name: string) {
