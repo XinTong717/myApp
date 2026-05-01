@@ -5,12 +5,14 @@ import { checkAdminAccess } from '../../../services/profile'
 import { listEventSubmissions, getEventPublishPayload, reviewEventSubmission } from '../../../services/admin'
 import { callCloud } from '../../../services/cloud'
 import AdminActionButton from '../../../components/admin/AdminActionButton'
+import FormInputBox from '../../../components/common/FormInputBox'
 import { palette } from '../../../theme/palette'
 import { typography } from '../../../theme/typography'
 
 const STATUS_OPTIONS = ['pending', 'merged', 'rejected'] as const
 
 type StatusValue = typeof STATUS_OPTIONS[number]
+type FocusField = 'publishedEventId' | 'adminNote' | ''
 
 type SubmissionItem = {
   _id: string
@@ -77,6 +79,7 @@ export default function AdminEventReviewsPage() {
   const [payloadResponse, setPayloadResponse] = useState<PayloadResponse>({})
   const [publishedEventId, setPublishedEventId] = useState('')
   const [adminNote, setAdminNote] = useState('')
+  const [focusedField, setFocusedField] = useState<FocusField>('')
 
   const selectedSubmission = useMemo(
     () => submissions.find((item) => item._id === selectedId) || null,
@@ -400,15 +403,34 @@ export default function AdminEventReviewsPage() {
 
             <View style={{ marginBottom: '12px' }}>
               <Text style={{ ...typography.caption, color: palette.accentDeep, fontWeight: '700' }}>publishedEventId（手动备用路径）</Text>
-              <View style={{ marginTop: '8px', backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
-                <Input value={publishedEventId} placeholder='一键发布后会自动回填；也可手动填写，例如：123' onInput={(e) => setPublishedEventId(e.detail.value)} style={{ ...typography.body, color: palette.text }} />
+              <View style={{ marginTop: '8px' }}>
+                <FormInputBox focused={focusedField === 'publishedEventId'} marginBottom='0'>
+                  <Input
+                    value={publishedEventId}
+                    placeholder='一键发布后会自动回填；也可手动填写，例如：123'
+                    onFocus={() => setFocusedField('publishedEventId')}
+                    onBlur={() => setFocusedField('')}
+                    onInput={(e) => setPublishedEventId(e.detail.value)}
+                    style={{ ...typography.body, color: palette.text }}
+                  />
+                </FormInputBox>
               </View>
             </View>
 
             <View style={{ marginBottom: '12px' }}>
               <Text style={{ ...typography.caption, color: palette.accentDeep, fontWeight: '700' }}>adminNote</Text>
-              <View style={{ marginTop: '8px', backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
-                <Textarea value={adminNote} placeholder='补充审核备注，比如已发布、重复、拒绝原因等' maxlength={300} onInput={(e) => setAdminNote(e.detail.value)} style={{ width: '100%', minHeight: '80px', ...typography.body, color: palette.text }} />
+              <View style={{ marginTop: '8px' }}>
+                <FormInputBox focused={focusedField === 'adminNote'} marginBottom='0'>
+                  <Textarea
+                    value={adminNote}
+                    placeholder='补充审核备注，比如已发布、重复、拒绝原因等'
+                    maxlength={300}
+                    onFocus={() => setFocusedField('adminNote')}
+                    onBlur={() => setFocusedField('')}
+                    onInput={(e) => setAdminNote(e.detail.value)}
+                    style={{ width: '100%', minHeight: '80px', ...typography.body, color: palette.text }}
+                  />
+                </FormInputBox>
               </View>
             </View>
 
