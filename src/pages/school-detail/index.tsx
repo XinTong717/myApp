@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { View, Text, Textarea } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { getSchoolDetail, submitCorrection } from '../../services/school'
@@ -181,7 +181,7 @@ function SchoolContent(props: {
                 <Text style={{ fontSize: '11px', color: palette.muted }}>{correctionText.length}/500</Text>
               </View>
               <View style={{ display: 'flex', flexDirection: 'row' }}>
-                <View onClick={onCancelCorrection} style={{ padding: '8px 16px', borderRadius: '999px', backgroundColor: palette.tag, marginRight: '10px' }}>
+                <View onClick={correctionSubmitting ? undefined : onCancelCorrection} style={{ padding: '8px 16px', borderRadius: '999px', backgroundColor: palette.tag, marginRight: '10px' }}>
                   <Text style={{ fontSize: '13px', color: palette.tagText }}>取消</Text>
                 </View>
                 <View onClick={correctionSubmitting ? undefined : onSubmitCorrection} style={{ padding: '8px 20px', borderRadius: '999px', backgroundColor: correctionSubmitting ? palette.muted : palette.brand }}>
@@ -212,6 +212,7 @@ export default function SchoolDetailPage() {
   const [correctionText, setCorrectionText] = useState('')
   const [correctionSubmitting, setCorrectionSubmitting] = useState(false)
   const [correctionDone, setCorrectionDone] = useState(false)
+  const correctionLockRef = useRef(false)
 
   const loadDetail = async (options: { forceRefresh?: boolean } = {}) => {
     const id = Number(getCurrentInstance().router?.params?.id || 0)
@@ -240,9 +241,11 @@ export default function SchoolDetailPage() {
     setShowCorrectionForm(false)
     setCorrectionText('')
     setCorrectionDone(false)
+    correctionLockRef.current = false
   })
 
   const handleSubmitCorrection = async () => {
+    if (correctionLockRef.current || correctionSubmitting) return
     const text = correctionText.trim()
     if (!text) {
       Taro.showToast({ title: '请填写修正内容', icon: 'none' })
@@ -250,6 +253,7 @@ export default function SchoolDetailPage() {
     }
     if (!school) return
 
+    correctionLockRef.current = true
     try {
       setCorrectionSubmitting(true)
       const result = await submitCorrection(school.id, school.name, text)
@@ -264,6 +268,7 @@ export default function SchoolDetailPage() {
       console.error('submitCorrection error:', err)
       Taro.showToast({ title: '提交失败，请稍后重试', icon: 'none' })
     } finally {
+      correctionLockRef.current = false
       setCorrectionSubmitting(false)
     }
   }
