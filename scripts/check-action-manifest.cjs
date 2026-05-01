@@ -4,10 +4,11 @@ const fs = require('fs')
 const path = require('path')
 
 const repoRoot = path.resolve(__dirname, '..')
+const appServiceDir = path.join(repoRoot, 'cloudfunctions/appService')
 
 const files = {
-  appServiceIndex: path.join(repoRoot, 'cloudfunctions/appService/index.js'),
-  rateLimitConfig: path.join(repoRoot, 'cloudfunctions/appService/lib/rateLimits.config.js'),
+  appServiceIndex: path.join(appServiceDir, 'index.js'),
+  rateLimitConfig: path.join(appServiceDir, 'lib/rateLimits.config.js'),
   cloudService: path.join(repoRoot, 'src/services/cloud.ts'),
 }
 
@@ -19,45 +20,116 @@ function readFile(filePath) {
   return fs.readFileSync(filePath, 'utf8')
 }
 
-function extractObjectKeys(source, objectName) {
-  const startMarker = `const ${objectName} = {`
-  const start = source.indexOf(startMarker)
-  if (start === -1) return []
+function findBalancedBlock(source, startIndex, openChar = '{', closeChar = '}') {
+  const openIndex = source.indexOf(openChar, startIndex)
+  if (openIndex === -1) return ''
 
   let depth = 0
-  let end = -1
-  for (let i = start + startMarker.length - 1; i < source.length; i += 1) {
+  let quote = ''
+  let escaped = false
+
+  for (let i = openIndex; i < source.length; i += 1) {
     const ch = source[i]
-    if (ch === '{') depth += 1
-    if (ch === '}') {
-      depth -= 1
-      if (depth === 0) {
-        end = i
-        break
+
+    if (quote) {
+      if (escaped) {
+        escaped = false
+      } else if (ch === '\\') {
+        escaped = true
+      } else if (ch === quote) {
+        quote = ''
       }
+      continue
+    }
+
+    if (ch === '\'' || ch === '"' || ch === '`') {
+      quote = ch
+      continue
+    }
+
+    if (ch === openChar) depth += 1
+    if (ch === closeChar) {
+      depth -= 1
+      if (depth === 0) return source.slice(openIndex + 1, i)
     }
   }
 
-  if (end === -1) return []
-  const body = source.slice(start + startMarker.length, end)
+  return ''
+}
+
+function extractObjectBody(source, objectName) {
+  const marker = `const ${objectName} =`
+  const start = source.indexOf(marker)
+  if (start === -1) return ''
+  return findBalancedBlock(source, start, '{', '}')
+}
+
+function extractObjectKeysFromBody(body) {
   const keys = []
   const keyRe = /^\s*([A-Za-z_$][\w$]*)\s*[:,]/gm
   let match
   while ((match = keyRe.exec(body)) !== null) {
-    const key = match[1]
-    if (!key.startsWith('...')) keys.push(key)
+    keys.push(match[1])
   }
   return keys
 }
 
+function extractObjectKeys(source, objectName) {
+  return extractObjectKeysFromBody(extractObjectBody(source, objectName))
+}
+
 function extractSetStrings(source, variableName) {
-  const startMarker = `const ${variableName} = new Set([`
-  const start = source.indexOf(startMarker)
+  const marker = `const ${variableName} = new Set(`
+  const start = source.indexOf(marker)
   if (start === -1) return []
-  const end = source.indexOf('])', start)
-  if (end === -1) return []
-  const body = source.slice(start + startMarker.length, end)
+  const body = findBalancedBlock(source, start, '[', ']')
   return Array.from(body.matchAll(/['"]([^'"]+)['"]/g)).map((match) => match[1])
+}
+
+function extractRequireMap(source) {
+  const map = new Map()
+  const requireRe = /^const\s+([A-Za-z_$][\w$]*)\s*=\s*require\(['"](.+?)['"]\)/gm
+  let match
+  while ((match = requireRe.exec(source)) !== null) {
+    const [, variableName, requiredPath] = match
+    if (!requiredPath.startsWith('./')) continue
+    map.set(variableName, path.join(appServiceDir, requiredPath) + '.js')
+  }
+  return map
+}
+
+function extractSpreadVariablesFromObject(source, objectName) {
+  const body = extractObjectBody(source, objectName)
+  return Array.from(body.matchAll(/\.\.\.([A-Za-z_$][\w$]*)/g)).map((match) => match[1])
+}
+
+function extractModuleExportKeys(filePath) {
+  const source = readFile(filePath)
+  const marker = 'module.exports ='
+  const start = source.indexOf(marker)
+  if (start === -1) return []
+  return extractObjectKeysFromBody(findBalancedBlock(source, start, '{', '}'))
+}
+
+function extractAppServiceActions(source) {
+  const requireMap = extractRequireMap(source)
+  const actionHandlers = new Set(extractObjectKeys(source, 'actionHandlers'))
+  const groupNames = ['publicActionHandlers', 'userActionHandlers', 'adminActionHandlers']
+
+  for (const groupName of groupNames) {
+    extractObjectKeys(source, groupName).forEach((key) => actionHandlers.add(key))
+
+    for (const variableName of extractSpreadVariablesFromObject(source, groupName)) {
+      const modulePath = requireMap.get(variableName)
+      if (!modulePath || !fs.existsSync(modulePath)) {
+        console.warn(`[check-actions] cannot resolve spread module ${variableName} in ${groupName}`)
+        continue
+      }
+      extractModuleExportKeys(modulePath).forEach((key) => actionHandlers.add(key))
+    }
+  }
+
+  return actionHandlers
 }
 
 function extractRateLimitKeys(source) {
@@ -86,13 +158,7 @@ const appServiceSource = readFile(files.appServiceIndex)
 const rateLimitSource = readFile(files.rateLimitConfig)
 const cloudServiceSource = readFile(files.cloudService)
 
-const appServiceActions = new Set([
-  ...extractObjectKeys(appServiceSource, 'actionHandlers'),
-  ...extractObjectKeys(appServiceSource, 'publicActionHandlers'),
-  ...extractObjectKeys(appServiceSource, 'userActionHandlers'),
-  ...extractObjectKeys(appServiceSource, 'adminActionHandlers'),
-])
-
+const appServiceActions = extractAppServiceActions(appServiceSource)
 const routedActions = new Set(extractSetStrings(cloudServiceSource, 'ROUTED_ACTIONS'))
 const rateLimitedActions = extractRateLimitKeys(rateLimitSource)
 const failClosedActions = new Set(extractSetStrings(appServiceSource, 'FAIL_CLOSED_RATE_LIMIT_ACTIONS'))
