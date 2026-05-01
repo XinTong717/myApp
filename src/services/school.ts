@@ -1,5 +1,6 @@
 import { callCloud } from './cloud'
 import { getScopedCachedValue, setScopedCachedValue } from './cache'
+import { runExclusive } from './internal/runExclusive'
 import type {
   SchoolDetailResult,
   SchoolListResult,
@@ -12,30 +13,7 @@ const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v1:'
 const SCHOOL_LIST_TTL_MS = 30 * 60 * 1000
 const SCHOOL_DETAIL_TTL_MS = 15 * 60 * 1000
 
-const pendingActionKeys = new Set<string>()
-
 type SchoolFilterValue = string | string[] | undefined
-
-async function runExclusive<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  if (pendingActionKeys.has(key)) {
-    return {
-      ok: false,
-      code: 'DUPLICATE_CLIENT_ACTION',
-      message: '操作正在处理中，请勿重复点击',
-    } as T
-  }
-
-  pendingActionKeys.add(key)
-  try {
-    return await fn()
-  } finally {
-    pendingActionKeys.delete(key)
-  }
-}
-
-function normalizeFilter(value?: string) {
-  return String(value || '').trim()
-}
 
 function normalizeFilterList(value?: SchoolFilterValue) {
   const list = Array.isArray(value) ? value : [value]
