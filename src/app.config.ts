@@ -10,6 +10,7 @@ export default defineAppConfig({
   subPackages: [
     { root: 'pkg/schools', pages: ['submit/index'] },
     { root: 'pkg/events', pages: ['submit/index'] },
+    { root: 'pkg/legal', pages: ['user-agreement/index', 'privacy-policy/index'] },
     { root: 'pages/school-detail', pages: ['index'] },
     { root: 'pages/event-detail', pages: ['index'] },
     { root: 'pages/admin', pages: ['event-reviews/index'] },

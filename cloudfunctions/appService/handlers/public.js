@@ -26,30 +26,14 @@ function buildCountDocId(eventId) {
   return String(eventId)
 }
 
-async function countInterestedFromSource(eventId) {
-  try {
-    const countRes = await db.collection('event_interest').where({ eventId, status: 'interested' }).count()
-    return countRes.total || 0
-  } catch (err) {
-    console.warn('event interest source count failed:', err)
-    return 0
-  }
-}
-
 async function writeInterestCountCache(eventId, count) {
   try {
     await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).set({
-      data: { eventId, count, updatedAt: db.serverDate() },
+      data: { eventId, count: Math.max(0, Number(count || 0)), updatedAt: db.serverDate() },
     })
   } catch (err) {
     console.warn('event interest count cache write skipped:', err)
   }
-}
-
-async function syncInterestCount(eventId) {
-  const count = await countInterestedFromSource(eventId)
-  await writeInterestCountCache(eventId, count)
-  return count
 }
 
 async function getCachedCount(eventId) {
@@ -62,27 +46,37 @@ async function getCachedCount(eventId) {
 }
 
 async function adjustInterestCountCache(eventId, delta) {
-  if (!delta) {
-    const cached = await getCachedCount(eventId)
-    return cached === null ? syncInterestCount(eventId) : cached
+  const safeDelta = Number(delta || 0)
+  const cached = await getCachedCount(eventId)
+
+  if (!safeDelta) {
+    return cached === null ? 0 : Math.max(0, cached)
+  }
+
+  if (cached === null) {
+    const initializedCount = Math.max(0, safeDelta)
+    await writeInterestCountCache(eventId, initializedCount)
+    return initializedCount
   }
 
   try {
     await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).update({
       data: {
         eventId,
-        count: _.inc(delta),
+        count: _.inc(safeDelta),
         updatedAt: db.serverDate(),
       },
     })
 
-    const cached = await getCachedCount(eventId)
-    if (cached !== null) return Math.max(0, cached)
+    const nextCached = await getCachedCount(eventId)
+    if (nextCached !== null) return Math.max(0, nextCached)
   } catch (err) {
     console.warn('event interest count atomic update degraded:', err)
   }
 
-  return syncInterestCount(eventId)
+  const degradedCount = Math.max(0, cached + safeDelta)
+  await writeInterestCountCache(eventId, degradedCount)
+  return degradedCount
 }
 
 async function getCachedCounts(eventIds) {
@@ -102,7 +96,7 @@ async function getCachedCounts(eventIds) {
 
   for (const eventId of eventIds) {
     if (!Object.prototype.hasOwnProperty.call(counts, eventId)) {
-      counts[eventId] = await syncInterestCount(eventId)
+      counts[eventId] = 0
     }
   }
 
@@ -399,7 +393,7 @@ async function getEventInterestInfo(event, wxContext) {
   }
 
   const cachedCount = await getCachedCount(eventId)
-  const count = cachedCount === null ? await syncInterestCount(eventId) : cachedCount
+  const count = cachedCount === null ? 0 : cachedCount
 
   return ok(requestId, { count, hasInterested, degraded })
 }

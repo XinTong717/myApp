@@ -9,33 +9,7 @@ const adminHandlers = require('./handlers/admin')
 const adminPublishHandlers = require('./handlers/adminPublish')
 const schoolMigrationHandlers = require('./handlers/schoolMigration')
 
-const DEFAULT_ACTION_RATE_LIMITS = {
-  getOpenId: { limit: 30, windowMs: 60 * 1000 },
-  getMe: { limit: 60, windowMs: 60 * 1000 },
-  getMapUsers: { limit: 30, windowMs: 60 * 1000 },
-  getMyRequests: { limit: 30, windowMs: 60 * 1000 },
-  getSafetyOverview: { limit: 30, windowMs: 60 * 1000 },
-  getEventInterestInfo: { limit: 60, windowMs: 60 * 1000 },
-  getEventInterestCountsBatch: { limit: 60, windowMs: 60 * 1000 },
-  getEventContactInfo: { limit: 30, windowMs: 60 * 1000 },
-  getEvents: { limit: 60, windowMs: 60 * 1000 },
-  getEventDetail: { limit: 120, windowMs: 60 * 1000 },
-  getSchools: { limit: 60, windowMs: 60 * 1000 },
-  getSchoolDetail: { limit: 120, windowMs: 60 * 1000 },
-  checkAdminAccess: { limit: 30, windowMs: 60 * 1000 },
-  submitCorrection: { limit: 5, windowMs: 24 * 60 * 60 * 1000 },
-  submitCommunity: { limit: 5, windowMs: 24 * 60 * 60 * 1000 },
-  submitEvent: { limit: 5, windowMs: 24 * 60 * 60 * 1000 },
-  sendRequest: { limit: 20, windowMs: 24 * 60 * 60 * 1000 },
-  reportUser: { limit: 10, windowMs: 24 * 60 * 60 * 1000 },
-  toggleEventInterest: { limit: 60, windowMs: 60 * 1000 },
-  publishEventDirect: { limit: 30, windowMs: 60 * 1000 },
-  reviewEventSubmission: { limit: 60, windowMs: 60 * 1000 },
-  getEventPublishPayload: { limit: 120, windowMs: 60 * 1000 },
-  listEventSubmissions: { limit: 120, windowMs: 60 * 1000 },
-  migrateSchoolLocations: { limit: 10, windowMs: 60 * 1000 },
-  validateSchoolLocationsMigration: { limit: 30, windowMs: 60 * 1000 },
-}
+const { ACTION_RATE_LIMITS } = require('./lib/rateLimits.config')
 
 const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
   'submitEvent',
@@ -51,22 +25,10 @@ const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
   'validateSchoolLocationsMigration',
 ])
 
-function loadRateLimitConfig() {
-  try {
-    return require('./lib/rateLimits.config').ACTION_RATE_LIMITS || DEFAULT_ACTION_RATE_LIMITS
-  } catch (err) {
-    console.warn('rateLimits.config missing, using default action limits:', err && err.message ? err.message : err)
-    return DEFAULT_ACTION_RATE_LIMITS
-  }
-}
-
-const ACTION_RATE_LIMITS = loadRateLimitConfig()
-
 async function getOpenId(event, wxContext) {
   const requestId = resolveRequestId('get-openid', event)
   return ok(requestId, {
     openid: wxContext.OPENID,
-    appid: wxContext.APPID,
   })
 }
 
