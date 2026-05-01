@@ -1,7 +1,6 @@
-const { db } = require('../lib/cloud')
+const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
-const { normalizeRoles } = require('../lib/normalize')
-const legacyUserHandlers = require('./userV2')
+const { normalizeStringArray, normalizeRoles } = require('../lib/normalize')
 
 function normalizeSection(value) {
   const section = String(value || 'all').trim()
@@ -64,27 +63,91 @@ async function loadSent(openid, hiddenOpenidSet) {
     }))
 }
 
+async function loadAccepted(openid, hiddenOpenidSet) {
+  const [acceptedFrom, acceptedTo] = await Promise.all([
+    db.collection('connections')
+      .where({ fromOpenid: openid, status: 'accepted' })
+      .field({ _id: true, fromOpenid: true, fromUserId: true, toOpenid: true, toUserId: true, fromName: true, toName: true, respondedAt: true })
+      .limit(50)
+      .get(),
+    db.collection('connections')
+      .where({ toOpenid: openid, status: 'accepted' })
+      .field({ _id: true, fromOpenid: true, fromUserId: true, toOpenid: true, toUserId: true, fromName: true, toName: true, respondedAt: true })
+      .limit(50)
+      .get(),
+  ])
+
+  const allAccepted = [...(acceptedFrom.data || []), ...(acceptedTo.data || [])]
+  const otherOpenids = Array.from(new Set(
+    allAccepted
+      .map((conn) => (conn.fromOpenid === openid ? conn.toOpenid : conn.fromOpenid))
+      .filter((oid) => oid && !hiddenOpenidSet.has(oid))
+  ))
+
+  const usersRes = otherOpenids.length > 0
+    ? await db.collection('users')
+      .where({ openid: _.in(otherOpenids) })
+      .field({ _id: true, openid: true, displayName: true, city: true, roles: true, bio: true, wechatId: true, childAgeRange: true, childDropoutStatus: true, childInterests: true, eduServices: true })
+      .limit(Math.min(otherOpenids.length, 100))
+      .get()
+    : { data: [] }
+
+  const userMap = new Map((usersRes.data || []).map((user) => [user.openid, user]))
+
+  return allAccepted.reduce((acc, conn) => {
+    const otherOpenid = conn.fromOpenid === openid ? conn.toOpenid : conn.fromOpenid
+    if (hiddenOpenidSet.has(otherOpenid)) return acc
+
+    const otherUserId = conn.fromOpenid === openid ? conn.toUserId : conn.fromUserId
+    const otherBasicName = conn.fromOpenid === openid ? conn.toName : conn.fromName
+    const other = userMap.get(otherOpenid) || {}
+    const otherRoles = normalizeRoles(other.roles || [])
+
+    acc.push({
+      _id: conn._id,
+      otherUserId: other._id || otherUserId || '',
+      otherName: other.displayName || otherBasicName,
+      otherCity: other.city || '',
+      otherRoles,
+      otherBio: other.bio || '',
+      otherWechat: other.wechatId || '',
+      otherChildInfo: otherRoles.includes('家长')
+        ? {
+          ageRange: normalizeStringArray(other.childAgeRange),
+          status: normalizeStringArray(other.childDropoutStatus),
+          interests: other.childInterests || '',
+        }
+        : null,
+      otherEduServices: otherRoles.includes('教育者') ? (other.eduServices || '') : '',
+      respondedAt: conn.respondedAt,
+    })
+
+    return acc
+  }, [])
+}
+
 async function getMyRequests(event, wxContext) {
   const requestId = resolveRequestId('get-my-requests', event)
   const section = normalizeSection(event?.section)
 
-  if (section === 'accepted' || section === 'all') {
-    return legacyUserHandlers.getMyRequests(event, wxContext)
-  }
-
   try {
     const openid = wxContext.OPENID
     const hiddenOpenidSet = await loadHiddenOpenidSet(openid)
+    const payload = { section }
 
-    if (section === 'pending') {
-      return ok(requestId, { section, pending: await loadPending(openid, hiddenOpenidSet) })
+    if (section === 'pending' || section === 'all') {
+      payload.pending = await loadPending(openid, hiddenOpenidSet)
     }
 
-    if (section === 'sent') {
-      return ok(requestId, { section, sent: await loadSent(openid, hiddenOpenidSet) })
+    if (section === 'accepted' || section === 'all') {
+      payload.accepted = await loadAccepted(openid, hiddenOpenidSet)
     }
 
-    return ok(requestId, { section, pending: [] })
+    if (section === 'sent' || section === 'all') {
+      payload.sent = await loadSent(openid, hiddenOpenidSet)
+    }
+
+    return ok(requestId, payload)
   } catch (err) {
     console.error('appService getMyRequests split error:', err)
     return fail(requestId, 'GET_MY_REQUESTS_FAILED', '读取联络动态失败', { pending: [], accepted: [], sent: [] })
