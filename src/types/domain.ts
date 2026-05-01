@@ -171,6 +171,10 @@ export type GetMapUsersResult = CloudResponse<{
   offset?: number
   nextOffset?: number | null
   hasMore?: boolean
+  autoPaged?: boolean
+  loadedPages?: number
+  loadedUserCount?: number
+  lastPageRequestId?: string
 }>
 
 export type PendingRequest = {
