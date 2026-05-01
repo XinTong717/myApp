@@ -623,9 +623,9 @@ export default function ExplorePage() {
     const schoolClusterCount = item.clusterSchools?.length || 0
     const shouldShowLabel = isUserCluster || isSchoolCluster || (item.type === 'school' ? shouldShowSchoolLabels : shouldShowUserLabels)
     const labelContent = isUserCluster
-      ? `${shortName(item.name, 6)} · ${clusterCount}人`
+      ? `${shortName(item.name, 4)} ${clusterCount}`
       : isSchoolCluster
-        ? `${shortName(item.name, 6)} · ${schoolClusterCount}校`
+        ? `${shortName(item.name, 4)} ${schoolClusterCount}`
         : item.type === 'school'
           ? shortName(item.name)
           : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
@@ -648,19 +648,29 @@ export default function ExplorePage() {
       ...(shouldShowLabel ? {
         label: {
           content: labelContent,
-          color: isUserCluster || isSchoolCluster ? '#FFFFFF' : palette.text,
-          fontSize: isUserCluster || isSchoolCluster ? 12 : 11,
-          anchorX: isUserCluster || isSchoolCluster ? -32 : item.type === 'school' ? -24 : -22,
-          anchorY: isUserCluster || isSchoolCluster ? -34 : -30,
-          borderRadius: isUserCluster || isSchoolCluster ? 8 : 6,
-          borderWidth: 0,
-          borderColor: '#FFFFFF',
-          bgColor: isUserCluster
-            ? 'rgba(92,128,98,0.95)'
+          color: isUserCluster
+            ? palette.green
             : isSchoolCluster
-              ? 'rgba(184,85,64,0.95)'
-              : item.type === 'school' ? 'rgba(255,255,255,0.9)' : 'rgba(238,245,232,0.92)',
-          padding: isUserCluster || isSchoolCluster ? 5 : 4,
+              ? palette.brand
+              : palette.text,
+          fontSize: 11,
+          anchorX: isUserCluster || isSchoolCluster ? -28 : item.type === 'school' ? -24 : -22,
+          anchorY: isUserCluster || isSchoolCluster ? -31 : -30,
+          borderRadius: isUserCluster || isSchoolCluster ? 7 : 6,
+          borderWidth: isUserCluster || isSchoolCluster ? 1 : 0,
+          borderColor: isUserCluster
+            ? 'rgba(111,125,98,0.32)'
+            : isSchoolCluster
+              ? 'rgba(184,85,64,0.32)'
+              : '#FFFFFF',
+          bgColor: isUserCluster
+            ? 'rgba(246,250,244,0.94)'
+            : isSchoolCluster
+              ? 'rgba(255,249,243,0.94)'
+              : item.type === 'school'
+                ? 'rgba(255,255,255,0.88)'
+                : 'rgba(246,250,244,0.90)',
+          padding: 4,
           textAlign: 'center',
         },
       } : {}),
