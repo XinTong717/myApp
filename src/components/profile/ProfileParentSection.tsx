@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Textarea } from '@tarojs/components'
 import SectionTitle from './SectionTitle'
 import PillSelect from './PillSelect'
@@ -7,6 +8,7 @@ import ProfileHelperText from './ProfileHelperText'
 import ProfileCounterText from './ProfileCounterText'
 import ProfileSectionHeading from './ProfileSectionHeading'
 import { profilePalette as palette } from './palette'
+import { typography } from '../../theme/typography'
 
 type Props = {
   childAgeRange: string[]
@@ -30,6 +32,7 @@ export default function ProfileParentSection(props: Props) {
     childAgeOptions,
     childStatusOptions,
   } = props
+  const [focused, setFocused] = useState(false)
 
   return (
     <ProfileCard>
@@ -43,8 +46,16 @@ export default function ProfileParentSection(props: Props) {
       <PillSelect options={childStatusOptions} selected={childDropoutStatus} multi onChange={(v) => setChildDropoutStatus(v as string[])} />
       <SectionTitle text='希望补充说明的情况' />
       <ProfileHelperText text='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持。' marginBottom='6px' />
-      <ProfileInputBox marginBottom='0'>
-        <Textarea value={childInterests} placeholder='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持...' maxlength={300} onInput={(e) => setChildInterests(e.detail.value)} style={{ fontSize: '14px', color: palette.text, width: '100%', minHeight: '70px' }} />
+      <ProfileInputBox marginBottom='0' focused={focused}>
+        <Textarea
+          value={childInterests}
+          placeholder='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持...'
+          maxlength={300}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onInput={(e) => setChildInterests(e.detail.value)}
+          style={{ ...typography.body, color: palette.text, width: '100%', minHeight: '70px' }}
+        />
       </ProfileInputBox>
       <ProfileCounterText current={childInterests.length} max={300} />
     </ProfileCard>
