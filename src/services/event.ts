@@ -1,5 +1,6 @@
 import { callCloud } from './cloud'
 import { clearScopedCachedValue, getScopedCachedValue, setScopedCachedValue } from './cache'
+import { runExclusive } from './internal/runExclusive'
 import type {
   CloudResponse,
   ContactInfoResult,
@@ -15,25 +16,6 @@ const EVENT_LIST_LEGACY_CACHE_KEY = 'cloud-cache:events:list:v1'
 const EVENT_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:events:detail:v1:'
 const EVENT_LIST_TTL_MS = 5 * 60 * 1000
 const EVENT_DETAIL_TTL_MS = 10 * 60 * 1000
-
-const pendingActionKeys = new Set<string>()
-
-async function runExclusive<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  if (pendingActionKeys.has(key)) {
-    return {
-      ok: false,
-      code: 'DUPLICATE_CLIENT_ACTION',
-      message: '操作正在处理中，请勿重复点击',
-    } as T
-  }
-
-  pendingActionKeys.add(key)
-  try {
-    return await fn()
-  } finally {
-    pendingActionKeys.delete(key)
-  }
-}
 
 function getEventDetailCacheKey(eventId: number) {
   return `${EVENT_DETAIL_CACHE_KEY_PREFIX}${eventId}`
