@@ -3,6 +3,7 @@ import { View, Text, Input, Textarea, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { checkAdminAccess } from '../../../services/profile'
 import { listEventSubmissions, getEventPublishPayload, reviewEventSubmission } from '../../../services/admin'
+import { callCloud } from '../../../services/cloud'
 import { palette } from '../../../theme/palette'
 
 const STATUS_OPTIONS = ['pending', 'merged', 'rejected'] as const
@@ -154,6 +155,45 @@ export default function AdminEventReviewsPage() {
     await loadPublishPayload(item._id)
   }
 
+  const handlePublishDirect = async () => {
+    if (!selectedSubmission || reviewLoading) return
+
+    const confirm = await Taro.showModal({
+      title: '一键发布到活动库',
+      content: '将直接写入 CloudBase events 集合，并把该提交标记为已发布。确认继续吗？',
+      confirmText: '确认发布',
+      cancelText: '取消',
+    })
+    if (!confirm.confirm) return
+
+    try {
+      setReviewLoading(true)
+      const result = await callCloud<any>('publishEventDirect', {
+        submissionId: selectedSubmission._id,
+        adminNote: adminNote.trim(),
+      })
+      if (result?.ok) {
+        const eventId = result.publishedEventId ? String(result.publishedEventId) : ''
+        setPublishedEventId(eventId)
+        Taro.showToast({ title: result.message || '已发布', icon: 'success' })
+        await loadSubmissions(statusFilter)
+      } else if (result?.code === 'PUBLISH_BLOCKED') {
+        Taro.showModal({
+          title: '暂不能发布',
+          content: result.message || '该提交缺少必要信息，请修正后再发布。',
+          showCancel: false,
+        })
+      } else {
+        Taro.showToast({ title: result?.message || '发布失败', icon: 'none' })
+      }
+    } catch (err) {
+      console.error('publishEventDirect error:', err)
+      Taro.showToast({ title: '发布失败，请稍后重试', icon: 'none' })
+    } finally {
+      setReviewLoading(false)
+    }
+  }
+
   const handleReview = async (action: 'mark_published' | 'reject' | 'reset_pending') => {
     if (!selectedSubmission || reviewLoading) return
     if (action === 'mark_published' && !publishedEventId.trim()) {
@@ -226,7 +266,7 @@ export default function AdminEventReviewsPage() {
           <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>活动审核台</Text>
           <View style={{ marginTop: '6px' }}>
             <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
-              这里是管理员专用页面。你可以查看 event_submissions，生成建议版 events payload，并在手动发布到云数据库 events 集合后回写审核状态。
+              这里是管理员专用页面。你可以查看 event_submissions，生成建议版 events payload，并一键发布到 CloudBase events 集合；也保留手动回填作为备用路径。
             </Text>
           </View>
           <View style={{ marginTop: '10px', backgroundColor: palette.cardSoft, borderRadius: '12px', padding: '10px 12px' }}>
@@ -351,9 +391,9 @@ export default function AdminEventReviewsPage() {
             ) : null}
 
             <View style={{ marginBottom: '12px' }}>
-              <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>publishedEventId（发布到云数据库 events 后填写）</Text>
+              <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>publishedEventId（手动备用路径）</Text>
               <View style={{ marginTop: '8px', backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
-                <Input value={publishedEventId} placeholder='例如：123' onInput={(e) => setPublishedEventId(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+                <Input value={publishedEventId} placeholder='一键发布后会自动回填；也可手动填写，例如：123' onInput={(e) => setPublishedEventId(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
               </View>
             </View>
 
@@ -365,8 +405,11 @@ export default function AdminEventReviewsPage() {
             </View>
 
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
-              <View onClick={() => handleReview('mark_published')} style={{ backgroundColor: reviewLoading ? '#DDD' : palette.green, borderRadius: '14px', padding: '10px 14px', marginRight: '8px', marginBottom: '8px' }}>
-                <Text style={{ fontSize: '13px', color: '#FFF', fontWeight: 'bold' }}>{reviewLoading ? '处理中...' : '发布完成'}</Text>
+              <View onClick={handlePublishDirect} style={{ backgroundColor: reviewLoading ? '#DDD' : palette.green, borderRadius: '14px', padding: '10px 14px', marginRight: '8px', marginBottom: '8px' }}>
+                <Text style={{ fontSize: '13px', color: '#FFF', fontWeight: 'bold' }}>{reviewLoading ? '处理中...' : '一键发布到活动库'}</Text>
+              </View>
+              <View onClick={() => handleReview('mark_published')} style={{ backgroundColor: reviewLoading ? '#DDD' : palette.accentSoft, borderRadius: '14px', padding: '10px 14px', marginRight: '8px', marginBottom: '8px' }}>
+                <Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>仅回写已发布</Text>
               </View>
               <View onClick={() => handleReview('reject')} style={{ backgroundColor: reviewLoading ? '#DDD' : palette.errorSoft, borderRadius: '14px', padding: '10px 14px', marginRight: '8px', marginBottom: '8px' }}>
                 <Text style={{ fontSize: '13px', color: palette.error, fontWeight: 'bold' }}>拒绝</Text>
