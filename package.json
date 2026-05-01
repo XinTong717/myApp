@@ -20,6 +20,8 @@
     "dev:weapp:dev": "npm run use:devtools:dev && npm run dev:weapp",
     "build:weapp:prod": "npm run use:devtools:prod-upload && NODE_ENV=production npm run build:weapp",
     "check:weapp:size": "node scripts/check-weapp-size.cjs",
+    "analyze:size": "npm run check:weapp:size",
+    "analyze:size:build": "npm run build:weapp:prod:check",
     "build:weapp:prod:check": "npm run build:weapp:prod && npm run check:weapp:size"
   },
   "browserslist": [
