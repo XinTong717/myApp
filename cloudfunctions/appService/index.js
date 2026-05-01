@@ -9,24 +9,30 @@ const adminHandlers = require('./handlers/admin')
 const adminPublishHandlers = require('./handlers/adminPublish')
 const schoolMigrationHandlers = require('./handlers/schoolMigration')
 
-const DEFAULT_READ_ACTION_RATE_LIMITS = {
+const DEFAULT_ACTION_RATE_LIMITS = {
   getMapUsers: { limit: 30, windowMs: 60 * 1000 },
   getMyRequests: { limit: 30, windowMs: 60 * 1000 },
   getEventInterestInfo: { limit: 60, windowMs: 60 * 1000 },
   getEvents: { limit: 60, windowMs: 60 * 1000 },
   getSchools: { limit: 60, windowMs: 60 * 1000 },
+  submitCorrection: { limit: 5, windowMs: 24 * 60 * 60 * 1000 },
+  submitCommunity: { limit: 5, windowMs: 24 * 60 * 60 * 1000 },
+  submitEvent: { limit: 5, windowMs: 24 * 60 * 60 * 1000 },
+  sendRequest: { limit: 20, windowMs: 24 * 60 * 60 * 1000 },
+  reportUser: { limit: 10, windowMs: 24 * 60 * 60 * 1000 },
+  toggleEventInterest: { limit: 60, windowMs: 60 * 1000 },
 }
 
 function loadRateLimitConfig() {
   try {
-    return require('./lib/rateLimits.config').READ_ACTION_RATE_LIMITS || DEFAULT_READ_ACTION_RATE_LIMITS
+    return require('./lib/rateLimits.config').ACTION_RATE_LIMITS || DEFAULT_ACTION_RATE_LIMITS
   } catch (err) {
-    console.warn('rateLimits.config missing, using default read action limits:', err && err.message ? err.message : err)
-    return DEFAULT_READ_ACTION_RATE_LIMITS
+    console.warn('rateLimits.config missing, using default action limits:', err && err.message ? err.message : err)
+    return DEFAULT_ACTION_RATE_LIMITS
   }
 }
 
-const READ_ACTION_RATE_LIMITS = loadRateLimitConfig()
+const ACTION_RATE_LIMITS = loadRateLimitConfig()
 
 async function getOpenId(event, wxContext) {
   const requestId = resolveRequestId('get-openid', event)
@@ -36,15 +42,27 @@ async function getOpenId(event, wxContext) {
   })
 }
 
-const actionHandlers = {
-  getOpenId,
+const publicActionHandlers = {
   ...publicHandlers,
+  ...mapUserHandlers,
+}
+
+const userActionHandlers = {
   ...userHandlers,
   ...requestHandlers,
-  ...mapUserHandlers,
+}
+
+const adminActionHandlers = {
   ...adminHandlers,
   ...adminPublishHandlers,
   ...schoolMigrationHandlers,
+}
+
+const actionHandlers = {
+  getOpenId,
+  ...publicActionHandlers,
+  ...userActionHandlers,
+  ...adminActionHandlers,
 }
 
 exports.main = async (event = {}) => {
@@ -62,7 +80,7 @@ exports.main = async (event = {}) => {
 
   try {
     const wxContext = cloud.getWXContext()
-    const limitConfig = READ_ACTION_RATE_LIMITS[action]
+    const limitConfig = ACTION_RATE_LIMITS[action]
 
     if (limitConfig) {
       const limitRes = await rateLimit(wxContext.OPENID, action, limitConfig)
