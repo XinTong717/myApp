@@ -3,6 +3,7 @@ import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
 import { setDetailPreview } from '../../services/detailPreview'
+import { registerCurrentPageShare } from '../../utils/share'
 import { palette } from '../../theme/palette'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import {
@@ -15,6 +16,16 @@ import {
 } from './shared'
 
 const FILTER_OPTIONS = ['全部', '线上', '线下'] as const
+const EVENT_SHARE = {
+  appMessage: {
+    title: '可雀活动｜找到教育探索里的同路活动',
+    path: '/pages/events/index',
+  },
+  timeline: {
+    title: '可雀活动｜教育探索活动与社区计划',
+    query: '',
+  },
+}
 
 type FilterValue = typeof FILTER_OPTIONS[number]
 type InterestMap = Record<number, number>
@@ -29,15 +40,8 @@ export default function EventsPage() {
   const [filter, setFilter] = useState<FilterValue>('全部')
   const [interestCounts, setInterestCounts] = useState<InterestMap>({})
 
-  useShareAppMessage(() => ({
-    title: '可雀活动｜找到教育探索里的同路活动',
-    path: '/pages/events/index',
-  }))
-
-  useShareTimeline(() => ({
-    title: '可雀活动｜教育探索活动与社区计划',
-    query: '',
-  }))
+  useShareAppMessage(() => EVENT_SHARE.appMessage)
+  useShareTimeline(() => EVENT_SHARE.timeline)
 
   const applyInterestCounts = (list: EventItemWithInterest[]) => {
     const counts = list.reduce<InterestMap>((acc, item) => {
@@ -70,7 +74,10 @@ export default function EventsPage() {
     }
   }
 
-  useDidShow(() => { loadEvents() })
+  useDidShow(() => {
+    registerCurrentPageShare(EVENT_SHARE)
+    loadEvents()
+  })
 
   usePullDownRefresh(async () => {
     await loadEvents({ forceRefresh: true })

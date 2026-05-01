@@ -1,5 +1,6 @@
 import { PropsWithChildren } from 'react'
 import Taro, { useLaunch } from '@tarojs/taro'
+import { showWeappShareMenu } from './utils/share'
 
 import './app.scss'
 
@@ -17,16 +18,6 @@ function setupWeappPrivacyAuthorization() {
       success: () => resolve({ event: 'agree' }),
       fail: () => resolve({ event: 'disagree' }),
     })
-  })
-}
-
-function setupWeappShareMenu() {
-  const wxapp = typeof wx !== 'undefined' ? (wx as any) : null
-  if (!wxapp?.showShareMenu) return
-
-  wxapp.showShareMenu({
-    withShareTicket: true,
-    menus: ['shareAppMessage', 'shareTimeline'],
   })
 }
 
@@ -51,7 +42,7 @@ function App({ children }: PropsWithChildren<any>) {
       }
 
       setupWeappPrivacyAuthorization()
-      setupWeappShareMenu()
+      showWeappShareMenu()
     }
   })
 
