@@ -306,6 +306,8 @@ export default function ProfilePage() {
             currentCity={currentCity}
             customCity={customCity}
             setCustomCity={setCustomCity}
+            wechatId={wechatId}
+            setWechatId={setWechatId}
             pickerRange={pickerRange}
             pickerValue={pickerValue}
             handlePickerChange={handlePickerChange}
