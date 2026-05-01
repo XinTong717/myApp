@@ -8,8 +8,12 @@ import type {
 
 export type RequestSection = 'pending' | 'accepted' | 'sent' | 'all'
 
-export async function getMyRequests(section: RequestSection = 'all') {
-  return callCloud<GetMyRequestsResult>('getMyRequests', { section })
+export async function getMyRequests(section: RequestSection = 'all', options: { offset?: number; limit?: number } = {}) {
+  return callCloud<GetMyRequestsResult>('getMyRequests', {
+    section,
+    ...(options.offset ? { offset: options.offset } : {}),
+    ...(options.limit ? { limit: options.limit } : {}),
+  })
 }
 
 export async function sendRequest(targetUserId: string) {
