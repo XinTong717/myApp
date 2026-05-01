@@ -29,10 +29,8 @@ import { buildExploreMarkers, shortName, uniqueSchoolsById } from './utils/marke
 
 const markerSchoolIcon = '/assets/marker-school.png'
 const markerUserIcon = '/assets/marker-user.png'
-const USER_CLUSTER_THRESHOLD = 5
 const EXPLORE_REFRESH_TTL = 30 * 1000
 
-type Coord = { lat: number; lng: number }
 
 type ExploreLoadKeyInput = {
   province: string
