@@ -3,12 +3,23 @@ import { View, Text, Input, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
 import { setDetailPreview } from '../../services/detailPreview'
+import { registerCurrentPageShare } from '../../utils/share'
 import { palette } from '../../theme/palette'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
 const ALL_FILTER = '全部'
 const SCHOOL_LIST_LIMIT = 200
+const SCHOOL_SHARE = {
+  appMessage: {
+    title: '可雀学习社区库｜找到适合教育探索的场域',
+    path: '/pages/schools/index',
+  },
+  timeline: {
+    title: '可雀学习社区库｜教育探索地图与社区资料',
+    query: '',
+  },
+}
 
 type School = SchoolItem
 
@@ -91,15 +102,8 @@ export default function SchoolsPage() {
   const [selectedAgeRanges, setSelectedAgeRanges] = useState<string[]>([])
   const didInitRef = useRef(false)
 
-  useShareAppMessage(() => ({
-    title: '可雀学习社区库｜找到适合教育探索的场域',
-    path: '/pages/schools/index',
-  }))
-
-  useShareTimeline(() => ({
-    title: '可雀学习社区库｜教育探索地图与社区资料',
-    query: '',
-  }))
+  useShareAppMessage(() => SCHOOL_SHARE.appMessage)
+  useShareTimeline(() => SCHOOL_SHARE.timeline)
 
   const loadSchools = async (options: { forceRefresh?: boolean; useFilters?: boolean } = {}) => {
     try {
@@ -134,6 +138,7 @@ export default function SchoolsPage() {
   }
 
   useDidShow(() => {
+    registerCurrentPageShare(SCHOOL_SHARE)
     if (didInitRef.current) return
     didInitRef.current = true
     Promise.all([
