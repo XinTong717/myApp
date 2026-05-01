@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { profilePalette as palette } from './palette'
+import { typography } from '../../theme/typography'
 
 type Props = {
   text: string
@@ -16,19 +18,27 @@ export default function ProfilePrimaryButton({
   onClick,
   marginBottom = '30px',
 }: Props) {
+  const [pressed, setPressed] = useState(false)
+  const disabled = loading
+
   return (
     <View
-      onClick={loading ? undefined : onClick}
+      onTouchStart={() => !disabled && setPressed(true)}
+      onTouchEnd={() => setPressed(false)}
+      onTouchCancel={() => setPressed(false)}
+      onClick={disabled ? undefined : onClick}
       style={{
-        background: loading ? palette.muted : palette.primaryGradient,
+        background: disabled ? palette.disabledBg : pressed ? palette.brandPress : palette.primaryGradient,
         borderRadius: '16px',
         padding: '14px',
         textAlign: 'center',
         marginBottom,
-        boxShadow: loading ? 'none' : `0 6px 16px ${palette.shadow}`,
+        boxShadow: disabled ? 'none' : pressed ? `0 3px 10px ${palette.shadow}` : `0 6px 16px ${palette.shadow}`,
+        transform: pressed ? 'scale(0.99)' : 'scale(1)',
+        opacity: disabled ? 0.9 : 1,
       }}
     >
-      <Text style={{ fontSize: '16px', color: '#FFF', fontWeight: 'bold' }}>{loading ? loadingText : text}</Text>
+      <Text style={{ ...typography.button, color: disabled ? palette.disabledText : '#FFF' }}>{loading ? loadingText : text}</Text>
     </View>
   )
 }
