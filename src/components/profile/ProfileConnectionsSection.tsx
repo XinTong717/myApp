@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import type { AcceptedConnection, PendingRequest, SentRequest } from '../../types/domain'
+import type { RequestSection } from '../../services/connection'
 import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
 import ProfileNoticeBox from './ProfileNoticeBox'
@@ -18,10 +20,13 @@ function renderStringArray(value: string[] = []) {
   return value.filter(Boolean).join(' · ')
 }
 
+type ConnectionTab = Exclude<RequestSection, 'all'>
+
 type Props = {
   pendingRequests: PendingRequest[]
   acceptedConnections: AcceptedConnection[]
   sentRequests: SentRequest[]
+  onLoadSection: (section: ConnectionTab) => void
   onRespond: (requestId: string, action: 'accept' | 'reject') => void
   onWithdrawRequest: (connectionId: string) => void
   onRemoveConnection: (connectionId: string) => void
@@ -29,11 +34,18 @@ type Props = {
   onReportUser: (targetUserId: string) => void
 }
 
+const TABS: { key: ConnectionTab; label: string }[] = [
+  { key: 'pending', label: '收到的请求' },
+  { key: 'accepted', label: '已建立联络' },
+  { key: 'sent', label: '我发出的请求' },
+]
+
 export default function ProfileConnectionsSection(props: Props) {
   const {
     pendingRequests,
     acceptedConnections,
     sentRequests,
+    onLoadSection,
     onRespond,
     onWithdrawRequest,
     onRemoveConnection,
@@ -41,7 +53,13 @@ export default function ProfileConnectionsSection(props: Props) {
     onReportUser,
   } = props
 
+  const [activeTab, setActiveTab] = useState<ConnectionTab>('pending')
   const totalPending = pendingRequests.length
+
+  const switchTab = (tab: ConnectionTab) => {
+    setActiveTab(tab)
+    onLoadSection(tab)
+  }
 
   return (
     <>
@@ -51,11 +69,34 @@ export default function ProfileConnectionsSection(props: Props) {
 
       <ProfileCard padding='18px 16px'>
         <Text style={{ fontSize: '18px', fontWeight: 'bold', color: palette.text }}>联络动态</Text>
+        <View style={{ display: 'flex', flexDirection: 'row', gap: '8px', marginTop: '12px' }}>
+          {TABS.map((tab) => {
+            const active = activeTab === tab.key
+            const count = tab.key === 'pending' ? pendingRequests.length : tab.key === 'accepted' ? acceptedConnections.length : sentRequests.length
+            return (
+              <View
+                key={tab.key}
+                onClick={() => switchTab(tab.key)}
+                style={{
+                  flex: 1,
+                  padding: '8px 6px',
+                  borderRadius: '999px',
+                  backgroundColor: active ? palette.accentDeep : '#FFFFFF',
+                  border: `1px solid ${active ? palette.accentDeep : palette.line}`,
+                  textAlign: 'center',
+                }}
+              >
+                <Text style={{ fontSize: '11px', color: active ? '#FFFFFF' : palette.subtext, fontWeight: active ? 'bold' : 'normal' }}>
+                  {tab.label}{count > 0 ? ` ${count}` : ''}
+                </Text>
+              </View>
+            )
+          })}
+        </View>
       </ProfileCard>
 
-      {pendingRequests.length > 0 && (
+      {activeTab === 'pending' && pendingRequests.length > 0 && (
         <View style={{ marginBottom: '14px' }}>
-          <View style={{ marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>收到的请求（{pendingRequests.length}）</Text></View>
           {pendingRequests.map((req) => (
             <ProfileCard key={req._id} padding='14px'>
               <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>{req.fromName}</Text>
@@ -74,9 +115,8 @@ export default function ProfileConnectionsSection(props: Props) {
         </View>
       )}
 
-      {acceptedConnections.length > 0 && (
+      {activeTab === 'accepted' && acceptedConnections.length > 0 && (
         <View style={{ marginBottom: '14px' }}>
-          <View style={{ marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.green, fontWeight: 'bold' }}>已建立联络（{acceptedConnections.length}）</Text></View>
           {acceptedConnections.map((conn) => (
             <ProfileCard key={conn._id} padding='14px'>
               <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>{conn.otherName}</Text>
@@ -115,9 +155,8 @@ export default function ProfileConnectionsSection(props: Props) {
         </View>
       )}
 
-      {sentRequests.length > 0 && (
+      {activeTab === 'sent' && sentRequests.length > 0 && (
         <View style={{ marginBottom: '14px' }}>
-          <View style={{ marginBottom: '8px' }}><Text style={{ fontSize: '13px', color: palette.subtext, fontWeight: 'bold' }}>我发出的请求（{sentRequests.length}）</Text></View>
           {sentRequests.map((req) => (
             <ProfileCard key={req._id} padding='12px 14px'>
               <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
@@ -138,8 +177,14 @@ export default function ProfileConnectionsSection(props: Props) {
         </View>
       )}
 
-      {pendingRequests.length === 0 && acceptedConnections.length === 0 && sentRequests.length === 0 && (
-        <ProfileNoticeBox text='暂无联络动态。在探索页点击同路人，发起你的第一个联络请求。' />
+      {activeTab === 'pending' && pendingRequests.length === 0 && (
+        <ProfileNoticeBox text='暂无收到的联络请求。' />
+      )}
+      {activeTab === 'accepted' && acceptedConnections.length === 0 && (
+        <ProfileNoticeBox text='暂无已建立联络。' />
+      )}
+      {activeTab === 'sent' && sentRequests.length === 0 && (
+        <ProfileNoticeBox text='暂无发出的联络请求。在探索页点击同路人，发起你的第一个联络请求。' />
       )}
     </>
   )
