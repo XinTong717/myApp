@@ -160,7 +160,6 @@ export type MapUser = {
 export type MapProvinceStat = {
   province: string
   count: number
-  sampleCities?: string[]
 }
 
 export type GetMapUsersResult = CloudResponse<{
