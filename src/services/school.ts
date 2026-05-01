@@ -12,7 +12,26 @@ const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v1:'
 const SCHOOL_LIST_TTL_MS = 30 * 60 * 1000
 const SCHOOL_DETAIL_TTL_MS = 15 * 60 * 1000
 
+const pendingActionKeys = new Set<string>()
+
 type SchoolFilterValue = string | string[] | undefined
+
+async function runExclusive<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  if (pendingActionKeys.has(key)) {
+    return {
+      ok: false,
+      code: 'DUPLICATE_CLIENT_ACTION',
+      message: '操作正在处理中，请勿重复点击',
+    } as T
+  }
+
+  pendingActionKeys.add(key)
+  try {
+    return await fn()
+  } finally {
+    pendingActionKeys.delete(key)
+  }
+}
 
 function normalizeFilter(value?: string) {
   return String(value || '').trim()
@@ -109,9 +128,10 @@ export async function getSchoolDetail(schoolId: number, options: { forceRefresh?
 }
 
 export async function submitCommunity(data: Record<string, unknown>) {
-  return callCloud<SubmitCommunityResult>('submitCommunity', data)
+  const dedupeKey = [data?.name, data?.province, data?.city].map((item) => String(item || '').trim()).join(':')
+  return runExclusive(`submitCommunity:${dedupeKey}`, () => callCloud<SubmitCommunityResult>('submitCommunity', data))
 }
 
 export async function submitCorrection(schoolId: number, schoolName: string, content: string) {
-  return callCloud<SubmitCorrectionResult>('submitCorrection', { schoolId, schoolName, content })
+  return runExclusive(`submitCorrection:${schoolId}`, () => callCloud<SubmitCorrectionResult>('submitCorrection', { schoolId, schoolName, content }))
 }
