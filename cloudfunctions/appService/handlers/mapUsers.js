@@ -2,8 +2,10 @@ const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
 const { normalizeRoles } = require('../lib/normalize')
 
+const $ = db.command.aggregate
 const MAP_USERS_PROVINCE_LIMIT = 300
 const MAP_USERS_SUMMARY_SCAN_LIMIT = 1000
+const MAP_USERS_MAX_PAGE_LIMIT = 300
 
 function normalizeProvince(value) {
   return String(value || '').trim()
@@ -11,6 +13,18 @@ function normalizeProvince(value) {
 
 function normalizeFilter(value) {
   return String(value || '').trim()
+}
+
+function normalizeOffset(value) {
+  const n = Number(value || 0)
+  if (!Number.isFinite(n) || n < 0) return 0
+  return Math.floor(n)
+}
+
+function normalizeLimit(value, fallback = MAP_USERS_PROVINCE_LIMIT) {
+  const n = Number(value || fallback)
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return Math.min(Math.floor(n), MAP_USERS_MAX_PAGE_LIMIT)
 }
 
 function matchesRole(user, role) {
@@ -79,7 +93,29 @@ function toPublicUser(user, openid) {
   }
 }
 
-async function getProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, blockedByRes }) {
+async function getAggregateProvinceSummaries() {
+  const res = await db.collection('users')
+    .aggregate()
+    .match({
+      province: _.neq(''),
+      city: _.neq(''),
+      displayName: _.neq(''),
+      isVisibleOnMap: _.neq(false),
+    })
+    .group({
+      _id: '$province',
+      count: $.sum(1),
+    })
+    .sort({ count: -1 })
+    .limit(100)
+    .end()
+
+  return (res.list || [])
+    .map((item) => ({ province: normalizeProvince(item._id), count: Number(item.count || 0) }))
+    .filter((item) => item.province && item.count > 0)
+}
+
+async function getScannedProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, blockedByRes }) {
   const { hiddenOpenids, blockedByOpenids } = buildHiddenSets(openid, mySafetyRes, blockedByRes)
   const usersRes = await db.collection('users')
     .where({
@@ -108,12 +144,30 @@ async function getProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, 
   return Array.from(provinceMap.values()).sort((a, b) => b.count - a.count)
 }
 
+async function getProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, blockedByRes }) {
+  const { hiddenOpenids, blockedByOpenids } = buildHiddenSets(openid, mySafetyRes, blockedByRes)
+  const hasPersonalSafetyFilters = hiddenOpenids.size > 0 || blockedByOpenids.size > 0
+  const hasUserFilters = !!role || !!childAgeRange
+
+  if (!hasPersonalSafetyFilters && !hasUserFilters) {
+    try {
+      return await getAggregateProvinceSummaries()
+    } catch (err) {
+      console.warn('getMapUsers aggregate summary failed, falling back to scan:', err && err.message ? err.message : err)
+    }
+  }
+
+  return getScannedProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, blockedByRes })
+}
+
 async function getMapUsers(event, wxContext) {
   const requestId = resolveRequestId('get-map-users', event)
   const openid = wxContext.OPENID
   const province = normalizeProvince(event.province)
   const role = normalizeFilter(event.role)
   const childAgeRange = normalizeFilter(event.childAgeRange)
+  const offset = normalizeOffset(event.offset)
+  const pageLimit = normalizeLimit(event.limit)
 
   try {
     const [mySafetyRes, blockedByRes] = await loadSafetyRelations(openid)
@@ -137,18 +191,31 @@ async function getMapUsers(event, wxContext) {
         isVisibleOnMap: _.neq(false),
       })
       .field({ displayName: true, roles: true, province: true, city: true, bio: true, companionContext: true, openid: true, childAgeRange: true })
-      .limit(MAP_USERS_PROVINCE_LIMIT)
+      .skip(offset)
+      .limit(pageLimit + 1)
       .get()
 
     const { hiddenOpenids, blockedByOpenids } = buildHiddenSets(openid, mySafetyRes, blockedByRes)
+    const rawUsers = usersRes.data || []
+    const hasMore = rawUsers.length > pageLimit
+    const pageUsers = rawUsers.slice(0, pageLimit)
 
-    const users = (usersRes.data || [])
+    const users = pageUsers
       .filter((user) => isVisibleToRequester(user, openid, hiddenOpenids, blockedByOpenids))
       .filter((user) => matchesRole(user, role))
       .filter((user) => matchesChildAgeRange(user, childAgeRange))
       .map((user) => toPublicUser(user, openid))
 
-    return ok(requestId, { users, province, provinceStats: [], mode: 'province_detail', limit: MAP_USERS_PROVINCE_LIMIT })
+    return ok(requestId, {
+      users,
+      province,
+      provinceStats: [],
+      mode: 'province_detail',
+      limit: pageLimit,
+      offset,
+      nextOffset: hasMore ? offset + pageLimit : null,
+      hasMore,
+    })
   } catch (err) {
     console.error('appService getMapUsers error:', err)
     return fail(requestId, 'GET_MAP_USERS_FAILED', '读取地图用户失败', { users: [], province: province || '', provinceStats: [] })
