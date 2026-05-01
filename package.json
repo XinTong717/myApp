@@ -18,7 +18,9 @@
     "use:devtools:prod": "node scripts/set-devtools-env.cjs keque-prod-d5gc6ylp793fabaea prod",
     "use:devtools:prod-upload": "node scripts/set-devtools-env.cjs keque-prod-d5gc6ylp793fabaea prod-upload",
     "dev:weapp:dev": "npm run use:devtools:dev && npm run dev:weapp",
-    "build:weapp:prod": "npm run use:devtools:prod-upload && NODE_ENV=production npm run build:weapp"
+    "build:weapp:prod": "npm run use:devtools:prod-upload && NODE_ENV=production npm run build:weapp",
+    "check:weapp:size": "node scripts/check-weapp-size.cjs",
+    "build:weapp:prod:check": "npm run build:weapp:prod && npm run check:weapp:size"
   },
   "browserslist": [
     "defaults and fully supports es6-module",
