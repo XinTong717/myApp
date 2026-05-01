@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { View, Text, Input, Picker } from '@tarojs/components'
 import SectionTitle from './SectionTitle'
 import PillSelect from './PillSelect'
@@ -5,6 +6,7 @@ import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
 import ProfileHelperText from './ProfileHelperText'
 import { profilePalette as palette } from './palette'
+import { typography } from '../../theme/typography'
 
 type Props = {
   displayName: string
@@ -30,6 +32,8 @@ type Props = {
   ageRangeOptions: string[]
   roleOptions: string[]
 }
+
+type FocusField = 'displayName' | 'customCity' | 'wechatId' | ''
 
 export default function ProfileBasicSection(props: Props) {
   const {
@@ -57,11 +61,20 @@ export default function ProfileBasicSection(props: Props) {
     roleOptions,
   } = props
 
+  const [focusedField, setFocusedField] = useState<FocusField>('')
+
   return (
     <ProfileCard>
       <SectionTitle text='显示名' />
-      <ProfileInputBox marginBottom='16px'>
-        <Input value={displayName} placeholder='你希望别人怎么称呼你' onInput={(e) => setDisplayName(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+      <ProfileInputBox marginBottom='16px' focused={focusedField === 'displayName'}>
+        <Input
+          value={displayName}
+          placeholder='你希望别人怎么称呼你'
+          onFocus={() => setFocusedField('displayName')}
+          onBlur={() => setFocusedField('')}
+          onInput={(e) => setDisplayName(e.detail.value)}
+          style={{ ...typography.body, color: palette.text }}
+        />
       </ProfileInputBox>
 
       <SectionTitle text='性别' />
@@ -77,24 +90,38 @@ export default function ProfileBasicSection(props: Props) {
       <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
         <ProfileInputBox marginBottom={cityOption === '其他' ? '8px' : '12px'}>
           <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ fontSize: '14px', flex: 1, color: province ? palette.text : '#C5B5A5' }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text>
-            <Text style={{ fontSize: '12px', color: palette.subtext }}>▼</Text>
+            <Text style={{ ...typography.body, flex: 1, color: province ? palette.text : '#C5B5A5' }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text>
+            <Text style={{ ...typography.caption, color: palette.subtext }}>▼</Text>
           </View>
         </ProfileInputBox>
       </Picker>
       {cityOption === '其他' && (
         <View style={{ marginBottom: '12px' }}>
           <ProfileHelperText text='请输入真实城市名。地图会先按省级近似坐标展示，但列表中会显示你填写的城市。' marginBottom='6px' />
-          <ProfileInputBox>
-            <Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onInput={(e) => setCustomCity(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+          <ProfileInputBox focused={focusedField === 'customCity'}>
+            <Input
+              value={customCity}
+              placeholder='例如：义乌 / 凯里 / 唐山'
+              onFocus={() => setFocusedField('customCity')}
+              onBlur={() => setFocusedField('')}
+              onInput={(e) => setCustomCity(e.detail.value)}
+              style={{ ...typography.body, color: palette.text }}
+            />
           </ProfileInputBox>
         </View>
       )}
 
       <SectionTitle text='可被搜索到的联系方式（选填）' />
       <ProfileHelperText text='可填写微信号、绑定手机号或 QQ 号。仅在你同意对方的联络请求后，对方才能看到它。' />
-      <ProfileInputBox>
-        <Input value={wechatId} placeholder='例如：微信号 / 绑定手机号 / QQ 号' onInput={(e) => setWechatId(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
+      <ProfileInputBox focused={focusedField === 'wechatId'}>
+        <Input
+          value={wechatId}
+          placeholder='例如：微信号 / 绑定手机号 / QQ 号'
+          onFocus={() => setFocusedField('wechatId')}
+          onBlur={() => setFocusedField('')}
+          onInput={(e) => setWechatId(e.detail.value)}
+          style={{ ...typography.body, color: palette.text }}
+        />
       </ProfileInputBox>
     </ProfileCard>
   )
