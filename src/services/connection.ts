@@ -6,8 +6,10 @@ import type {
   SendRequestResult,
 } from '../types/domain'
 
-export async function getMyRequests() {
-  return callCloud<GetMyRequestsResult>('getMyRequests')
+export type RequestSection = 'pending' | 'accepted' | 'sent' | 'all'
+
+export async function getMyRequests(section: RequestSection = 'all') {
+  return callCloud<GetMyRequestsResult>('getMyRequests', { section })
 }
 
 export async function sendRequest(targetUserId: string) {
