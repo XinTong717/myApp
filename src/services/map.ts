@@ -18,15 +18,22 @@ function normalizeFilter(value?: string) {
   return String(value || '').trim()
 }
 
-function getMapUsersCacheKey(province?: string, childAgeRange?: string, role?: string) {
-  return `${MAP_USERS_CACHE_KEY_PREFIX}${normalizeProvince(province) || 'all'}:${normalizeFilter(role) || 'all-role'}:${normalizeFilter(childAgeRange) || 'all-child-stage'}`
+function normalizeOffset(value?: number) {
+  const n = Number(value || 0)
+  if (!Number.isFinite(n) || n < 0) return 0
+  return Math.floor(n)
 }
 
-export async function getMapUsers(options: { forceRefresh?: boolean; province?: string; childAgeRange?: string; role?: string } = {}) {
+function getMapUsersCacheKey(province?: string, childAgeRange?: string, role?: string, offset?: number, limit?: number) {
+  return `${MAP_USERS_CACHE_KEY_PREFIX}${normalizeProvince(province) || 'all'}:${normalizeFilter(role) || 'all-role'}:${normalizeFilter(childAgeRange) || 'all-child-stage'}:${normalizeOffset(offset)}:${limit || 'default-limit'}`
+}
+
+export async function getMapUsers(options: { forceRefresh?: boolean; province?: string; childAgeRange?: string; role?: string; offset?: number; limit?: number } = {}) {
   const province = normalizeProvince(options.province)
   const childAgeRange = normalizeFilter(options.childAgeRange)
   const role = normalizeFilter(options.role)
-  const cacheKey = getMapUsersCacheKey(province, childAgeRange, role)
+  const offset = normalizeOffset(options.offset)
+  const cacheKey = getMapUsersCacheKey(province, childAgeRange, role, offset, options.limit)
 
   if (!options.forceRefresh) {
     const cached = await getScopedCachedValue<GetMapUsersResult>(cacheKey)
@@ -39,6 +46,8 @@ export async function getMapUsers(options: { forceRefresh?: boolean; province?: 
     ...(province ? { province } : {}),
     ...(role && role !== '全部' ? { role } : {}),
     ...(childAgeRange ? { childAgeRange } : {}),
+    ...(offset ? { offset } : {}),
+    ...(options.limit ? { limit: options.limit } : {}),
   })
   if (result.ok) {
     await setScopedCachedValue(cacheKey, result, MAP_USERS_TTL_MS)
