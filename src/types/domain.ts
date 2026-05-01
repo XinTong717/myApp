@@ -168,6 +168,9 @@ export type GetMapUsersResult = CloudResponse<{
   province?: string
   mode?: 'province_summary' | 'province_detail'
   limit?: number
+  offset?: number
+  nextOffset?: number | null
+  hasMore?: boolean
 }>
 
 export type PendingRequest = {
