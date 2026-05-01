@@ -117,8 +117,11 @@ export default function ProfilePage() {
     pendingRequests,
     acceptedConnections,
     sentRequests,
+    requestPages,
+    loadingMoreSection,
     loadRequests,
     loadRequestSection,
+    loadMoreRequests,
     refreshLoadedRequests,
     handleRespond,
     handleWithdrawRequest,
@@ -320,7 +323,10 @@ export default function ProfilePage() {
         pendingRequests={pendingRequests}
         acceptedConnections={acceptedConnections}
         sentRequests={sentRequests}
+        requestPages={requestPages}
+        loadingMoreSection={loadingMoreSection}
         onLoadSection={loadRequestSection}
+        onLoadMore={loadMoreRequests}
         onRespond={(requestId, action) => handleRespond(requestId, action, refreshRelations)}
         onWithdrawRequest={(connectionId) => handleWithdrawRequest(connectionId, refreshRelations)}
         onRemoveConnection={(connectionId) => handleRemoveConnection(connectionId, refreshRelations)}
