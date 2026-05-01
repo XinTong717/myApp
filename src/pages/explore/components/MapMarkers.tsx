@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Map as TaroMap, Text, View } from '@tarojs/components'
 import { palette } from '../../../theme/palette'
 import { cardStyle, exploreTheme } from '../styles'
@@ -22,6 +23,8 @@ type MapMarkersProps = {
   onCalloutTap: (e: any) => void
   onLabelTap: (e: any) => void
 }
+
+const EMPTY_STATE_DELAY_MS = 360
 
 function CenteredText(props: { text: string; bold?: boolean; color?: string }) {
   return (
@@ -57,6 +60,24 @@ export default function MapMarkers(props: MapMarkersProps) {
     onLabelTap,
   } = props
 
+  const [emptyStateReady, setEmptyStateReady] = useState(false)
+
+  useEffect(() => {
+    setEmptyStateReady(false)
+
+    const shouldArmEmptyState =
+      !loading &&
+      !error &&
+      isProvinceDataSettled &&
+      !isNavigatingAway &&
+      !canRenderMap
+
+    if (!shouldArmEmptyState) return undefined
+
+    const timer = setTimeout(() => setEmptyStateReady(true), EMPTY_STATE_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [loading, error, isProvinceDataSettled, isNavigatingAway, canRenderMap, selectedProvince, mapMarkers.length])
+
   if (error) {
     return (
       <View style={{ padding: '40px 20px' }}>
@@ -83,6 +104,17 @@ export default function MapMarkers(props: MapMarkersProps) {
 
   if (isNavigatingAway) {
     return <CenteredText text='页面跳转中…' bold />
+  }
+
+  if (!canRenderMap && !emptyStateReady) {
+    const provinceLabel = selectedProvince || '全国'
+    return (
+      <View style={{ padding: '80px 20px', textAlign: 'center' }}>
+        <Text style={{ fontSize: '14px', color: exploreTheme.subtext }}>
+          正在整理{provinceLabel}点位...
+        </Text>
+      </View>
+    )
   }
 
   if (!canRenderMap) {
