@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
+import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import {
@@ -67,6 +68,7 @@ export default function EventsPage() {
   })
 
   const goToDetail = (item: EventItem) => {
+    setDetailPreview('event', item.id, item)
     Taro.navigateTo({ url: `/pages/event-detail/index?id=${item.id}` })
   }
 
