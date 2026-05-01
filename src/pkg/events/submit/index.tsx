@@ -5,13 +5,30 @@ import { LOCATION_DATA, PROVINCES } from '../../../constants/location'
 import { submitEvent } from '../../../services/event'
 import SectionTitle from '../../../components/profile/SectionTitle'
 import { palette } from '../../../theme/palette'
+import { typography } from '../../../theme/typography'
 import { MultiPillSelect, SinglePillSelect } from '../../../components/common/PillSelect'
 import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
+import FormInputBox from '../../../components/common/FormInputBox'
+import AppIcon from '../../../components/common/AppIcon'
 
 const EVENT_TYPE_OPTIONS = ['圆桌讨论', '工作坊', '线下聚会', '线上活动', '家庭活动', '项目招募', '其他']
 const AUDIENCE_WHO_OPTIONS = ['家长', '教育工作者', '儿童/青少年（需家长陪同）', '儿童/青少年（独立参加）', '开放给所有人', '其他']
 const MIN_AGE_OPTIONS = ['全年龄', '6岁+', '12岁+', '18岁+（成人活动）']
 const FEE_OPTIONS = ['免费', '付费', '公益捐赠', '费用待确认']
+
+type FocusField =
+  | 'title'
+  | 'customCity'
+  | 'eventTypeOther'
+  | 'audienceWhoOther'
+  | 'location'
+  | 'feeDetail'
+  | 'organizer'
+  | 'organizerContact'
+  | 'officialUrl'
+  | 'signupNote'
+  | 'description'
+  | ''
 
 function combineDateTime(date: string, time: string) {
   if (!date || !time) return ''
@@ -20,6 +37,7 @@ function combineDateTime(date: string, time: string) {
 
 export default function SubmitEventPage() {
   const [submitting, setSubmitting] = useState(false)
+  const [focusedField, setFocusedField] = useState<FocusField>('')
   const [title, setTitle] = useState('')
   const [province, setProvince] = useState('')
   const [cityOption, setCityOption] = useState('')
@@ -172,9 +190,9 @@ export default function SubmitEventPage() {
   return (
     <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '16px', boxSizing: 'border-box' }}>
       <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
-        <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>发布或推荐活动</Text>
+        <Text style={{ ...typography.title, color: palette.text }}>发布或推荐活动</Text>
         <View style={{ marginTop: '6px' }}>
-          <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
+          <Text style={{ ...typography.meta, color: palette.subtext }}>
             你可以提交自己组织的活动，也可以推荐你认为值得被看见的公开活动。请优先填写公开链接和公开报名方式。
           </Text>
         </View>
@@ -182,23 +200,25 @@ export default function SubmitEventPage() {
 
       <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', border: `1px solid ${palette.line}` }}>
         <SectionTitle text='活动标题' />
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}` }}>
-          <Input value={title} placeholder='例如：杭州家长圆桌讨论' onInput={(e) => setTitle(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
-        </View>
+        <FormInputBox focused={focusedField === 'title'}>
+          <Input value={title} placeholder='例如：杭州家长圆桌讨论' onFocus={() => setFocusedField('title')} onBlur={() => setFocusedField('')} onInput={(e) => setTitle(e.detail.value)} style={{ ...typography.body, color: palette.text }} />
+        </FormInputBox>
 
         <SectionTitle text='所在城市' />
         <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
-          <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: cityOption === '其他' ? '8px' : '16px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ fontSize: '14px', flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text>
-            <Text style={{ fontSize: '12px', color: palette.subtext }}>▼</Text>
-          </View>
+          <FormInputBox marginBottom={cityOption === '其他' ? '8px' : '16px'}>
+            <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ ...typography.body, flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text>
+              <Text style={{ ...typography.caption, color: palette.subtext }}>▼</Text>
+            </View>
+          </FormInputBox>
         </Picker>
         {cityOption === '其他' && (
           <View style={{ marginBottom: '16px' }}>
-            <View style={{ marginBottom: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View>
-            <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
-              <Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onInput={(e) => setCustomCity(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
-            </View>
+            <View style={{ marginBottom: '6px' }}><Text style={{ ...typography.caption, color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View>
+            <FormInputBox focused={focusedField === 'customCity'} marginBottom='0'>
+              <Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onFocus={() => setFocusedField('customCity')} onBlur={() => setFocusedField('')} onInput={(e) => setCustomCity(e.detail.value)} style={{ ...typography.body, color: palette.text }} />
+            </FormInputBox>
           </View>
         )}
 
@@ -206,10 +226,10 @@ export default function SubmitEventPage() {
         <MultiPillSelect options={EVENT_TYPE_OPTIONS} selected={eventTypes} onChange={setEventTypes} />
         {eventTypes.includes('其他') && (
           <View style={{ marginBottom: '16px' }}>
-            <View style={{ marginBottom: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>补充活动类型中的“其他”。</Text></View>
-            <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
-              <Input value={eventTypeOther} placeholder='例如：读书会 / 展映 / 体验营' onInput={(e) => setEventTypeOther(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
-            </View>
+            <View style={{ marginBottom: '6px' }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充活动类型中的“其他”。</Text></View>
+            <FormInputBox focused={focusedField === 'eventTypeOther'} marginBottom='0'>
+              <Input value={eventTypeOther} placeholder='例如：读书会 / 展映 / 体验营' onFocus={() => setFocusedField('eventTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setEventTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} />
+            </FormInputBox>
           </View>
         )}
 
@@ -217,10 +237,10 @@ export default function SubmitEventPage() {
         <MultiPillSelect options={AUDIENCE_WHO_OPTIONS} selected={audienceWho} onChange={setAudienceWho} />
         {audienceWho.includes('其他') && (
           <View style={{ marginBottom: '16px' }}>
-            <View style={{ marginBottom: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>补充参与对象中的“其他”。</Text></View>
-            <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
-              <Input value={audienceWhoOther} placeholder='例如：大学生 / 创作者 / 社区志愿者' onInput={(e) => setAudienceWhoOther(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
-            </View>
+            <View style={{ marginBottom: '6px' }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充参与对象中的“其他”。</Text></View>
+            <FormInputBox focused={focusedField === 'audienceWhoOther'} marginBottom='0'>
+              <Input value={audienceWhoOther} placeholder='例如：大学生 / 创作者 / 社区志愿者' onFocus={() => setFocusedField('audienceWhoOther')} onBlur={() => setFocusedField('')} onInput={(e) => setAudienceWhoOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} />
+            </FormInputBox>
           </View>
         )}
 
@@ -230,13 +250,15 @@ export default function SubmitEventPage() {
         <SectionTitle text='开始时间' />
         <View style={{ display: 'flex', flexDirection: 'row', marginBottom: '12px' }}>
           <Picker mode='date' value={startDate} onChange={(e) => setStartDate(e.detail.value)}>
-            <View style={{ flex: 1, backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}`, marginRight: '8px' }}>
-              <Text style={{ fontSize: '14px', color: startDate ? palette.text : palette.muted }}>{startDate || '选择日期'}</Text>
-            </View>
+            <FormInputBox marginBottom='0'>
+              <Text style={{ ...typography.body, color: startDate ? palette.text : palette.muted }}>{startDate || '选择日期'}</Text>
+            </FormInputBox>
           </Picker>
           <Picker mode='time' value={startTime} onChange={(e) => setStartTime(e.detail.value)}>
-            <View style={{ width: '120px', backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
-              <Text style={{ fontSize: '14px', color: startTime ? palette.text : palette.muted }}>{startTime || '选择时间'}</Text>
+            <View style={{ width: '120px', marginLeft: '8px' }}>
+              <FormInputBox marginBottom='0'>
+                <Text style={{ ...typography.body, color: startTime ? palette.text : palette.muted }}>{startTime || '选择时间'}</Text>
+              </FormInputBox>
             </View>
           </Picker>
         </View>
@@ -244,27 +266,31 @@ export default function SubmitEventPage() {
         <SectionTitle text='结束时间（选填）' />
         <View style={{ display: 'flex', flexDirection: 'row', marginBottom: '16px' }}>
           <Picker mode='date' value={endDate} onChange={(e) => setEndDate(e.detail.value)}>
-            <View style={{ flex: 1, backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}`, marginRight: '8px' }}>
-              <Text style={{ fontSize: '14px', color: endDate ? palette.text : palette.muted }}>{endDate || '选择日期'}</Text>
-            </View>
+            <FormInputBox marginBottom='0'>
+              <Text style={{ ...typography.body, color: endDate ? palette.text : palette.muted }}>{endDate || '选择日期'}</Text>
+            </FormInputBox>
           </Picker>
           <Picker mode='time' value={endTime} onChange={(e) => setEndTime(e.detail.value)}>
-            <View style={{ width: '120px', backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
-              <Text style={{ fontSize: '14px', color: endTime ? palette.text : palette.muted }}>{endTime || '选择时间'}</Text>
+            <View style={{ width: '120px', marginLeft: '8px' }}>
+              <FormInputBox marginBottom='0'>
+                <Text style={{ ...typography.body, color: endTime ? palette.text : palette.muted }}>{endTime || '选择时间'}</Text>
+              </FormInputBox>
             </View>
           </Picker>
         </View>
 
         <SectionTitle text='线上活动' />
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', marginBottom: '16px', border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ flex: 1, fontSize: '14px', color: palette.text }}>{isOnline ? '是，主要在线上进行' : '否，主要在线下进行'}</Text>
-          <Switch checked={isOnline} color={palette.accentDeep} onChange={(e) => setIsOnline(!!e.detail.value)} />
-        </View>
+        <FormInputBox>
+          <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isOnline ? '是，主要在线上进行' : '否，主要在线下进行'}</Text>
+            <Switch checked={isOnline} color={palette.accentDeep} onChange={(e) => setIsOnline(!!e.detail.value)} />
+          </View>
+        </FormInputBox>
 
         <SectionTitle text={isOnline ? '平台 / 线上说明（选填）' : '地点说明（选填）'} />
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}` }}>
-          <Input value={location} placeholder={isOnline ? '例如：腾讯会议 / Zoom' : '例如：杭州西湖区某空间'} onInput={(e) => setLocation(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
-        </View>
+        <FormInputBox focused={focusedField === 'location'}>
+          <Input value={location} placeholder={isOnline ? '例如：腾讯会议 / Zoom' : '例如：杭州西湖区某空间'} onFocus={() => setFocusedField('location')} onBlur={() => setFocusedField('')} onInput={(e) => setLocation(e.detail.value)} style={{ ...typography.body, color: palette.text }} />
+        </FormInputBox>
 
         <SectionTitle text='费用' />
         <SinglePillSelect options={FEE_OPTIONS} selected={fee} onChange={(value) => {
@@ -273,48 +299,49 @@ export default function SubmitEventPage() {
         }} />
         {fee === '付费' && (
           <View style={{ marginBottom: '16px' }}>
-            <View style={{ marginBottom: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext }}>补充费用说明，例如：单次 49 元 / 四次 199 元。</Text></View>
-            <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', border: `1px solid ${palette.line}` }}>
-              <Input value={feeDetail} placeholder='例如：单次 49 元' onInput={(e) => setFeeDetail(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
-            </View>
+            <View style={{ marginBottom: '6px' }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充费用说明，例如：单次 49 元 / 四次 199 元。</Text></View>
+            <FormInputBox focused={focusedField === 'feeDetail'} marginBottom='0'>
+              <Input value={feeDetail} placeholder='例如：单次 49 元' onFocus={() => setFocusedField('feeDetail')} onBlur={() => setFocusedField('')} onInput={(e) => setFeeDetail(e.detail.value)} style={{ ...typography.body, color: palette.text }} />
+            </FormInputBox>
           </View>
         )}
 
         <SectionTitle text='组织者' />
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}` }}>
-          <Input value={organizer} placeholder='例如：自由学社 / 某教育团队 / 个人发起者' onInput={(e) => setOrganizer(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
-        </View>
+        <FormInputBox focused={focusedField === 'organizer'}>
+          <Input value={organizer} placeholder='例如：自由学社 / 某教育团队 / 个人发起者' onFocus={() => setFocusedField('organizer')} onBlur={() => setFocusedField('')} onInput={(e) => setOrganizer(e.detail.value)} style={{ ...typography.body, color: palette.text }} />
+        </FormInputBox>
 
         <SectionTitle text='组织者联系方式（选填）' />
         <View style={{ marginBottom: '6px' }}>
-          <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>如果你是这个活动的组织者，可以填写你的微信号、手机号或其他联系方式。仅对填写过资料的可雀用户可见。</Text>
+          <Text style={{ ...typography.caption, color: palette.subtext }}>如果你是这个活动的组织者，可以填写你的微信号、手机号或其他联系方式。仅对填写过资料的可雀用户可见。</Text>
         </View>
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '16px', border: `1px solid ${palette.line}` }}>
-          <Input value={organizerContact} placeholder='例如：微信号 / 手机号 / 邮箱' onInput={(e) => setOrganizerContact(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
-        </View>
+        <FormInputBox focused={focusedField === 'organizerContact'}>
+          <Input value={organizerContact} placeholder='例如：微信号 / 手机号 / 邮箱' onFocus={() => setFocusedField('organizerContact')} onBlur={() => setFocusedField('')} onInput={(e) => setOrganizerContact(e.detail.value)} style={{ ...typography.body, color: palette.text }} />
+        </FormInputBox>
 
         <SectionTitle text='公开链接（选填）' />
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}` }}>
-          <Input value={officialUrl} placeholder='https://...' onInput={(e) => setOfficialUrl(e.detail.value)} style={{ fontSize: '14px', color: palette.text }} />
-        </View>
+        <FormInputBox focused={focusedField === 'officialUrl'} marginBottom='12px'>
+          <Input value={officialUrl} placeholder='https://...' onFocus={() => setFocusedField('officialUrl')} onBlur={() => setFocusedField('')} onInput={(e) => setOfficialUrl(e.detail.value)} style={{ ...typography.body, color: palette.text }} />
+        </FormInputBox>
 
         <SectionTitle text='报名方式补充说明（选填）' />
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}` }}>
-          <Textarea value={signupNote} placeholder='例如：先看公开主页，再联系组织者；或报名开放时间说明' maxlength={200} onInput={(e) => setSignupNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', fontSize: '14px', color: palette.text }} />
-        </View>
+        <FormInputBox focused={focusedField === 'signupNote'} marginBottom='12px'>
+          <Textarea value={signupNote} placeholder='例如：先看公开主页，再联系组织者；或报名开放时间说明' maxlength={200} onFocus={() => setFocusedField('signupNote')} onBlur={() => setFocusedField('')} onInput={(e) => setSignupNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', ...typography.body, color: palette.text }} />
+        </FormInputBox>
 
         <SectionTitle text='活动简介' />
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '8px', border: `1px solid ${palette.line}` }}>
-          <Textarea value={description} placeholder='介绍活动内容、适合谁、预计会发生什么。请尽量填写结构化和公开可验证的信息。' maxlength={600} onInput={(e) => setDescription(e.detail.value)} style={{ width: '100%', minHeight: '120px', fontSize: '14px', color: palette.text }} />
-        </View>
+        <FormInputBox focused={focusedField === 'description'} marginBottom='8px'>
+          <Textarea value={description} placeholder='介绍活动内容、适合谁、预计会发生什么。请尽量填写结构化和公开可验证的信息。' maxlength={600} onFocus={() => setFocusedField('description')} onBlur={() => setFocusedField('')} onInput={(e) => setDescription(e.detail.value)} style={{ width: '100%', minHeight: '120px', ...typography.body, color: palette.text }} />
+        </FormInputBox>
         <View style={{ marginBottom: '16px' }}>
-          <Text style={{ fontSize: '11px', color: palette.muted }}>{description.length}/600</Text>
+          <Text style={{ ...typography.micro, color: palette.muted }}>{description.length}/600</Text>
         </View>
       </View>
 
-      <View style={{ backgroundColor: palette.cardSoft, borderRadius: '16px', padding: '12px 14px', marginTop: '14px', marginBottom: '20px', border: `1px dashed ${palette.line}` }}>
-        <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
-          🔒 提交内容不会自动公开。组织者联系方式仅对填写过资料的可雀用户可见。请不要提交未公开的未成年人信息。
+      <View style={{ display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'flex-start', backgroundColor: palette.cardSoft, borderRadius: '16px', padding: '12px 14px', marginTop: '14px', marginBottom: '20px', border: `1px dashed ${palette.line}` }}>
+        <AppIcon name='lock' size={22} bordered />
+        <Text style={{ ...typography.caption, color: palette.subtext, flex: 1 }}>
+          提交内容不会自动公开。组织者联系方式仅对填写过资料的可雀用户可见。请不要提交未公开的未成年人信息。
         </Text>
       </View>
 
