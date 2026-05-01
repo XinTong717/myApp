@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import type { AcceptedConnection, PendingRequest, SentRequest } from '../../types/domain'
+import type { AcceptedConnection, PendingRequest, RequestPages, SentRequest } from '../../types/domain'
 import type { RequestSection } from '../../services/connection'
 import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
@@ -26,7 +26,10 @@ type Props = {
   pendingRequests: PendingRequest[]
   acceptedConnections: AcceptedConnection[]
   sentRequests: SentRequest[]
+  requestPages: RequestPages
+  loadingMoreSection: RequestSection | ''
   onLoadSection: (section: ConnectionTab) => void
+  onLoadMore: (section: ConnectionTab) => void
   onRespond: (requestId: string, action: 'accept' | 'reject') => void
   onWithdrawRequest: (connectionId: string) => void
   onRemoveConnection: (connectionId: string) => void
@@ -40,12 +43,36 @@ const TABS: { key: ConnectionTab; label: string }[] = [
   { key: 'sent', label: '我发出的请求' },
 ]
 
+function LoadMoreButton(props: { visible: boolean; loading: boolean; onClick: () => void }) {
+  if (!props.visible) return null
+  return (
+    <View
+      onClick={props.loading ? undefined : props.onClick}
+      style={{
+        margin: '4px 0 16px',
+        padding: '10px 14px',
+        borderRadius: '999px',
+        backgroundColor: '#FFFFFF',
+        border: `1px solid ${palette.line}`,
+        textAlign: 'center',
+      }}
+    >
+      <Text style={{ fontSize: '13px', color: palette.accentDeep, fontWeight: 'bold' }}>
+        {props.loading ? '加载中...' : '加载更多'}
+      </Text>
+    </View>
+  )
+}
+
 export default function ProfileConnectionsSection(props: Props) {
   const {
     pendingRequests,
     acceptedConnections,
     sentRequests,
+    requestPages,
+    loadingMoreSection,
     onLoadSection,
+    onLoadMore,
     onRespond,
     onWithdrawRequest,
     onRemoveConnection,
@@ -60,6 +87,9 @@ export default function ProfileConnectionsSection(props: Props) {
     setActiveTab(tab)
     onLoadSection(tab)
   }
+
+  const activePage = requestPages[activeTab]
+  const canLoadMore = !!activePage?.hasMore
 
   return (
     <>
@@ -176,6 +206,12 @@ export default function ProfileConnectionsSection(props: Props) {
           ))}
         </View>
       )}
+
+      <LoadMoreButton
+        visible={canLoadMore}
+        loading={loadingMoreSection === activeTab}
+        onClick={() => onLoadMore(activeTab)}
+      />
 
       {activeTab === 'pending' && pendingRequests.length === 0 && (
         <ProfileNoticeBox text='暂无收到的联络请求。' />
