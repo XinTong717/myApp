@@ -1,11 +1,44 @@
+const MINUTE = 60 * 1000
+const DAY = 24 * 60 * MINUTE
+
 const READ_ACTION_RATE_LIMITS = {
-  getMapUsers: { limit: 30, windowMs: 60 * 1000 },
-  getMyRequests: { limit: 30, windowMs: 60 * 1000 },
-  getEventInterestInfo: { limit: 60, windowMs: 60 * 1000 },
-  getEvents: { limit: 60, windowMs: 60 * 1000 },
-  getSchools: { limit: 60, windowMs: 60 * 1000 },
+  getMapUsers: { limit: 30, windowMs: MINUTE },
+  getMyRequests: { limit: 30, windowMs: MINUTE },
+  getEventInterestInfo: { limit: 60, windowMs: MINUTE },
+  getEvents: { limit: 60, windowMs: MINUTE },
+  getSchools: { limit: 60, windowMs: MINUTE },
+}
+
+const WRITE_ACTION_RATE_LIMITS = {
+  submitCorrection: { limit: 5, windowMs: DAY },
+  submitCommunity: { limit: 5, windowMs: DAY },
+  submitEvent: { limit: 5, windowMs: DAY },
+  sendRequest: { limit: 20, windowMs: DAY },
+  respondRequest: { limit: 60, windowMs: DAY },
+  manageConnection: { limit: 60, windowMs: DAY },
+  manageSafetyRelation: { limit: 30, windowMs: DAY },
+  reportUser: { limit: 10, windowMs: DAY },
+  toggleEventInterest: { limit: 60, windowMs: MINUTE },
+  updatePrivacySettings: { limit: 30, windowMs: DAY },
+  saveProfile: { limit: 20, windowMs: DAY },
+}
+
+const ADMIN_ACTION_RATE_LIMITS = {
+  publishEventDirect: { limit: 30, windowMs: MINUTE },
+  reviewEventSubmission: { limit: 60, windowMs: MINUTE },
+  getEventPublishPayload: { limit: 120, windowMs: MINUTE },
+  listEventSubmissions: { limit: 120, windowMs: MINUTE },
+}
+
+const ACTION_RATE_LIMITS = {
+  ...READ_ACTION_RATE_LIMITS,
+  ...WRITE_ACTION_RATE_LIMITS,
+  ...ADMIN_ACTION_RATE_LIMITS,
 }
 
 module.exports = {
+  ACTION_RATE_LIMITS,
   READ_ACTION_RATE_LIMITS,
+  WRITE_ACTION_RATE_LIMITS,
+  ADMIN_ACTION_RATE_LIMITS,
 }
