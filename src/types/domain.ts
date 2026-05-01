@@ -212,7 +212,21 @@ export type SentRequest = {
   createdAt: string
 }
 
+export type RequestPageInfo = {
+  section: 'pending' | 'accepted' | 'sent'
+  offset: number
+  limit: number
+  hasMore: boolean
+  nextOffset: number | null
+}
+
+export type RequestPages = Partial<Record<'pending' | 'accepted' | 'sent', RequestPageInfo>>
+
 export type GetMyRequestsResult = CloudResponse<{
+  section?: 'pending' | 'accepted' | 'sent' | 'all'
+  offset?: number
+  limit?: number
+  pages?: RequestPages
   pending?: PendingRequest[]
   accepted?: AcceptedConnection[]
   sent?: SentRequest[]
