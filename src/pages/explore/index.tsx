@@ -621,7 +621,16 @@ export default function ExplorePage() {
     const isSchoolCluster = item.type === 'school_cluster'
     const clusterCount = item.provinceStat?.count || item.clusterUsers?.length || 0
     const schoolClusterCount = item.clusterSchools?.length || 0
-    const shouldShowLabel = isUserCluster || isSchoolCluster || (item.type === 'school' ? shouldShowSchoolLabels : shouldShowUserLabels)
+    const shouldShowClusterLabel = isUserCluster
+      ? clusterCount >= 2
+      : isSchoolCluster
+        ? schoolClusterCount >= 3
+        : false
+    const shouldShowLabel = isUserCluster || isSchoolCluster
+      ? shouldShowClusterLabel
+      : item.type === 'school'
+        ? shouldShowSchoolLabels
+        : shouldShowUserLabels
     const labelContent = isUserCluster
       ? `${shortName(item.name, 4)} ${clusterCount}`
       : isSchoolCluster
