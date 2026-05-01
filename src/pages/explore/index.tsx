@@ -34,6 +34,18 @@ const EXPLORE_REFRESH_TTL = 30 * 1000
 
 type Coord = { lat: number; lng: number }
 
+type ExploreLoadKeyInput = {
+  province: string
+  role: UserRoleFilter
+  childAgeRange: string
+}
+
+function createExploreLoadKey(input: ExploreLoadKeyInput): string {
+  const province = input.province || '全国'
+  const childAgeRange = input.role === '家长' ? input.childAgeRange : '全部'
+  return `${province}|${input.role}|${childAgeRange}`
+}
+
 function parseCities(f?: string): string[] {
   if (!f) return []
   return f.split(',').map((s) => s.trim()).filter((s) => s && !s.startsWith('(') && !s.startsWith('（'))
@@ -196,50 +208,76 @@ export default function ExplorePage() {
   const [selectedProfileCompleteness, setSelectedProfileCompleteness] = useState<ProfileCompletenessFilter>('全部')
   const [selectedUserCity, setSelectedUserCity] = useState('全部')
   const [selectedChildAgeRange, setSelectedChildAgeRange] = useState('全部')
-  // Tracks which province the latest mapUsers response actually corresponds to.
-  // Used to suppress the false "暂无数据" flicker when the user has just switched
-  // province but the new mapUsers response hasn't arrived yet.
-  const [mapUsersLoadedForProvince, setMapUsersLoadedForProvince] = useState('')
+  // Tracks whether both school data and map user data have settled for the
+  // current province/filter snapshot. This prevents stale async responses from
+  // briefly rendering a false empty state.
+  const [schoolsLoaded, setSchoolsLoaded] = useState(false)
+  const [mapUsersLoadedKey, setMapUsersLoadedKey] = useState('')
+  const loadSeqRef = useRef(0)
   const hasLoadedOnceRef = useRef(false)
   const isFirstRunRef = useRef(true)
   const lastAutoRefreshAtRef = useRef(0)
 
   const loadData = async (options: { forceRefreshMapUsers?: boolean } = {}) => {
+    const requestSeq = loadSeqRef.current + 1
+    loadSeqRef.current = requestSeq
+
+    const provinceSnapshot = selectedProvince
+    const roleSnapshot = selectedUserRole
+    const childAgeRangeSnapshot = selectedChildAgeRange
+    const requestKey = createExploreLoadKey({
+      province: provinceSnapshot,
+      role: roleSnapshot,
+      childAgeRange: childAgeRangeSnapshot,
+    })
+
     try {
       setLoading(true)
       setError('')
       setIsNavigatingAway(false)
+
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
         getSchools({ limit: 200 }),
         getMapUsers({
-            forceRefresh: !!options.forceRefreshMapUsers,
-            province: selectedProvince || undefined,
-            role: selectedUserRole !== '全部' ? selectedUserRole : undefined,
-            childAgeRange: selectedUserRole === '家长' && selectedChildAgeRange !== '全部' ? selectedChildAgeRange : undefined,
-          }),
+          forceRefresh: !!options.forceRefreshMapUsers,
+          province: provinceSnapshot || undefined,
+          role: roleSnapshot !== '全部' ? roleSnapshot : undefined,
+          childAgeRange: roleSnapshot === '家长' && childAgeRangeSnapshot !== '全部' ? childAgeRangeSnapshot : undefined,
+        }),
         getMe(),
       ])
 
-      if (schoolRes?.ok && Array.isArray(schoolRes.schools)) setSchools(schoolRes.schools)
-      else { setSchools([]); logCloudFailure('getSchoolsInExplore', schoolRes) }
+      // Drop stale responses from older province/filter requests.
+      if (requestSeq !== loadSeqRef.current) return
+
+      if (schoolRes?.ok && Array.isArray(schoolRes.schools)) {
+        setSchools(schoolRes.schools)
+      } else {
+        setSchools([])
+        logCloudFailure('getSchoolsInExplore', schoolRes)
+      }
+      setSchoolsLoaded(true)
 
       if (mapUsersRes?.ok) {
         setAppUsers(Array.isArray(mapUsersRes.users) ? mapUsersRes.users : [])
         setProvinceStats(Array.isArray(mapUsersRes.provinceStats) ? mapUsersRes.provinceStats : [])
-        setMapUsersLoadedForProvince(selectedProvince || '')
+        setMapUsersLoadedKey(requestKey)
       } else {
         setAppUsers([])
         setProvinceStats([])
-        setMapUsersLoadedForProvince(selectedProvince || '')
+        setMapUsersLoadedKey(requestKey)
         logCloudFailure('getMapUsersInExplore', mapUsersRes)
       }
 
       const myProfile = myRes?.profile
       setHasProfile(!!(myProfile && myProfile.displayName && myProfile.province && myProfile.city))
     } catch (err: any) {
+      if (requestSeq !== loadSeqRef.current) return
       setError(err?.message || '读取数据失败')
     } finally {
-      setLoading(false)
+      if (requestSeq === loadSeqRef.current) {
+        setLoading(false)
+      }
     }
   }
 
@@ -674,10 +712,15 @@ export default function ExplorePage() {
 
   const canRenderMap = mapMarkers.length > 0 && Number.isFinite(center.latitude) && Number.isFinite(center.longitude)
 
-  // Province data is "settled" when the latest mapUsers response we received
-  // matches the currently selected province. Used to suppress the false empty
-  // state during the gap between province click and response.
-  const isProvinceDataSettled = mapUsersLoadedForProvince === (selectedProvince || '')
+  // Explore data is settled only when both school data and map user data match
+  // the current province/filter snapshot. This guards against stale responses
+  // and false empty-state flicker during fast province/filter switching.
+  const currentLoadKey = createExploreLoadKey({
+    province: selectedProvince,
+    role: selectedUserRole,
+    childAgeRange: selectedChildAgeRange,
+  })
+  const isProvinceDataSettled = schoolsLoaded && mapUsersLoadedKey === currentLoadKey
 
   useEffect(() => {
     setMapMountReady(false)
