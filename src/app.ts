@@ -20,6 +20,16 @@ function setupWeappPrivacyAuthorization() {
   })
 }
 
+function setupWeappShareMenu() {
+  const wxapp = typeof wx !== 'undefined' ? (wx as any) : null
+  if (!wxapp?.showShareMenu) return
+
+  wxapp.showShareMenu({
+    withShareTicket: true,
+    menus: ['shareAppMessage', 'shareTimeline'],
+  })
+}
+
 function App({ children }: PropsWithChildren<any>) {
   useLaunch(() => {
     console.log('App launched.')
@@ -41,6 +51,7 @@ function App({ children }: PropsWithChildren<any>) {
       }
 
       setupWeappPrivacyAuthorization()
+      setupWeappShareMenu()
     }
   })
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Input, ScrollView } from '@tarojs/components'
-import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
+import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
@@ -90,6 +90,16 @@ export default function SchoolsPage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedAgeRanges, setSelectedAgeRanges] = useState<string[]>([])
   const didInitRef = useRef(false)
+
+  useShareAppMessage(() => ({
+    title: '可雀学习社区库｜找到适合教育探索的场域',
+    path: '/pages/schools/index',
+  }))
+
+  useShareTimeline(() => ({
+    title: '可雀学习社区库｜教育探索地图与社区资料',
+    query: '',
+  }))
 
   const loadSchools = async (options: { forceRefresh?: boolean; useFilters?: boolean } = {}) => {
     try {
