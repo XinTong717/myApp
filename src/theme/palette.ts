@@ -40,6 +40,14 @@ export const palette = {
   line: '#E9DED5',
   lineSoft: '#F1E8E0',
 
+  // Focus and interaction. Warm, visible, not neon-app-blue.
+  focus: '#D99A55',
+  focusSoft: '#FFF6E6',
+  focusRing: '0 0 0 3px rgba(217, 154, 85, 0.22)',
+  activeBg: '#FFF3EC',
+  disabledBg: '#D8CEC5',
+  disabledText: '#FFF8F1',
+
   // Backward-compatible aliases used by older pages/components.
   accent: '#B85540',
   accentDeep: '#B85540',
