@@ -4,6 +4,8 @@ export default defineAppConfig({
     'pages/schools/index',
     'pages/events/index',
     'pages/profile/index',
+    'pages/user-agreement/index',
+    'pages/privacy-policy/index',
   ],
   subPackages: [
     { root: 'pkg/schools', pages: ['submit/index'] },
