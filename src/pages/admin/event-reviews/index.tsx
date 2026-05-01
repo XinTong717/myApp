@@ -3,6 +3,7 @@ import { View, Text, Input, Textarea, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { checkAdminAccess } from '../../../services/profile'
 import { listEventSubmissions, getEventPublishPayload, reviewEventSubmission } from '../../../services/admin'
+import { clearEventListCache } from '../../../services/event'
 import { callCloud } from '../../../services/cloud'
 import AdminActionButton from '../../../components/admin/AdminActionButton'
 import FormInputBox from '../../../components/common/FormInputBox'
@@ -188,6 +189,7 @@ export default function AdminEventReviewsPage() {
       if (result?.ok) {
         const eventId = result.publishedEventId ? String(result.publishedEventId) : ''
         setPublishedEventId(eventId)
+        await clearEventListCache()
         Taro.showToast({ title: result.message || '已发布', icon: 'success' })
         await loadSubmissions(statusFilter)
       } else if (result?.code === 'PUBLISH_BLOCKED') {
@@ -225,6 +227,9 @@ export default function AdminEventReviewsPage() {
       })
       if (result?.ok) {
         Taro.showToast({ title: result.message || '已更新', icon: 'success' })
+        if (action === 'mark_published' || action === 'reset_pending') {
+          await clearEventListCache()
+        }
         await loadSubmissions(statusFilter)
       } else {
         Taro.showToast({ title: result?.message || '操作失败', icon: 'none' })
