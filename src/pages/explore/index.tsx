@@ -5,6 +5,7 @@ import { REPORT_CODE_MESSAGES, REQUEST_CODE_MESSAGES, SAFETY_CODE_MESSAGES } fro
 import { getSchools } from '../../services/school'
 import { getMe } from '../../services/profile'
 import { clearMapUsersCache, getMapUsers } from '../../services/map'
+import { setDetailPreview } from '../../services/detailPreview'
 import type { MapProvinceStat } from '../../types/domain'
 import { sendRequest } from '../../services/connection'
 import { manageSafetyRelation, reportUser } from '../../services/safety'
@@ -74,6 +75,9 @@ export default function ExplorePage() {
   const hasLoadedOnceRef = useRef(false)
   const isFirstRunRef = useRef(true)
   const lastAutoRefreshAtRef = useRef(0)
+  const sendRequestLockRef = useRef(false)
+  const reportLockRef = useRef(false)
+  const blockLockRef = useRef(false)
 
   const loadData = async (options: { forceRefreshMapUsers?: boolean } = {}) => {
     const requestSeq = loadSeqRef.current + 1
@@ -400,7 +404,10 @@ export default function ExplorePage() {
   }, [])
 
   const handleReportUser = async (targetUserId: string) => {
+    if (reportLockRef.current) return
+
     try {
+      reportLockRef.current = true
       const reasonRes = await Taro.showActionSheet({ itemList: [...REPORT_REASON_OPTIONS] })
       const reason = REPORT_REASON_OPTIONS[reasonRes.tapIndex] || '其他'
       const result = await reportUser(targetUserId, reason)
@@ -411,10 +418,14 @@ export default function ExplorePage() {
     } catch (err: any) {
       if (err?.errMsg?.includes('cancel')) return
       Taro.showToast({ title: '举报失败', icon: 'none' })
+    } finally {
+      reportLockRef.current = false
     }
   }
 
   const handleBlockUser = async (targetUserId: string) => {
+    if (blockLockRef.current) return
+
     const confirm = await Taro.showModal({
       title: '确认拉黑',
       content: '拉黑后，你将不再看到对方，且当前待处理或已建立的联络都会断开。',
@@ -424,6 +435,7 @@ export default function ExplorePage() {
     if (!confirm.confirm) return
 
     try {
+      blockLockRef.current = true
       const result = await manageSafetyRelation(targetUserId, 'block')
       const message = resolveCloudMessage(result, SAFETY_CODE_MESSAGES, '已拉黑')
       Taro.showToast({ title: message, icon: result?.ok ? 'success' : 'none' })
@@ -436,11 +448,16 @@ export default function ExplorePage() {
       }
     } catch (err) {
       Taro.showToast({ title: '操作失败', icon: 'none' })
+    } finally {
+      blockLockRef.current = false
     }
   }
 
   const sendRequestToUser = async (targetUserId: string) => {
+    if (sendRequestLockRef.current) return
+
     try {
+      sendRequestLockRef.current = true
       Taro.showLoading({ title: '发送中...' })
       const result = await sendRequest(targetUserId)
       Taro.hideLoading()
@@ -451,6 +468,8 @@ export default function ExplorePage() {
     } catch (err) {
       Taro.hideLoading()
       Taro.showToast({ title: '发送失败，请稍后重试', icon: 'none' })
+    } finally {
+      sendRequestLockRef.current = false
     }
   }
 
@@ -466,6 +485,10 @@ export default function ExplorePage() {
     }
 
     if (item.type === 'school') {
+      const schoolData = schools.find((school) => Number(school.id) === Number(item.originalId))
+      if (schoolData) {
+        setDetailPreview('school', item.originalId, schoolData)
+      }
       Taro.navigateTo({ url: '/pages/school-detail/index?id=' + item.originalId })
       return
     }
@@ -485,7 +508,7 @@ export default function ExplorePage() {
 
     setSelectedCluster(null)
     setSelectedUser(item)
-  }, [idToMarker])
+  }, [idToMarker, schools])
 
   const handlePrimaryAction = async () => {
     if (!selectedUser) return
