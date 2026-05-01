@@ -121,6 +121,17 @@ function buildWarnings(submission, payload) {
   return warnings
 }
 
+async function getEventSubmissionById(submissionId) {
+  try {
+    const res = await db.collection('event_submissions').doc(submissionId).get()
+    return res.data || null
+  } catch (err) {
+    const message = String(err?.errMsg || err?.message || '')
+    if (message.includes('does not exist') || message.includes('document.get:fail')) return null
+    throw err
+  }
+}
+
 async function allocateEventId() {
   try {
     const res = await db.collection('events')
@@ -142,14 +153,14 @@ async function publishEventDirect(event, wxContext) {
   const adminNote = String(event.adminNote || '').trim()
   const force = !!event.force
   if (!submissionId) return fail(requestId, 'SUBMISSION_ID_REQUIRED', '缺少 submissionId')
+  if (submissionId.includes('填一个')) return fail(requestId, 'SUBMISSION_ID_PLACEHOLDER', '请把 submissionId 替换成 event_submissions 里的真实 _id')
 
   try {
     const admin = await getActiveAdmin(wxContext.OPENID)
     if (!admin) return fail(requestId, 'FORBIDDEN', '无权限发布活动')
 
-    const docRes = await db.collection('event_submissions').doc(submissionId).get()
-    const submission = docRes.data
-    if (!submission) return fail(requestId, 'SUBMISSION_NOT_FOUND', '未找到该活动提交记录')
+    const submission = await getEventSubmissionById(submissionId)
+    if (!submission) return fail(requestId, 'SUBMISSION_NOT_FOUND', `未找到该活动提交记录：${submissionId}`)
 
     if (submission.status === 'merged' && submission.publishedEventId) {
       return ok(requestId, { message: '该活动已发布，无需重复发布', nextStatus: 'merged', publishedEventId: Number(submission.publishedEventId) })
