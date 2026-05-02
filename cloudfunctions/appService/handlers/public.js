@@ -3,6 +3,7 @@ const { ok, fail, resolveRequestId } = require('../lib/response')
 const { runMsgSecCheck } = require('../lib/security')
 const {
   listSchools,
+  listSchoolMarkers,
   getSchoolById,
   listEvents,
   getEventById,
@@ -47,20 +48,15 @@ async function getCachedCount(eventId) {
 
 async function adjustInterestCountCache(eventId, delta) {
   const safeDelta = Number(delta || 0)
-  const cached = await getCachedCount(eventId)
+  const docId = buildCountDocId(eventId)
 
   if (!safeDelta) {
+    const cached = await getCachedCount(eventId)
     return cached === null ? 0 : Math.max(0, cached)
   }
 
-  if (cached === null) {
-    const initializedCount = Math.max(0, safeDelta)
-    await writeInterestCountCache(eventId, initializedCount)
-    return initializedCount
-  }
-
   try {
-    await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).update({
+    await db.collection(COUNT_COLLECTION).doc(docId).update({
       data: {
         eventId,
         count: _.inc(safeDelta),
@@ -71,12 +67,26 @@ async function adjustInterestCountCache(eventId, delta) {
     const nextCached = await getCachedCount(eventId)
     if (nextCached !== null) return Math.max(0, nextCached)
   } catch (err) {
-    console.warn('event interest count atomic update degraded:', err)
+    try {
+      await db.collection(COUNT_COLLECTION).doc(docId).set({
+        data: { eventId, count: 0, updatedAt: db.serverDate(), createdAt: db.serverDate() },
+      })
+      await db.collection(COUNT_COLLECTION).doc(docId).update({
+        data: {
+          eventId,
+          count: _.inc(safeDelta),
+          updatedAt: db.serverDate(),
+        },
+      })
+      const nextCached = await getCachedCount(eventId)
+      if (nextCached !== null) return Math.max(0, nextCached)
+    } catch (initErr) {
+      console.warn('event interest count initialize+inc degraded:', initErr)
+    }
   }
 
-  const degradedCount = Math.max(0, cached + safeDelta)
-  await writeInterestCountCache(eventId, degradedCount)
-  return degradedCount
+  const degraded = await getCachedCount(eventId)
+  return degraded === null ? Math.max(0, safeDelta) : Math.max(0, degraded)
 }
 
 async function getCachedCounts(eventIds) {
@@ -132,6 +142,27 @@ async function getSchools(event) {
   } catch (err) {
     console.error('appService getSchools error:', err)
     return fail(requestId, 'GET_SCHOOLS_FAILED', '读取学习社区失败，请稍后重试', { schools: [] })
+  }
+}
+
+async function getSchoolMarkers(event) {
+  const requestId = resolveRequestId('get-school-markers', event)
+  try {
+    const schools = await listSchoolMarkers({
+      limit: event?.limit,
+      province: event?.province,
+      provinces: event?.provinces,
+      city: event?.city,
+      cities: event?.cities,
+      schoolType: event?.schoolType || event?.type,
+      schoolTypes: event?.schoolTypes || event?.types,
+      ageRange: event?.ageRange,
+      ageRanges: event?.ageRanges,
+    })
+    return ok(requestId, { schools })
+  } catch (err) {
+    console.error('appService getSchoolMarkers error:', err)
+    return fail(requestId, 'GET_SCHOOL_MARKERS_FAILED', '读取学习社区标记失败，请稍后重试', { schools: [] })
   }
 }
 
@@ -467,6 +498,7 @@ async function getEventContactInfo(event, wxContext) {
 
 module.exports = {
   getSchools,
+  getSchoolMarkers,
   getSchoolDetail,
   getEvents,
   getEventDetail,
