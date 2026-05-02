@@ -14,6 +14,7 @@ const READ_ACTION_RATE_LIMITS = {
   getEvents: { limit: 60, windowMs: MINUTE },
   getEventDetail: { limit: 120, windowMs: MINUTE },
   getSchools: { limit: 60, windowMs: MINUTE },
+  getSchoolMarkers: { limit: 60, windowMs: MINUTE },
   getSchoolDetail: { limit: 120, windowMs: MINUTE },
 }
 
