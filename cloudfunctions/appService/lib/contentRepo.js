@@ -184,6 +184,23 @@ function attachSchoolLocations(schools, locations) {
   })
 }
 
+function toSchoolMarker(school) {
+  return {
+    id: Number(school.id),
+    name: school.name,
+    canonical_name: school.canonical_name,
+    province: school.province,
+    city: school.city,
+    locations: Array.isArray(school.locations) ? school.locations.map((location) => ({
+      school_id: Number(location.school_id),
+      province: normalizeString(location.province),
+      city: normalizeString(location.city),
+      status: normalizeString(location.status || 'published'),
+    })) : [],
+    location_count: Number(school.location_count || 0),
+  }
+}
+
 function filterSchoolsByLocation(schools, options = {}) {
   const { provinces, cities } = getLocationFilters(options)
   if (provinces.length === 0 && cities.length === 0) return schools
@@ -210,7 +227,7 @@ function filterSchoolsByFacets(schools, options = {}) {
   })
 }
 
-async function listSchools(options = {}) {
+async function querySchoolsWithLocations(options = {}) {
   const normalizedOptions = typeof options === 'object' && options !== null ? options : { limit: options }
   const limit = normalizeLimit(normalizedOptions.limit, SCHOOL_LIST_DEFAULT_LIMIT, SCHOOL_LIST_MAX_LIMIT)
   const locationSchoolIds = await listSchoolIdsByLocation(normalizedOptions)
@@ -257,11 +274,35 @@ async function listSchools(options = {}) {
   return filterSchoolsByFacets(filterSchoolsByLocation(schoolsWithLocations, normalizedOptions), normalizedOptions).slice(0, limit)
 }
 
+async function listSchools(options = {}) {
+  return querySchoolsWithLocations(options)
+}
+
+async function listSchoolMarkers(options = {}) {
+  return (await querySchoolsWithLocations(options)).map(toSchoolMarker)
+}
+
 async function getSchoolById(schoolId) {
   if (!isFinitePositiveNumber(schoolId)) return null
 
   const res = await db.collection('schools')
     .where({ id: Number(schoolId) })
+    .field({
+      id: true,
+      name: true,
+      canonical_name: true,
+      description: true,
+      age_range: true,
+      school_type: true,
+      fee: true,
+      has_xuji: true,
+      xuji_note: true,
+      residency_req: true,
+      admission_req: true,
+      output_direction: true,
+      official_url: true,
+      status: true,
+    })
     .limit(1)
     .get()
 
@@ -300,6 +341,19 @@ async function getEventById(eventId) {
 
   const res = await db.collection('events')
     .where({ id: Number(eventId) })
+    .field({
+      id: true,
+      title: true,
+      event_type: true,
+      description: true,
+      start_time: true,
+      end_time: true,
+      location: true,
+      fee: true,
+      status: true,
+      organizer: true,
+      is_online: true,
+    })
     .limit(1)
     .get()
 
@@ -312,6 +366,7 @@ module.exports = {
   EVENT_LIST_LIMIT,
   SCHOOL_LOCATION_COLLECTION,
   listSchools,
+  listSchoolMarkers,
   getSchoolById,
   listEvents,
   getEventById,
