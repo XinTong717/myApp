@@ -56,6 +56,22 @@ export function getCachedValue<T>(key: string): T | null {
   }
 }
 
+export function getCachedValueAllowExpired<T>(key: string): { value: T; stale: boolean } | null {
+  const memoryHit = memoryCache.get(key) as CacheEnvelope<T> | undefined
+  if (memoryHit) {
+    return { value: memoryHit.value, stale: isExpired(memoryHit.expiresAt) }
+  }
+
+  try {
+    const stored = Taro.getStorageSync(key) as CacheEnvelope<T> | undefined
+    if (!stored || typeof stored.expiresAt !== 'number') return null
+    memoryCache.set(key, stored)
+    return { value: stored.value, stale: isExpired(stored.expiresAt) }
+  } catch (err) {
+    return null
+  }
+}
+
 export function setCachedValue<T>(key: string, value: T, ttlMs: number) {
   const payload: CacheEnvelope<T> = {
     value,
@@ -132,6 +148,11 @@ export async function getCacheScopePrefix() {
 export async function getScopedCachedValue<T>(key: string): Promise<T | null> {
   const scope = await getCacheScopePrefix()
   return getCachedValue<T>(getScopedKey(scope, key))
+}
+
+export async function getScopedCachedValueAllowExpired<T>(key: string): Promise<{ value: T; stale: boolean } | null> {
+  const scope = await getCacheScopePrefix()
+  return getCachedValueAllowExpired<T>(getScopedKey(scope, key))
 }
 
 export async function setScopedCachedValue<T>(key: string, value: T, ttlMs: number): Promise<void> {
