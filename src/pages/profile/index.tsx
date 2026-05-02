@@ -30,6 +30,8 @@ import { useSafety } from '../../hooks/useSafety'
 import { useProfileForm } from '../../hooks/useProfileForm'
 
 const PROFILE_REFRESH_TTL = 30 * 1000
+const USER_AGREEMENT_URL = '/pkg/legal/user-agreement/index'
+const PRIVACY_POLICY_URL = '/pkg/legal/privacy-policy/index'
 const PROFILE_STEPS = [
   { key: 'basic', label: '基本资料' },
   { key: 'identity', label: '身份补充' },
@@ -236,11 +238,11 @@ export default function ProfilePage() {
   })
 
   const openUserAgreement = () => {
-    Taro.navigateTo({ url: '/pages/user-agreement/index' })
+    Taro.navigateTo({ url: USER_AGREEMENT_URL })
   }
 
   const openPrivacyPolicy = () => {
-    Taro.navigateTo({ url: '/pages/privacy-policy/index' })
+    Taro.navigateTo({ url: PRIVACY_POLICY_URL })
   }
 
   const openAdminReviewPage = () => {
