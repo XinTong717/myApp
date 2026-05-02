@@ -111,12 +111,12 @@ export default function ProfileBasicSection(props: Props) {
         </View>
       )}
 
-      <SectionTitle text='联络标识（选填）' />
-      <ProfileHelperText text='可填写微信号、手机号或 QQ，仅在你同意联络后对对方可见。' />
+      <SectionTitle text='微信号（选填）' />
+      <ProfileHelperText text='可填写微信号、绑定手机号或 QQ，仅在你同意联络后对对方可见。' />
       <ProfileInputBox focused={focusedField === 'contactId'}>
         <Input
           value={contactId}
-          placeholder='可填写微信号、手机号或 QQ，仅在你同意联络后对对方可见'
+          placeholder='例如：你的微信号 / 绑定手机号 / QQ'
           onFocus={() => setFocusedField('contactId')}
           onBlur={() => setFocusedField('')}
           onInput={(e) => setContactId(e.detail.value)}
