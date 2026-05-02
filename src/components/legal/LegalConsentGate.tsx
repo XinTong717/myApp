@@ -8,6 +8,8 @@ import {
   recordLegalConsent,
 } from '../../services/legalConsent'
 
+declare const getCurrentPages: undefined | (() => Array<{ route?: string; options?: Record<string, unknown> }>)
+
 type ConsentChecks = {
   terms: boolean
   privacy: boolean
@@ -35,8 +37,8 @@ const TAB_PAGE_ROUTES = new Set([
 ])
 
 function getCurrentRouteInfo() {
-  const pages = Taro.getCurrentPages ? Taro.getCurrentPages() : []
-  const current = pages[pages.length - 1] as any
+  const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+  const current = pages[pages.length - 1]
   const route = String(current?.route || '')
   const options = current?.options || {}
   const query = Object.keys(options)
