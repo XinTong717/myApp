@@ -39,14 +39,12 @@ const PROFILE_STEPS = [
 ] as const
 
 type ProfileStep = typeof PROFILE_STEPS[number]['key']
-type CompletionMap = Record<ProfileStep, { done: number; total: number }>
 
-function StepTabs(props: { activeStep: ProfileStep; completion: CompletionMap; onChange: (step: ProfileStep) => void }) {
+function StepTabs(props: { activeStep: ProfileStep; onChange: (step: ProfileStep) => void }) {
   return (
     <View style={{ display: 'flex', flexDirection: 'row', gap: '8px', marginBottom: '14px' }}>
       {PROFILE_STEPS.map((step, index) => {
         const active = props.activeStep === step.key
-        const progress = props.completion[step.key]
         return (
           <View
             key={step.key}
@@ -64,11 +62,6 @@ function StepTabs(props: { activeStep: ProfileStep; completion: CompletionMap; o
             <Text style={{ ...typography.caption, fontWeight: active ? 'bold' : 'normal', color: active ? '#FFFFFF' : palette.subtext }}>
               {index + 1}. {step.label}
             </Text>
-            <View style={{ marginTop: '3px' }}>
-              <Text style={{ fontSize: '10px', color: active ? 'rgba(255,255,255,0.82)' : palette.muted }}>
-                {progress.done}/{progress.total} 已填
-              </Text>
-            </View>
           </View>
         )
       })}
@@ -103,10 +96,6 @@ function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; 
   )
 }
 
-function countDone(items: boolean[]) {
-  return items.filter(Boolean).length
-}
-
 export default function ProfilePage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [activeStep, setActiveStep] = useState<ProfileStep>('basic')
@@ -120,21 +109,6 @@ export default function ProfilePage() {
 
   const { pendingRequests, acceptedConnections, sentRequests, requestPages, loadingMoreSection, loadRequests, loadRequestSection, loadMoreRequests, refreshLoadedRequests, handleRespond, handleWithdrawRequest, handleRemoveConnection } = useConnections()
   const { blockedUsers, mutedUsers, loadSafetyOverview, handleSafetyAction, handleReportUser } = useSafety()
-
-  const completion: CompletionMap = {
-    basic: { done: countDone([!!displayName.trim(), roles.length > 0, !!province && !!currentCity, !!bio.trim()]), total: 4 },
-    identity: {
-      done: countDone([
-        !isParent || childAgeRange.length > 0,
-        !isParent || childDropoutStatus.length > 0,
-        !isParent || !!childInterests.trim(),
-        !isEducator || !!eduServices.trim(),
-        !isCompanion || !!companionContext.trim(),
-      ]),
-      total: [isParent, isParent, isParent, isEducator, isCompanion].filter(Boolean).length || 1,
-    },
-    privacy: { done: countDone([!!contactId.trim(), allowIncomingRequests, isVisibleOnMap, legalAgreed]), total: 4 },
-  }
 
   const loadAdminAccess = async () => {
     try {
@@ -228,7 +202,7 @@ export default function ProfilePage() {
     <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '16px 16px 100px', boxSizing: 'border-box' }}>
       <ProfileHeaderCard />
       <ProfileAdminEntry isAdmin={isAdmin} onOpen={openAdminReviewPage} />
-      <StepTabs activeStep={activeStep} completion={completion} onChange={setActiveStep} />
+      <StepTabs activeStep={activeStep} onChange={setActiveStep} />
 
       {activeStep === 'basic' && <>
         <ProfileBasicSection displayName={displayName} setDisplayName={setDisplayName} gender={gender} setGender={setGender} ageRange={ageRange} setAgeRange={setAgeRange} roles={roles} setRoles={setRoles} province={province} cityOption={cityOption} currentCity={currentCity} customCity={customCity} setCustomCity={setCustomCity} contactId={contactId} setContactId={setContactId} pickerRange={pickerRange} pickerValue={pickerValue} handlePickerChange={handlePickerChange} handlePickerColumnChange={handlePickerColumnChange} genderOptions={GENDER_OPTIONS} ageRangeOptions={AGE_RANGE_OPTIONS} roleOptions={ROLE_OPTIONS} />
