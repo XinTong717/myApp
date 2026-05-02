@@ -171,11 +171,11 @@ export default function ProfileConnectionsSection(props: Props) {
               {conn.otherContactId ? (
                 <ProfileInputBox marginBottom='0'>
                   <View onClick={() => { Taro.setClipboardData({ data: conn.otherContactId }) }} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ ...typography.meta, color: palette.green, flex: 1 }}>联络标识: {conn.otherContactId}</Text>
+                    <Text style={{ ...typography.meta, color: palette.green, flex: 1 }}>微信号: {conn.otherContactId}</Text>
                     <Text style={{ ...typography.micro, color: palette.subtext }}>点击复制</Text>
                   </View>
                 </ProfileInputBox>
-              ) : <View style={{ marginTop: '8px' }}><Text style={{ ...typography.caption, color: '#C5B5A5' }}>对方未填写联络标识</Text></View>}
+              ) : <View style={{ marginTop: '8px' }}><Text style={{ ...typography.caption, color: '#C5B5A5' }}>对方未填写微信号</Text></View>}
               {conn.otherChildInfo && (conn.otherChildInfo.ageRange.length > 0 || conn.otherChildInfo.status.length > 0 || conn.otherChildInfo.interests) ? (
                 <ProfileInputBox marginBottom='8px'>
                   <Text style={{ ...typography.caption, color: palette.accentDeep, fontWeight: '700', marginBottom: '4px' }}>家庭教育关注</Text>
