@@ -20,7 +20,7 @@ type ProfileDraft = {
   province: string
   cityOption: string
   customCity: string
-  wechatId: string
+  contactId: string
   childAgeRange: string[]
   childDropoutStatus: string[]
   childInterests: string
@@ -33,7 +33,7 @@ function hasDraftContent(draft: Partial<ProfileDraft> | null) {
   if (!draft) return false
   return !!(
     draft.displayName || draft.gender || draft.ageRange || draft.province || draft.cityOption || draft.customCity ||
-    draft.wechatId || draft.childInterests || draft.eduServices || draft.companionContext || draft.bio ||
+    draft.contactId || draft.childInterests || draft.eduServices || draft.companionContext || draft.bio ||
     (Array.isArray(draft.roles) && draft.roles.length > 0) ||
     (Array.isArray(draft.childAgeRange) && draft.childAgeRange.length > 0) ||
     (Array.isArray(draft.childDropoutStatus) && draft.childDropoutStatus.length > 0)
@@ -54,7 +54,7 @@ export function useProfileForm() {
   const [province, setProvince] = useState('')
   const [cityOption, setCityOption] = useState('')
   const [customCity, setCustomCity] = useState('')
-  const [wechatId, setWechatId] = useState('')
+  const [contactId, setContactId] = useState('')
   const [allowIncomingRequests, setAllowIncomingRequests] = useState(true)
   const [isVisibleOnMap, setIsVisibleOnMap] = useState(true)
 
@@ -79,7 +79,7 @@ export function useProfileForm() {
     setProvince(draft.province || '')
     setCityOption(draft.cityOption || '')
     setCustomCity(draft.customCity || '')
-    setWechatId(draft.wechatId || '')
+    setContactId(draft.contactId || '')
     setChildAgeRange(Array.isArray(draft.childAgeRange) ? draft.childAgeRange : [])
     setChildDropoutStatus(Array.isArray(draft.childDropoutStatus) ? draft.childDropoutStatus : [])
     setChildInterests(draft.childInterests || '')
@@ -109,7 +109,7 @@ export function useProfileForm() {
       setCustomCity('')
     }
 
-    setWechatId(p.wechatId || '')
+    setContactId(p.contactId || '')
     setAllowIncomingRequests(p.allowIncomingRequests !== false)
     setIsVisibleOnMap(p.isVisibleOnMap !== false)
     setChildAgeRange(Array.isArray(p.childAgeRange) ? p.childAgeRange : [])
@@ -171,7 +171,7 @@ export function useProfileForm() {
         province,
         cityOption,
         customCity,
-        wechatId,
+        contactId,
         childAgeRange,
         childDropoutStatus,
         childInterests,
@@ -187,7 +187,7 @@ export function useProfileForm() {
     }, PROFILE_DRAFT_DEBOUNCE_MS)
 
     return () => clearTimeout(timer)
-  }, [displayName, gender, ageRange, roles, province, cityOption, customCity, wechatId, childAgeRange, childDropoutStatus, childInterests, eduServices, companionContext, bio, saving])
+  }, [displayName, gender, ageRange, roles, province, cityOption, customCity, contactId, childAgeRange, childDropoutStatus, childInterests, eduServices, companionContext, bio, saving])
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -211,7 +211,7 @@ export function useProfileForm() {
         roles,
         province,
         city: currentCity,
-        wechatId: wechatId.trim(),
+        contactId: contactId.trim(),
         allowIncomingRequests,
         isVisibleOnMap,
         childAgeRange: isParent ? childAgeRange : [],
@@ -304,8 +304,8 @@ export function useProfileForm() {
     cityOption,
     customCity,
     setCustomCity,
-    wechatId,
-    setWechatId,
+    contactId,
+    setContactId,
     allowIncomingRequests,
     isVisibleOnMap,
     childAgeRange,
