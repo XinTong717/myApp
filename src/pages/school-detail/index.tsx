@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { View, Text, Textarea } from '@tarojs/components'
-import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
+import Taro, { useDidShow, getCurrentInstance, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
+import { registerCurrentPageShare } from '../../utils/share'
 import { getSchoolDetail, submitCorrection } from '../../services/school'
 import { getDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
@@ -8,6 +9,23 @@ import { DetailSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
 type School = SchoolItem
+
+function buildSchoolShare(school?: School | null, schoolId?: number) {
+    const id = Number(school?.id || schoolId || 0)
+    const name = school?.canonical_name || school?.name || ''
+    const title = name ? `可雀学习社区｜${name}` : '可雀学习社区库｜找到适合教育探索的场域'
+  
+    return {
+      appMessage: {
+        title,
+        path: id ? `/pages/school-detail/index?id=${id}` : '/pages/schools/index',
+      },
+      timeline: {
+        title,
+        query: id ? `id=${id}` : '',
+      },
+    }
+  }
 
 function InfoRow(props: { label: string; value?: string }) {
   return (
@@ -213,11 +231,20 @@ export default function SchoolDetailPage() {
   const [correctionSubmitting, setCorrectionSubmitting] = useState(false)
   const [correctionDone, setCorrectionDone] = useState(false)
   const correctionLockRef = useRef(false)
+  const currentSchoolId = Number(getCurrentInstance().router?.params?.id || school?.id || previewSchool?.id || 0)
+
+  useShareAppMessage(() => buildSchoolShare(school || previewSchool, currentSchoolId).appMessage)
+  useShareTimeline(() => buildSchoolShare(school || previewSchool, currentSchoolId).timeline)
 
   const loadDetail = async (options: { forceRefresh?: boolean } = {}) => {
     const id = Number(getCurrentInstance().router?.params?.id || 0)
     const preview = getDetailPreview<School>('school', id)
-    if (preview) setPreviewSchool(preview)
+    if (preview) {
+        setPreviewSchool(preview)
+        registerCurrentPageShare(buildSchoolShare(preview, id))
+      } else {
+        registerCurrentPageShare(buildSchoolShare(null, id))
+      }
 
     try {
       setLoading(true)
@@ -225,6 +252,9 @@ export default function SchoolDetailPage() {
       const result = await getSchoolDetail(id, { forceRefresh: !!options.forceRefresh })
       const nextSchool = result?.school || null
       setSchool(nextSchool)
+      if (nextSchool) {
+        registerCurrentPageShare(buildSchoolShare(nextSchool, id))
+      }
       if (!result?.ok || !nextSchool) {
         setError(result?.message || '未找到该学习社区')
       }
@@ -237,6 +267,7 @@ export default function SchoolDetailPage() {
   }
 
   useDidShow(() => {
+    registerCurrentPageShare(buildSchoolShare(school || previewSchool, currentSchoolId))
     loadDetail()
     setShowCorrectionForm(false)
     setCorrectionText('')

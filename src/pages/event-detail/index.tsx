@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
-import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
+import Taro, { useDidShow, getCurrentInstance, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
+import { registerCurrentPageShare } from '../../utils/share'
 import { EVENT_CODE_MESSAGES } from '../../constants/cloudMessages'
 import { clearEventListCache, getEventDetail, getEventInterestInfo, getEventContactInfo, toggleEventInterest } from '../../services/event'
 import { getMe } from '../../services/profile'
@@ -15,6 +16,24 @@ import {
   formatEventTime,
   getEventStatusInfo,
 } from '../events/shared'
+
+function buildEventShare(event?: EventItem | null, eventId?: number) {
+    const id = Number(event?.id || eventId || 0)
+    const title = event?.title
+      ? `可雀活动｜${event.title}`
+      : '可雀活动｜看看这个教育探索活动'
+  
+    return {
+      appMessage: {
+        title,
+        path: id ? `/pages/event-detail/index?id=${id}` : '/pages/events/index',
+      },
+      timeline: {
+        title,
+        query: id ? `id=${id}` : '',
+      },
+    }
+  }
 
 function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
   const handleCopy = () => {
@@ -155,6 +174,10 @@ export default function EventDetailPage() {
   const [contactLoading, setContactLoading] = useState(false)
   const [publicSignupText, setPublicSignupText] = useState('')
   const toggleLockRef = useRef(false)
+  const currentEventId = Number(getCurrentInstance().router?.params?.id || event?.id || previewEvent?.id || 0)
+
+  useShareAppMessage(() => buildEventShare(event || previewEvent, currentEventId).appMessage)
+  useShareTimeline(() => buildEventShare(event || previewEvent, currentEventId).timeline)
 
   const loadInterestInfo = async (eventId: number) => {
     try {
@@ -243,7 +266,12 @@ export default function EventDetailPage() {
   const loadDetail = async () => {
     const id = Number(getCurrentInstance().router?.params?.id || 0)
     const preview = getDetailPreview<EventItem>('event', id)
-    if (preview) setPreviewEvent(preview)
+if (preview) {
+  setPreviewEvent(preview)
+  registerCurrentPageShare(buildEventShare(preview, id))
+} else {
+  registerCurrentPageShare(buildEventShare(null, id))
+}
 
     try {
       setLoading(true)
@@ -256,6 +284,11 @@ export default function EventDetailPage() {
 
       const detail = found?.event || null
       setEvent(detail)
+
+      if (detail) {
+      registerCurrentPageShare(buildEventShare(detail, id))
+      }
+
       if (detail?.id) {
         await Promise.all([
           loadInterestInfo(detail.id),
@@ -272,6 +305,7 @@ export default function EventDetailPage() {
   }
 
   useDidShow(() => {
+    registerCurrentPageShare(buildEventShare(event || previewEvent, currentEventId))
     loadDetail()
   })
 
