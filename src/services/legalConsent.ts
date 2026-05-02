@@ -10,13 +10,12 @@ import {
 
 const APP_SERVICE_NAME = 'appService'
 
-export type LegalConsentStatusResult = CloudResponse<{
+type LegalConsentPayload = {
   consent?: LegalConsentCache | null
-}>
+}
 
-export type RecordLegalConsentResult = CloudResponse<{
-  consent?: LegalConsentCache | null
-}>
+export type LegalConsentStatusResult = CloudResponse<LegalConsentPayload>
+export type RecordLegalConsentResult = CloudResponse<LegalConsentPayload>
 
 function createClientRequestId(name: string) {
   return `${name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -61,19 +60,22 @@ export function clearLocalLegalConsent() {
   }
 }
 
-async function callLegalConsentAction<T>(action: string, data: Record<string, unknown> = {}) {
+async function callLegalConsentAction(action: string, data: Record<string, unknown> = {}) {
   const clientRequestId = createClientRequestId(action)
   try {
     const res = await Taro.cloud.callFunction({
       name: APP_SERVICE_NAME,
       data: { action, ...data, clientRequestId },
     })
-    const result = ((res.result || {}) as CloudResponse<T>) || ({ ok: false } as CloudResponse<T>)
+    const result = ((res.result || {}) as CloudResponse<LegalConsentPayload>) || ({ ok: false } as CloudResponse<LegalConsentPayload>)
     if (!result.requestId) result.requestId = clientRequestId
     if (typeof result.ok !== 'boolean') {
       result.ok = false
       result.code = result.code || 'INVALID_CLOUD_RESPONSE'
       result.message = result.message || '服务返回格式异常，请稍后重试'
+    }
+    if (result.consent) {
+      result.consent = normalizeConsentCache(result.consent)
     }
     return result
   } catch (err) {
@@ -83,12 +85,12 @@ async function callLegalConsentAction<T>(action: string, data: Record<string, un
       code: 'CLOUD_CALL_FAILED',
       requestId: clientRequestId,
       message: '网络异常，请稍后重试',
-    } as CloudResponse<T>
+    } as CloudResponse<LegalConsentPayload>
   }
 }
 
-export async function recordLegalConsent() {
-  const result = await callLegalConsentAction<RecordLegalConsentResult>('recordLegalConsent', {
+export async function recordLegalConsent(): Promise<RecordLegalConsentResult> {
+  const result = await callLegalConsentAction('recordLegalConsent', {
     termsAccepted: true,
     privacyAccepted: true,
     adultConfirmed: true,
@@ -96,15 +98,15 @@ export async function recordLegalConsent() {
     privacyVersion: CURRENT_PRIVACY_VERSION,
   })
 
-  if (result.ok && result.consent) {
+  if (result.ok && result.consent && isCurrentLegalConsent(result.consent)) {
     setLocalLegalConsent(result.consent)
   }
 
   return result
 }
 
-export async function syncLegalConsentStatus() {
-  const result = await callLegalConsentAction<LegalConsentStatusResult>('getLegalConsentStatus', {
+export async function syncLegalConsentStatus(): Promise<LegalConsentStatusResult> {
+  const result = await callLegalConsentAction('getLegalConsentStatus', {
     termsVersion: CURRENT_TERMS_VERSION,
     privacyVersion: CURRENT_PRIVACY_VERSION,
   })
