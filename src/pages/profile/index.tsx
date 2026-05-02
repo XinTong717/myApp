@@ -18,10 +18,10 @@ import ProfileEducatorSection from '../../components/profile/ProfileEducatorSect
 import ProfileCompanionSection from '../../components/profile/ProfileCompanionSection'
 import ProfileBioSection from '../../components/profile/ProfileBioSection'
 import ProfileNoticeBox from '../../components/profile/ProfileNoticeBox'
-import ProfilePrimaryButton from '../../components/profile/ProfilePrimaryButton'
 import ProfileSecondaryButton from '../../components/profile/ProfileSecondaryButton'
+import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import AppIcon from '../../components/common/AppIcon'
-import { profilePalette as palette } from '../../components/profile/palette'
+import { palette } from '../../theme/palette'
 import { typography } from '../../theme/typography'
 import { checkAdminAccess, requestAccountDeletion } from '../../services/profile'
 import { recordLegalConsent } from '../../services/legalConsent'
@@ -429,7 +429,7 @@ export default function ProfilePage() {
             onOpenPrivacyPolicy={openPrivacyPolicy}
           />
 
-          <ProfilePrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
+          <AppPrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
         </>
       )}
 
