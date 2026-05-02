@@ -8,6 +8,7 @@ const requestHandlers = require('./handlers/requests')
 const mapUserHandlers = require('./handlers/mapUsers')
 const adminHandlers = require('./handlers/admin')
 const adminPublishHandlers = require('./handlers/adminPublish')
+const adminMaintenanceHandlers = require('./handlers/adminMaintenance')
 const schoolMigrationHandlers = require('./handlers/schoolMigration')
 const legalConsentHandlers = require('./handlers/legalConsent')
 const { hasCurrentConsent } = require('./lib/legalConsent')
@@ -24,6 +25,8 @@ const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
   'getEventContactInfo',
   'publishEventDirect',
   'reviewEventSubmission',
+  'reconcileEventInterestCounts',
+  'cleanupRateLimits',
   'migrateSchoolLocations',
   'validateSchoolLocationsMigration',
 ])
@@ -50,6 +53,7 @@ const userActionHandlers = {
 const adminActionHandlers = {
   ...adminHandlers,
   ...adminPublishHandlers,
+  ...adminMaintenanceHandlers,
   ...schoolMigrationHandlers,
 }
 

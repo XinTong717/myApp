@@ -40,6 +40,8 @@ const ADMIN_ACTION_RATE_LIMITS = {
   reviewEventSubmission: { limit: 60, windowMs: MINUTE },
   getEventPublishPayload: { limit: 120, windowMs: MINUTE },
   listEventSubmissions: { limit: 120, windowMs: MINUTE },
+  reconcileEventInterestCounts: { limit: 10, windowMs: MINUTE },
+  cleanupRateLimits: { limit: 10, windowMs: MINUTE },
   migrateSchoolLocations: { limit: 10, windowMs: MINUTE },
   validateSchoolLocationsMigration: { limit: 30, windowMs: MINUTE },
 }

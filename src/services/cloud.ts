@@ -36,6 +36,8 @@ const ROUTED_ACTIONS = new Set([
   'getEventPublishPayload',
   'publishEventDirect',
   'reviewEventSubmission',
+  'reconcileEventInterestCounts',
+  'cleanupRateLimits',
   'migrateSchoolLocations',
   'validateSchoolLocationsMigration',
 ])

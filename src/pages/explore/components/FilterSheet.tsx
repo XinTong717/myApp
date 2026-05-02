@@ -1,9 +1,9 @@
-import { ScrollView, Text, View } from '@tarojs/components'
+import { Text, View } from '@tarojs/components'
 import { palette } from '../../../theme/palette'
 import { CHILD_AGE_OPTIONS } from '../../../constants/profile'
 import { exploreTheme, ghostButtonStyle, primaryButtonStyle, sheetStyle } from '../styles'
 import type { ProfileCompletenessFilter, UserRoleFilter } from '../types'
-import { FilterChip, ProvinceChip } from './Chips'
+import { FilterChip } from './Chips'
 
 type FilterSheetProps = {
   visible: boolean
@@ -21,7 +21,6 @@ type FilterSheetProps = {
 }
 
 const ROLE_OPTIONS: UserRoleFilter[] = ['全部', '家长', '教育者', '同行者']
-const COMPLETENESS_OPTIONS: ProfileCompletenessFilter[] = ['全部', '有简介', '有联络说明']
 
 export default function FilterSheet(props: FilterSheetProps) {
   const {
@@ -34,12 +33,16 @@ export default function FilterSheet(props: FilterSheetProps) {
     setSelectedProfileCompleteness,
     selectedUserCity,
     setSelectedUserCity,
-    userCityOptions,
     onReset,
     onClose,
   } = props
 
   if (!visible) return null
+
+  const resetClientOnlyFilters = () => {
+    if (selectedProfileCompleteness !== '全部') setSelectedProfileCompleteness('全部')
+    if (selectedUserCity !== '全部') setSelectedUserCity('全部')
+  }
 
   return (
     <View onClick={onClose} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: exploreTheme.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
@@ -48,7 +51,7 @@ export default function FilterSheet(props: FilterSheetProps) {
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: '20px', fontWeight: 'bold', color: exploreTheme.text }}>筛选同路人</Text>
             <View style={{ marginTop: '4px' }}>
-              <Text style={{ fontSize: '12px', color: exploreTheme.subtext }}>只影响地图上的同路人，不影响学习社区点位</Text>
+              <Text style={{ fontSize: '12px', color: exploreTheme.subtext }}>身份和孩子学段会同步影响地图聚合数字；学习社区点位不受影响</Text>
             </View>
           </View>
           <View onClick={onClose} style={{ width: '32px', height: '32px', borderRadius: '999px', backgroundColor: exploreTheme.tag, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -66,6 +69,7 @@ export default function FilterSheet(props: FilterSheetProps) {
                 tone={role === '教育者' ? 'educator' : role === '家长' ? 'brand' : role === '同行者' ? 'user' : 'neutral'}
                 text={role}
                 onClick={() => {
+                  resetClientOnlyFilters()
                   setSelectedUserRole(role)
                   if (role !== '家长') setSelectedChildAgeRange('全部')
                 }}
@@ -84,42 +88,20 @@ export default function FilterSheet(props: FilterSheetProps) {
                   active={selectedChildAgeRange === stage}
                   tone='brand'
                   text={stage}
-                  onClick={() => setSelectedChildAgeRange(stage)}
+                  onClick={() => {
+                    resetClientOnlyFilters()
+                    setSelectedChildAgeRange(stage)
+                  }}
                 />
               ))}
             </View>
           </View>
         )}
 
-        <View style={{ marginBottom: '14px' }}>
-          <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.brand }}>资料完整度</Text>
-          <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '8px' }}>
-            {COMPLETENESS_OPTIONS.map((item) => (
-              <FilterChip
-                key={item}
-                active={selectedProfileCompleteness === item}
-                tone='neutral'
-                text={item}
-                onClick={() => setSelectedProfileCompleteness(item)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={{ marginBottom: '18px' }}>
-          <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.brand }}>城市</Text>
-          <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: '34px', marginTop: '8px' }}>
-            <View style={{ display: 'inline-flex', flexDirection: 'row' }}>
-              {userCityOptions.map((city) => (
-                <ProvinceChip
-                  key={city}
-                  active={selectedUserCity === city}
-                  text={city}
-                  onClick={() => setSelectedUserCity(city)}
-                />
-              ))}
-            </View>
-          </ScrollView>
+        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '18px', border: `1px solid ${palette.line}` }}>
+          <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
+            资料完整度和城市筛选已暂时收起，避免全国聚合数字和前端二次过滤结果不一致。后续若需要，会改为服务端统一筛选后再恢复。
+          </Text>
         </View>
 
         <View style={{ display: 'flex', flexDirection: 'row' }}>
