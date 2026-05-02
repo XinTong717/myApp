@@ -107,6 +107,8 @@ function buildEventPayload(submission) {
 
   return {
     title: String(submission.title || '').trim(),
+    province: String(submission.province || '').trim(),
+    city: String(submission.city || '').trim(),
     event_type: normalizeEventType(submission),
     event_types: eventTypes,
     audience_who: audienceWho,
