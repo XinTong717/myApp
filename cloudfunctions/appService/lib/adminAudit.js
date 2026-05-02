@@ -1,8 +1,17 @@
 const { db } = require('./cloud')
 
+class AdminAuditWriteError extends Error {
+  constructor(cause) {
+    super('ADMIN_AUDIT_WRITE_FAILED')
+    this.name = 'AdminAuditWriteError'
+    this.code = 'ADMIN_AUDIT_WRITE_FAILED'
+    this.cause = cause
+  }
+}
+
 async function writeAdminAuditLog({ admin, openid, action, targetType = '', targetId = '', metadata = {} }) {
   try {
-    await db.collection('admin_audit_logs').add({
+    return await db.collection('admin_audit_logs').add({
       data: {
         adminOpenid: openid || '',
         adminName: admin?.name || '',
@@ -15,8 +24,9 @@ async function writeAdminAuditLog({ admin, openid, action, targetType = '', targ
       },
     })
   } catch (err) {
-    console.warn('admin audit log skipped:', err)
+    console.error('admin audit log write failed:', err)
+    throw new AdminAuditWriteError(err)
   }
 }
 
-module.exports = { writeAdminAuditLog }
+module.exports = { writeAdminAuditLog, AdminAuditWriteError }
