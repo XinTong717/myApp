@@ -4,6 +4,8 @@ import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimel
 import { getSchools } from '../../services/school'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
+import AppCard from '../../components/common/AppCard'
+import AppTag from '../../components/common/AppTag'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
@@ -214,10 +216,7 @@ export default function SchoolsPage() {
       padding: '16px', backgroundColor: palette.bg,
       minHeight: '100vh', boxSizing: 'border-box',
     }}>
-      <View style={{
-        backgroundColor: palette.card, borderRadius: '22px',
-        padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-      }}>
+      <AppCard padding='18px 16px'>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '8px' }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>学习社区库</Text>
@@ -243,9 +242,9 @@ export default function SchoolsPage() {
             onInput={(e) => setKeyword(e.detail.value)}
           />
         </View>
-      </View>
+      </AppCard>
 
-      <View style={{ backgroundColor: palette.card, borderRadius: '18px', padding: '12px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+      <AppCard padding='12px' radius='18px'>
         <View style={{ marginBottom: '8px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.text }}>筛选</Text>
@@ -281,7 +280,7 @@ export default function SchoolsPage() {
             ))}
           </View>
         </ScrollView>
-      </View>
+      </AppCard>
 
       <View style={{ marginBottom: '14px' }}>
         <Text style={{ color: palette.muted, fontSize: '13px' }}>
@@ -304,12 +303,9 @@ export default function SchoolsPage() {
       ) : null}
 
       {!loading && filteredSchools.length === 0 ? (
-        <View style={{
-          padding: '16px', backgroundColor: palette.card,
-          borderRadius: '18px', border: `1px solid ${palette.line}`,
-        }}>
+        <AppCard radius='18px'>
           <Text style={{ color: palette.subtext }}>没有匹配结果</Text>
-        </View>
+        </AppCard>
       ) : null}
 
       {!loading && filteredSchools.map((item, index) => {
@@ -318,15 +314,7 @@ export default function SchoolsPage() {
         const locationCount = getLocations(item).length
 
         return (
-          <View
-            key={item.id}
-            onClick={() => goToDetail(item)}
-            style={{
-              backgroundColor: palette.card, borderRadius: '22px',
-              padding: '16px', marginBottom: '14px',
-              boxSizing: 'border-box', border: `1px solid ${palette.line}`,
-            }}
-          >
+          <AppCard key={item.id} onClick={() => goToDetail(item)}>
             <View style={{
               display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
             }}>
@@ -346,27 +334,9 @@ export default function SchoolsPage() {
             </View>
 
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
-              <View style={{
-                padding: '5px 10px', borderRadius: '999px',
-                backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px',
-              }}>
-                <Text style={{ fontSize: '12px', color: palette.tagText }}>
-                  {getLocationSummary(item)}
-                </Text>
-              </View>
-              {locationCount > 1 ? (
-                <View style={{ padding: '5px 10px', borderRadius: '999px', backgroundColor: palette.brandSoft, marginRight: '8px', marginBottom: '8px' }}>
-                  <Text style={{ fontSize: '12px', color: palette.brand }}>{locationCount} 个地点</Text>
-                </View>
-              ) : null}
-              <View style={{
-                padding: '5px 10px', borderRadius: '999px',
-                backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px',
-              }}>
-                <Text style={{ fontSize: '12px', color: palette.tagText }}>
-                  {item.school_type || '未填写'}
-                </Text>
-              </View>
+              <AppTag text={getLocationSummary(item)} />
+              {locationCount > 1 ? <AppTag text={`${locationCount} 个地点`} tone='brand' /> : null}
+              <AppTag text={item.school_type || '未填写'} />
             </View>
 
             <View style={{
@@ -388,7 +358,7 @@ export default function SchoolsPage() {
             <Text style={{ color: palette.link, fontSize: '13px', fontWeight: 'bold' }}>
               查看详情 ›
             </Text>
-          </View>
+          </AppCard>
         )
       })}
     </View>
