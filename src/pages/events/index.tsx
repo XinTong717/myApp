@@ -4,6 +4,8 @@ import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimel
 import { getEvents } from '../../services/event'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
+import AppCard from '../../components/common/AppCard'
+import AppTag from '../../components/common/AppTag'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import {
   type EventItem,
@@ -110,10 +112,7 @@ export default function EventsPage() {
       padding: '16px', backgroundColor: palette.bg,
       minHeight: '100vh', boxSizing: 'border-box',
     }}>
-      <View style={{
-        backgroundColor: palette.card, borderRadius: '22px',
-        padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}`,
-      }}>
+      <AppCard padding='18px 16px'>
         <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>活动</Text>
         <View style={{ marginTop: '6px' }}>
           <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
@@ -126,7 +125,7 @@ export default function EventsPage() {
         }}>
           <Text style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>+ 推荐新活动</Text>
         </View>
-      </View>
+      </AppCard>
 
       <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '12px' }}>
         {FILTER_OPTIONS.map((option) => {
@@ -180,14 +179,11 @@ export default function EventsPage() {
       ) : null}
 
       {!loading && !error && visibleEvents.length === 0 ? (
-        <View style={{
-          backgroundColor: palette.card, borderRadius: '22px',
-          padding: '18px 16px', border: `1px solid ${palette.line}`,
-        }}>
+        <AppCard padding='18px 16px'>
           <Text style={{ fontSize: '14px', color: palette.subtext, lineHeight: '22px' }}>
             {events.length > 0 ? '当前筛选下没有可显示的活动。' : '暂时还没有活动。'}
           </Text>
-        </View>
+        </AppCard>
       ) : null}
 
       {!loading && !error && visibleEvents.map((item) => {
@@ -200,14 +196,7 @@ export default function EventsPage() {
         const summary = firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine
 
         return (
-          <View
-            key={item.id}
-            onClick={() => goToDetail(item)}
-            style={{
-              backgroundColor: palette.card, borderRadius: '22px',
-              padding: '16px', marginBottom: '14px',
-              boxSizing: 'border-box', border: `1px solid ${palette.line}`,
-            }}>
+          <AppCard key={item.id} onClick={() => goToDetail(item)}>
             <View style={{
               display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
             }}>
@@ -227,38 +216,16 @@ export default function EventsPage() {
             </View>
 
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
-              <View style={{
-                padding: '4px 10px', borderRadius: '999px',
-                backgroundColor: palette.tag, marginRight: '8px', marginBottom: '6px',
-              }}>
-                <Text style={{ fontSize: '12px', color: palette.tagText }}>{typeLabel}</Text>
-              </View>
+              <AppTag text={typeLabel} padding='4px 10px' marginBottom='6px' />
 
               {statusInfo ? (
-                <View style={{
-                  padding: '4px 10px', borderRadius: '999px',
-                  backgroundColor: statusInfo.bg, marginRight: '8px', marginBottom: '6px',
-                }}>
-                  <Text style={{ fontSize: '12px', color: statusInfo.color }}>{statusInfo.text}</Text>
-                </View>
+                <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} padding='4px 10px' marginBottom='6px' />
               ) : null}
 
-              <View style={{
-                padding: '4px 10px', borderRadius: '999px',
-                backgroundColor: palette.tag, marginRight: '8px', marginBottom: '6px',
-              }}>
-                <Text style={{ fontSize: '12px', color: palette.tagText }}>
-                  {item.is_online ? '线上' : '线下'}
-                </Text>
-              </View>
+              <AppTag text={item.is_online ? '线上' : '线下'} padding='4px 10px' marginBottom='6px' />
 
               {interestedCount > 0 ? (
-                <View style={{
-                  padding: '4px 10px', borderRadius: '999px',
-                  backgroundColor: palette.accent2Soft, marginRight: '8px', marginBottom: '6px',
-                }}>
-                  <Text style={{ fontSize: '12px', color: palette.accent2 }}>#{interestedCount} 人感兴趣</Text>
-                </View>
+                <AppTag text={`#${interestedCount} 人感兴趣`} tone='accent' padding='4px 10px' marginBottom='6px' />
               ) : null}
             </View>
 
@@ -281,7 +248,7 @@ export default function EventsPage() {
             <Text style={{ color: palette.link, fontSize: '13px', fontWeight: 'bold' }}>
               查看详情 ›
             </Text>
-          </View>
+          </AppCard>
         )
       })}
     </View>
