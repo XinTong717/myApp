@@ -27,16 +27,6 @@ function buildCountDocId(eventId) {
   return String(eventId)
 }
 
-async function writeInterestCountCache(eventId, count) {
-  try {
-    await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).set({
-      data: { eventId, count: Math.max(0, Number(count || 0)), updatedAt: db.serverDate() },
-    })
-  } catch (err) {
-    console.warn('event interest count cache write skipped:', err)
-  }
-}
-
 async function getCachedCount(eventId) {
   try {
     const cacheRes = await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).get()
@@ -50,10 +40,7 @@ async function adjustInterestCountCache(eventId, delta) {
   const safeDelta = Number(delta || 0)
   const docId = buildCountDocId(eventId)
 
-  if (!safeDelta) {
-    const cached = await getCachedCount(eventId)
-    return cached === null ? 0 : Math.max(0, cached)
-  }
+  if (!safeDelta) return
 
   try {
     await db.collection(COUNT_COLLECTION).doc(docId).update({
@@ -63,9 +50,6 @@ async function adjustInterestCountCache(eventId, delta) {
         updatedAt: db.serverDate(),
       },
     })
-
-    const nextCached = await getCachedCount(eventId)
-    if (nextCached !== null) return Math.max(0, nextCached)
   } catch (err) {
     try {
       await db.collection(COUNT_COLLECTION).doc(docId).set({
@@ -78,15 +62,10 @@ async function adjustInterestCountCache(eventId, delta) {
           updatedAt: db.serverDate(),
         },
       })
-      const nextCached = await getCachedCount(eventId)
-      if (nextCached !== null) return Math.max(0, nextCached)
     } catch (initErr) {
       console.warn('event interest count initialize+inc degraded:', initErr)
     }
   }
-
-  const degraded = await getCachedCount(eventId)
-  return degraded === null ? Math.max(0, safeDelta) : Math.max(0, degraded)
 }
 
 async function getCachedCounts(eventIds) {
@@ -121,7 +100,7 @@ function attachInterestCounts(events, counts = {}) {
 }
 
 async function updateInterestCountAfterMutation(eventId, delta) {
-  return adjustInterestCountCache(eventId, delta)
+  await adjustInterestCountCache(eventId, delta)
 }
 
 async function getSchools(event) {
@@ -458,12 +437,12 @@ async function toggleEventInterest(event, wxContext) {
       const nextStatus = wasInterested ? 'cancelled' : 'interested'
       const delta = wasInterested ? -1 : 1
       await db.collection('event_interest').doc(stableDocId).update({ data: { status: nextStatus, updatedAt: db.serverDate() } })
-      const count = await updateInterestCountAfterMutation(eventId, delta)
-      return ok(requestId, { hasInterested: nextStatus === 'interested', count, delta, message: nextStatus === 'interested' ? '已标记为感兴趣' : '已取消感兴趣' })
+      await updateInterestCountAfterMutation(eventId, delta)
+      return ok(requestId, { hasInterested: nextStatus === 'interested', delta, message: nextStatus === 'interested' ? '已标记为感兴趣' : '已取消感兴趣' })
     }
     await db.collection('event_interest').doc(stableDocId).set({ data: { eventId, openid, status: 'interested', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
-    const count = await updateInterestCountAfterMutation(eventId, 1)
-    return ok(requestId, { hasInterested: true, count, delta: 1, message: '已标记为感兴趣' })
+    await updateInterestCountAfterMutation(eventId, 1)
+    return ok(requestId, { hasInterested: true, delta: 1, message: '已标记为感兴趣' })
   } catch (err) {
     console.error('appService toggleEventInterest error:', err)
     return fail(requestId, 'TOGGLE_EVENT_INTEREST_FAILED', '操作失败，请稍后重试')

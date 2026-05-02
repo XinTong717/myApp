@@ -19,6 +19,8 @@ import {
   getEventStatusInfo,
 } from '../events/shared'
 
+const EVENT_DETAIL_REFRESH_TTL_MS = 45 * 1000
+
 function buildEventShare(event?: EventItem | null, eventId?: number) {
   const id = Number(event?.id || eventId || 0)
   const title = event?.title
@@ -168,14 +170,15 @@ export default function EventDetailPage() {
   const [contactLoading, setContactLoading] = useState(false)
   const [publicSignupText, setPublicSignupText] = useState('')
   const toggleLockRef = useRef(false)
+  const lastLoadRef = useRef<{ eventId: number; loadedAt: number }>({ eventId: 0, loadedAt: 0 })
   const currentEventId = Number(getCurrentInstance().router?.params?.id || event?.id || previewEvent?.id || 0)
 
   useShareAppMessage(() => buildEventShare(event || previewEvent, currentEventId).appMessage)
   useShareTimeline(() => buildEventShare(event || previewEvent, currentEventId).timeline)
 
-  const loadInterestInfo = async (eventId: number) => {
+  const loadInterestInfo = async (eventId: number, options: { forceRefresh?: boolean } = {}) => {
     try {
-      const result = await getEventInterestInfo(eventId)
+      const result = await getEventInterestInfo(eventId, options)
       if (result?.ok) {
         setInterestCount(result.count || 0)
         setHasInterested(!!result.hasInterested)
@@ -198,14 +201,14 @@ export default function EventDetailPage() {
     }
   }
 
-  const loadContactInfo = async (eventId: number) => {
+  const loadContactInfo = async (eventId: number, options: { forceRefresh?: boolean } = {}) => {
     try {
       setContactLoading(true)
       setContactInfo('')
       setContactMessage('')
       setPublicSignupText('')
 
-      const result = await getEventContactInfo(eventId)
+      const result = await getEventContactInfo(eventId, options)
 
       if (result?.ok) {
         setContactInfo(result.contactInfo || '')
@@ -242,9 +245,11 @@ export default function EventDetailPage() {
         } else {
           setInterestCount((count) => nextHasInterested ? count + 1 : Math.max(0, count - 1))
         }
+        lastLoadRef.current = { eventId: event.id, loadedAt: 0 }
         await Promise.all([
           clearEventListCache(),
-          loadContactInfo(event.id),
+          loadInterestInfo(event.id, { forceRefresh: true }),
+          loadContactInfo(event.id, { forceRefresh: true }),
         ])
         Taro.showToast({ title: result.message || '已更新', icon: 'success' })
       } else {
@@ -261,8 +266,19 @@ export default function EventDetailPage() {
     }
   }
 
-  const loadDetail = async () => {
+  const loadDetail = async (options: { forceRefresh?: boolean } = {}) => {
     const id = Number(getCurrentInstance().router?.params?.id || 0)
+    const now = Date.now()
+    const canSkip =
+      !options.forceRefresh &&
+      id > 0 &&
+      lastLoadRef.current.eventId === id &&
+      now - lastLoadRef.current.loadedAt < EVENT_DETAIL_REFRESH_TTL_MS &&
+      !!event &&
+      !error
+
+    if (canSkip) return
+
     const preview = getDetailPreview<EventItem>('event', id)
     if (preview) {
       setPreviewEvent(preview)
@@ -292,6 +308,7 @@ export default function EventDetailPage() {
           loadInterestInfo(detail.id),
           loadContactInfo(detail.id),
         ])
+        lastLoadRef.current = { eventId: detail.id, loadedAt: Date.now() }
       }
       if (!detail) setError(found?.message || '未找到该活动')
     } catch (err: any) {
@@ -333,7 +350,7 @@ export default function EventDetailPage() {
       {!loading && error ? (
         <View style={{ padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.accentSoft}` }}>
           <Text style={{ color: palette.error }}>{error}</Text>
-          <View onClick={loadDetail} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
+          <View onClick={() => loadDetail({ forceRefresh: true })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
             <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
           </View>
         </View>

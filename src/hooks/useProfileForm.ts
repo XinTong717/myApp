@@ -7,7 +7,7 @@ import { CACHE_KEY_PREFIXES } from '../constants/cacheKeys'
 import type { UserProfile } from '../types/domain'
 
 const PROFILE_DRAFT_KEY = CACHE_KEY_PREFIXES.profileDraft
-const PROFILE_DRAFT_DEBOUNCE_MS = 600
+const PROFILE_DRAFT_DEBOUNCE_MS = 1500
 const PROFILE_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 type ProfileDraft = {
