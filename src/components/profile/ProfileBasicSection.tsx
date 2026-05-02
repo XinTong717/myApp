@@ -7,6 +7,7 @@ import ProfileInputBox from './ProfileInputBox'
 import ProfileHelperText from './ProfileHelperText'
 import { palette } from '../../theme/palette'
 import { typography } from '../../theme/typography'
+import type { CityPickerChangeEvent, CityPickerColumnChangeEvent } from '../../hooks/useProfileForm'
 
 type Props = {
   displayName: string
@@ -24,10 +25,10 @@ type Props = {
   setCustomCity: (value: string) => void
   contactId: string
   setContactId: (value: string) => void
-  pickerRange: any[]
+  pickerRange: string[][]
   pickerValue: number[]
-  handlePickerChange: (e: any) => void
-  handlePickerColumnChange: (e: any) => void
+  handlePickerChange: (e: CityPickerChangeEvent) => void
+  handlePickerColumnChange: (e: CityPickerColumnChangeEvent) => void
   genderOptions: string[]
   ageRangeOptions: string[]
   roleOptions: string[]
