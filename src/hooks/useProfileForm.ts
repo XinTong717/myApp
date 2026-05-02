@@ -45,6 +45,7 @@ export function useProfileForm() {
   const [privacySaving, setPrivacySaving] = useState(false)
   const draftReadyRef = useRef(false)
   const applyingRemoteRef = useRef(false)
+  const refreshSeqRef = useRef(0)
 
   const [displayName, setDisplayName] = useState('')
   const [gender, setGender] = useState('')
@@ -132,28 +133,50 @@ export function useProfileForm() {
     return [provIdx, Math.max(0, cities.indexOf(normalizedCityOption))]
   }, [province, cityOption])
 
-  const loadProfile = async () => {
+  const loadDraftIfEmpty = async (remoteProfile: UserProfile | null | undefined) => {
+    if (remoteProfile?.displayName || remoteProfile?.province) return
     try {
-      setLoading(true)
-      const res = await getMe()
-      const remoteProfile = res.profile
-      applyProfile(remoteProfile)
-
-      if (!remoteProfile?.displayName && !remoteProfile?.province) {
-        try {
-          const draft = await getScopedCachedValue<Partial<ProfileDraft>>(PROFILE_DRAFT_KEY)
-          if (draft && hasDraftContent(draft)) {
-            setTimeout(() => applyDraft(draft), 0)
-          }
-        } catch (draftErr) {
-          console.warn('load profile draft skipped:', draftErr)
-        }
+      const draft = await getScopedCachedValue<Partial<ProfileDraft>>(PROFILE_DRAFT_KEY)
+      if (draft && hasDraftContent(draft)) {
+        setTimeout(() => applyDraft(draft), 0)
       }
+    } catch (draftErr) {
+      console.warn('load profile draft skipped:', draftErr)
+    }
+  }
+
+  const loadProfile = async () => {
+    const seq = refreshSeqRef.current + 1
+    refreshSeqRef.current = seq
+
+    try {
+      const cachedRes = await getMe({ allowStale: true })
+      const hasCachedProfile = !!cachedRes.profile
+
+      if (hasCachedProfile) {
+        applyProfile(cachedRes.profile || null)
+        draftReadyRef.current = true
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
+
+      if (hasCachedProfile && !cachedRes.stale) {
+        return
+      }
+
+      const freshRes = await getMe({ forceRefresh: true })
+      if (seq !== refreshSeqRef.current) return
+      const remoteProfile = freshRes.profile || null
+      applyProfile(remoteProfile)
+      await loadDraftIfEmpty(remoteProfile)
     } catch (err) {
       console.error('loadProfile error:', err)
     } finally {
-      draftReadyRef.current = true
-      setLoading(false)
+      if (seq === refreshSeqRef.current) {
+        draftReadyRef.current = true
+        setLoading(false)
+      }
     }
   }
 
