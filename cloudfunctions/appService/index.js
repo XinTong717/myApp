@@ -40,6 +40,7 @@ async function getOpenId(event, wxContext) {
 }
 
 const publicActionHandlers = {
+  ...legalConsentHandlers,
   ...publicHandlers,
   ...mapUserHandlers,
 }
@@ -57,7 +58,6 @@ const adminActionHandlers = {
 
 const actionHandlers = {
   getOpenId,
-  ...legalConsentHandlers,
   ...publicActionHandlers,
   ...userActionHandlers,
   ...adminActionHandlers,
