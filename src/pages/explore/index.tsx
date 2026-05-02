@@ -6,6 +6,7 @@ import { getSchoolMarkers } from '../../services/school'
 import { getMe } from '../../services/profile'
 import { clearMapUsersCache, getMapUsers } from '../../services/map'
 import { setDetailPreview } from '../../services/detailPreview'
+import { STORAGE_FLAGS } from '../../constants/storageFlags'
 import type { MapProvinceStat } from '../../types/domain'
 import { sendRequest } from '../../services/connection'
 import { manageSafetyRelation, reportUser } from '../../services/safety'
@@ -45,7 +46,17 @@ function createExploreLoadKey(input: ExploreLoadKeyInput): string {
   return `${province}|${input.role}|${childAgeRange}`
 }
 
-
+async function consumeExploreForceRefreshFlag() {
+  try {
+    const value = Taro.getStorageSync(STORAGE_FLAGS.exploreForceRefresh)
+    if (!value) return false
+    Taro.removeStorageSync(STORAGE_FLAGS.exploreForceRefresh)
+    return true
+  } catch (err) {
+    console.warn('consumeExploreForceRefreshFlag skipped:', err)
+    return false
+  }
+}
 
 export default function ExplorePage() {
   const [schools, setSchools] = useState<School[]>([])
@@ -66,9 +77,6 @@ export default function ExplorePage() {
   const [selectedProfileCompleteness, setSelectedProfileCompleteness] = useState<ProfileCompletenessFilter>('全部')
   const [selectedUserCity, setSelectedUserCity] = useState('全部')
   const [selectedChildAgeRange, setSelectedChildAgeRange] = useState('全部')
-  // Tracks whether both school data and map user data have settled for the
-  // current province/filter snapshot. This prevents stale async responses from
-  // briefly rendering a false empty state.
   const [schoolsLoaded, setSchoolsLoaded] = useState(false)
   const [mapUsersLoadedKey, setMapUsersLoadedKey] = useState('')
   const loadSeqRef = useRef(0)
@@ -108,7 +116,6 @@ export default function ExplorePage() {
         getMe(),
       ])
 
-      // Drop stale responses from older province/filter requests.
       if (requestSeq !== loadSeqRef.current) return
 
       if (schoolRes?.ok && Array.isArray(schoolRes.schools)) {
@@ -156,8 +163,9 @@ export default function ExplorePage() {
     loadData({ forceRefreshMapUsers: !!options.forceRefreshMapUsers })
   }
   
-  useDidShow(() => {
-    refreshData()
+  useDidShow(async () => {
+    const shouldForceRefresh = await consumeExploreForceRefreshFlag()
+    refreshData({ force: shouldForceRefresh, forceRefreshMapUsers: shouldForceRefresh })
   })
   
   useEffect(() => {
@@ -367,9 +375,6 @@ export default function ExplorePage() {
 
   const canRenderMap = mapMarkers.length > 0 && Number.isFinite(center.latitude) && Number.isFinite(center.longitude)
 
-  // Explore data is settled only when both school data and map user data match
-  // the current province/filter snapshot. This guards against stale responses
-  // and false empty-state flicker during fast province/filter switching.
   const currentLoadKey = createExploreLoadKey({
     province: selectedProvince,
     role: selectedUserRole,

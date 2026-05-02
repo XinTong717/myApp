@@ -6,6 +6,7 @@ import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
+import AppIcon from '../../components/common/AppIcon'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
@@ -35,7 +36,7 @@ function FilterChip(props: { label: string; active: boolean; onClick: () => void
       border: `1px solid ${props.active ? palette.accentDeep : palette.line}`,
     }}>
       <Text style={{ fontSize: '12px', color: props.active ? '#FFF' : palette.tagText }}>
-        {props.label}{props.active && props.label !== ALL_FILTER ? ' ✓' : ''}
+        {props.label}
       </Text>
     </View>
   )
@@ -237,10 +238,15 @@ export default function SchoolsPage() {
           <Input
             type='text'
             value={keyword}
-            placeholder='搜索当前结果里的学习社区名 / 城市 / 类型'
+            placeholder={`搜索当前已加载的前 ${SCHOOL_LIST_LIMIT} 条结果`}
             placeholderStyle={`color:${palette.muted}`}
             onInput={(e) => setKeyword(e.detail.value)}
           />
+        </View>
+        <View style={{ marginTop: '6px' }}>
+          <Text style={{ fontSize: '11px', color: palette.muted }}>
+            搜索仅覆盖当前结果；找不到时可先调整筛选，或推荐新的学习社区。
+          </Text>
         </View>
       </AppCard>
 
@@ -304,7 +310,15 @@ export default function SchoolsPage() {
 
       {!loading && filteredSchools.length === 0 ? (
         <AppCard radius='18px'>
-          <Text style={{ color: palette.subtext }}>没有匹配结果</Text>
+          <Text style={{ color: palette.subtext, lineHeight: '22px' }}>没有匹配结果。可以先重置筛选，或把你知道的学习社区推荐进来。</Text>
+          <View style={{ display: 'flex', flexDirection: 'row', marginTop: '12px' }}>
+            <View onClick={resetFilters} style={{ backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', marginRight: '8px' }}>
+              <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重置筛选</Text>
+            </View>
+            <View onClick={goToSubmit} style={{ backgroundColor: palette.cardSoft, borderRadius: '12px', padding: '8px 12px' }}>
+              <Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>推荐新社区</Text>
+            </View>
+          </View>
         </AppCard>
       ) : null}
 
@@ -318,13 +332,8 @@ export default function SchoolsPage() {
             <View style={{
               display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
             }}>
-              <View style={{
-                width: '38px', height: '38px', borderRadius: '14px',
-                backgroundColor: iconBg, display: 'flex',
-                alignItems: 'center', justifyContent: 'center', marginRight: '10px',
-                border: `1px solid ${palette.lineSoft}`,
-              }}>
-                <Text style={{ fontSize: '18px' }}>🏫</Text>
+              <View style={{ marginRight: '10px' }}>
+                <AppIcon name='school' size={38} backgroundColor={iconBg} bordered />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: '17px', fontWeight: 'bold', color: palette.text }}>
