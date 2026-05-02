@@ -124,9 +124,6 @@ async function saveProfile(event, wxContext) {
   })
   if (!securityResult.ok) return fail(requestId, securityResult.code || 'CONTENT_SECURITY_BLOCKED', securityResult.message)
 
-  const dupCheck = await db.collection('users').where({ displayName: cleanData.displayName, openid: _.neq(openid) }).limit(1).get()
-  if (dupCheck.data.length > 0) return fail(requestId, 'DISPLAY_NAME_TAKEN', '这个显示名已被使用，请换一个')
-
   const existing = await db.collection('users').where({ openid }).limit(20).get()
   const existingDocs = existing.data || []
   const canonicalDoc = existingDocs.find((item) => item._id === openid) || existingDocs[0] || null
