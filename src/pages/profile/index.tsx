@@ -23,7 +23,7 @@ import ProfileSecondaryButton from '../../components/profile/ProfileSecondaryBut
 import AppIcon from '../../components/common/AppIcon'
 import { profilePalette as palette } from '../../components/profile/palette'
 import { typography } from '../../theme/typography'
-import { checkAdminAccess } from '../../services/profile'
+import { checkAdminAccess, requestAccountDeletion } from '../../services/profile'
 import { recordLegalConsent } from '../../services/legalConsent'
 import { useConnections } from '../../hooks/useConnections'
 import { useSafety } from '../../hooks/useSafety'
@@ -249,6 +249,37 @@ export default function ProfilePage() {
     Taro.navigateTo({ url: '/pages/admin/event-reviews/index' })
   }
 
+  const handleRequestAccountDeletion = async () => {
+    const firstConfirm = await Taro.showModal({
+      title: '申请账号注销',
+      content: '提交后，你的资料会先从地图隐藏，联络标识会被清空，并暂停新的联络请求。管理员随后处理账号和相关数据删除。',
+      confirmText: '继续',
+      cancelText: '取消',
+    })
+    if (!firstConfirm.confirm) return
+
+    const secondConfirm = await Taro.showModal({
+      title: '再次确认',
+      content: '这是账号注销 / 数据删除申请。提交后不会立即物理删除全部历史记录，但你的公开资料会先被隐藏。确认提交吗？',
+      confirmText: '确认提交',
+      cancelText: '取消',
+    })
+    if (!secondConfirm.confirm) return
+
+    try {
+      Taro.showLoading({ title: '提交中...' })
+      const result = await requestAccountDeletion()
+      Taro.hideLoading()
+      Taro.showToast({ title: result.message || (result.ok ? '已提交申请' : '提交失败'), icon: result.ok ? 'success' : 'none' })
+      if (result.ok) {
+        refreshProfilePage(true)
+      }
+    } catch (err) {
+      Taro.hideLoading()
+      Taro.showToast({ title: '提交失败，请稍后重试', icon: 'none' })
+    }
+  }
+
   const validateBasicStep = () => {
     if (!displayName.trim()) {
       Taro.showToast({ title: '请先填写显示名', icon: 'none' })
@@ -386,6 +417,7 @@ export default function ProfilePage() {
             mutedUsers={mutedUsers}
             onUpdatePrivacySetting={handleUpdatePrivacySetting}
             onSafetyAction={(targetUserId, action) => handleSafetyAction(targetUserId, action, () => { refreshRelations(); loadProfile() })}
+            onRequestAccountDeletion={handleRequestAccountDeletion}
           />
 
           <PrivacyDisclosureNotice />
