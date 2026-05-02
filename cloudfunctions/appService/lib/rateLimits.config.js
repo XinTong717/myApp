@@ -31,6 +31,7 @@ const WRITE_ACTION_RATE_LIMITS = {
   toggleEventInterest: { limit: 60, windowMs: MINUTE },
   updatePrivacySettings: { limit: 30, windowMs: DAY },
   saveProfile: { limit: 20, windowMs: DAY },
+  requestAccountDeletion: { limit: 3, windowMs: DAY },
 }
 
 const ADMIN_ACTION_RATE_LIMITS = {
