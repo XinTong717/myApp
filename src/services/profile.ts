@@ -5,6 +5,7 @@ import type {
   AdminAccessResult,
   GetMeResult,
   SafetyOverviewResult,
+  SimpleActionResult,
   UpdatePrivacySettingsResult,
   UserProfile,
 } from '../types/domain'
@@ -92,6 +93,17 @@ export async function updatePrivacySettings(data: { allowIncomingRequests?: bool
     await Promise.all([
       clearProfileCache(),
       clearSafetyOverviewCache(),
+      clearMapUsersCache(),
+    ])
+  }
+  return result
+}
+
+export async function requestAccountDeletion(note = '') {
+  const result = await callCloud<SimpleActionResult>('requestAccountDeletion', { note })
+  if (result.ok) {
+    await Promise.all([
+      clearProfileCache(),
       clearMapUsersCache(),
     ])
   }
