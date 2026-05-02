@@ -13,6 +13,7 @@ type Props = {
   mutedUsers: SafetyItem[]
   onUpdatePrivacySetting: (field: 'allowIncomingRequests' | 'isVisibleOnMap', value: boolean) => void
   onSafetyAction: (targetUserId: string, action: 'block' | 'unblock' | 'mute' | 'unmute') => void
+  onRequestAccountDeletion: () => void
 }
 
 export default function ProfilePrivacySection(props: Props) {
@@ -24,6 +25,7 @@ export default function ProfilePrivacySection(props: Props) {
     mutedUsers,
     onUpdatePrivacySetting,
     onSafetyAction,
+    onRequestAccountDeletion,
   } = props
 
   return (
@@ -49,6 +51,17 @@ export default function ProfilePrivacySection(props: Props) {
             </View>
           </View>
           <Switch checked={isVisibleOnMap} disabled={privacySaving} color={palette.accentDeep} onChange={(e) => onUpdatePrivacySetting('isVisibleOnMap', !!e.detail.value)} />
+        </View>
+      </ProfileInputBox>
+      <ProfileInputBox>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flex: 1, paddingRight: '12px' }}>
+            <Text style={{ fontSize: '14px', color: palette.text }}>账号注销 / 数据删除</Text>
+            <View style={{ marginTop: '4px' }}>
+              <Text style={{ fontSize: '12px', color: palette.subtext }}>提交后会先隐藏你的地图资料、清空联络标识并暂停新的联络请求，后续由管理员处理删除申请。</Text>
+            </View>
+          </View>
+          <Text onClick={onRequestAccountDeletion} style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>申请</Text>
         </View>
       </ProfileInputBox>
       {(blockedUsers.length > 0 || mutedUsers.length > 0) && (
