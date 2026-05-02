@@ -3,17 +3,28 @@ import { getScopedCachedValue, setScopedCachedValue } from './cache'
 import { runExclusive } from './internal/runExclusive'
 import type {
   SchoolDetailResult,
+  SchoolItem,
   SchoolListResult,
   SubmitCommunityResult,
   SubmitCorrectionResult,
 } from '../types/domain'
 
-const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v3:'
-const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v1:'
+const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v4:'
+const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v2:'
 const SCHOOL_LIST_TTL_MS = 30 * 60 * 1000
 const SCHOOL_DETAIL_TTL_MS = 15 * 60 * 1000
 
 type SchoolFilterValue = string | string[] | undefined
+type SchoolListPayload = { schools?: SchoolItem[] }
+type SchoolDetailPayload = { school?: SchoolItem | null }
+
+function okSchoolList(payload: SchoolListPayload): SchoolListResult {
+  return { ok: true, schools: Array.isArray(payload.schools) ? payload.schools : [] }
+}
+
+function okSchoolDetail(payload: SchoolDetailPayload): SchoolDetailResult {
+  return { ok: true, school: payload.school || null }
+}
 
 function normalizeFilterList(value?: SchoolFilterValue) {
   const list = Array.isArray(value) ? value : [value]
@@ -45,10 +56,8 @@ export async function getSchools(options: { forceRefresh?: boolean; province?: S
   const ageRanges = normalizeFilterList(options.ageRange)
   const limit = Number(options.limit || 80)
   const cacheKey = getSchoolListCacheKey({ province: provinces, schoolType: schoolTypes, ageRange: ageRanges, limit })
-  const cached = options.forceRefresh ? null : await getScopedCachedValue<SchoolListResult>(cacheKey)
-  if (cached) {
-    return cached
-  }
+  const cached = options.forceRefresh ? null : await getScopedCachedValue<SchoolListPayload>(cacheKey)
+  if (cached) return okSchoolList(cached)
 
   const result = await callCloud<SchoolListResult>('getSchools', {
     limit,
@@ -60,15 +69,14 @@ export async function getSchools(options: { forceRefresh?: boolean; province?: S
     ...(ageRanges.length > 1 ? { ageRanges } : {}),
   })
   if (result.ok) {
-    await setScopedCachedValue(cacheKey, result, SCHOOL_LIST_TTL_MS)
+    await setScopedCachedValue(cacheKey, { schools: result.schools || [] }, SCHOOL_LIST_TTL_MS)
     return result
   }
 
-  const staleCached = await getScopedCachedValue<SchoolListResult>(cacheKey)
+  const staleCached = await getScopedCachedValue<SchoolListPayload>(cacheKey)
   if (staleCached) {
     return {
-      ...staleCached,
-      ok: true,
+      ...okSchoolList(staleCached),
       stale: true,
       code: result.code,
       message: result.message,
@@ -80,22 +88,19 @@ export async function getSchools(options: { forceRefresh?: boolean; province?: S
 
 export async function getSchoolDetail(schoolId: number, options: { forceRefresh?: boolean } = {}) {
   const cacheKey = getSchoolDetailCacheKey(schoolId)
-  const cached = options.forceRefresh ? null : await getScopedCachedValue<SchoolDetailResult>(cacheKey)
-  if (cached) {
-    return cached
-  }
+  const cached = options.forceRefresh ? null : await getScopedCachedValue<SchoolDetailPayload>(cacheKey)
+  if (cached) return okSchoolDetail(cached)
 
   const result = await callCloud<SchoolDetailResult>('getSchoolDetail', { schoolId })
   if (result.ok) {
-    await setScopedCachedValue(cacheKey, result, SCHOOL_DETAIL_TTL_MS)
+    await setScopedCachedValue(cacheKey, { school: result.school || null }, SCHOOL_DETAIL_TTL_MS)
     return result
   }
 
-  const staleCached = await getScopedCachedValue<SchoolDetailResult>(cacheKey)
+  const staleCached = await getScopedCachedValue<SchoolDetailPayload>(cacheKey)
   if (staleCached) {
     return {
-      ...staleCached,
-      ok: true,
+      ...okSchoolDetail(staleCached),
       stale: true,
       code: result.code,
       message: result.message,
