@@ -5,52 +5,40 @@ import { registerCurrentPageShare } from '../../utils/share'
 import { getSchoolDetail, submitCorrection } from '../../services/school'
 import { getDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
+import AppCard from '../../components/common/AppCard'
+import AppTag from '../../components/common/AppTag'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
 type School = SchoolItem
 
 function buildSchoolShare(school?: School | null, schoolId?: number) {
-    const id = Number(school?.id || schoolId || 0)
-    const name = school?.canonical_name || school?.name || ''
-    const title = name ? `可雀学习社区｜${name}` : '可雀学习社区库｜找到适合教育探索的场域'
-  
-    return {
-      appMessage: {
-        title,
-        path: id ? `/pages/school-detail/index?id=${id}` : '/pages/schools/index',
-      },
-      timeline: {
-        title,
-        query: id ? `id=${id}` : '',
-      },
-    }
+  const id = Number(school?.id || schoolId || 0)
+  const name = school?.canonical_name || school?.name || ''
+  const title = name ? `可雀学习社区｜${name}` : '可雀学习社区库｜找到适合教育探索的场域'
+
+  return {
+    appMessage: {
+      title,
+      path: id ? `/pages/school-detail/index?id=${id}` : '/pages/schools/index',
+    },
+    timeline: {
+      title,
+      query: id ? `id=${id}` : '',
+    },
   }
+}
 
 function InfoRow(props: { label: string; value?: string }) {
   return (
-    <View style={{
-      backgroundColor: palette.card,
-      borderRadius: '18px',
-      padding: '14px 16px',
-      marginBottom: '12px',
-      border: `1px solid ${palette.lineSoft}`,
-    }}>
+    <AppCard radius='18px' padding='14px 16px' marginBottom='12px' borderColor={palette.lineSoft}>
       <View style={{ marginBottom: '6px' }}>
         <Text style={{ fontSize: '13px', color: palette.brand, fontWeight: 'bold' }}>{props.label}</Text>
       </View>
       <Text style={{ fontSize: '15px', color: palette.text, lineHeight: '22px' }}>
         {props.value || '未填写'}
       </Text>
-    </View>
-  )
-}
-
-function Tag(props: { text: string }) {
-  return (
-    <View style={{ padding: '5px 10px', borderRadius: '999px', backgroundColor: palette.tag, marginRight: '8px', marginBottom: '8px' }}>
-      <Text style={{ fontSize: '12px', color: palette.tagText }}>{props.text}</Text>
-    </View>
+    </AppCard>
   )
 }
 
@@ -109,7 +97,7 @@ function SchoolContent(props: {
         </View>
       ) : null}
 
-      <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+      <AppCard padding='18px 16px'>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
           <View style={{ width: '42px', height: '42px', borderRadius: '15px', backgroundColor: palette.tag, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '10px', border: `1px solid ${palette.line}` }}>
             <Text style={{ fontSize: '20px' }}>🏫</Text>
@@ -120,9 +108,9 @@ function SchoolContent(props: {
         </View>
 
         <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: school.official_url ? '10px' : '0' }}>
-          <Tag text={locations.length > 0 ? `${locations.length} 个地点` : '地点未填写'} />
-          {!!school.school_type && <Tag text={school.school_type} />}
-          {!!school.age_range && <Tag text={school.age_range} />}
+          <AppTag text={locations.length > 0 ? `${locations.length} 个地点` : '地点未填写'} />
+          {!!school.school_type && <AppTag text={school.school_type} />}
+          {!!school.age_range && <AppTag text={school.age_range} />}
         </View>
 
         {!!school.official_url && (
@@ -136,9 +124,9 @@ function SchoolContent(props: {
             <Text style={{ fontSize: '11px', color: palette.muted }}>点击复制</Text>
           </View>
         )}
-      </View>
+      </AppCard>
 
-      <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+      <AppCard>
         <View style={{ marginBottom: '10px' }}>
           <Text style={{ fontSize: '15px', color: palette.text, fontWeight: 'bold' }}>地点列表</Text>
         </View>
@@ -155,7 +143,7 @@ function SchoolContent(props: {
         )) : (
           <Text style={{ fontSize: '13px', color: palette.subtext }}>暂无地点信息</Text>
         )}
-      </View>
+      </AppCard>
 
       <InfoRow label='公开说明' value={school.xuji_note} />
       <InfoRow label='参与前了解' value={school.residency_req} />
@@ -164,7 +152,7 @@ function SchoolContent(props: {
       <InfoRow label='相关说明' value={school.output_direction} />
 
       {!preview ? (
-        <View style={{ backgroundColor: palette.card, borderRadius: '22px', padding: '16px', marginTop: '6px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+        <AppCard marginBottom='14px'>
           {!showCorrectionForm && !correctionDone && (
             <View onClick={onShowCorrectionForm} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ fontSize: '16px', marginRight: '8px' }}>✏️</Text>
@@ -215,7 +203,7 @@ function SchoolContent(props: {
               <View><Text style={{ fontSize: '14px', color: palette.green, fontWeight: 'bold' }}>感谢反馈！我们会尽快核实</Text></View>
             </View>
           )}
-        </View>
+        </AppCard>
       ) : null}
     </>
   )
@@ -240,11 +228,11 @@ export default function SchoolDetailPage() {
     const id = Number(getCurrentInstance().router?.params?.id || 0)
     const preview = getDetailPreview<School>('school', id)
     if (preview) {
-        setPreviewSchool(preview)
-        registerCurrentPageShare(buildSchoolShare(preview, id))
-      } else {
-        registerCurrentPageShare(buildSchoolShare(null, id))
-      }
+      setPreviewSchool(preview)
+      registerCurrentPageShare(buildSchoolShare(preview, id))
+    } else {
+      registerCurrentPageShare(buildSchoolShare(null, id))
+    }
 
     try {
       setLoading(true)
