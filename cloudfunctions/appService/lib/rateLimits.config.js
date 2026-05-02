@@ -7,6 +7,7 @@ const READ_ACTION_RATE_LIMITS = {
   getMapUsers: { limit: 30, windowMs: MINUTE },
   getMyRequests: { limit: 30, windowMs: MINUTE },
   getSafetyOverview: { limit: 30, windowMs: MINUTE },
+  getLegalConsentStatus: { limit: 30, windowMs: MINUTE },
   getEventInterestInfo: { limit: 60, windowMs: MINUTE },
   getEventInterestCountsBatch: { limit: 60, windowMs: MINUTE },
   getEventContactInfo: { limit: 30, windowMs: MINUTE },
@@ -17,6 +18,7 @@ const READ_ACTION_RATE_LIMITS = {
 }
 
 const WRITE_ACTION_RATE_LIMITS = {
+  recordLegalConsent: { limit: 10, windowMs: DAY },
   submitCorrection: { limit: 5, windowMs: DAY },
   submitCommunity: { limit: 5, windowMs: DAY },
   submitEvent: { limit: 5, windowMs: DAY },
