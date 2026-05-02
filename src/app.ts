@@ -1,4 +1,4 @@
-import { PropsWithChildren } from 'react'
+import { Fragment, PropsWithChildren, createElement } from 'react'
 import Taro, { useLaunch } from '@tarojs/taro'
 import { showWeappShareMenu } from './utils/share'
 import LegalConsentGate from './components/legal/LegalConsentGate'
@@ -47,12 +47,7 @@ function App({ children }: PropsWithChildren<any>) {
     }
   })
 
-  return (
-    <>
-      {children}
-      <LegalConsentGate />
-    </>
-  )
+  return createElement(Fragment, null, children, createElement(LegalConsentGate))
 }
 
 export default App
