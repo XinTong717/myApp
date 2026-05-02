@@ -3,6 +3,8 @@ import { palette } from '../../theme/palette'
 export type EventItem = {
   id: number
   title: string
+  province?: string
+  city?: string
   event_type: string
   event_types?: string[]
   audience_who?: string[]
