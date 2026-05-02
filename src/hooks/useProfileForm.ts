@@ -28,6 +28,17 @@ type ProfileDraft = {
   bio: string
 }
 
+export type PickerMultiChangeEvent = {
+  detail: { value: number[] }
+}
+
+export type PickerColumnChangeEvent = {
+  detail: {
+    column: number
+    value: number
+  }
+}
+
 function hasDraftContent(draft: Partial<ProfileDraft> | null) {
   if (!draft) return false
   return !!(
@@ -121,7 +132,7 @@ export function useProfileForm() {
     setTimeout(() => { applyingRemoteRef.current = false }, 0)
   }
 
-  const pickerRange = useMemo(() => {
+  const pickerRange = useMemo<string[][]>(() => {
     const cities = province ? (LOCATION_DATA[province] || ['其他']) : ['请先选择省份']
     return [PROVINCES, cities]
   }, [province])
@@ -286,7 +297,7 @@ export function useProfileForm() {
     }
   }
 
-  const handlePickerChange = (e: any) => {
+  const handlePickerChange = (e: PickerMultiChangeEvent) => {
     const [provIdx, cityIdx] = e.detail.value
     const newProv = PROVINCES[provIdx] || ''
     const cities = LOCATION_DATA[newProv] || []
@@ -298,7 +309,7 @@ export function useProfileForm() {
     }
   }
 
-  const handlePickerColumnChange = (e: any) => {
+  const handlePickerColumnChange = (e: PickerColumnChangeEvent) => {
     if (e.detail.column === 0) {
       const newProv = PROVINCES[e.detail.value] || ''
       const firstCity = (LOCATION_DATA[newProv] || [])[0] || ''
