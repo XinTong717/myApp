@@ -3,7 +3,6 @@ import { View, Text, Input, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
 import { setDetailPreview } from '../../services/detailPreview'
-import { registerCurrentPageShare } from '../../utils/share'
 import { palette } from '../../theme/palette'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
@@ -146,7 +145,6 @@ export default function SchoolsPage() {
   }
 
   useDidShow(() => {
-    registerCurrentPageShare(SCHOOL_SHARE)
     if (didInitRef.current) return
     didInitRef.current = true
     loadSchools({ useFilters: false, syncFilterSource: true }).catch((err) => {
