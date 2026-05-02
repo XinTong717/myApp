@@ -3,6 +3,8 @@ export type CloudResponse<T = Record<string, unknown>> = T & {
   message?: string
   code?: string
   requestId?: string
+  stale?: boolean
+  degraded?: boolean
 }
 
 export type EventItem = {
@@ -171,6 +173,8 @@ export type MapUser = {
   bio?: string
   companionContext?: string
   isSelf?: boolean
+  requestCooldownDays?: number
+  requestCooldownUntil?: string
 }
 
 export type MapProvinceStat = {
@@ -250,6 +254,8 @@ export type GetMyRequestsResult = CloudResponse<{
 
 export type SendRequestResult = CloudResponse<{
   connectionId?: string
+  cooldownDays?: number
+  cooldownUntil?: string
 }>
 
 export type RespondRequestResult = CloudResponse<{
