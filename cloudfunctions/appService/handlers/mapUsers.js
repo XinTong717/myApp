@@ -6,6 +6,7 @@ const $ = db.command.aggregate
 const MAP_USERS_PROVINCE_LIMIT = 300
 const MAP_USERS_SUMMARY_SCAN_LIMIT = 1000
 const MAP_USERS_MAX_PAGE_LIMIT = 300
+const REJECTED_REQUEST_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
 function normalizeProvince(value) {
   return String(value || '').trim()
@@ -80,7 +81,44 @@ async function loadSafetyRelations(openid) {
   ])
 }
 
-function toPublicUser(user, openid) {
+function getCooldownInfo(record) {
+  if (!record) return { requestCooldownDays: 0, requestCooldownUntil: '' }
+  const ts = new Date(record.respondedAt || record.updatedAt || '').getTime()
+  if (!Number.isFinite(ts)) return { requestCooldownDays: 0, requestCooldownUntil: '' }
+  const untilMs = ts + REJECTED_REQUEST_COOLDOWN_MS
+  const remainingMs = untilMs - Date.now()
+  if (remainingMs <= 0) return { requestCooldownDays: 0, requestCooldownUntil: '' }
+  return {
+    requestCooldownDays: Math.ceil(remainingMs / (24 * 60 * 60 * 1000)),
+    requestCooldownUntil: new Date(untilMs).toISOString(),
+  }
+}
+
+async function loadRejectedCooldownMap(openid, targetOpenids) {
+  const uniqueTargets = Array.from(new Set((targetOpenids || []).filter((item) => item && item !== openid)))
+  if (!openid || uniqueTargets.length === 0) return new Map()
+
+  const rows = []
+  for (let i = 0; i < uniqueTargets.length; i += 20) {
+    const chunk = uniqueTargets.slice(i, i + 20)
+    const res = await db.collection('connections')
+      .where({ fromOpenid: openid, toOpenid: _.in(chunk), status: 'rejected' })
+      .field({ toOpenid: true, respondedAt: true, updatedAt: true })
+      .limit(chunk.length)
+      .get()
+    rows.push(...(res.data || []))
+  }
+
+  const map = new Map()
+  rows.forEach((record) => {
+    const info = getCooldownInfo(record)
+    if (info.requestCooldownDays > 0) map.set(record.toOpenid, info)
+  })
+  return map
+}
+
+function toPublicUser(user, openid, cooldownMap = new Map()) {
+  const cooldown = cooldownMap.get(user.openid) || { requestCooldownDays: 0, requestCooldownUntil: '' }
   return {
     _id: user._id,
     displayName: user.displayName,
@@ -90,6 +128,8 @@ function toPublicUser(user, openid) {
     bio: user.bio,
     companionContext: user.companionContext || '',
     isSelf: user.openid === openid,
+    requestCooldownDays: cooldown.requestCooldownDays || 0,
+    requestCooldownUntil: cooldown.requestCooldownUntil || '',
   }
 }
 
@@ -199,12 +239,12 @@ async function getMapUsers(event, wxContext) {
     const rawUsers = usersRes.data || []
     const hasMore = rawUsers.length > pageLimit
     const pageUsers = rawUsers.slice(0, pageLimit)
-
-    const users = pageUsers
       .filter((user) => isVisibleToRequester(user, openid, hiddenOpenids, blockedByOpenids))
       .filter((user) => matchesRole(user, role))
       .filter((user) => matchesChildAgeRange(user, childAgeRange))
-      .map((user) => toPublicUser(user, openid))
+
+    const cooldownMap = await loadRejectedCooldownMap(openid, pageUsers.map((user) => user.openid))
+    const users = pageUsers.map((user) => toPublicUser(user, openid, cooldownMap))
 
     return ok(requestId, {
       users,
