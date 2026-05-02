@@ -8,6 +8,8 @@ import { getMe } from '../../services/profile'
 import { getDetailPreview } from '../../services/detailPreview'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import { palette } from '../../theme/palette'
+import AppCard from '../../components/common/AppCard'
+import AppTag from '../../components/common/AppTag'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import type { EventItem } from '../events/shared'
 import {
@@ -18,22 +20,22 @@ import {
 } from '../events/shared'
 
 function buildEventShare(event?: EventItem | null, eventId?: number) {
-    const id = Number(event?.id || eventId || 0)
-    const title = event?.title
-      ? `可雀活动｜${event.title}`
-      : '可雀活动｜看看这个教育探索活动'
-  
-    return {
-      appMessage: {
-        title,
-        path: id ? `/pages/event-detail/index?id=${id}` : '/pages/events/index',
-      },
-      timeline: {
-        title,
-        query: id ? `id=${id}` : '',
-      },
-    }
+  const id = Number(event?.id || eventId || 0)
+  const title = event?.title
+    ? `可雀活动｜${event.title}`
+    : '可雀活动｜看看这个教育探索活动'
+
+  return {
+    appMessage: {
+      title,
+      path: id ? `/pages/event-detail/index?id=${id}` : '/pages/events/index',
+    },
+    timeline: {
+      title,
+      query: id ? `id=${id}` : '',
+    },
   }
+}
 
 function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
   const handleCopy = () => {
@@ -43,13 +45,13 @@ function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
   }
 
   return (
-    <View onClick={props.copyable ? handleCopy : undefined} style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', marginBottom: '10px' }}>
+    <AppCard onClick={props.copyable ? handleCopy : undefined} backgroundColor={palette.cardSoft} radius='14px' padding='12px' marginBottom='10px' borderColor={palette.cardSoft}>
       <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '4px' }}>
         <Text style={{ fontSize: '12px', color: palette.accentDeep, flex: 1 }}>{props.label}</Text>
         {props.copyable && props.value ? <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text> : null}
       </View>
       <Text style={{ fontSize: '14px', color: palette.text, lineHeight: '21px' }}>{props.value || '未填写'}</Text>
-    </View>
+    </AppCard>
   )
 }
 
@@ -88,7 +90,7 @@ function EventContent(props: {
         </View>
       ) : null}
 
-      <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+      <AppCard radius='20px' padding='18px 16px'>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
           <View style={{ width: '42px', height: '42px', borderRadius: '14px', backgroundColor: palette.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '10px' }}>
             <Text style={{ fontSize: '20px' }}>{EVENT_TYPE_ICONS[event.event_type] || '📌'}</Text>
@@ -99,30 +101,22 @@ function EventContent(props: {
         </View>
 
         <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
-          <View style={{ padding: '5px 10px', borderRadius: '999px', backgroundColor: palette.accentSoft, marginRight: '8px', marginBottom: '8px' }}>
-            <Text style={{ fontSize: '12px', color: palette.accentDeep }}>{EVENT_TYPE_LABELS[event.event_type] || event.event_type}</Text>
-          </View>
+          <AppTag text={EVENT_TYPE_LABELS[event.event_type] || event.event_type} tone='brand' />
 
           {(() => {
             const statusInfo = getEventStatusInfo(event)
             return statusInfo ? (
-              <View style={{ padding: '5px 10px', borderRadius: '999px', backgroundColor: statusInfo.bg, marginRight: '8px', marginBottom: '8px' }}>
-                <Text style={{ fontSize: '12px', color: statusInfo.color }}>{statusInfo.text}</Text>
-              </View>
+              <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} />
             ) : null
           })()}
 
-          <View style={{ padding: '5px 10px', borderRadius: '999px', backgroundColor: palette.greenSoft, marginRight: '8px', marginBottom: '8px' }}>
-            <Text style={{ fontSize: '12px', color: palette.green }}>{event.is_online ? '线上' : '线下'}</Text>
-          </View>
+          <AppTag text={event.is_online ? '线上' : '线下'} tone='green' />
 
           {interestCount > 0 ? (
-            <View style={{ padding: '5px 10px', borderRadius: '999px', backgroundColor: palette.surfaceWarm, marginRight: '8px', marginBottom: '8px' }}>
-              <Text style={{ fontSize: '12px', color: palette.accentDeep }}>{interestCount} 人感兴趣</Text>
-            </View>
+            <AppTag text={`${interestCount} 人感兴趣`} backgroundColor={palette.surfaceWarm} textColor={palette.accentDeep} />
           ) : null}
         </View>
-      </View>
+      </AppCard>
 
       <View onClick={preview || interestLoading ? undefined : onToggleInterest} style={{ backgroundColor: hasInterested ? palette.surfaceSoft : preview ? palette.disabledBg : palette.accentDeep, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '14px' }}>
         <Text style={{ fontSize: '15px', color: hasInterested || preview ? palette.subtext : '#FFF', fontWeight: 'bold' }}>{preview ? '完整详情加载后可标记感兴趣' : interestLoading ? '处理中...' : hasInterested ? '已感兴趣，再点一次取消' : '我感兴趣'}</Text>
@@ -136,26 +130,26 @@ function EventContent(props: {
       {!preview && publicSignupText ? <InfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}
 
       {!preview && (contactLoading ? (
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', marginBottom: '10px', border: `1px dashed ${palette.line}` }}>
+        <AppCard backgroundColor={palette.cardSoft} radius='14px' padding='12px' marginBottom='10px' borderColor={palette.line}>
           <Text style={{ fontSize: '13px', color: palette.subtext }}>正在读取组织者联系方式...</Text>
-        </View>
+        </AppCard>
       ) : contactInfo ? (
         <InfoRow label='组织者联系方式' value={contactInfo} copyable />
       ) : (
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', marginBottom: '10px', border: `1px dashed ${palette.line}` }}>
+        <AppCard backgroundColor={palette.cardSoft} radius='14px' padding='12px' marginBottom='10px' borderColor={palette.line}>
           <Text style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '4px' }}>组织者联系方式</Text>
           <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '21px' }}>
             {contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者联系方式。')}
           </Text>
-        </View>
+        </AppCard>
       ))}
 
-      <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+      <AppCard radius='20px'>
         <View style={{ marginBottom: '10px' }}>
           <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>详细介绍</Text>
         </View>
         <Text style={{ fontSize: '14px', color: palette.text, lineHeight: '24px', whiteSpace: 'pre-wrap' }}>{event.description || '暂无详细介绍'}</Text>
-      </View>
+      </AppCard>
     </>
   )
 }
@@ -266,12 +260,12 @@ export default function EventDetailPage() {
   const loadDetail = async () => {
     const id = Number(getCurrentInstance().router?.params?.id || 0)
     const preview = getDetailPreview<EventItem>('event', id)
-if (preview) {
-  setPreviewEvent(preview)
-  registerCurrentPageShare(buildEventShare(preview, id))
-} else {
-  registerCurrentPageShare(buildEventShare(null, id))
-}
+    if (preview) {
+      setPreviewEvent(preview)
+      registerCurrentPageShare(buildEventShare(preview, id))
+    } else {
+      registerCurrentPageShare(buildEventShare(null, id))
+    }
 
     try {
       setLoading(true)
@@ -286,7 +280,7 @@ if (preview) {
       setEvent(detail)
 
       if (detail) {
-      registerCurrentPageShare(buildEventShare(detail, id))
+        registerCurrentPageShare(buildEventShare(detail, id))
       }
 
       if (detail?.id) {
