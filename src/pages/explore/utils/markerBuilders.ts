@@ -155,6 +155,22 @@ type BuildExploreMarkersOptions = {
   selectedProvince: string
 }
 
+function buildUserMarker(user: AppUser, props: Pick<MarkerItem, 'id' | 'latitude' | 'longitude' | 'markerProv' | 'city'>): MarkerItem {
+  const name = user.displayName?.trim() || '同路人'
+  return {
+    ...props,
+    name,
+    type: 'user',
+    originalId: user._id,
+    bio: user.bio,
+    roles: normalizeRolesForDisplay(user.roles || []),
+    companionContext: user.companionContext || '',
+    isSelf: !!user.isSelf,
+    requestCooldownDays: user.requestCooldownDays || 0,
+    requestCooldownUntil: user.requestCooldownUntil || '',
+  }
+}
+
 export function buildExploreMarkers(options: BuildExploreMarkersOptions): MarkerItem[] {
   const {
     schools,
@@ -339,20 +355,13 @@ export function buildExploreMarkers(options: BuildExploreMarkersOptions): Marker
         const name = u.displayName?.trim() || '同路人'
         const jittered = jitter(info.lat, info.lng, idx, usersInCity.length, name + u._id)
         if (!isValidCoord(jittered)) return
-        items.push({
+        items.push(buildUserMarker(u, {
           id: nextId++,
           latitude: jittered.lat,
           longitude: jittered.lng,
-          name,
-          type: 'user',
           markerProv: info.prov,
           city: u.city,
-          originalId: u._id,
-          bio: u.bio,
-          roles: normalizeRolesForDisplay(u.roles || []),
-          companionContext: u.companionContext || '',
-          isSelf: !!u.isSelf,
-        })
+        }))
       })
     })
 
@@ -380,20 +389,13 @@ export function buildExploreMarkers(options: BuildExploreMarkersOptions): Marker
         const name = u.displayName?.trim() || '同路人'
         const jittered = jitter(coord.lat, coord.lng, idx, usersInProvince.length, name + u._id)
         if (!isValidCoord(jittered)) return
-        items.push({
+        items.push(buildUserMarker(u, {
           id: nextId++,
           latitude: jittered.lat,
           longitude: jittered.lng,
-          name,
-          type: 'user',
           markerProv: province,
           city: u.city,
-          originalId: u._id,
-          bio: u.bio,
-          roles: normalizeRolesForDisplay(u.roles || []),
-          companionContext: u.companionContext || '',
-          isSelf: !!u.isSelf,
-        })
+        }))
       })
     })
   }
