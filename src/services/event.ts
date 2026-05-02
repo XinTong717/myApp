@@ -7,45 +7,55 @@ import type {
   EventDetailResult,
   EventInterestCountsBatchResult,
   EventInterestInfoResult,
+  EventItem,
   EventListResult,
   ToggleEventInterestResult,
 } from '../types/domain'
 
-const EVENT_LIST_CACHE_KEY = 'cloud-cache:events:list:v2'
-const EVENT_LIST_LEGACY_CACHE_KEY = 'cloud-cache:events:list:v1'
-const EVENT_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:events:detail:v1:'
+const EVENT_LIST_CACHE_KEY = 'cloud-cache:events:list:v3'
+const EVENT_LIST_LEGACY_CACHE_KEYS = ['cloud-cache:events:list:v1', 'cloud-cache:events:list:v2']
+const EVENT_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:events:detail:v2:'
 const EVENT_LIST_TTL_MS = 5 * 60 * 1000
 const EVENT_DETAIL_TTL_MS = 10 * 60 * 1000
+
+type EventListPayload = { events?: EventItem[]; degraded?: boolean }
+type EventDetailPayload = { event?: EventItem | null }
+
+function okEventList(payload: EventListPayload): EventListResult {
+  return {
+    ok: true,
+    events: Array.isArray(payload.events) ? payload.events : [],
+    ...(payload.degraded ? { degraded: true } : {}),
+  }
+}
+
+function okEventDetail(payload: EventDetailPayload): EventDetailResult {
+  return { ok: true, event: payload.event || null }
+}
 
 function getEventDetailCacheKey(eventId: number) {
   return `${EVENT_DETAIL_CACHE_KEY_PREFIX}${eventId}`
 }
 
 async function readAnyEventListCache() {
-  return (
-    await getScopedCachedValue<EventListResult>(EVENT_LIST_CACHE_KEY)
-  ) || (
-    await getScopedCachedValue<EventListResult>(EVENT_LIST_LEGACY_CACHE_KEY)
-  )
+  return await getScopedCachedValue<EventListPayload>(EVENT_LIST_CACHE_KEY)
 }
 
 export async function clearEventListCache() {
   await Promise.all([
     clearScopedCachedValue(EVENT_LIST_CACHE_KEY),
-    clearScopedCachedValue(EVENT_LIST_LEGACY_CACHE_KEY),
+    ...EVENT_LIST_LEGACY_CACHE_KEYS.map((key) => clearScopedCachedValue(key)),
   ])
 }
 
 export async function getEvents(options: { forceRefresh?: boolean; includeInterestCounts?: boolean } = {}) {
   const includeInterestCounts = options.includeInterestCounts !== false
   const cached = options.forceRefresh ? null : await readAnyEventListCache()
-  if (cached) {
-    return cached
-  }
+  if (cached) return okEventList(cached)
 
   const result = await callCloud<EventListResult>('getEvents', { includeInterestCounts })
   if (result.ok) {
-    await setScopedCachedValue(EVENT_LIST_CACHE_KEY, result, EVENT_LIST_TTL_MS)
+    await setScopedCachedValue(EVENT_LIST_CACHE_KEY, { events: result.events || [] }, EVENT_LIST_TTL_MS)
     return result
   }
 
@@ -63,7 +73,7 @@ export async function getEvents(options: { forceRefresh?: boolean; includeIntere
         code: result.code,
         message: result.message,
       }
-      await setScopedCachedValue(EVENT_LIST_CACHE_KEY, degradedResult, EVENT_LIST_TTL_MS)
+      await setScopedCachedValue(EVENT_LIST_CACHE_KEY, { events, degraded: true }, EVENT_LIST_TTL_MS)
       return degradedResult
     }
   }
@@ -71,8 +81,7 @@ export async function getEvents(options: { forceRefresh?: boolean; includeIntere
   const staleCached = await readAnyEventListCache()
   if (staleCached) {
     return {
-      ...staleCached,
-      ok: true,
+      ...okEventList(staleCached),
       stale: true,
       code: result.code,
       message: result.message,
@@ -84,22 +93,19 @@ export async function getEvents(options: { forceRefresh?: boolean; includeIntere
 
 export async function getEventDetail(eventId: number, options: { forceRefresh?: boolean } = {}) {
   const cacheKey = getEventDetailCacheKey(eventId)
-  const cached = options.forceRefresh ? null : await getScopedCachedValue<EventDetailResult>(cacheKey)
-  if (cached) {
-    return cached
-  }
+  const cached = options.forceRefresh ? null : await getScopedCachedValue<EventDetailPayload>(cacheKey)
+  if (cached) return okEventDetail(cached)
 
   const result = await callCloud<EventDetailResult>('getEventDetail', { eventId })
   if (result.ok) {
-    await setScopedCachedValue(cacheKey, result, EVENT_DETAIL_TTL_MS)
+    await setScopedCachedValue(cacheKey, { event: result.event || null }, EVENT_DETAIL_TTL_MS)
     return result
   }
 
-  const staleCached = await getScopedCachedValue<EventDetailResult>(cacheKey)
+  const staleCached = await getScopedCachedValue<EventDetailPayload>(cacheKey)
   if (staleCached) {
     return {
-      ...staleCached,
-      ok: true,
+      ...okEventDetail(staleCached),
       stale: true,
       code: result.code,
       message: result.message,
