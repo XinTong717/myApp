@@ -6,11 +6,11 @@ import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
+import AppIcon from '../../components/common/AppIcon'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import {
   type EventItem,
   EVENT_TYPE_LABELS,
-  EVENT_TYPE_ICONS,
   getEventIconBg,
   getEventStatusInfo,
   isEventEnded,
@@ -183,13 +183,15 @@ export default function EventsPage() {
           <Text style={{ fontSize: '14px', color: palette.subtext, lineHeight: '22px' }}>
             {events.length > 0 ? '当前筛选下没有可显示的活动。' : '暂时还没有活动。'}
           </Text>
+          <View onClick={events.length > 0 ? () => setFilter('全部') : goToSubmit} style={{ marginTop: '12px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '9px 12px', alignSelf: 'flex-start' }}>
+            <Text style={{ color: palette.accentDeep, fontSize: '13px', fontWeight: 'bold' }}>{events.length > 0 ? '重置筛选' : '推荐新活动'}</Text>
+          </View>
         </AppCard>
       ) : null}
 
       {!loading && !error && visibleEvents.map((item) => {
         const typeLabel = EVENT_TYPE_LABELS[item.event_type] || item.event_type
         const statusInfo = getEventStatusInfo(item)
-        const icon = EVENT_TYPE_ICONS[item.event_type] || '📌'
         const interestedCount = interestCounts[item.id] || 0
 
         const firstLine = (item.description || '').split('\n').find((line) => line.trim()) || ''
@@ -200,13 +202,8 @@ export default function EventsPage() {
             <View style={{
               display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
             }}>
-              <View style={{
-                width: '42px', height: '42px', borderRadius: '15px',
-                backgroundColor: getEventIconBg(item.event_type), display: 'flex',
-                alignItems: 'center', justifyContent: 'center', marginRight: '10px',
-                border: `1px solid ${palette.lineSoft}`,
-              }}>
-                <Text style={{ fontSize: '20px' }}>{icon}</Text>
+              <View style={{ marginRight: '10px' }}>
+                <AppIcon name='calendar' size={42} backgroundColor={getEventIconBg(item.event_type)} bordered />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: '17px', fontWeight: 'bold', color: palette.text, lineHeight: '24px' }}>
