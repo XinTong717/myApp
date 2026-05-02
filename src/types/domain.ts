@@ -101,7 +101,7 @@ export type UserProfile = {
   roles?: string[]
   province?: string
   city?: string
-  wechatId?: string
+  contactId?: string
   allowIncomingRequests?: boolean
   isVisibleOnMap?: boolean
   childAgeRange?: string[]
@@ -194,7 +194,7 @@ export type AcceptedConnection = {
   otherCity: string
   otherRoles: string[]
   otherBio: string
-  otherWechat: string
+  otherContactId: string
   otherChildInfo: {
     ageRange: string[]
     status: string[]
