@@ -3,7 +3,7 @@ import type { SafetyItem } from '../../types/domain'
 import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
 import ProfileSectionHeading from './ProfileSectionHeading'
-import { profilePalette as palette } from './palette'
+import { palette } from '../../theme/palette'
 
 type Props = {
   privacySaving: boolean
