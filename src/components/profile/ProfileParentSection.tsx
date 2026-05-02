@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Textarea } from '@tarojs/components'
 import SectionTitle from './SectionTitle'
-import PillSelect from './PillSelect'
+import { MultiPillSelect } from '../common/PillSelect'
 import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
 import ProfileHelperText from './ProfileHelperText'
 import ProfileCounterText from './ProfileCounterText'
 import ProfileSectionHeading from './ProfileSectionHeading'
-import { profilePalette as palette } from './palette'
+import { palette } from '../../theme/palette'
 import { typography } from '../../theme/typography'
 
 type Props = {
@@ -41,9 +41,9 @@ export default function ProfileParentSection(props: Props) {
         description='仅在你主动同意联络请求后展示，用于帮助对方理解你当前在寻找什么支持'
       />
       <SectionTitle text='孩子学段（可多选）' />
-      <PillSelect options={childAgeOptions} selected={childAgeRange} multi onChange={(v) => setChildAgeRange(v as string[])} />
+      <MultiPillSelect options={childAgeOptions} selected={childAgeRange} onChange={setChildAgeRange} />
       <SectionTitle text='当前关注方向（可多选）' />
-      <PillSelect options={childStatusOptions} selected={childDropoutStatus} multi onChange={(v) => setChildDropoutStatus(v as string[])} />
+      <MultiPillSelect options={childStatusOptions} selected={childDropoutStatus} onChange={setChildDropoutStatus} />
       <SectionTitle text='希望补充说明的情况' />
       <ProfileHelperText text='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持。' marginBottom='6px' />
       <ProfileInputBox marginBottom='0' focused={focused}>
