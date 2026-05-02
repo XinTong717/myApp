@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { View, Text, Input, Picker } from '@tarojs/components'
 import SectionTitle from './SectionTitle'
-import PillSelect from './PillSelect'
+import { MultiPillSelect, SinglePillSelect } from '../common/PillSelect'
 import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
 import ProfileHelperText from './ProfileHelperText'
-import { profilePalette as palette } from './palette'
+import { palette } from '../../theme/palette'
 import { typography } from '../../theme/typography'
 
 type Props = {
@@ -78,13 +78,13 @@ export default function ProfileBasicSection(props: Props) {
       </ProfileInputBox>
 
       <SectionTitle text='性别' />
-      <PillSelect options={genderOptions} selected={gender} onChange={(v) => setGender(v as string)} />
+      <SinglePillSelect options={genderOptions} selected={gender} onChange={setGender} />
 
       <SectionTitle text='年龄段' />
-      <PillSelect options={ageRangeOptions} selected={ageRange} onChange={(v) => setAgeRange(v as string)} />
+      <SinglePillSelect options={ageRangeOptions} selected={ageRange} onChange={setAgeRange} />
 
       <SectionTitle text='身份（可多选）' />
-      <PillSelect options={roleOptions} selected={roles} multi onChange={(v) => setRoles(v as string[])} />
+      <MultiPillSelect options={roleOptions} selected={roles} onChange={setRoles} />
 
       <SectionTitle text='所在城市' />
       <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
