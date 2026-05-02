@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../constants/location'
 import { getMe, saveProfile, updatePrivacySettings } from '../services/profile'
-import { clearMapUsersCache } from '../services/map'
 import { clearScopedCachedValue, getScopedCachedValue, setScopedCachedValue } from '../services/cache'
 import { CACHE_KEY_PREFIXES } from '../constants/cacheKeys'
 import type { UserProfile } from '../types/domain'
@@ -222,7 +221,6 @@ export function useProfileForm() {
         bio: bio.trim(),
       })
       if (r?.ok) {
-        await clearMapUsersCache()
         clearScopedCachedValue(PROFILE_DRAFT_KEY).catch(() => null)
         if (r.profile) {
           applyProfile(r.profile)
@@ -250,7 +248,6 @@ export function useProfileForm() {
 
       const result = await updatePrivacySettings({ [field]: value })
       if (result?.ok) {
-        await clearMapUsersCache()
         Taro.showToast({ title: '设置已更新', icon: 'success' })
       } else {
         if (field === 'allowIncomingRequests') setAllowIncomingRequests(!value)
