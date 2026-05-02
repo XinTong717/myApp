@@ -22,8 +22,8 @@ type Props = {
   currentCity: string
   customCity: string
   setCustomCity: (value: string) => void
-  wechatId: string
-  setWechatId: (value: string) => void
+  contactId: string
+  setContactId: (value: string) => void
   pickerRange: any[]
   pickerValue: number[]
   handlePickerChange: (e: any) => void
@@ -33,7 +33,7 @@ type Props = {
   roleOptions: string[]
 }
 
-type FocusField = 'displayName' | 'customCity' | 'wechatId' | ''
+type FocusField = 'displayName' | 'customCity' | 'contactId' | ''
 
 export default function ProfileBasicSection(props: Props) {
   const {
@@ -50,8 +50,8 @@ export default function ProfileBasicSection(props: Props) {
     currentCity,
     customCity,
     setCustomCity,
-    wechatId,
-    setWechatId,
+    contactId,
+    setContactId,
     pickerRange,
     pickerValue,
     handlePickerChange,
@@ -111,15 +111,15 @@ export default function ProfileBasicSection(props: Props) {
         </View>
       )}
 
-      <SectionTitle text='可被搜索到的联系方式（选填）' />
-      <ProfileHelperText text='可填写微信号、绑定手机号或 QQ 号。仅在你同意对方的联络请求后，对方才能看到它。' />
-      <ProfileInputBox focused={focusedField === 'wechatId'}>
+      <SectionTitle text='联络标识（选填）' />
+      <ProfileHelperText text='可填写微信号、手机号或 QQ，仅在你同意联络后对对方可见。' />
+      <ProfileInputBox focused={focusedField === 'contactId'}>
         <Input
-          value={wechatId}
-          placeholder='例如：微信号 / 绑定手机号 / QQ 号'
-          onFocus={() => setFocusedField('wechatId')}
+          value={contactId}
+          placeholder='可填写微信号、手机号或 QQ，仅在你同意联络后对对方可见'
+          onFocus={() => setFocusedField('contactId')}
           onBlur={() => setFocusedField('')}
-          onInput={(e) => setWechatId(e.detail.value)}
+          onInput={(e) => setContactId(e.detail.value)}
           style={{ ...typography.body, color: palette.text }}
         />
       </ProfileInputBox>
