@@ -96,6 +96,7 @@ export async function recordLegalConsent(): Promise<RecordLegalConsentResult> {
     adultConfirmed: true,
     termsVersion: CURRENT_TERMS_VERSION,
     privacyVersion: CURRENT_PRIVACY_VERSION,
+    source: 'profile_save',
   })
 
   if (result.ok && result.consent && isCurrentLegalConsent(result.consent)) {
