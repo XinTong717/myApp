@@ -15,13 +15,21 @@ function parseDate(value) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-function stringifyLabels(value) {
-  if (Array.isArray(value)) return value.filter(Boolean).join(' / ')
+function normalizeLabel(value) {
   return String(value || '').trim()
 }
 
+function normalizeLabelArray(value) {
+  const list = Array.isArray(value) ? value : String(value || '').split(/[、,，/|｜]+/)
+  return Array.from(new Set(list.map(normalizeLabel).filter(Boolean)))
+}
+
+function stringifyLabels(value) {
+  return normalizeLabelArray(value).join(' / ')
+}
+
 function firstEventType(submission) {
-  const eventTypes = Array.isArray(submission.eventTypes) ? submission.eventTypes.filter(Boolean) : []
+  const eventTypes = normalizeLabelArray(submission.eventTypes)
   if (eventTypes.length > 0) return eventTypes.find((item) => !String(item).startsWith('其他：')) || eventTypes[0]
   return String(submission.eventType || '').trim()
 }
@@ -92,9 +100,18 @@ function buildDescription(submission) {
 }
 
 function buildEventPayload(submission) {
+  const eventTypes = normalizeLabelArray(submission.eventTypes || submission.eventType)
+  const audienceWho = normalizeLabelArray(submission.audienceWhoTags || submission.audienceWho)
+  const minAgeRequirement = String(submission.minAgeRequirement || '').trim()
+  const feeCategory = String(submission.fee || '').trim() || '费用待确认'
+
   return {
     title: String(submission.title || '').trim(),
     event_type: normalizeEventType(submission),
+    event_types: eventTypes,
+    audience_who: audienceWho,
+    min_age_requirement: minAgeRequirement,
+    fee_category: feeCategory,
     description: buildDescription(submission),
     start_time: String(submission.startTime || '').trim(),
     end_time: String(submission.endTime || '').trim(),
