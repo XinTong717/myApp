@@ -6,6 +6,7 @@ const APP_SERVICE_NAME = 'appService'
 const ROUTED_ACTIONS = new Set([
   'getOpenId',
   'getSchools',
+  'getSchoolMarkers',
   'getSchoolDetail',
   'getEvents',
   'getEventDetail',
