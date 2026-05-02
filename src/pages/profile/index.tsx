@@ -24,6 +24,7 @@ import AppIcon from '../../components/common/AppIcon'
 import { profilePalette as palette } from '../../components/profile/palette'
 import { typography } from '../../theme/typography'
 import { checkAdminAccess } from '../../services/profile'
+import { recordLegalConsent } from '../../services/legalConsent'
 import { useConnections } from '../../hooks/useConnections'
 import { useSafety } from '../../hooks/useSafety'
 import { useProfileForm } from '../../hooks/useProfileForm'
@@ -87,7 +88,12 @@ function PrivacyDisclosureNotice() {
   )
 }
 
-function AdultConfirmation(props: { checked: boolean; onToggle: () => void }) {
+function LegalAgreementConsent(props: {
+  checked: boolean
+  onToggle: () => void
+  onOpenUserAgreement: () => void
+  onOpenPrivacyPolicy: () => void
+}) {
   return (
     <View
       onClick={props.onToggle}
@@ -116,9 +122,12 @@ function AdultConfirmation(props: { checked: boolean; onToggle: () => void }) {
       }}>
         <Text style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>{props.checked ? '✓' : ''}</Text>
       </View>
-      <Text style={{ ...typography.caption, color: palette.subtext, flex: 1 }}>
-        我确认本人已满18周岁，并理解地图公开展示范围；不会填写可直接识别未成年人的姓名、学校、住址、联系方式或精确行程。
-      </Text>
+      <View style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
+        <Text style={{ ...typography.caption, color: palette.subtext }}>我已阅读并同意</Text>
+        <Text onClick={props.onOpenUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>《用户协议》</Text>
+        <Text style={{ ...typography.caption, color: palette.subtext }}>和</Text>
+        <Text onClick={props.onOpenPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>《隐私政策》</Text>
+      </View>
     </View>
   )
 }
@@ -126,7 +135,7 @@ function AdultConfirmation(props: { checked: boolean; onToggle: () => void }) {
 export default function ProfilePage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [activeStep, setActiveStep] = useState<ProfileStep>('basic')
-  const [adultConfirmed, setAdultConfirmed] = useState(false)
+  const [legalAgreed, setLegalAgreed] = useState(false)
   const lastAutoRefreshAtRef = useRef(0)
 
   const {
@@ -267,10 +276,17 @@ export default function ProfilePage() {
   }
 
   const handleConfirmedSave = async () => {
-    if (!adultConfirmed) {
-      Taro.showToast({ title: '请先确认已满18周岁', icon: 'none' })
+    if (!legalAgreed) {
+      Taro.showToast({ title: '请先阅读并同意用户协议和隐私政策', icon: 'none' })
       return
     }
+
+    const consentResult = await recordLegalConsent()
+    if (!consentResult.ok) {
+      Taro.showToast({ title: consentResult.message || '协议确认失败，请稍后重试', icon: 'none' })
+      return
+    }
+
     await handleSave()
   }
 
@@ -372,7 +388,12 @@ export default function ProfilePage() {
 
           <PrivacyDisclosureNotice />
 
-          <AdultConfirmation checked={adultConfirmed} onToggle={() => setAdultConfirmed((value) => !value)} />
+          <LegalAgreementConsent
+            checked={legalAgreed}
+            onToggle={() => setLegalAgreed((value) => !value)}
+            onOpenUserAgreement={openUserAgreement}
+            onOpenPrivacyPolicy={openPrivacyPolicy}
+          />
 
           <ProfilePrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
         </>
