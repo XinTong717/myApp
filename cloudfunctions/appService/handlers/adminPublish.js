@@ -1,4 +1,4 @@
-const { db } = require('../lib/cloud')
+const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
 const { getActiveAdmin } = require('../lib/userRepo')
 const { writeAdminAuditLog } = require('../lib/adminAudit')
@@ -9,6 +9,8 @@ const {
 } = require('../lib/eventPublishPayload')
 
 const EVENT_ID_ALLOCATION_MAX_RETRIES = 5
+const COUNTERS_COLLECTION = 'counters'
+const EVENT_COUNTER_DOC_ID = 'events'
 
 async function getEventSubmissionById(submissionId) {
   try {
@@ -40,24 +42,71 @@ async function eventIdExists(eventId) {
   return (res.data || []).length > 0
 }
 
+async function ensureEventCounterSeeded() {
+  try {
+    const existing = await db.collection(COUNTERS_COLLECTION).doc(EVENT_COUNTER_DOC_ID).get()
+    if (existing.data) return
+  } catch (err) {
+    // Missing counter doc is expected before first publish after this migration.
+  }
+
+  const maxId = await getCurrentMaxEventId()
+  try {
+    await db.collection(COUNTERS_COLLECTION).doc(EVENT_COUNTER_DOC_ID).set({
+      data: {
+        current: maxId,
+        name: EVENT_COUNTER_DOC_ID,
+        updatedAt: db.serverDate(),
+        createdAt: db.serverDate(),
+      },
+    })
+  } catch (err) {
+    console.warn('ensureEventCounterSeeded set skipped:', err && err.message ? err.message : err)
+  }
+}
+
+async function allocateEventIdFromCounter() {
+  await ensureEventCounterSeeded()
+
+  for (let i = 0; i < EVENT_ID_ALLOCATION_MAX_RETRIES; i += 1) {
+    await db.collection(COUNTERS_COLLECTION).doc(EVENT_COUNTER_DOC_ID).update({
+      data: {
+        current: _.inc(1),
+        updatedAt: db.serverDate(),
+      },
+    })
+
+    const counterRes = await db.collection(COUNTERS_COLLECTION).doc(EVENT_COUNTER_DOC_ID).get()
+    const candidate = Number(counterRes.data?.current || 0)
+    if (!Number.isFinite(candidate) || candidate <= 0) continue
+    const exists = await eventIdExists(candidate)
+    if (!exists) return candidate
+  }
+
+  throw new Error('EVENT_COUNTER_COLLISION_RETRIES_EXHAUSTED')
+}
+
+async function allocateEventIdLegacyFallback() {
+  const maxId = await getCurrentMaxEventId()
+  let candidate = maxId + 1
+
+  for (let i = 0; i < EVENT_ID_ALLOCATION_MAX_RETRIES; i += 1) {
+    const exists = await eventIdExists(candidate)
+    if (!exists) return candidate
+    candidate += 1
+  }
+
+  const fallback = Date.now()
+  console.warn('allocateEventId legacy exhausted sequential retries, using timestamp fallback:', fallback)
+  return fallback
+}
+
 async function allocateEventId() {
   try {
-    const maxId = await getCurrentMaxEventId()
-    let candidate = maxId + 1
-
-    for (let i = 0; i < EVENT_ID_ALLOCATION_MAX_RETRIES; i += 1) {
-      const exists = await eventIdExists(candidate)
-      if (!exists) return candidate
-      candidate += 1
-    }
-
-    const fallback = Date.now()
-    console.warn('allocateEventId exhausted sequential retries, using timestamp fallback:', fallback)
-    return fallback
+    return await allocateEventIdFromCounter()
   } catch (err) {
-    const fallback = Date.now()
-    console.warn('allocateEventId lookup failed, using timestamp fallback:', err && err.message ? err.message : err, fallback)
-    return fallback
+    console.warn('allocateEventId counter path failed, falling back to legacy allocator:', err && err.message ? err.message : err)
+    return allocateEventIdLegacyFallback()
   }
 }
 
