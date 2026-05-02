@@ -19,6 +19,8 @@ export type AppUser = {
   bio?: string
   companionContext?: string
   isSelf?: boolean
+  requestCooldownDays?: number
+  requestCooldownUntil?: string
 }
 
 export type MarkerItem = {
@@ -34,6 +36,8 @@ export type MarkerItem = {
   roles?: string[]
   companionContext?: string
   isSelf?: boolean
+  requestCooldownDays?: number
+  requestCooldownUntil?: string
   clusterUsers?: AppUser[]
   clusterSchools?: School[]
   schoolPointCount?: number
