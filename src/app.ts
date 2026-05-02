@@ -1,6 +1,7 @@
 import { PropsWithChildren } from 'react'
 import Taro, { useLaunch } from '@tarojs/taro'
 import { showWeappShareMenu } from './utils/share'
+import LegalConsentGate from './components/legal/LegalConsentGate'
 
 import './app.scss'
 
@@ -46,7 +47,12 @@ function App({ children }: PropsWithChildren<any>) {
     }
   })
 
-  return children
+  return (
+    <>
+      {children}
+      <LegalConsentGate />
+    </>
+  )
 }
 
 export default App
