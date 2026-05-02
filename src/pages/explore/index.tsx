@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { REPORT_CODE_MESSAGES, REQUEST_CODE_MESSAGES, SAFETY_CODE_MESSAGES } from '../../constants/cloudMessages'
-import { getSchools } from '../../services/school'
+import { getSchoolMarkers } from '../../services/school'
 import { getMe } from '../../services/profile'
 import { clearMapUsersCache, getMapUsers } from '../../services/map'
 import { setDetailPreview } from '../../services/detailPreview'
@@ -98,7 +98,7 @@ export default function ExplorePage() {
       setIsNavigatingAway(false)
 
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
-        getSchools({ limit: 200 }),
+        getSchoolMarkers({ limit: 200 }),
         getMapUsers({
           forceRefresh: !!options.forceRefreshMapUsers,
           province: provinceSnapshot || undefined,
@@ -115,7 +115,7 @@ export default function ExplorePage() {
         setSchools(schoolRes.schools)
       } else {
         setSchools([])
-        logCloudFailure('getSchoolsInExplore', schoolRes)
+        logCloudFailure('getSchoolMarkersInExplore', schoolRes)
       }
       setSchoolsLoaded(true)
 
