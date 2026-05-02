@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Button, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { palette } from '../../theme/palette'
@@ -6,7 +6,6 @@ import { typography } from '../../theme/typography'
 import {
   hasCurrentLocalLegalConsent,
   recordLegalConsent,
-  syncLegalConsentStatus,
 } from '../../services/legalConsent'
 
 type ConsentChecks = {
@@ -23,7 +22,7 @@ const initialChecks: ConsentChecks = {
 
 function ConsentCheckbox(props: {
   checked: boolean
-  children: React.ReactNode
+  children: ReactNode
   onClick: () => void
 }) {
   return (
@@ -62,19 +61,9 @@ export default function LegalConsentGate() {
   const [visible, setVisible] = useState(false)
   const [checks, setChecks] = useState<ConsentChecks>(initialChecks)
   const [submitting, setSubmitting] = useState(false)
-  const [checkingCloud, setCheckingCloud] = useState(false)
 
   useEffect(() => {
-    if (hasCurrentLocalLegalConsent()) return
-    setVisible(true)
-    setCheckingCloud(true)
-    syncLegalConsentStatus()
-      .then((result) => {
-        if (result.ok && result.consent && hasCurrentLocalLegalConsent()) {
-          setVisible(false)
-        }
-      })
-      .finally(() => setCheckingCloud(false))
+    if (!hasCurrentLocalLegalConsent()) setVisible(true)
   }, [])
 
   if (!visible) return null
@@ -182,8 +171,8 @@ export default function LegalConsentGate() {
         </ConsentCheckbox>
 
         <Button
-          loading={submitting || checkingCloud}
-          disabled={submitting || checkingCloud}
+          loading={submitting}
+          disabled={submitting}
           onClick={handleAgree}
           style={{
             marginTop: '10px',
@@ -197,7 +186,7 @@ export default function LegalConsentGate() {
             border: 'none',
           }}
         >
-          {checkingCloud ? '确认状态中...' : submitting ? '保存中...' : '同意并继续'}
+          {submitting ? '保存中...' : '同意并继续'}
         </Button>
       </View>
     </View>
