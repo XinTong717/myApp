@@ -49,7 +49,7 @@ async function recordLegalConsent(event, wxContext) {
         termsAcceptedAt: db.serverDate(),
         privacyAcceptedAt: db.serverDate(),
         adultConfirmedAt: db.serverDate(),
-        source: 'first_launch_gate',
+        source: String(event.source || 'profile_save'),
         updatedAt: db.serverDate(),
         createdAt: db.serverDate(),
       },
