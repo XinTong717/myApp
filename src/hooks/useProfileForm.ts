@@ -10,6 +10,19 @@ const PROFILE_DRAFT_KEY = CACHE_KEY_PREFIXES.profileDraft
 const PROFILE_DRAFT_DEBOUNCE_MS = 1500
 const PROFILE_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
+export type CityPickerChangeEvent = {
+  detail: {
+    value: number[]
+  }
+}
+
+export type CityPickerColumnChangeEvent = {
+  detail: {
+    column: number
+    value: number
+  }
+}
+
 type ProfileDraft = {
   updatedAt: number
   displayName: string
@@ -121,7 +134,7 @@ export function useProfileForm() {
     setTimeout(() => { applyingRemoteRef.current = false }, 0)
   }
 
-  const pickerRange = useMemo(() => {
+  const pickerRange = useMemo<string[][]>(() => {
     const cities = province ? (LOCATION_DATA[province] || ['其他']) : ['请先选择省份']
     return [PROVINCES, cities]
   }, [province])
@@ -286,8 +299,8 @@ export function useProfileForm() {
     }
   }
 
-  const handlePickerChange = (e: any) => {
-    const [provIdx, cityIdx] = e.detail.value
+  const handlePickerChange = (e: CityPickerChangeEvent) => {
+    const [provIdx = 0, cityIdx = 0] = e.detail.value
     const newProv = PROVINCES[provIdx] || ''
     const cities = LOCATION_DATA[newProv] || []
     const nextCityOption = cities[cityIdx] || ''
@@ -298,7 +311,7 @@ export function useProfileForm() {
     }
   }
 
-  const handlePickerColumnChange = (e: any) => {
+  const handlePickerColumnChange = (e: CityPickerColumnChangeEvent) => {
     if (e.detail.column === 0) {
       const newProv = PROVINCES[e.detail.value] || ''
       const firstCity = (LOCATION_DATA[newProv] || [])[0] || ''
