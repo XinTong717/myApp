@@ -137,9 +137,9 @@ function EventContent(props: {
         <InfoRow label='组织者联系方式' value={contactInfo} copyable />
       ) : (
         <AppCard backgroundColor={palette.cardSoft} radius='14px' padding='12px' marginBottom='10px' borderColor={palette.line}>
-          <Text style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '4px' }}>组织者联系方式</Text>
+          <Text style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '4px' }}>组织者私人联系方式</Text>
           <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '21px' }}>
-            {contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者联系方式。')}
+            {contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者私人联系方式。')}
           </Text>
         </AppCard>
       ))}
@@ -209,6 +209,7 @@ export default function EventDetailPage() {
 
       if (result?.ok) {
         setContactInfo(result.contactInfo || '')
+        setContactMessage(result.message || '')
         const publicParts = [
           result?.publicSignupInfo?.officialUrl ? `公开主页或报名链接：${result.publicSignupInfo.officialUrl}` : '',
           result?.publicSignupInfo?.signupNote ? `报名方式补充说明：${result.publicSignupInfo.signupNote}` : '',
@@ -241,7 +242,10 @@ export default function EventDetailPage() {
         } else {
           setInterestCount((count) => nextHasInterested ? count + 1 : Math.max(0, count - 1))
         }
-        await clearEventListCache()
+        await Promise.all([
+          clearEventListCache(),
+          loadContactInfo(event.id),
+        ])
         Taro.showToast({ title: result.message || '已更新', icon: 'success' })
       } else {
         const message = resolveCloudMessage(result, EVENT_CODE_MESSAGES, '操作失败')

@@ -2,6 +2,7 @@ const { ok, fail, resolveRequestId } = require('./lib/response')
 const { cloud } = require('./lib/cloud')
 const { rateLimit } = require('./lib/rateLimit')
 const publicHandlers = require('./handlers/public')
+const eventContactHandlers = require('./handlers/eventContact')
 const userHandlers = require('./handlers/userProfile')
 const requestHandlers = require('./handlers/requests')
 const mapUserHandlers = require('./handlers/mapUsers')
@@ -37,6 +38,7 @@ async function getOpenId(event, wxContext) {
 const publicActionHandlers = {
   ...legalConsentHandlers,
   ...publicHandlers,
+  ...eventContactHandlers,
   ...mapUserHandlers,
 }
 

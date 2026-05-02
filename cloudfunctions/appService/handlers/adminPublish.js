@@ -140,6 +140,7 @@ async function publishEventDirect(event, wxContext) {
         previousStatus: submission.status || 'pending',
         nextStatus: 'merged',
         publishedEventId,
+        forceUsed: force,
         warnings,
         blockingErrors,
         adminNote: adminNote || '已发布到 events',

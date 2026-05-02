@@ -46,14 +46,21 @@ function createClientRequestId(name: string) {
 
 export async function callCloud<T = Record<string, unknown>>(name: string, data: Record<string, unknown> = {}) {
   const clientRequestId = createClientRequestId(name)
-  const routed = ROUTED_ACTIONS.has(name)
-  const functionName = routed ? APP_SERVICE_NAME : name
-  const payload = routed
-    ? { action: name, ...data, clientRequestId }
-    : { ...data, clientRequestId }
+
+  if (!ROUTED_ACTIONS.has(name)) {
+    console.error(`callCloud blocked unknown action: ${name}`)
+    return {
+      ok: false,
+      code: 'UNKNOWN_ACTION_CLIENT_BLOCKED',
+      requestId: clientRequestId,
+      message: '服务入口未注册，请更新小程序后重试',
+    } as CloudResponse<T>
+  }
+
+  const payload = { action: name, ...data, clientRequestId }
 
   try {
-    const res = await Taro.cloud.callFunction({ name: functionName, data: payload })
+    const res = await Taro.cloud.callFunction({ name: APP_SERVICE_NAME, data: payload })
     const result = ((res.result || {}) as CloudResponse<T>) || ({ ok: false } as CloudResponse<T>)
 
     if (!result.requestId) {

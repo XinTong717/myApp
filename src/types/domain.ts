@@ -99,6 +99,8 @@ export type ContactInfoResult = CloudResponse<{
     signupNote?: string
   }
   needCompleteProfile?: boolean
+  privateContactRequiresProfile?: boolean
+  privateContactRequiresInterest?: boolean
 }>
 
 export type EventInterestInfoResult = CloudResponse<{
