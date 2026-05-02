@@ -4,6 +4,10 @@ export type EventItem = {
   id: number
   title: string
   event_type: string
+  event_types?: string[]
+  audience_who?: string[]
+  min_age_requirement?: string
+  fee_category?: string
   description?: string
   start_time?: string
   end_time?: string
@@ -18,10 +22,10 @@ export type EventItem = {
 export const EVENT_TYPE_LABELS: Record<string, string> = {
   night_chat: '夜聊',
   parent_observer: '家长观察',
-  community_program: '社区计划',
+  community_program: '项目招募',
   workshop: '工作坊',
-  meetup: '聚会',
-  discussion: '讨论',
+  meetup: '线下聚会',
+  discussion: '圆桌讨论',
   family: '家庭活动',
   online: '线上活动',
 }
@@ -32,17 +36,6 @@ export const EVENT_STATUS_LABELS: Record<string, { text: string; color: string; 
   upcoming: { text: '即将开始', color: palette.info, bg: palette.infoSoft },
   ongoing: { text: '进行中', color: palette.tagText, bg: palette.tag },
   ended: { text: '已结束', color: palette.muted, bg: palette.surfaceSoft },
-}
-
-export const EVENT_TYPE_ICONS: Record<string, string> = {
-  night_chat: '🌙',
-  parent_observer: '👀',
-  community_program: '🚀',
-  workshop: '🛠️',
-  meetup: '☕',
-  discussion: '💬',
-  family: '🏠',
-  online: '💻',
 }
 
 const EVENT_TYPE_ICON_BG: Record<string, string> = {
