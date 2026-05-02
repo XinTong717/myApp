@@ -7,6 +7,11 @@ import prodConfig from './prod'
 export default defineConfig<'webpack5'>(async (merge, { mode }) => {
   const runtimeEnv = process.env.NODE_ENV || mode || 'development'
   const fallbackCloudEnvId = 'cloud1-9g8njw4c79fb1322'
+
+  if (runtimeEnv === 'production' && !process.env.TARO_APP_CLOUD_ENV) {
+    throw new Error('[cloud] Missing TARO_APP_CLOUD_ENV for production build. Refuse to fallback to dev cloud env.')
+  }
+
   const cloudEnvId = process.env.TARO_APP_CLOUD_ENV || fallbackCloudEnvId
   const isUsingFallbackCloudEnv = !process.env.TARO_APP_CLOUD_ENV
 
