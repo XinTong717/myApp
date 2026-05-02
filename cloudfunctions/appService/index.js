@@ -9,6 +9,7 @@ const adminHandlers = require('./handlers/admin')
 const adminPublishHandlers = require('./handlers/adminPublish')
 const schoolMigrationHandlers = require('./handlers/schoolMigration')
 const legalConsentHandlers = require('./handlers/legalConsent')
+const { hasCurrentConsent } = require('./lib/legalConsent')
 
 const { ACTION_RATE_LIMITS } = require('./lib/rateLimits.config')
 
@@ -72,6 +73,14 @@ exports.main = async (event = {}) => {
 
   try {
     const wxContext = cloud.getWXContext()
+
+    if (action === 'saveProfile') {
+      const consentOk = await hasCurrentConsent(wxContext.OPENID)
+      if (!consentOk) {
+        return fail(requestId, 'LEGAL_CONSENT_REQUIRED', '请先阅读并同意用户协议和隐私政策')
+      }
+    }
+
     const limitConfig = ACTION_RATE_LIMITS[action]
 
     if (limitConfig) {
