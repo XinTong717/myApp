@@ -103,15 +103,7 @@ async function listSchoolLocationsByIds(schoolIds) {
   try {
     const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
       .where({ school_id: _.in(ids) })
-      .field({
-        school_id: true,
-        province: true,
-        city: true,
-        address_note: true,
-        contact_note: true,
-        status: true,
-        source: true,
-      })
+      .field({ school_id: true, province: true, city: true, address_note: true, contact_note: true, status: true, source: true })
       .limit(SCHOOL_LIST_MAX_LIMIT * 3)
       .get()
 
@@ -239,30 +231,12 @@ async function querySchoolsWithLocations(options = {}) {
     ? { ...normalizedOptions, schoolIds: locationSchoolIds }
     : normalizedOptions
 
-  const hasMultiFacetFilter =
-    normalizeFilterList(queryOptions.schoolType || queryOptions.type, queryOptions.schoolTypes || queryOptions.types).length > 1 ||
-    normalizeFilterList(queryOptions.ageRange, queryOptions.ageRanges).length > 1
-
-  const queryLimit = Array.isArray(locationSchoolIds) && locationSchoolIds.length > 0
-    ? Math.min(Math.max(locationSchoolIds.length, 1), SCHOOL_LIST_MAX_LIMIT)
-    : hasMultiFacetFilter
-      ? SCHOOL_LIST_MAX_LIMIT
-      : limit
+  const hasMultiFacetFilter = normalizeFilterList(queryOptions.schoolType || queryOptions.type, queryOptions.schoolTypes || queryOptions.types).length > 1 || normalizeFilterList(queryOptions.ageRange, queryOptions.ageRanges).length > 1
+  const queryLimit = Array.isArray(locationSchoolIds) && locationSchoolIds.length > 0 ? Math.min(Math.max(locationSchoolIds.length, 1), SCHOOL_LIST_MAX_LIMIT) : hasMultiFacetFilter ? SCHOOL_LIST_MAX_LIMIT : limit
 
   const res = await db.collection('schools')
     .where(buildSchoolWhere(queryOptions))
-    .field({
-      id: true,
-      name: true,
-      canonical_name: true,
-      description: true,
-      age_range: true,
-      school_type: true,
-      fee: true,
-      has_xuji: true,
-      official_url: true,
-      status: true,
-    })
+    .field({ id: true, name: true, canonical_name: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, official_url: true, status: true })
     .orderBy('id', 'asc')
     .limit(queryLimit)
     .get()
@@ -287,22 +261,7 @@ async function getSchoolById(schoolId) {
 
   const res = await db.collection('schools')
     .where({ id: Number(schoolId) })
-    .field({
-      id: true,
-      name: true,
-      canonical_name: true,
-      description: true,
-      age_range: true,
-      school_type: true,
-      fee: true,
-      has_xuji: true,
-      xuji_note: true,
-      residency_req: true,
-      admission_req: true,
-      output_direction: true,
-      official_url: true,
-      status: true,
-    })
+    .field({ id: true, name: true, canonical_name: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, xuji_note: true, residency_req: true, admission_req: true, output_direction: true, official_url: true, status: true })
     .limit(1)
     .get()
 
@@ -316,6 +275,8 @@ async function getSchoolById(schoolId) {
 const EVENT_FIELD_SELECTION = {
   id: true,
   title: true,
+  province: true,
+  city: true,
   event_type: true,
   event_types: true,
   audience_who: true,
