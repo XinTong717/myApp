@@ -42,6 +42,8 @@ export type SchoolLocationItem = {
   source?: string
 }
 
+export type SchoolMarkerLocationItem = Pick<SchoolLocationItem, 'school_id' | 'province' | 'city' | 'status'>
+
 export type SchoolItem = {
   id: number
   name: string
@@ -62,8 +64,22 @@ export type SchoolItem = {
   official_url?: string
 }
 
+export type SchoolMarkerItem = {
+  id: number
+  name?: string
+  canonical_name?: string
+  province?: string
+  city?: string
+  locations?: SchoolMarkerLocationItem[]
+  location_count?: number
+}
+
 export type SchoolListResult = CloudResponse<{
   schools?: SchoolItem[]
+}>
+
+export type SchoolMarkerListResult = CloudResponse<{
+  schools?: SchoolMarkerItem[]
 }>
 
 export type SchoolDetailResult = CloudResponse<{
