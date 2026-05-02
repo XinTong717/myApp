@@ -124,14 +124,7 @@ async function saveProfile(event, wxContext) {
   })
   if (!securityResult.ok) return fail(requestId, securityResult.code || 'CONTENT_SECURITY_BLOCKED', securityResult.message)
 
-  const existing = await db.collection('users').where({ openid }).limit(20).get()
-  const existingDocs = existing.data || []
-  const canonicalDoc = existingDocs.find((item) => item._id === openid) || existingDocs[0] || null
-  const baseDoc = canonicalDoc ? { ...canonicalDoc } : {}
-  delete baseDoc._id
-
   const dataToSave = {
-    ...baseDoc,
     allowIncomingRequests: cleanData.allowIncomingRequests !== false,
     isVisibleOnMap: cleanData.isVisibleOnMap !== false,
     ...cleanData,
@@ -139,16 +132,23 @@ async function saveProfile(event, wxContext) {
     wechatId: '',
     deletionRequestedAt: null,
     deletionStatus: '',
-    createdAt: canonicalDoc?.createdAt || db.serverDate(),
   }
 
-  await db.collection('users').doc(openid).set({ data: dataToSave })
-  const staleDocs = existingDocs.filter((item) => item._id !== openid)
-  if (staleDocs.length > 0) {
-    await Promise.all(staleDocs.map((item) => db.collection('users').doc(item._id).remove().catch(() => null)))
+  let mode = 'update'
+  try {
+    await db.collection('users').doc(openid).update({ data: dataToSave })
+  } catch (err) {
+    mode = 'create'
+    await db.collection('users').doc(openid).set({
+      data: {
+        ...dataToSave,
+        createdAt: db.serverDate(),
+      },
+    })
   }
+
   return ok(requestId, {
-    mode: canonicalDoc ? 'update' : 'create',
+    mode,
     profile: normalizeProfile({ ...dataToSave, _id: openid }),
   })
 }
