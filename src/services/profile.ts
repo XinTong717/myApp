@@ -1,5 +1,5 @@
 import { callCloud } from './cloud'
-import { clearScopedCachedValue, getScopedCachedValue, setScopedCachedValue } from './cache'
+import { clearScopedCachedValue, getScopedCachedValue, getScopedCachedValueAllowExpired, setScopedCachedValue } from './cache'
 import { clearMapUsersCache } from './map'
 import type {
   AdminAccessResult,
@@ -24,8 +24,8 @@ type ProfilePayload = { profile?: UserProfile | null }
 type SafetyOverviewPayload = Pick<SafetyOverviewResult, 'blocked' | 'muted'>
 type AdminAccessPayload = Pick<AdminAccessResult, 'isAdmin' | 'admin'>
 
-function okProfile(payload: ProfilePayload): GetMeResult {
-  return { ok: true, profile: payload.profile || null }
+function okProfile(payload: ProfilePayload, meta: { stale?: boolean } = {}): GetMeResult {
+  return { ok: true, profile: payload.profile || null, ...(meta.stale ? { stale: true } : {}) }
 }
 
 function okSafetyOverview(payload: SafetyOverviewPayload): SafetyOverviewResult {
@@ -57,9 +57,16 @@ export async function clearAdminAccessCache() {
   ])
 }
 
-export async function getMe(options: { forceRefresh?: boolean } = {}) {
-  const cached = options.forceRefresh ? null : await getScopedCachedValue<ProfilePayload>(PROFILE_CACHE_KEY)
-  if (cached) return okProfile(cached)
+export async function getMe(options: { forceRefresh?: boolean; allowStale?: boolean } = {}) {
+  if (!options.forceRefresh) {
+    if (options.allowStale) {
+      const staleCached = await getScopedCachedValueAllowExpired<ProfilePayload>(PROFILE_CACHE_KEY)
+      if (staleCached) return okProfile(staleCached.value, { stale: staleCached.stale })
+    } else {
+      const cached = await getScopedCachedValue<ProfilePayload>(PROFILE_CACHE_KEY)
+      if (cached) return okProfile(cached)
+    }
+  }
 
   const result = await callCloud<GetMeResult>('getMe')
   if (result.ok) {
