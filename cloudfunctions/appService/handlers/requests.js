@@ -48,6 +48,27 @@ async function loadHiddenOpenidSet(openid) {
   )
 }
 
+async function loadBlockedByOpenidSet(openid, candidateOpenids = []) {
+  const candidates = Array.from(new Set((candidateOpenids || []).filter(Boolean)))
+  if (!openid || candidates.length === 0) return new Set()
+
+  const blockedBy = new Set()
+  for (let i = 0; i < candidates.length; i += 20) {
+    const chunk = candidates.slice(i, i + 20)
+    const res = await db.collection('safety_relations')
+      .where({ ownerOpenid: _.in(chunk), targetOpenid: openid, isBlocked: true })
+      .field({ ownerOpenid: true })
+      .limit(chunk.length)
+      .get()
+
+    ;(res.data || []).forEach((item) => {
+      if (item.ownerOpenid) blockedBy.add(item.ownerOpenid)
+    })
+  }
+
+  return blockedBy
+}
+
 async function loadPending(openid, hiddenOpenidSet, offset, limit) {
   const pendingRes = await db.collection('connections')
     .where({ toOpenid: openid, status: 'pending' })
@@ -124,11 +145,14 @@ async function loadAccepted(openid, hiddenOpenidSet, offset, limit) {
   const allAccepted = [...pageFrom, ...pageTo]
     .sort((a, b) => new Date(b.respondedAt || 0).getTime() - new Date(a.respondedAt || 0).getTime())
 
-  const otherOpenids = Array.from(new Set(
+  const candidateOpenids = Array.from(new Set(
     allAccepted
       .map((conn) => (conn.fromOpenid === openid ? conn.toOpenid : conn.fromOpenid))
       .filter((oid) => oid && !hiddenOpenidSet.has(oid))
   ))
+
+  const blockedByOpenidSet = await loadBlockedByOpenidSet(openid, candidateOpenids)
+  const otherOpenids = candidateOpenids.filter((oid) => !blockedByOpenidSet.has(oid))
 
   const usersRes = otherOpenids.length > 0
     ? await db.collection('users')
@@ -143,6 +167,7 @@ async function loadAccepted(openid, hiddenOpenidSet, offset, limit) {
   const items = allAccepted.reduce((acc, conn) => {
     const otherOpenid = conn.fromOpenid === openid ? conn.toOpenid : conn.fromOpenid
     if (hiddenOpenidSet.has(otherOpenid)) return acc
+    if (blockedByOpenidSet.has(otherOpenid)) return acc
 
     const otherUserId = conn.fromOpenid === openid ? conn.toUserId : conn.fromUserId
     const otherBasicName = conn.fromOpenid === openid ? conn.toName : conn.fromName
