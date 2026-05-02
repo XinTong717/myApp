@@ -20,6 +20,7 @@ const ROUTED_ACTIONS = new Set([
   'getMe',
   'saveProfile',
   'updatePrivacySettings',
+  'requestAccountDeletion',
   'getSafetyOverview',
   'getMapUsers',
   'sendRequest',
