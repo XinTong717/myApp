@@ -313,22 +313,28 @@ async function getSchoolById(schoolId) {
   return attachSchoolLocations([school], locations)[0] || null
 }
 
+const EVENT_FIELD_SELECTION = {
+  id: true,
+  title: true,
+  event_type: true,
+  event_types: true,
+  audience_who: true,
+  min_age_requirement: true,
+  fee_category: true,
+  description: true,
+  start_time: true,
+  end_time: true,
+  location: true,
+  fee: true,
+  status: true,
+  organizer: true,
+  is_online: true,
+}
+
 async function listEvents(limit = EVENT_LIST_LIMIT) {
   const queryLimit = normalizeLimit(limit, EVENT_LIST_LIMIT, EVENT_LIST_LIMIT)
   const res = await db.collection('events')
-    .field({
-      id: true,
-      title: true,
-      event_type: true,
-      description: true,
-      start_time: true,
-      end_time: true,
-      location: true,
-      fee: true,
-      status: true,
-      organizer: true,
-      is_online: true,
-    })
+    .field(EVENT_FIELD_SELECTION)
     .orderBy('start_time', 'asc')
     .limit(queryLimit)
     .get()
@@ -341,19 +347,7 @@ async function getEventById(eventId) {
 
   const res = await db.collection('events')
     .where({ id: Number(eventId) })
-    .field({
-      id: true,
-      title: true,
-      event_type: true,
-      description: true,
-      start_time: true,
-      end_time: true,
-      location: true,
-      fee: true,
-      status: true,
-      organizer: true,
-      is_online: true,
-    })
+    .field(EVENT_FIELD_SELECTION)
     .limit(1)
     .get()
 
