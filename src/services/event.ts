@@ -15,11 +15,16 @@ import type {
 const EVENT_LIST_CACHE_KEY = 'cloud-cache:events:list:v3'
 const EVENT_LIST_LEGACY_CACHE_KEYS = ['cloud-cache:events:list:v1', 'cloud-cache:events:list:v2']
 const EVENT_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:events:detail:v2:'
+const EVENT_INTEREST_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:interest-info:v1:'
+const EVENT_CONTACT_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:contact-info:v1:'
 const EVENT_LIST_TTL_MS = 5 * 60 * 1000
 const EVENT_DETAIL_TTL_MS = 10 * 60 * 1000
+const EVENT_RUNTIME_TTL_MS = 45 * 1000
 
 type EventListPayload = { events?: EventItem[]; degraded?: boolean }
 type EventDetailPayload = { event?: EventItem | null }
+type EventInterestInfoPayload = Pick<EventInterestInfoResult, 'count' | 'hasInterested' | 'degraded'>
+type ContactInfoPayload = Pick<ContactInfoResult, 'contactInfo' | 'publicSignupInfo' | 'needCompleteProfile' | 'privateContactRequiresProfile' | 'privateContactRequiresInterest' | 'message'>
 
 function okEventList(payload: EventListPayload): EventListResult {
   return {
@@ -33,8 +38,37 @@ function okEventDetail(payload: EventDetailPayload): EventDetailResult {
   return { ok: true, event: payload.event || null }
 }
 
+function okEventInterestInfo(payload: EventInterestInfoPayload): EventInterestInfoResult {
+  return {
+    ok: true,
+    count: Number(payload.count || 0),
+    hasInterested: !!payload.hasInterested,
+    ...(payload.degraded ? { degraded: true } : {}),
+  }
+}
+
+function okContactInfo(payload: ContactInfoPayload): ContactInfoResult {
+  return {
+    ok: true,
+    contactInfo: payload.contactInfo || '',
+    publicSignupInfo: payload.publicSignupInfo,
+    needCompleteProfile: !!payload.needCompleteProfile,
+    privateContactRequiresProfile: !!payload.privateContactRequiresProfile,
+    privateContactRequiresInterest: !!payload.privateContactRequiresInterest,
+    message: payload.message,
+  }
+}
+
 function getEventDetailCacheKey(eventId: number) {
   return `${EVENT_DETAIL_CACHE_KEY_PREFIX}${eventId}`
+}
+
+function getEventInterestInfoCacheKey(eventId: number) {
+  return `${EVENT_INTEREST_INFO_CACHE_KEY_PREFIX}${eventId}`
+}
+
+function getEventContactInfoCacheKey(eventId: number) {
+  return `${EVENT_CONTACT_INFO_CACHE_KEY_PREFIX}${eventId}`
 }
 
 async function readAnyEventListCache() {
@@ -45,6 +79,13 @@ export async function clearEventListCache() {
   await Promise.all([
     clearScopedCachedValue(EVENT_LIST_CACHE_KEY),
     ...EVENT_LIST_LEGACY_CACHE_KEYS.map((key) => clearScopedCachedValue(key)),
+  ])
+}
+
+export async function clearEventRuntimeCache(eventId: number) {
+  await Promise.all([
+    clearScopedCachedValue(getEventInterestInfoCacheKey(eventId)),
+    clearScopedCachedValue(getEventContactInfoCacheKey(eventId)),
   ])
 }
 
@@ -119,16 +160,52 @@ export async function getEventInterestCountsBatch(eventIds: number[]) {
   return callCloud<EventInterestCountsBatchResult>('getEventInterestCountsBatch', { eventIds })
 }
 
-export async function getEventInterestInfo(eventId: number) {
-  return callCloud<EventInterestInfoResult>('getEventInterestInfo', { eventId })
+export async function getEventInterestInfo(eventId: number, options: { forceRefresh?: boolean } = {}) {
+  const cacheKey = getEventInterestInfoCacheKey(eventId)
+  const cached = options.forceRefresh ? null : await getScopedCachedValue<EventInterestInfoPayload>(cacheKey)
+  if (cached) return okEventInterestInfo(cached)
+
+  const result = await callCloud<EventInterestInfoResult>('getEventInterestInfo', { eventId })
+  if (result.ok) {
+    await setScopedCachedValue(cacheKey, {
+      count: result.count || 0,
+      hasInterested: !!result.hasInterested,
+      degraded: !!result.degraded,
+    }, EVENT_RUNTIME_TTL_MS)
+  }
+  return result
 }
 
 export async function toggleEventInterest(eventId: number) {
-  return runExclusive(`toggleEventInterest:${eventId}`, () => callCloud<ToggleEventInterestResult>('toggleEventInterest', { eventId }))
+  return runExclusive(`toggleEventInterest:${eventId}`, async () => {
+    const result = await callCloud<ToggleEventInterestResult>('toggleEventInterest', { eventId })
+    if (result.ok) {
+      await Promise.all([
+        clearEventRuntimeCache(eventId),
+        clearEventListCache(),
+      ])
+    }
+    return result
+  })
 }
 
-export async function getEventContactInfo(eventId: number) {
-  return callCloud<ContactInfoResult>('getEventContactInfo', { eventId })
+export async function getEventContactInfo(eventId: number, options: { forceRefresh?: boolean } = {}) {
+  const cacheKey = getEventContactInfoCacheKey(eventId)
+  const cached = options.forceRefresh ? null : await getScopedCachedValue<ContactInfoPayload>(cacheKey)
+  if (cached) return okContactInfo(cached)
+
+  const result = await callCloud<ContactInfoResult>('getEventContactInfo', { eventId })
+  if (result.ok) {
+    await setScopedCachedValue(cacheKey, {
+      contactInfo: result.contactInfo || '',
+      publicSignupInfo: result.publicSignupInfo,
+      needCompleteProfile: !!result.needCompleteProfile,
+      privateContactRequiresProfile: !!result.privateContactRequiresProfile,
+      privateContactRequiresInterest: !!result.privateContactRequiresInterest,
+      message: result.message,
+    }, EVENT_RUNTIME_TTL_MS)
+  }
+  return result
 }
 
 export async function submitEvent(data: Record<string, unknown>) {
