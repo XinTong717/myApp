@@ -66,7 +66,7 @@ async function getMe(event, wxContext) {
 async function saveProfile(event, wxContext) {
   const requestId = resolveRequestId('save-profile', event)
   const openid = wxContext.OPENID
-  const ALLOWED_FIELDS = ['displayName', 'gender', 'ageRange', 'roles', 'province', 'city', 'wechatId', 'childAgeRange', 'childDropoutStatus', 'childInterests', 'eduServices', 'bio', 'companionContext', 'allowIncomingRequests', 'isVisibleOnMap']
+  const ALLOWED_FIELDS = ['displayName', 'gender', 'ageRange', 'roles', 'province', 'city', 'contactId', 'childAgeRange', 'childDropoutStatus', 'childInterests', 'eduServices', 'bio', 'companionContext', 'allowIncomingRequests', 'isVisibleOnMap']
   const BOOLEAN_FIELDS = ['allowIncomingRequests', 'isVisibleOnMap']
   const ARRAY_FIELDS = ['roles', 'childAgeRange', 'childDropoutStatus']
   const GENDER_WHITELIST = ['男', '女', '其他', '不想说']
@@ -106,7 +106,7 @@ async function saveProfile(event, wxContext) {
     validateLength('教育服务', cleanData.eduServices, 500)
   if (lengthError) return fail(requestId, 'INVALID_LENGTH', lengthError)
 
-  const contactError = validateSearchableContactId(cleanData.wechatId)
+  const contactError = validateSearchableContactId(cleanData.contactId)
   if (contactError) return fail(requestId, 'INVALID_CONTACT_ID', contactError)
 
   if (!selectedRoles.includes('同行者')) cleanData.companionContext = ''
@@ -139,6 +139,7 @@ async function saveProfile(event, wxContext) {
     isVisibleOnMap: cleanData.isVisibleOnMap !== false,
     ...cleanData,
     openid,
+    wechatId: '',
     createdAt: canonicalDoc?.createdAt || db.serverDate(),
   }
 
