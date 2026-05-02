@@ -1,6 +1,8 @@
+import Taro from '@tarojs/taro'
 import { callCloud } from './cloud'
 import { clearScopedCachedValue, getScopedCachedValue, getScopedCachedValueAllowExpired, setScopedCachedValue } from './cache'
 import { clearMapUsersCache } from './map'
+import { STORAGE_FLAGS } from '../constants/storageFlags'
 import type {
   AdminAccessResult,
   GetMeResult,
@@ -35,6 +37,14 @@ function okSafetyOverview(payload: SafetyOverviewPayload): SafetyOverviewResult 
 
 function okAdminAccess(payload: AdminAccessPayload): AdminAccessResult {
   return { ok: true, isAdmin: !!payload.isAdmin, admin: payload.admin }
+}
+
+async function flagExploreRefresh() {
+  try {
+    await Taro.setStorage({ key: STORAGE_FLAGS.exploreForceRefresh, data: String(Date.now()) })
+  } catch (err) {
+    console.warn('flagExploreRefresh skipped:', err)
+  }
 }
 
 export async function clearProfileCache() {
@@ -82,6 +92,7 @@ export async function saveProfile(data: Record<string, unknown>) {
     await Promise.all([
       clearProfileCache(),
       clearMapUsersCache(),
+      flagExploreRefresh(),
     ])
   }
   return result
@@ -94,6 +105,7 @@ export async function updatePrivacySettings(data: { allowIncomingRequests?: bool
       clearProfileCache(),
       clearSafetyOverviewCache(),
       clearMapUsersCache(),
+      flagExploreRefresh(),
     ])
   }
   return result
@@ -105,6 +117,7 @@ export async function requestAccountDeletion(note = '') {
     await Promise.all([
       clearProfileCache(),
       clearMapUsersCache(),
+      flagExploreRefresh(),
     ])
   }
   return result
