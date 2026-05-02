@@ -140,6 +140,7 @@ async function saveProfile(event, wxContext) {
     ...cleanData,
     openid,
     wechatId: '',
+    deletionRequestedAt: null,
     createdAt: canonicalDoc?.createdAt || db.serverDate(),
   }
 
@@ -169,6 +170,62 @@ async function updatePrivacySettings(event, wxContext) {
   } catch (err) {
     console.error('appService updatePrivacySettings error:', err)
     return fail(requestId, 'UPDATE_PRIVACY_SETTINGS_FAILED', '更新隐私设置失败，请稍后重试')
+  }
+}
+
+async function requestAccountDeletion(event, wxContext) {
+  const requestId = resolveRequestId('request-account-deletion', event)
+  const openid = wxContext.OPENID
+  const note = String(event.note || '').trim()
+
+  if (note.length > 500) return fail(requestId, 'NOTE_TOO_LONG', '注销说明不能超过500字')
+
+  try {
+    if (note) {
+      const securityResult = await runMsgSecCheck({
+        content: note,
+        openid,
+        scene: 2,
+        maxLen: 500,
+        blockedMessage: '注销说明包含不合规信息，请修改后重试',
+        failedMessage: '注销说明审核失败，请稍后重试',
+      })
+      if (!securityResult.ok) return fail(requestId, securityResult.code || 'CONTENT_SECURITY_BLOCKED', securityResult.message)
+    }
+
+    const userDocId = await resolveUserDocId(openid)
+    const profile = userDocId ? await getUserProfileByOpenid(openid) : null
+
+    await db.collection('account_deletion_requests').add({
+      data: {
+        openid,
+        userDocId: userDocId || '',
+        displayName: profile?.displayName || '',
+        city: profile?.city || '',
+        note,
+        status: 'pending',
+        createdAt: db.serverDate(),
+        updatedAt: db.serverDate(),
+      },
+    })
+
+    if (userDocId) {
+      await db.collection('users').doc(userDocId).update({
+        data: {
+          contactId: '',
+          wechatId: '',
+          allowIncomingRequests: false,
+          isVisibleOnMap: false,
+          deletionRequestedAt: db.serverDate(),
+          updatedAt: db.serverDate(),
+        },
+      })
+    }
+
+    return ok(requestId, { message: '注销申请已提交。你的资料已先从地图隐藏，并暂停新的联络请求。' })
+  } catch (err) {
+    console.error('appService requestAccountDeletion error:', err)
+    return fail(requestId, 'REQUEST_ACCOUNT_DELETION_FAILED', '提交注销申请失败，请稍后重试')
   }
 }
 
@@ -218,7 +275,7 @@ async function sendRequest(event, wxContext) {
   if (sameDirectionRecord?.status === 'rejected') {
     const cooldownDays = getCooldownRemainingDays(sameDirectionRecord.respondedAt || sameDirectionRecord.updatedAt)
     if (cooldownDays > 0) {
-      return fail(requestId, 'REJECTED_COOLDOWN', `对方近期已拒绝你的联络请求，请 ${cooldownDays} 天后再试`)
+      return fail(requestId, 'REJECTED_COOLDOWN', `对方近期已拒绝你的联络请求，请 ${cooldownDays} 天后再试`, { cooldownDays })
     }
   }
   let reverseRecord = null
@@ -375,6 +432,7 @@ module.exports = {
   getMe,
   saveProfile,
   updatePrivacySettings,
+  requestAccountDeletion,
   getSafetyOverview,
   sendRequest,
   respondRequest,
