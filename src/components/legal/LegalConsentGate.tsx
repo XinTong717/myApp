@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Button, Text, View } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { palette } from '../../theme/palette'
 import { typography } from '../../theme/typography'
 import {
@@ -18,6 +18,40 @@ const initialChecks: ConsentChecks = {
   terms: false,
   privacy: false,
   adult: false,
+}
+
+const LEGAL_PAGE_ROUTES = new Set([
+  'pages/user-agreement/index',
+  'pages/privacy-policy/index',
+  'pkg/legal/user-agreement/index',
+  'pkg/legal/privacy-policy/index',
+])
+
+const TAB_PAGE_ROUTES = new Set([
+  'pages/explore/index',
+  'pages/schools/index',
+  'pages/events/index',
+  'pages/profile/index',
+])
+
+function getCurrentRouteInfo() {
+  const pages = Taro.getCurrentPages ? Taro.getCurrentPages() : []
+  const current = pages[pages.length - 1] as any
+  const route = String(current?.route || '')
+  const options = current?.options || {}
+  const query = Object.keys(options)
+    .filter((key) => options[key] !== undefined && options[key] !== null && options[key] !== '')
+    .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(String(options[key]))}`)
+    .join('&')
+
+  return {
+    route,
+    url: route ? `/${route}${query ? `?${query}` : ''}` : '/pages/explore/index',
+  }
+}
+
+function isLegalPageRoute(route: string) {
+  return LEGAL_PAGE_ROUTES.has(route)
 }
 
 function ConsentCheckbox(props: {
@@ -62,9 +96,22 @@ export default function LegalConsentGate() {
   const [checks, setChecks] = useState<ConsentChecks>(initialChecks)
   const [submitting, setSubmitting] = useState(false)
 
+  const refreshVisibility = () => {
+    const { route } = getCurrentRouteInfo()
+    if (hasCurrentLocalLegalConsent() || isLegalPageRoute(route)) {
+      setVisible(false)
+      return
+    }
+    setVisible(true)
+  }
+
   useEffect(() => {
-    if (!hasCurrentLocalLegalConsent()) setVisible(true)
+    refreshVisibility()
   }, [])
+
+  useDidShow(() => {
+    refreshVisibility()
+  })
 
   if (!visible) return null
 
@@ -73,11 +120,25 @@ export default function LegalConsentGate() {
   }
 
   const openUserAgreement = () => {
+    setVisible(false)
     Taro.navigateTo({ url: '/pages/user-agreement/index' })
   }
 
   const openPrivacyPolicy = () => {
+    setVisible(false)
     Taro.navigateTo({ url: '/pages/privacy-policy/index' })
+  }
+
+  const reloadCurrentPage = () => {
+    const { route, url } = getCurrentRouteInfo()
+    if (isLegalPageRoute(route)) return
+    if (TAB_PAGE_ROUTES.has(route)) {
+      Taro.switchTab({ url: `/${route}` })
+      return
+    }
+    Taro.redirectTo({ url }).catch(() => {
+      Taro.reLaunch({ url })
+    })
   }
 
   const handleAgree = async () => {
@@ -105,6 +166,7 @@ export default function LegalConsentGate() {
 
     setVisible(false)
     Taro.showToast({ title: '已确认', icon: 'success' })
+    reloadCurrentPage()
   }
 
   return (
