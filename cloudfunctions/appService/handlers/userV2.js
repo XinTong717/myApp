@@ -141,6 +141,7 @@ async function saveProfile(event, wxContext) {
     openid,
     wechatId: '',
     deletionRequestedAt: null,
+    deletionStatus: '',
     createdAt: canonicalDoc?.createdAt || db.serverDate(),
   }
 
@@ -212,17 +213,28 @@ async function requestAccountDeletion(event, wxContext) {
     if (userDocId) {
       await db.collection('users').doc(userDocId).update({
         data: {
+          displayName: '已注销用户',
+          gender: '',
+          ageRange: '',
+          roles: [],
           contactId: '',
           wechatId: '',
+          bio: '',
+          companionContext: '',
+          childAgeRange: [],
+          childDropoutStatus: [],
+          childInterests: '',
+          eduServices: '',
           allowIncomingRequests: false,
           isVisibleOnMap: false,
+          deletionStatus: 'pending',
           deletionRequestedAt: db.serverDate(),
           updatedAt: db.serverDate(),
         },
       })
     }
 
-    return ok(requestId, { message: '注销申请已提交。你的资料已先从地图隐藏，并暂停新的联络请求。' })
+    return ok(requestId, { message: '注销申请已提交。你的公开资料已先匿名化并从地图隐藏，联络标识已清空，新的联络请求也已暂停。' })
   } catch (err) {
     console.error('appService requestAccountDeletion error:', err)
     return fail(requestId, 'REQUEST_ACCOUNT_DELETION_FAILED', '提交注销申请失败，请稍后重试')
