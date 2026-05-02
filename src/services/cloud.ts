@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import type { CloudResponse } from '../types/domain'
+import { hasCurrentLocalLegalConsent } from './legalConsent'
 
 const APP_SERVICE_NAME = 'appService'
 
@@ -28,6 +29,8 @@ const ROUTED_ACTIONS = new Set([
   'manageSafetyRelation',
   'reportUser',
   'checkAdminAccess',
+  'recordLegalConsent',
+  'getLegalConsentStatus',
   'listEventSubmissions',
   'getEventPublishPayload',
   'publishEventDirect',
@@ -36,12 +39,27 @@ const ROUTED_ACTIONS = new Set([
   'validateSchoolLocationsMigration',
 ])
 
+const LEGAL_CONSENT_EXEMPT_ACTIONS = new Set([
+  'recordLegalConsent',
+  'getLegalConsentStatus',
+])
+
 function createClientRequestId(name: string) {
   return `${name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 export async function callCloud<T = Record<string, unknown>>(name: string, data: Record<string, unknown> = {}) {
   const clientRequestId = createClientRequestId(name)
+
+  if (!LEGAL_CONSENT_EXEMPT_ACTIONS.has(name) && !hasCurrentLocalLegalConsent()) {
+    return {
+      ok: false,
+      code: 'LEGAL_CONSENT_REQUIRED',
+      requestId: clientRequestId,
+      message: '请先阅读并同意用户协议和隐私政策',
+    } as CloudResponse<T>
+  }
+
   const routed = ROUTED_ACTIONS.has(name)
   const functionName = routed ? APP_SERVICE_NAME : name
   const payload = routed
