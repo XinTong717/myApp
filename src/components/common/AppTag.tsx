@@ -9,6 +9,9 @@ type AppTagProps = {
   tone?: AppTagTone
   marginRight?: string
   marginBottom?: string
+  padding?: string
+  backgroundColor?: string
+  textColor?: string
 }
 
 function getToneColors(tone: AppTagTone) {
@@ -18,18 +21,26 @@ function getToneColors(tone: AppTagTone) {
   return { bg: palette.tag, text: palette.tagText }
 }
 
-export default function AppTag({ text, tone = 'neutral', marginRight = '8px', marginBottom = '8px' }: AppTagProps) {
+export default function AppTag({
+  text,
+  tone = 'neutral',
+  marginRight = '8px',
+  marginBottom = '8px',
+  padding = '5px 10px',
+  backgroundColor,
+  textColor,
+}: AppTagProps) {
   const colors = getToneColors(tone)
 
   return (
     <View style={{
-      padding: '5px 10px',
+      padding,
       borderRadius: '999px',
-      backgroundColor: colors.bg,
+      backgroundColor: backgroundColor || colors.bg,
       marginRight,
       marginBottom,
     }}>
-      <Text style={{ ...typography.caption, color: colors.text }}>{text}</Text>
+      <Text style={{ ...typography.caption, color: textColor || colors.text }}>{text}</Text>
     </View>
   )
 }
