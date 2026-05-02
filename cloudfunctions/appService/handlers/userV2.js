@@ -91,7 +91,6 @@ async function saveProfile(event, wxContext) {
   if (!cleanData.province || !cleanData.city) return fail(requestId, 'CITY_REQUIRED', '请选择所在城市')
   if (cleanData.gender && !GENDER_WHITELIST.includes(cleanData.gender)) return fail(requestId, 'INVALID_GENDER', '性别选项不合法')
   if (cleanData.ageRange && !AGE_RANGE_WHITELIST.includes(cleanData.ageRange)) return fail(requestId, 'INVALID_AGE_RANGE', '年龄段选项不合法')
-  if (cleanData.ageRange === '18岁以下') return fail(requestId, 'UNDERAGE_NOT_ALLOWED', '当前仅支持18岁及以上用户注册')
   const selectedRoles = Array.isArray(cleanData.roles) ? cleanData.roles : []
   if (selectedRoles.length === 0) return fail(requestId, 'ROLE_REQUIRED', '请至少选择一个身份')
 
