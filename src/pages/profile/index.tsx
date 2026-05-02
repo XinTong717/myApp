@@ -154,8 +154,8 @@ export default function ProfilePage() {
     cityOption,
     customCity,
     setCustomCity,
-    wechatId,
-    setWechatId,
+    contactId,
+    setContactId,
     allowIncomingRequests,
     isVisibleOnMap,
     childAgeRange,
@@ -322,8 +322,8 @@ export default function ProfilePage() {
             currentCity={currentCity}
             customCity={customCity}
             setCustomCity={setCustomCity}
-            wechatId={wechatId}
-            setWechatId={setWechatId}
+            contactId={contactId}
+            setContactId={setContactId}
             pickerRange={pickerRange}
             pickerValue={pickerValue}
             handlePickerChange={handlePickerChange}
