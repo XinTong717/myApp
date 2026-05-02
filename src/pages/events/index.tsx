@@ -3,7 +3,6 @@ import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
 import { setDetailPreview } from '../../services/detailPreview'
-import { registerCurrentPageShare } from '../../utils/share'
 import { palette } from '../../theme/palette'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import {
@@ -75,7 +74,6 @@ export default function EventsPage() {
   }
 
   useDidShow(() => {
-    registerCurrentPageShare(EVENT_SHARE)
     loadEvents()
   })
 
