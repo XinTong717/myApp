@@ -1,6 +1,6 @@
 import { View } from '@tarojs/components'
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
+import { elevation, radius, space, type ElevationScale } from '../../theme/spacing'
 
 type AppCardProps = {
   children: any
@@ -9,16 +9,20 @@ type AppCardProps = {
   radius?: string
   backgroundColor?: string
   borderColor?: string
+  border?: boolean
+  elevationLevel?: ElevationScale
   onClick?: () => void
 }
 
 export default function AppCard({
   children,
   padding = space(4),
-  marginBottom = '14px',
-  radius = '22px',
+  marginBottom = radius.lg,
+  radius: cardRadius = radius.lg,
   backgroundColor = palette.card,
-  borderColor = palette.line,
+  borderColor = palette.lineSoft,
+  border = false,
+  elevationLevel = 'card',
   onClick,
 }: AppCardProps) {
   return (
@@ -26,11 +30,12 @@ export default function AppCard({
       onClick={onClick}
       style={{
         backgroundColor,
-        borderRadius: radius,
+        borderRadius: cardRadius,
         padding,
         marginBottom,
         boxSizing: 'border-box',
-        border: `1px solid ${borderColor}`,
+        border: border ? `1px solid ${borderColor}` : 'none',
+        boxShadow: elevation[elevationLevel],
       }}
     >
       {children}
