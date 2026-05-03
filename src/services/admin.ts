@@ -15,7 +15,7 @@ export async function getEventPublishPayload(submissionId: string) {
 
 export async function reviewEventSubmission(data: {
   submissionId: string
-  action: 'mark_published' | 'reject' | 'reset_pending'
+  reviewAction: 'mark_published' | 'reject' | 'reset_pending'
   publishedEventId?: string
   adminNote?: string
 }) {
