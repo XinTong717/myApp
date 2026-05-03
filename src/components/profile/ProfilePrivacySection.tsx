@@ -39,7 +39,7 @@ export default function ProfilePrivacySection(props: Props) {
               <Text style={{ fontSize: '12px', color: palette.subtext }}>打开后，其他用户将无法再向你发起新的联络请求。</Text>
             </View>
           </View>
-          <Switch checked={!allowIncomingRequests} disabled={privacySaving} color={palette.accentDeep} onChange={(e) => onUpdatePrivacySetting('allowIncomingRequests', !e.detail.value)} />
+          <Switch checked={!allowIncomingRequests} disabled={privacySaving} color={palette.brand} onChange={(e) => onUpdatePrivacySetting('allowIncomingRequests', !e.detail.value)} />
         </View>
       </ProfileInputBox>
       <ProfileInputBox>
@@ -50,7 +50,7 @@ export default function ProfilePrivacySection(props: Props) {
               <Text style={{ fontSize: '12px', color: palette.subtext }}>关闭后，你的名字和简介不会再出现在探索地图上。</Text>
             </View>
           </View>
-          <Switch checked={isVisibleOnMap} disabled={privacySaving} color={palette.accentDeep} onChange={(e) => onUpdatePrivacySetting('isVisibleOnMap', !!e.detail.value)} />
+          <Switch checked={isVisibleOnMap} disabled={privacySaving} color={palette.brand} onChange={(e) => onUpdatePrivacySetting('isVisibleOnMap', !!e.detail.value)} />
         </View>
       </ProfileInputBox>
       <ProfileInputBox>
@@ -61,14 +61,14 @@ export default function ProfilePrivacySection(props: Props) {
               <Text style={{ fontSize: '12px', color: palette.subtext }}>提交后会先隐藏你的地图资料、清空联络标识并暂停新的联络请求，后续由管理员处理删除申请。</Text>
             </View>
           </View>
-          <Text onClick={onRequestAccountDeletion} style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>申请</Text>
+          <Text onClick={onRequestAccountDeletion} style={{ fontSize: '12px', color: palette.brand, fontWeight: 'bold' }}>申请</Text>
         </View>
       </ProfileInputBox>
       {(blockedUsers.length > 0 || mutedUsers.length > 0) && (
         <View>
           {blockedUsers.length > 0 && (
             <View style={{ marginBottom: '10px' }}>
-              <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>已拉黑</Text>
+              <Text style={{ fontSize: '12px', color: palette.brand, fontWeight: 'bold' }}>已拉黑</Text>
               {blockedUsers.map((item) => (
                 <ProfileInputBox key={item._id} marginBottom='8px'>
                   <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
@@ -76,7 +76,7 @@ export default function ProfilePrivacySection(props: Props) {
                       <Text style={{ fontSize: '13px', color: palette.text }}>{item.targetName || '未知用户'}</Text>
                       {item.targetCity ? <Text style={{ fontSize: '11px', color: palette.subtext }}> · {item.targetCity}</Text> : null}
                     </View>
-                    <Text onClick={() => onSafetyAction(item.targetUserId, 'unblock')} style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>解除拉黑</Text>
+                    <Text onClick={() => onSafetyAction(item.targetUserId, 'unblock')} style={{ fontSize: '12px', color: palette.brand, fontWeight: 'bold' }}>解除拉黑</Text>
                   </View>
                 </ProfileInputBox>
               ))}
@@ -84,7 +84,7 @@ export default function ProfilePrivacySection(props: Props) {
           )}
           {mutedUsers.length > 0 && (
             <View>
-              <Text style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>已静音</Text>
+              <Text style={{ fontSize: '12px', color: palette.brand, fontWeight: 'bold' }}>已静音</Text>
               {mutedUsers.map((item) => (
                 <ProfileInputBox key={item._id} marginBottom='8px'>
                   <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
@@ -92,7 +92,7 @@ export default function ProfilePrivacySection(props: Props) {
                       <Text style={{ fontSize: '13px', color: palette.text }}>{item.targetName || '未知用户'}</Text>
                       {item.targetCity ? <Text style={{ fontSize: '11px', color: palette.subtext }}> · {item.targetCity}</Text> : null}
                     </View>
-                    <Text onClick={() => onSafetyAction(item.targetUserId, 'unmute')} style={{ fontSize: '12px', color: palette.accentDeep, fontWeight: 'bold' }}>取消静音</Text>
+                    <Text onClick={() => onSafetyAction(item.targetUserId, 'unmute')} style={{ fontSize: '12px', color: palette.brand, fontWeight: 'bold' }}>取消静音</Text>
                   </View>
                 </ProfileInputBox>
               ))}
