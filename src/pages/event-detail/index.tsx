@@ -44,11 +44,11 @@ function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
   )
 }
 
-function EventContent(props: { event: EventItem; preview?: boolean; interestCount: number; hasInterested: boolean; interestLoading: boolean; hasProfile: boolean; contactInfo: string; contactMessage: string; contactLoading: boolean; publicSignupText: string; onToggleInterest: () => void }) {
-  const { event, preview, interestCount, hasInterested, interestLoading, hasProfile, contactInfo, contactMessage, contactLoading, publicSignupText, onToggleInterest } = props
+function EventContent(props: { event: EventItem; preview?: boolean; previewError?: string; interestCount: number; hasInterested: boolean; interestLoading: boolean; hasProfile: boolean; contactInfo: string; contactMessage: string; contactLoading: boolean; publicSignupText: string; onToggleInterest: () => void; onRetryDetail?: () => void }) {
+  const { event, preview, previewError, interestCount, hasInterested, interestLoading, hasProfile, contactInfo, contactMessage, contactLoading, publicSignupText, onToggleInterest, onRetryDetail } = props
   return (
     <>
-      {preview ? <View style={{ backgroundColor: palette.warningSoft, borderRadius: '14px', padding: `10px ${space(3)}`, marginBottom: space(3), border: `1px solid ${palette.line}` }}><Text style={{ ...typography.caption, color: palette.subtext }}>正在加载完整详情，先显示列表中的基础信息。</Text></View> : null}
+      {preview ? <View style={{ backgroundColor: palette.warningSoft, borderRadius: '14px', padding: `10px ${space(3)}`, marginBottom: space(3), border: `1px solid ${palette.line}` }}><Text style={{ ...typography.caption, color: palette.subtext }}>{previewError ? `完整详情加载失败，当前显示列表缓存信息：${previewError}` : '正在加载完整详情，先显示列表中的基础信息。'}</Text>{previewError && onRetryDetail ? <View onClick={onRetryDetail} style={{ marginTop: '8px' }}><Text style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>重新加载完整详情</Text></View> : null}</View> : null}
       <AppCard radius='20px' padding={`18px ${space(4)}`}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(3) }}>
           <View style={{ marginRight: '10px' }}><AppIcon name='calendar' size={42} backgroundColor={getEventIconBg(event.event_type)} bordered /></View>
@@ -104,10 +104,11 @@ export default function EventDetailPage() {
   return (
     <View style={{ padding: space(4), backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
       {loading && !displayEvent ? <DetailSkeleton /> : null}
-      {loading && displayEvent ? <EventContent event={displayEvent} preview={isPreview} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} /> : null}
-      {!loading && error ? <ErrorRetryCard error={error} onRetry={() => loadDetail({ forceRefresh: true })} secondaryText='返回活动列表' onSecondary={() => Taro.switchTab({ url: '/pages/events/index' })} /> : null}
+      {loading && displayEvent ? <EventContent event={displayEvent} preview={isPreview} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} onRetryDetail={() => loadDetail({ forceRefresh: true })} /> : null}
+      {!loading && error && displayEvent ? <EventContent event={displayEvent} preview previewError={error} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} onRetryDetail={() => loadDetail({ forceRefresh: true })} /> : null}
+      {!loading && error && !displayEvent ? <ErrorRetryCard error={error} onRetry={() => loadDetail({ forceRefresh: true })} secondaryText='返回活动列表' onSecondary={() => Taro.switchTab({ url: '/pages/events/index' })} /> : null}
       {!loading && !error && !displayEvent ? <EmptyCard text='未找到该活动。' actionText='返回活动列表' onAction={() => Taro.switchTab({ url: '/pages/events/index' })} /> : null}
-      {!loading && !error && displayEvent ? <EventContent event={displayEvent} preview={isPreview} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} /> : null}
+      {!loading && !error && displayEvent ? <EventContent event={displayEvent} preview={isPreview} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} onRetryDetail={() => loadDetail({ forceRefresh: true })} /> : null}
     </View>
   )
 }
