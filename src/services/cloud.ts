@@ -77,7 +77,7 @@ export async function callCloud<T = Record<string, unknown>>(name: string, data:
     }
 
     return result
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(`callCloud ${name} error:`, err)
     return {
       ok: false,
