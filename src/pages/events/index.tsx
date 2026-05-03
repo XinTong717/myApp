@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ScrollView, View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
@@ -32,6 +32,10 @@ const EVENT_SHARE = { appMessage: { title: '可雀活动｜找到教育探索里
 
 type InterestMap = Record<number, number>
 type EventItemWithInterest = EventItem & { interest_count?: number }
+
+function shouldIncludeEnded(statusFilter: string) {
+  return statusFilter === '全部' || statusFilter === 'ended'
+}
 
 function normalizeLabels(value: unknown): string[] {
   if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean)
@@ -107,6 +111,7 @@ export default function EventsPage() {
   const [feeFilter, setFeeFilter] = useState('全部')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [interestCounts, setInterestCounts] = useState<InterestMap>({})
+  const includeEnded = shouldIncludeEnded(statusFilter)
 
   useShareAppMessage(() => EVENT_SHARE.appMessage)
   useShareTimeline(() => EVENT_SHARE.timeline)
@@ -120,11 +125,12 @@ export default function EventsPage() {
     setInterestCounts(counts)
   }
 
-  const loadEvents = async (options: { forceRefresh?: boolean } = {}) => {
+  const loadEvents = async (options: { forceRefresh?: boolean; includeEnded?: boolean } = {}) => {
     try {
+      const nextIncludeEnded = options.includeEnded ?? includeEnded
       setLoading(true)
       setError('')
-      const result = await getEvents({ forceRefresh: !!options.forceRefresh, includeInterestCounts: true })
+      const result = await getEvents({ forceRefresh: !!options.forceRefresh, includeInterestCounts: true, includeEnded: nextIncludeEnded })
       const list = Array.isArray(result.events) ? (result.events as EventItemWithInterest[]) : []
       setEvents(list)
       applyInterestCounts(list)
@@ -138,8 +144,9 @@ export default function EventsPage() {
     }
   }
 
-  useDidShow(() => { loadEvents() })
-  usePullDownRefresh(async () => { await loadEvents({ forceRefresh: true }); Taro.stopPullDownRefresh() })
+  useDidShow(() => { loadEvents({ includeEnded }) })
+  useEffect(() => { loadEvents({ includeEnded }) }, [includeEnded])
+  usePullDownRefresh(async () => { await loadEvents({ forceRefresh: true, includeEnded }); Taro.stopPullDownRefresh() })
 
   const goToDetail = (item: EventItem) => { setDetailPreview('event', item.id, item); Taro.navigateTo({ url: `/pages/event-detail/index?id=${item.id}` }) }
   const goToSubmit = () => { Taro.navigateTo({ url: '/pkg/events/submit/index' }) }
@@ -187,7 +194,7 @@ export default function EventsPage() {
       <View style={{ marginBottom: '14px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ ...typography.meta, color: palette.muted, flex: 1, marginRight: space(3) }}>{loading ? '加载中...' : `当前显示 ${visibleEvents.length} / ${events.length} 个活动${statusFilter === '未结束' && hiddenEndedCount > 0 ? `，已隐藏 ${hiddenEndedCount} 个已结束活动` : ''}`}</Text></View>
 
       {loading ? <ListSkeleton count={3} rows={3} /> : null}
-      {!loading && error ? <ErrorRetryCard error={error} onRetry={() => loadEvents({ forceRefresh: true })} /> : null}
+      {!loading && error ? <ErrorRetryCard error={error} onRetry={() => loadEvents({ forceRefresh: true, includeEnded })} /> : null}
       {!loading && !error && visibleEvents.length === 0 ? <EmptyCard text={events.length > 0 ? '当前筛选下没有可显示的活动。' : '暂时还没有活动。'} actionText={events.length > 0 ? '重置筛选' : '推荐新活动'} onAction={events.length > 0 ? resetFilters : goToSubmit} /> : null}
 
       {!loading && !error && visibleEvents.map((item) => {
