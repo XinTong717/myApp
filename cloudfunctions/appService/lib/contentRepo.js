@@ -3,6 +3,7 @@ const { db, _ } = require('./cloud')
 const SCHOOL_LIST_DEFAULT_LIMIT = 80
 const SCHOOL_LIST_MAX_LIMIT = 200
 const EVENT_LIST_LIMIT = 50
+const EVENT_LIST_SCAN_LIMIT = 200
 const SCHOOL_LOCATION_COLLECTION = 'school_locations'
 const DELETED_STATUSES = new Set(['deleted', 'removed', 'archived'])
 
@@ -21,6 +22,20 @@ function normalizeStatus(value) {
 function isReadableStatus(value) {
   const status = normalizeStatus(value)
   return !status || !DELETED_STATUSES.has(status)
+}
+
+function parseDateTime(value) {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function isEndedEvent(event) {
+  const endTime = parseDateTime(event?.end_time)
+  if (endTime) return endTime.getTime() < Date.now()
+  const startTime = parseDateTime(event?.start_time)
+  if (!startTime) return false
+  return normalizeStatus(event?.status) === 'ended'
 }
 
 function splitLabels(value) {
@@ -292,15 +307,22 @@ const EVENT_FIELD_SELECTION = {
   is_online: true,
 }
 
-async function listEvents(limit = EVENT_LIST_LIMIT) {
-  const queryLimit = normalizeLimit(limit, EVENT_LIST_LIMIT, EVENT_LIST_LIMIT)
+async function listEvents(options = {}) {
+  const normalizedOptions = typeof options === 'object' && options !== null ? options : { limit: options }
+  const limit = normalizeLimit(normalizedOptions.limit, EVENT_LIST_LIMIT, EVENT_LIST_LIMIT)
+  const includeEnded = normalizedOptions.includeEnded === true
+  const scanLimit = includeEnded ? limit : EVENT_LIST_SCAN_LIMIT
+
   const res = await db.collection('events')
     .field(EVENT_FIELD_SELECTION)
     .orderBy('start_time', 'asc')
-    .limit(queryLimit)
+    .limit(scanLimit)
     .get()
 
-  return (res.data || []).filter((event) => isReadableStatus(event.status)).slice(0, queryLimit)
+  return (res.data || [])
+    .filter((event) => isReadableStatus(event.status))
+    .filter((event) => includeEnded || !isEndedEvent(event))
+    .slice(0, limit)
 }
 
 async function getEventById(eventId) {
