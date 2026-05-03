@@ -317,8 +317,8 @@ export default function SchoolDetailPage() {
       {!loading && error && (
         <View style={{ padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.line}` }}>
           <Text style={{ color: palette.error }}>{error}</Text>
-          <View onClick={() => loadDetail({ forceRefresh: true })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
-            <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
+          <View onClick={() => loadDetail({ forceRefresh: true })} style={{ marginTop: '10px', backgroundColor: palette.brandSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
+            <Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
           </View>
         </View>
       )}
