@@ -15,6 +15,7 @@ const EVENT_TYPE_OPTIONS = ['圆桌讨论', '工作坊', '线下聚会', '线上
 const AUDIENCE_WHO_OPTIONS = ['家长', '教育工作者', '儿童/青少年（需家长陪同）', '儿童/青少年（独立参加）', '开放给所有人', '其他']
 const MIN_AGE_OPTIONS = ['全年龄', '6岁+', '12岁+', '18岁+（成人活动）']
 const FEE_OPTIONS = ['免费', '付费', '公益捐赠', '费用待确认']
+const CHINA_TIMEZONE_OFFSET = '+08:00'
 
 type FocusField =
   | 'title'
@@ -32,7 +33,7 @@ type FocusField =
 
 function combineDateTime(date: string, time: string) {
   if (!date || !time) return ''
-  return new Date(`${date}T${time}:00`).toISOString()
+  return `${date}T${time}:00${CHINA_TIMEZONE_OFFSET}`
 }
 
 function setBeforeUnloadAlert(enabled: boolean, message: string) {
@@ -140,7 +141,7 @@ export default function SubmitEventPage() {
 
     const confirm = await Taro.showModal({
       title: '提交活动',
-      content: '提交后会进入人工审核队列，审核通过后才会出现在活动列表中。你可以发布自己组织的活动，也可以推荐公开活动。',
+      content: '提交后会进入人工审核队列，审核通过后才会出现在活动列表中。你可以发布自己组织的活动，也可以推荐公开活动。时间会按中国标准时间（UTC+8）保存。',
       confirmText: '确认提交',
       cancelText: '再看看',
     })
@@ -197,6 +198,7 @@ export default function SubmitEventPage() {
         {audienceWho.includes('其他') && <View style={{ marginBottom: '16px' }}><View style={{ marginBottom: '6px' }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充参与对象中的“其他”。</Text></View><FormInputBox focused={focusedField === 'audienceWhoOther'} marginBottom='0'><Input value={audienceWhoOther} placeholder='例如：大学生 / 创作者 / 社区志愿者' onFocus={() => setFocusedField('audienceWhoOther')} onBlur={() => setFocusedField('')} onInput={(e) => setAudienceWhoOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
         <SectionTitle text='最低年龄要求（选填）' /><SinglePillSelect options={MIN_AGE_OPTIONS} selected={minAgeRequirement} onChange={setMinAgeRequirement} />
         <SectionTitle text='开始时间' /><View style={{ display: 'flex', flexDirection: 'row', marginBottom: '12px' }}><Picker mode='date' value={startDate} onChange={(e) => setStartDate(e.detail.value)}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: startDate ? palette.text : palette.muted }}>{startDate || '选择日期'}</Text></FormInputBox></Picker><Picker mode='time' value={startTime} onChange={(e) => setStartTime(e.detail.value)}><View style={{ width: '120px', marginLeft: '8px' }}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: startTime ? palette.text : palette.muted }}>{startTime || '选择时间'}</Text></FormInputBox></View></Picker></View>
+        <View style={{ marginTop: '-6px', marginBottom: '12px' }}><Text style={{ ...typography.micro, color: palette.muted }}>时间按中国标准时间 UTC+8 保存。</Text></View>
         <SectionTitle text='结束时间（选填）' /><View style={{ display: 'flex', flexDirection: 'row', marginBottom: '16px' }}><Picker mode='date' value={endDate} onChange={(e) => setEndDate(e.detail.value)}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: endDate ? palette.text : palette.muted }}>{endDate || '选择日期'}</Text></FormInputBox></Picker><Picker mode='time' value={endTime} onChange={(e) => setEndTime(e.detail.value)}><View style={{ width: '120px', marginLeft: '8px' }}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: endTime ? palette.text : palette.muted }}>{endTime || '选择时间'}</Text></FormInputBox></View></Picker></View>
         <SectionTitle text='线上活动' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isOnline ? '是，主要在线上进行' : '否，主要在线下进行'}</Text><Switch checked={isOnline} color={palette.accentDeep} onChange={(e) => setIsOnline(!!e.detail.value)} /></View></FormInputBox>
         <SectionTitle text={isOnline ? '平台 / 线上说明（选填）' : '地点说明（选填）'} /><FormInputBox focused={focusedField === 'location'}><Input value={location} placeholder={isOnline ? '例如：腾讯会议 / Zoom' : '例如：杭州西湖区某空间'} onFocus={() => setFocusedField('location')} onBlur={() => setFocusedField('')} onInput={(e) => setLocation(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
