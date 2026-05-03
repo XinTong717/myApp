@@ -12,7 +12,7 @@ import type {
   ToggleEventInterestResult,
 } from '../types/domain'
 
-const EVENT_LIST_CACHE_KEY = 'cloud-cache:events:list:v3'
+const EVENT_LIST_CACHE_KEY_PREFIX = 'cloud-cache:events:list:v4:'
 const EVENT_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:events:detail:v2:'
 const EVENT_INTEREST_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:interest-info:v1:'
 const EVENT_CONTACT_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:contact-info:v1:'
@@ -24,6 +24,16 @@ type EventListPayload = { events?: EventItem[]; degraded?: boolean }
 type EventDetailPayload = { event?: EventItem | null }
 type EventInterestInfoPayload = Pick<EventInterestInfoResult, 'count' | 'hasInterested' | 'degraded'>
 type ContactInfoPayload = Pick<ContactInfoResult, 'contactInfo' | 'publicSignupInfo' | 'needCompleteProfile' | 'privateContactRequiresProfile' | 'privateContactRequiresInterest' | 'message'>
+
+type GetEventsOptions = {
+  forceRefresh?: boolean
+  includeInterestCounts?: boolean
+  includeEnded?: boolean
+}
+
+function getEventListCacheKey(includeEnded: boolean) {
+  return `${EVENT_LIST_CACHE_KEY_PREFIX}${includeEnded ? 'with-ended' : 'active'}`
+}
 
 function okEventList(payload: EventListPayload): EventListResult {
   return {
@@ -70,12 +80,15 @@ function getEventContactInfoCacheKey(eventId: number) {
   return `${EVENT_CONTACT_INFO_CACHE_KEY_PREFIX}${eventId}`
 }
 
-async function readAnyEventListCache() {
-  return await getScopedCachedValue<EventListPayload>(EVENT_LIST_CACHE_KEY)
+async function readEventListCache(includeEnded: boolean) {
+  return await getScopedCachedValue<EventListPayload>(getEventListCacheKey(includeEnded))
 }
 
 export async function clearEventListCache() {
-  await clearScopedCachedValue(EVENT_LIST_CACHE_KEY)
+  await Promise.all([
+    clearScopedCachedValue(getEventListCacheKey(false)),
+    clearScopedCachedValue(getEventListCacheKey(true)),
+  ])
 }
 
 export async function clearEventRuntimeCache(eventId: number) {
@@ -85,19 +98,20 @@ export async function clearEventRuntimeCache(eventId: number) {
   ])
 }
 
-export async function getEvents(options: { forceRefresh?: boolean; includeInterestCounts?: boolean } = {}) {
+export async function getEvents(options: GetEventsOptions = {}) {
   const includeInterestCounts = options.includeInterestCounts !== false
-  const cached = options.forceRefresh ? null : await readAnyEventListCache()
+  const includeEnded = options.includeEnded === true
+  const cached = options.forceRefresh ? null : await readEventListCache(includeEnded)
   if (cached) return okEventList(cached)
 
-  const result = await callCloud<EventListResult>('getEvents', { includeInterestCounts })
+  const result = await callCloud<EventListResult>('getEvents', { includeInterestCounts, includeEnded })
   if (result.ok) {
-    await setScopedCachedValue(EVENT_LIST_CACHE_KEY, { events: result.events || [] }, EVENT_LIST_TTL_MS)
+    await setScopedCachedValue(getEventListCacheKey(includeEnded), { events: result.events || [] }, EVENT_LIST_TTL_MS)
     return result
   }
 
   if (includeInterestCounts) {
-    const fallbackResult = await callCloud<EventListResult>('getEvents', { includeInterestCounts: false })
+    const fallbackResult = await callCloud<EventListResult>('getEvents', { includeInterestCounts: false, includeEnded })
     if (fallbackResult.ok) {
       const events = Array.isArray(fallbackResult.events)
         ? fallbackResult.events.map((item) => ({ ...item, interest_count: item.interest_count || 0 }))
@@ -110,12 +124,12 @@ export async function getEvents(options: { forceRefresh?: boolean; includeIntere
         code: result.code,
         message: result.message,
       }
-      await setScopedCachedValue(EVENT_LIST_CACHE_KEY, { events, degraded: true }, EVENT_LIST_TTL_MS)
+      await setScopedCachedValue(getEventListCacheKey(includeEnded), { events, degraded: true }, EVENT_LIST_TTL_MS)
       return degradedResult
     }
   }
 
-  const staleCached = await readAnyEventListCache()
+  const staleCached = await readEventListCache(includeEnded)
   if (staleCached) {
     return {
       ...okEventList(staleCached),
