@@ -14,6 +14,7 @@
     "new": "taro new",
     "build:weapp": "taro build --type weapp",
     "dev:weapp": "npm run build:weapp -- --watch",
+    "typecheck": "tsc --noEmit",
     "use:devtools:dev": "node scripts/set-devtools-env.cjs cloud1-9g8njw4c79fb1322 dev",
     "use:devtools:prod": "node scripts/set-devtools-env.cjs keque-prod-d5gc6ylp793fabaea prod",
     "use:devtools:prod-upload": "node scripts/set-devtools-env.cjs keque-prod-d5gc6ylp793fabaea prod-upload",
@@ -23,7 +24,7 @@
     "check:weapp:size": "node scripts/check-weapp-size.cjs",
     "analyze:size": "npm run check:weapp:size",
     "analyze:size:build": "npm run build:weapp:prod:check",
-    "build:weapp:prod:check": "npm run check:actions && npm run build:weapp:prod && npm run check:weapp:size"
+    "build:weapp:prod:check": "npm run typecheck && npm run check:actions && npm run build:weapp:prod && npm run check:weapp:size"
   },
   "browserslist": [
     "defaults and fully supports es6-module",
