@@ -157,7 +157,7 @@ async function loadAccepted(openid, hiddenOpenidSet, offset, limit) {
   const usersRes = otherOpenids.length > 0
     ? await db.collection('users')
       .where({ openid: _.in(otherOpenids) })
-      .field({ _id: true, openid: true, displayName: true, city: true, roles: true, bio: true, contactId: true, wechatId: true, childAgeRange: true, childDropoutStatus: true, childInterests: true, eduServices: true })
+      .field({ _id: true, openid: true, displayName: true, city: true, roles: true, bio: true, contactId: true, childAgeRange: true, childDropoutStatus: true, childInterests: true, eduServices: true })
       .limit(Math.min(otherOpenids.length, 100))
       .get()
     : { data: [] }
@@ -181,7 +181,7 @@ async function loadAccepted(openid, hiddenOpenidSet, offset, limit) {
       otherCity: other.city || '',
       otherRoles,
       otherBio: other.bio || '',
-      otherContactId: other.contactId || other.wechatId || '',
+      otherContactId: other.contactId || '',
       otherChildInfo: otherRoles.includes('家长')
         ? {
           ageRange: normalizeStringArray(other.childAgeRange),
