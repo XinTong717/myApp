@@ -22,6 +22,7 @@ import ProfileSecondaryButton from '../../components/profile/ProfileSecondaryBut
 import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import AppIcon from '../../components/common/AppIcon'
 import { palette } from '../../theme/palette'
+import { elevation, radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 import { checkAdminAccess, requestAccountDeletion } from '../../services/profile'
 import { recordLegalConsent } from '../../services/legalConsent'
@@ -42,7 +43,7 @@ type ProfileStep = typeof PROFILE_STEPS[number]['key']
 
 function StepTabs(props: { activeStep: ProfileStep; onChange: (step: ProfileStep) => void }) {
   return (
-    <View style={{ display: 'flex', flexDirection: 'row', gap: '8px', marginBottom: '14px' }}>
+    <View style={{ display: 'flex', flexDirection: 'row', gap: space(2), marginBottom: '14px' }}>
       {PROFILE_STEPS.map((step, index) => {
         const active = props.activeStep === step.key
         return (
@@ -52,14 +53,14 @@ function StepTabs(props: { activeStep: ProfileStep; onChange: (step: ProfileStep
             style={{
               flex: 1,
               padding: '9px 8px',
-              borderRadius: '999px',
-              backgroundColor: active ? palette.accentDeep : '#FFFFFF',
-              border: `1px solid ${active ? palette.accentDeep : palette.line}`,
+              borderRadius: radius.md,
+              backgroundColor: active ? palette.brandSoft : palette.card,
+              border: `1px solid ${active ? palette.brandLight : palette.line}`,
               textAlign: 'center',
-              boxShadow: active ? '0 4px 12px rgba(184,85,64,0.16)' : 'none',
+              boxShadow: active ? elevation.pressed : 'none',
             }}
           >
-            <Text style={{ ...typography.caption, fontWeight: active ? 'bold' : 'normal', color: active ? '#FFFFFF' : palette.subtext }}>
+            <Text style={{ ...typography.caption, fontWeight: active ? '500' : '400', color: active ? palette.brandDark : palette.subtext }}>
               {index + 1}. {step.label}
             </Text>
           </View>
@@ -82,15 +83,15 @@ function PrivacyDisclosureNotice() {
 
 function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; onOpenUserAgreement: () => void; onOpenPrivacyPolicy: () => void }) {
   return (
-    <View onClick={props.onToggle} style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: props.checked ? '#FFF7F3' : palette.card, borderRadius: '16px', border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, padding: '12px', marginBottom: '12px' }}>
-      <View style={{ width: '20px', height: '20px', borderRadius: '6px', marginRight: '10px', marginTop: '1px', backgroundColor: props.checked ? palette.accentDeep : '#FFFFFF', border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <View onClick={props.onToggle} style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: props.checked ? '#FFF7F3' : palette.card, borderRadius: '16px', border: `1px solid ${props.checked ? palette.brand : palette.line}`, padding: '12px', marginBottom: '12px' }}>
+      <View style={{ width: '20px', height: '20px', borderRadius: '6px', marginRight: '10px', marginTop: '1px', backgroundColor: props.checked ? palette.brand : '#FFFFFF', border: `1px solid ${props.checked ? palette.brand : palette.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>{props.checked ? '✓' : ''}</Text>
       </View>
       <View style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
         <Text style={{ ...typography.caption, color: palette.subtext }}>我已阅读并同意</Text>
-        <Text onClick={props.onOpenUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>《用户协议》</Text>
+        <Text onClick={props.onOpenUserAgreement} style={{ ...typography.caption, color: palette.brand }}>《用户协议》</Text>
         <Text style={{ ...typography.caption, color: palette.subtext }}>和</Text>
-        <Text onClick={props.onOpenPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>《隐私政策》</Text>
+        <Text onClick={props.onOpenPrivacyPolicy} style={{ ...typography.caption, color: palette.brand }}>《隐私政策》</Text>
       </View>
     </View>
   )
@@ -227,7 +228,7 @@ export default function ProfilePage() {
         <AppPrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
       </>}
 
-      <View style={{ marginBottom: '20px', alignItems: 'center' }}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}><Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>用户协议</Text><Text style={{ ...typography.caption, color: palette.subtext, marginLeft: '8px', marginRight: '8px' }}>·</Text><Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>隐私政策</Text></View></View>
+      <View style={{ marginBottom: '20px', alignItems: 'center' }}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}><Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.brand }}>用户协议</Text><Text style={{ ...typography.caption, color: palette.subtext, marginLeft: '8px', marginRight: '8px' }}>·</Text><Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.brand }}>隐私政策</Text></View></View>
 
       <ProfileConnectionsSection pendingRequests={pendingRequests} acceptedConnections={acceptedConnections} sentRequests={sentRequests} requestPages={requestPages} loadingMoreSection={loadingMoreSection} onLoadSection={loadRequestSection} onLoadMore={loadMoreRequests} onRespond={(requestId, action) => handleRespond(requestId, action, refreshRelations)} onWithdrawRequest={(connectionId) => handleWithdrawRequest(connectionId, refreshRelations)} onRemoveConnection={(connectionId) => handleRemoveConnection(connectionId, refreshRelations)} onSafetyAction={(targetUserId, action) => handleSafetyAction(targetUserId, action, () => { refreshRelations(); loadProfile() })} onReportUser={handleReportUser} />
     </View>
