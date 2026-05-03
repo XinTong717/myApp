@@ -74,13 +74,22 @@ function PrivacyDisclosureNotice() {
     <View style={{ display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'flex-start', backgroundColor: palette.card, borderRadius: '16px', border: `1px solid ${palette.line}`, padding: '12px', marginBottom: '12px' }}>
       <AppIcon name='lock' size={24} bordered />
       <Text style={{ ...typography.caption, color: palette.subtext, flex: 1 }}>
-        你的显示名、身份、城市和简介会在地图上公开展示。联络标识、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。
+        如果你选择出现在地图上，你的显示名、身份、城市、简介，以及“和这个生态的关系”会公开展示。联络标识、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。
       </Text>
     </View>
   )
 }
 
 function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; onOpenUserAgreement: () => void; onOpenPrivacyPolicy: () => void }) {
+  const openUserAgreement = (e: any) => {
+    e?.stopPropagation?.()
+    props.onOpenUserAgreement()
+  }
+  const openPrivacyPolicy = (e: any) => {
+    e?.stopPropagation?.()
+    props.onOpenPrivacyPolicy()
+  }
+
   return (
     <View onClick={props.onToggle} style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: props.checked ? '#FFF7F3' : palette.card, borderRadius: '16px', border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, padding: '12px', marginBottom: '12px' }}>
       <View style={{ width: '20px', height: '20px', borderRadius: '6px', marginRight: '10px', marginTop: '1px', backgroundColor: props.checked ? palette.accentDeep : '#FFFFFF', border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -88,9 +97,9 @@ function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; 
       </View>
       <View style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
         <Text style={{ ...typography.caption, color: palette.subtext }}>我已阅读并同意</Text>
-        <Text onClick={props.onOpenUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>《用户协议》</Text>
+        <Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>《用户协议》</Text>
         <Text style={{ ...typography.caption, color: palette.subtext }}>和</Text>
-        <Text onClick={props.onOpenPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>《隐私政策》</Text>
+        <Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>《隐私政策》</Text>
       </View>
     </View>
   )
@@ -187,8 +196,21 @@ export default function ProfilePage() {
     setActiveStep(next.key)
   }
 
+  const confirmMapDisclosureIfNeeded = async () => {
+    if (!isVisibleOnMap) return true
+    const confirm = await Taro.showModal({
+      title: '确认公开展示',
+      content: '保存后，你的显示名、身份、城市、简介，以及“和这个生态的关系”会出现在同路人地图上。联络标识不会公开；家庭教育关注信息和教育服务内容仅在你同意联络后可见。确认公开展示并保存吗？',
+      confirmText: '公开并保存',
+      cancelText: '先不保存',
+    })
+    return !!confirm.confirm
+  }
+
   const handleConfirmedSave = async () => {
     if (!legalAgreed) { Taro.showToast({ title: '请先阅读并同意用户协议和隐私政策', icon: 'none' }); return }
+    const mapDisclosureOk = await confirmMapDisclosureIfNeeded()
+    if (!mapDisclosureOk) return
     const consentResult = await recordLegalConsent()
     if (!consentResult.ok) { Taro.showToast({ title: consentResult.message || '协议确认失败，请稍后重试', icon: 'none' }); return }
     await handleSave()
@@ -216,7 +238,7 @@ export default function ProfilePage() {
         {isEducator && <ProfileEducatorSection eduServices={eduServices} setEduServices={setEduServices} />}
         {isCompanion && <ProfileCompanionSection companionContext={companionContext} setCompanionContext={setCompanionContext} />}
         {!isParent && !isEducator && !isCompanion && <ProfileNoticeBox text='你还没有选择身份。回到“基本资料”选择家长、教育者或同行者后，这里会出现对应的补充信息。' />}
-        <ProfileNoticeBox text='身份补充信息默认不会在地图卡片直接展示；仅在你同意联络后，对特定联络人开放更完整信息。' />
+        <ProfileNoticeBox text='家长与教育者补充信息不会在地图卡片直接公开；同行者填写的“和这个生态的关系”会随地图卡片公开展示，请不要写入敏感身份或未成年人细节。' />
         <ProfileSecondaryButton text='下一步：隐私与联络' onClick={goNextStep} />
       </>}
 
