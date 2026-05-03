@@ -31,6 +31,22 @@ const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
   'validateSchoolLocationsMigration',
 ])
 
+const CONSENT_REQUIRED_ACTIONS = new Set([
+  'saveProfile',
+  'updatePrivacySettings',
+  'requestAccountDeletion',
+  'submitEvent',
+  'submitCommunity',
+  'submitCorrection',
+  'sendRequest',
+  'respondRequest',
+  'manageConnection',
+  'manageSafetyRelation',
+  'reportUser',
+  'toggleEventInterest',
+  'getEventContactInfo',
+])
+
 async function getOpenId(event, wxContext) {
   const requestId = resolveRequestId('get-openid', event)
   return ok(requestId, {
@@ -38,9 +54,15 @@ async function getOpenId(event, wxContext) {
   })
 }
 
+const {
+  // Keep the strictly-gated implementation in handlers/eventContact.js as the only routed handler.
+  getEventContactInfo: _legacyPublicGetEventContactInfo,
+  ...publicHandlersWithoutContactInfo
+} = publicHandlers
+
 const publicActionHandlers = {
   ...legalConsentHandlers,
-  ...publicHandlers,
+  ...publicHandlersWithoutContactInfo,
   ...eventContactHandlers,
   ...mapUserHandlers,
 }
@@ -80,7 +102,7 @@ exports.main = async (event = {}) => {
   try {
     const wxContext = cloud.getWXContext()
 
-    if (action === 'saveProfile') {
+    if (CONSENT_REQUIRED_ACTIONS.has(action)) {
       const consentOk = await hasCurrentConsent(wxContext.OPENID)
       if (!consentOk) {
         return fail(requestId, 'LEGAL_CONSENT_REQUIRED', '请先阅读并同意用户协议和隐私政策')
