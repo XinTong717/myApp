@@ -394,8 +394,8 @@ async function getEventInterestInfo(event, wxContext) {
       const stableRes = await db.collection('event_interest').doc(stableDocId).get()
       hasInterested = stableRes.data?.status === 'interested'
     } catch (err) {
-      const mineRes = await db.collection('event_interest').where({ eventId, openid, status: _.in(['interested']) }).limit(1).get()
-      hasInterested = mineRes.data.length > 0
+      degraded = true
+      console.warn('getEventInterestInfo canonical read failed:', err)
     }
   } catch (err) {
     degraded = true
@@ -420,17 +420,6 @@ async function toggleEventInterest(event, wxContext) {
       current = (await db.collection('event_interest').doc(stableDocId).get()).data || null
     } catch (err) {
       current = null
-    }
-    if (!current) {
-      const legacyRes = await db.collection('event_interest').where({ eventId, openid }).limit(20).get()
-      const legacyList = legacyRes.data || []
-      if (legacyList.length > 0) {
-        const preferred = legacyList.find((item) => item.status === 'interested') || legacyList[0]
-        const normalizedStatus = preferred.status === 'interested' ? 'interested' : 'cancelled'
-        await db.collection('event_interest').doc(stableDocId).set({ data: { eventId, openid, status: normalizedStatus, createdAt: preferred.createdAt || db.serverDate(), updatedAt: db.serverDate() } })
-        await Promise.all(legacyList.filter((item) => item._id !== stableDocId).map((item) => db.collection('event_interest').doc(item._id).remove().catch(() => null)))
-        current = { _id: stableDocId, status: normalizedStatus }
-      }
     }
     if (current) {
       const wasInterested = current.status === 'interested'
