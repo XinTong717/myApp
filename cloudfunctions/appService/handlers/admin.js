@@ -117,11 +117,11 @@ async function getEventPublishPayload(event, wxContext) {
 async function reviewEventSubmission(event, wxContext) {
   const requestId = resolveRequestId('review-event-submission', event)
   const submissionId = String(event.submissionId || '').trim()
-  const action = String(event.action || '').trim()
+  const reviewAction = String(event.reviewAction || '').trim()
   const publishedEventIdRaw = event.publishedEventId
   const adminNote = String(event.adminNote || '').trim()
   if (!submissionId) return fail(requestId, 'SUBMISSION_ID_REQUIRED', '缺少 submissionId')
-  if (!['mark_published', 'reject', 'reset_pending'].includes(action)) return fail(requestId, 'INVALID_ACTION', '不支持的 action')
+  if (!['mark_published', 'reject', 'reset_pending'].includes(reviewAction)) return fail(requestId, 'INVALID_ACTION', '不支持的 action')
   try {
     const admin = await getActiveAdmin(wxContext.OPENID)
     if (!admin) return fail(requestId, 'FORBIDDEN', '无权限修改活动审核状态')
@@ -129,7 +129,7 @@ async function reviewEventSubmission(event, wxContext) {
     const submission = docRes.data
     if (!submission) return fail(requestId, 'SUBMISSION_NOT_FOUND', '未找到该活动提交记录')
     const reviewerName = String(admin.name || '').trim() || 'admin'
-    if (action === 'mark_published') {
+    if (reviewAction === 'mark_published') {
       const publishedEventId = Number(publishedEventIdRaw || 0)
       if (!publishedEventId) return fail(requestId, 'PUBLISHED_EVENT_ID_REQUIRED', 'mark_published 需要有效的 publishedEventId')
       await db.collection('event_submissions').doc(submissionId).update({ data: { status: 'merged', publishedEventId, publishedAt: db.serverDate(), reviewedAt: db.serverDate(), reviewedBy: reviewerName, adminNote: adminNote || '已发布到 events', updatedAt: db.serverDate() } })
@@ -149,7 +149,7 @@ async function reviewEventSubmission(event, wxContext) {
       })
       return ok(requestId, { message: '已标记为已发布', nextStatus: 'merged', publishedEventId })
     }
-    if (action === 'reject') {
+    if (reviewAction === 'reject') {
       await db.collection('event_submissions').doc(submissionId).update({ data: { status: 'rejected', reviewedAt: db.serverDate(), reviewedBy: reviewerName, adminNote: adminNote || '未通过审核', updatedAt: db.serverDate() } })
       await writeAdminAuditLog({
         admin,
