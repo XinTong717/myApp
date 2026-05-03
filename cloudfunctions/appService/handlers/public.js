@@ -27,6 +27,16 @@ function buildCountDocId(eventId) {
   return String(eventId)
 }
 
+function buildContentSecurityFields(sec = {}) {
+  return {
+    contentSecurityStatus: sec.contentSecurityStatus || 'unknown',
+    contentSecuritySuggest: sec.contentSecuritySuggest || '',
+    contentSecurityLabel: sec.contentSecurityLabel || '',
+    contentSecurityErrorCode: sec.contentSecurityErrorCode || 0,
+    contentSecurityError: sec.contentSecurityError || '',
+  }
+}
+
 async function getCachedCount(eventId) {
   try {
     const cacheRes = await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).get()
@@ -202,7 +212,7 @@ async function submitCorrection(event, wxContext) {
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
   try {
     await db.collection('corrections').add({
-      data: { openid, schoolId, schoolName, content, status: 'pending', createdAt: db.serverDate() },
+      data: { openid, schoolId, schoolName, content, ...buildContentSecurityFields(sec), status: 'pending', createdAt: db.serverDate() },
     })
     return ok(requestId, { message: '提交成功' })
   } catch (err) {
@@ -262,6 +272,7 @@ async function submitCommunity(event, wxContext) {
         feeNote: cleanData.feeNote || '',
         sourceNote: cleanData.sourceNote || '',
         recommendationNote: cleanData.recommendationNote || '',
+        ...buildContentSecurityFields(sec),
         status: 'pending',
         adminNote: '',
         reviewedAt: null,
@@ -352,6 +363,7 @@ async function submitEvent(event, wxContext) {
         officialUrl: cleanData.officialUrl || '',
         signupNote: cleanData.signupNote || '',
         description: cleanData.description || '',
+        ...buildContentSecurityFields(sec),
         status: 'pending',
         adminNote: '',
         reviewedAt: null,
@@ -438,32 +450,6 @@ async function toggleEventInterest(event, wxContext) {
   }
 }
 
-async function getEventContactInfo(event, wxContext) {
-  const requestId = resolveRequestId('get-event-contact', event)
-  const openid = wxContext.OPENID
-  const eventId = Number(event.eventId || 0)
-  if (!eventId) return fail(requestId, 'BAD_REQUEST', '缺少活动 ID')
-  try {
-    const profile = await getUserProfileByOpenid(openid)
-    if (!(profile && profile.displayName && profile.province && profile.city)) {
-      return fail(requestId, 'PROFILE_REQUIRED', '完成“我的资料”填写后，才可查看组织者联系方式', { needCompleteProfile: true })
-    }
-    const matched = await db.collection('event_submissions').where({ publishedEventId: eventId, status: _.in(['merged', 'approved']) }).limit(1).get()
-    const submission = matched.data[0] || null
-    if (!submission) return ok(requestId, { contactInfo: '', message: '该活动暂无额外联系方式' })
-    return ok(requestId, {
-      contactInfo: String(submission.organizerContact || '').trim(),
-      publicSignupInfo: {
-        officialUrl: String(submission.officialUrl || '').trim(),
-        signupNote: String(submission.signupNote || '').trim(),
-      },
-    })
-  } catch (err) {
-    console.error('appService getEventContactInfo error:', err)
-    return fail(requestId, 'GET_EVENT_CONTACT_INFO_FAILED', '读取联系方式失败，请稍后重试')
-  }
-}
-
 module.exports = {
   getSchools,
   getSchoolMarkers,
@@ -476,5 +462,4 @@ module.exports = {
   getEventInterestCountsBatch,
   getEventInterestInfo,
   toggleEventInterest,
-  getEventContactInfo,
 }
