@@ -6,6 +6,7 @@ export const palette = {
   brandLight: '#C76752',
   brandSoft: '#FBE5E1',
   brandGlow: '#FFF0ED',
+  accentDeep: '#8F3C2F',
 
   // Action color is a touch brighter than brand, but not old coral-orange.
   action: '#C76752',
