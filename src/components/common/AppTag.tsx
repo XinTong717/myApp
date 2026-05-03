@@ -1,5 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type AppTagTone = 'neutral' | 'brand' | 'green' | 'accent'
@@ -24,8 +25,8 @@ function getToneColors(tone: AppTagTone) {
 export default function AppTag({
   text,
   tone = 'neutral',
-  marginRight = '8px',
-  marginBottom = '8px',
+  marginRight = space(2),
+  marginBottom = space(2),
   padding = '5px 10px',
   backgroundColor,
   textColor,
