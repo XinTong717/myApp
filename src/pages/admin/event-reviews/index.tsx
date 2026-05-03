@@ -194,9 +194,9 @@ export default function AdminEventReviewsPage() {
     }
   }
 
-  const handleReview = async (action: 'mark_published' | 'reject' | 'reset_pending') => {
+  const handleReview = async (reviewAction: 'mark_published' | 'reject' | 'reset_pending') => {
     if (!selectedSubmission || reviewLoading) return
-    if (action === 'mark_published' && !publishedEventId.trim()) {
+    if (reviewAction === 'mark_published' && !publishedEventId.trim()) {
       Taro.showToast({ title: '请先填写 publishedEventId', icon: 'none' })
       return
     }
@@ -205,14 +205,13 @@ export default function AdminEventReviewsPage() {
       setReviewLoading(true)
       const result = await reviewEventSubmission({
         submissionId: selectedSubmission._id,
-        action,
+        reviewAction,
         publishedEventId: publishedEventId.trim(),
-        reviewedBy: adminName,
         adminNote: adminNote.trim(),
       })
       if (result?.ok) {
         Taro.showToast({ title: result.message || '已更新', icon: 'success' })
-        if (action === 'mark_published' || action === 'reset_pending') {
+        if (reviewAction === 'mark_published' || reviewAction === 'reset_pending') {
           await clearEventListCache()
         }
         await loadSubmissions(statusFilter)
