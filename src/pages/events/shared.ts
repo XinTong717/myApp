@@ -51,6 +51,8 @@ const EVENT_TYPE_ICON_BG: Record<string, string> = {
   online: palette.accent2Soft,
 }
 
+const EVENT_TIMEZONE = 'Asia/Shanghai'
+
 export function getEventIconBg(eventType: string) {
   return EVENT_TYPE_ICON_BG[eventType] || palette.iconBg
 }
@@ -63,7 +65,7 @@ function parseEventDate(value?: string) {
 
 function formatDateTime(value?: string) {
   const date = parseEventDate(value)
-  return date ? date.toLocaleString('zh-CN', { hour12: false }) : ''
+  return date ? date.toLocaleString('zh-CN', { hour12: false, timeZone: EVENT_TIMEZONE }) : ''
 }
 
 export function getEventStatusKey(event: Pick<EventItem, 'status' | 'start_time' | 'end_time'>) {
