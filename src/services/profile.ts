@@ -13,11 +13,8 @@ import type {
 } from '../types/domain'
 
 const PROFILE_CACHE_KEY = 'cloud-cache:profile:me:v2'
-const PROFILE_LEGACY_CACHE_KEY = 'cloud-cache:profile:me:v1'
 const SAFETY_OVERVIEW_CACHE_KEY = 'cloud-cache:profile:safety-overview:v2'
-const SAFETY_OVERVIEW_LEGACY_CACHE_KEY = 'cloud-cache:profile:safety-overview:v1'
 const ADMIN_ACCESS_CACHE_KEY = 'cloud-cache:profile:admin-access:v2'
-const ADMIN_ACCESS_LEGACY_CACHE_KEY = 'cloud-cache:profile:admin-access:v1'
 
 const PROFILE_TTL_MS = 5 * 60 * 1000
 const SAFETY_OVERVIEW_TTL_MS = 5 * 60 * 1000
@@ -48,24 +45,15 @@ async function flagExploreRefresh() {
 }
 
 export async function clearProfileCache() {
-  await Promise.all([
-    clearScopedCachedValue(PROFILE_CACHE_KEY),
-    clearScopedCachedValue(PROFILE_LEGACY_CACHE_KEY),
-  ])
+  await clearScopedCachedValue(PROFILE_CACHE_KEY)
 }
 
 export async function clearSafetyOverviewCache() {
-  await Promise.all([
-    clearScopedCachedValue(SAFETY_OVERVIEW_CACHE_KEY),
-    clearScopedCachedValue(SAFETY_OVERVIEW_LEGACY_CACHE_KEY),
-  ])
+  await clearScopedCachedValue(SAFETY_OVERVIEW_CACHE_KEY)
 }
 
 export async function clearAdminAccessCache() {
-  await Promise.all([
-    clearScopedCachedValue(ADMIN_ACCESS_CACHE_KEY),
-    clearScopedCachedValue(ADMIN_ACCESS_LEGACY_CACHE_KEY),
-  ])
+  await clearScopedCachedValue(ADMIN_ACCESS_CACHE_KEY)
 }
 
 export async function getMe(options: { forceRefresh?: boolean; allowStale?: boolean } = {}) {

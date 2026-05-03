@@ -1,4 +1,4 @@
-const { db, _, cloud } = require('../lib/cloud')
+const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
 const { runMsgSecCheck } = require('../lib/security')
 const {
@@ -129,7 +129,6 @@ async function saveProfile(event, wxContext) {
     isVisibleOnMap: cleanData.isVisibleOnMap !== false,
     ...cleanData,
     openid,
-    wechatId: '',
     deletionRequestedAt: null,
     deletionStatus: '',
   }
@@ -215,7 +214,6 @@ async function requestAccountDeletion(event, wxContext) {
           ageRange: '',
           roles: [],
           contactId: '',
-          wechatId: '',
           bio: '',
           companionContext: '',
           childAgeRange: [],
@@ -371,12 +369,6 @@ async function manageSafetyRelation(event, wxContext) {
   const stableDocId = buildSafetyDocId(openid, target.openid)
   let existing = null
   try { existing = (await db.collection('safety_relations').doc(stableDocId).get()).data || null } catch (err) { existing = null }
-  let legacyDocs = []
-  if (!existing) {
-    const existingRes = await db.collection('safety_relations').where({ ownerOpenid: openid, targetOpenid: target.openid }).limit(20).get()
-    legacyDocs = existingRes.data || []
-    existing = legacyDocs.find((item) => item._id === stableDocId) || legacyDocs[0] || null
-  }
   const currentBlocked = !!existing?.isBlocked
   const currentMuted = !!existing?.isMuted
   let nextBlocked = currentBlocked
@@ -387,12 +379,10 @@ async function manageSafetyRelation(event, wxContext) {
   if (action === 'unmute') nextMuted = false
   try {
     if (!nextBlocked && !nextMuted) {
-      if (existing?._id) await db.collection('safety_relations').doc(existing._id).remove().catch(() => null)
-      await Promise.all(legacyDocs.filter((item) => item._id !== existing?._id).map((item) => db.collection('safety_relations').doc(item._id).remove().catch(() => null)))
+      await db.collection('safety_relations').doc(stableDocId).remove().catch(() => null)
       return ok(requestId, { message: action === 'unblock' ? '已解除拉黑' : '已取消静音', isBlocked: false, isMuted: false })
     }
     await db.collection('safety_relations').doc(stableDocId).set({ data: { ownerOpenid: openid, targetOpenid: target.openid, targetUserId, targetName: target.displayName || '', targetCity: target.city || '', isBlocked: nextBlocked, isMuted: nextMuted, updatedAt: db.serverDate(), createdAt: existing?.createdAt || db.serverDate() } })
-    await Promise.all(legacyDocs.filter((item) => item._id !== stableDocId).map((item) => db.collection('safety_relations').doc(item._id).remove().catch(() => null)))
     if (action === 'block') {
       const [forwardRes, backwardRes] = await Promise.all([
         db.collection('connections').where({ fromOpenid: openid, toOpenid: target.openid, status: _.in(['pending', 'accepted']) }).get(),
