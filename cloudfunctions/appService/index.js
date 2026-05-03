@@ -54,15 +54,9 @@ async function getOpenId(event, wxContext) {
   })
 }
 
-const {
-  // Keep the strictly-gated implementation in handlers/eventContact.js as the only routed handler.
-  getEventContactInfo: _legacyPublicGetEventContactInfo,
-  ...publicHandlersWithoutContactInfo
-} = publicHandlers
-
 const publicActionHandlers = {
   ...legalConsentHandlers,
-  ...publicHandlersWithoutContactInfo,
+  ...publicHandlers,
   ...eventContactHandlers,
   ...mapUserHandlers,
 }
