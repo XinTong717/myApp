@@ -43,9 +43,34 @@ npm run dev:weapp:dev
 
 ### 本地 prod build 核验
 ```bash
-npm run use:devtools:prod
+npm run build:weapp:prod:check
+```
+
+`build:weapp:prod:check` 会依次执行：
+- `npm run typecheck`
+- `npm run check:actions`
+- `npm run build:weapp:prod`
+- `npm run check:weapp:size`
+
+## 正式上传 SOP
+正式体验版 / 审核版 / 线上发布包只允许使用：
+
+```bash
 npm run build:weapp:prod
 ```
+
+不要用裸 `npm run dev:weapp`、`npm run dev:weapp:dev` 或微信开发者工具里残留的 dev build 产物上传正式版本。
+
+`build:weapp:prod` 会先执行 `use:devtools:prod-upload`，把 `project.config.json` 切到 prod CloudBase 环境，并设置：
+- `minified = true`
+- `uploadWithSourceMap = false`
+- `compileHotReLoad = false`
+
+上传前仍需人工确认：
+- DevTools 当前 CloudBase 环境是 prod
+- prod `appService` 已重新部署
+- prod `admin_users` 中已有当前运营 openid 且 `isActive = true`
+- prod 数据库集合权限与索引已按 `docs/CLOUDBASE_INDEXES.md` 配置
 
 ## 启动时日志
 `src/app.ts` 会打印：
