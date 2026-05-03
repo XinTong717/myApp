@@ -1,6 +1,7 @@
 import { View } from '@tarojs/components'
 import type { PropsWithChildren } from 'react'
-import { profilePalette as palette } from './palette'
+import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 
 type Props = PropsWithChildren<{
   marginBottom?: string
@@ -12,7 +13,7 @@ type Props = PropsWithChildren<{
 export default function ProfileCard({
   children,
   marginBottom = '14px',
-  padding = '16px',
+  padding = space(4),
   backgroundColor = palette.card,
   borderStyle,
 }: Props) {

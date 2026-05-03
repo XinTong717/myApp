@@ -235,7 +235,7 @@ function IconShape({ name, size, color }: { name: IconName; size: number; color:
 export default function AppIcon({
   name,
   size = 22,
-  color = palette.accentDeep,
+  color = palette.brand,
   backgroundColor = palette.iconBg,
   bordered = false,
 }: Props) {

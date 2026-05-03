@@ -8,6 +8,7 @@ import { getMe } from '../../services/profile'
 import { getDetailPreview } from '../../services/detailPreview'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
@@ -31,9 +32,9 @@ function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
     if (props.value && props.copyable) Taro.setClipboardData({ data: props.value })
   }
   return (
-    <AppCard onClick={props.copyable ? handleCopy : undefined} backgroundColor={palette.cardSoft} radius='14px' padding='12px' marginBottom='10px' borderColor={palette.cardSoft}>
-      <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '4px' }}>
-        <Text style={{ fontSize: '12px', color: palette.accentDeep, flex: 1 }}>{props.label}</Text>
+    <AppCard onClick={props.copyable ? handleCopy : undefined} backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.cardSoft}>
+      <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(1) }}>
+        <Text style={{ fontSize: '12px', color: palette.brand, flex: 1 }}>{props.label}</Text>
         {props.copyable && props.value ? <Text style={{ fontSize: '11px', color: palette.subtext }}>点击复制</Text> : null}
       </View>
       <Text style={{ fontSize: '14px', color: palette.text, lineHeight: '21px' }}>{props.value || '未填写'}</Text>
@@ -45,9 +46,9 @@ function EventContent(props: { event: EventItem; preview?: boolean; interestCoun
   const { event, preview, interestCount, hasInterested, interestLoading, hasProfile, contactInfo, contactMessage, contactLoading, publicSignupText, onToggleInterest } = props
   return (
     <>
-      {preview ? <View style={{ backgroundColor: palette.warningSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}` }}><Text style={{ fontSize: '12px', color: palette.subtext }}>正在加载完整详情，先显示列表中的基础信息。</Text></View> : null}
-      <AppCard radius='20px' padding='18px 16px'>
-        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
+      {preview ? <View style={{ backgroundColor: palette.warningSoft, borderRadius: '14px', padding: `10px ${space(3)}`, marginBottom: space(3), border: `1px solid ${palette.line}` }}><Text style={{ fontSize: '12px', color: palette.subtext }}>正在加载完整详情，先显示列表中的基础信息。</Text></View> : null}
+      <AppCard radius='20px' padding={`18px ${space(4)}`}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(3) }}>
           <View style={{ marginRight: '10px' }}><AppIcon name='calendar' size={42} backgroundColor={getEventIconBg(event.event_type)} bordered /></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text, lineHeight: '30px' }}>{event.title}</Text></View>
         </View>
@@ -55,10 +56,10 @@ function EventContent(props: { event: EventItem; preview?: boolean; interestCoun
           <AppTag text={EVENT_TYPE_LABELS[event.event_type] || event.event_type} tone='brand' />
           {(() => { const statusInfo = getEventStatusInfo(event); return statusInfo ? <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} /> : null })()}
           <AppTag text={event.is_online ? '线上' : '线下'} tone='green' />
-          {interestCount > 0 ? <AppTag text={`${interestCount} 人感兴趣`} backgroundColor={palette.surfaceWarm} textColor={palette.accentDeep} /> : null}
+          {interestCount > 0 ? <AppTag text={`${interestCount} 人感兴趣`} backgroundColor={palette.surfaceWarm} textColor={palette.brand} /> : null}
         </View>
       </AppCard>
-      <View onClick={preview || interestLoading ? undefined : onToggleInterest} style={{ backgroundColor: hasInterested ? palette.surfaceSoft : preview ? palette.disabledBg : palette.accentDeep, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '14px' }}>
+      <View onClick={preview || interestLoading ? undefined : onToggleInterest} style={{ backgroundColor: hasInterested ? palette.surfaceSoft : preview ? palette.disabledBg : palette.brand, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '14px' }}>
         <Text style={{ fontSize: '15px', color: hasInterested || preview ? palette.subtext : '#FFF', fontWeight: 'bold' }}>{preview ? '完整详情加载后可标记感兴趣' : interestLoading ? '处理中...' : hasInterested ? '已感兴趣，再点一次取消' : '我感兴趣'}</Text>
       </View>
       <InfoRow label='时间' value={formatEventTime(event)} />
@@ -66,7 +67,7 @@ function EventContent(props: { event: EventItem; preview?: boolean; interestCoun
       <InfoRow label='费用' value={event.fee || '免费'} />
       <InfoRow label='组织者' value={event.organizer} />
       {!preview && publicSignupText ? <InfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}
-      {!preview && (contactLoading ? <AppCard backgroundColor={palette.cardSoft} radius='14px' padding='12px' marginBottom='10px' borderColor={palette.line}><Text style={{ fontSize: '13px', color: palette.subtext }}>正在读取组织者联系方式...</Text></AppCard> : contactInfo ? <InfoRow label='组织者联系方式' value={contactInfo} copyable /> : <AppCard backgroundColor={palette.cardSoft} radius='14px' padding='12px' marginBottom='10px' borderColor={palette.line}><Text style={{ fontSize: '12px', color: palette.accentDeep, marginBottom: '4px' }}>组织者私人联系方式</Text><Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '21px' }}>{contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者私人联系方式。')}</Text></AppCard>)}
+      {!preview && (contactLoading ? <AppCard backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.line}><Text style={{ fontSize: '13px', color: palette.subtext }}>正在读取组织者联系方式...</Text></AppCard> : contactInfo ? <InfoRow label='组织者联系方式' value={contactInfo} copyable /> : <AppCard backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.line}><Text style={{ fontSize: '12px', color: palette.brand, marginBottom: space(1) }}>组织者私人联系方式</Text><Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '21px' }}>{contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者私人联系方式。')}</Text></AppCard>)}
       <AppCard radius='20px'><View style={{ marginBottom: '10px' }}><Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>详细介绍</Text></View><Text style={{ fontSize: '14px', color: palette.text, lineHeight: '24px', whiteSpace: 'pre-wrap' }}>{event.description || '暂无详细介绍'}</Text></AppCard>
     </>
   )
@@ -99,11 +100,11 @@ export default function EventDetailPage() {
   const displayEvent = event || previewEvent
   const isPreview = !event && !!previewEvent
   return (
-    <View style={{ padding: '16px', backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
+    <View style={{ padding: space(4), backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
       {loading && !displayEvent ? <DetailSkeleton /> : null}
       {loading && displayEvent ? <EventContent event={displayEvent} preview={isPreview} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} /> : null}
-      {!loading && error ? <View style={{ padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.accentSoft}` }}><Text style={{ color: palette.error }}>{error}</Text><View onClick={() => loadDetail({ forceRefresh: true })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}><Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text></View><View onClick={() => Taro.switchTab({ url: '/pages/events/index' })} style={{ marginTop: '8px', backgroundColor: palette.cardSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}><Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>返回活动列表</Text></View></View> : null}
-      {!loading && !error && !displayEvent ? <AppCard radius='18px'><Text style={{ color: palette.subtext }}>未找到该活动。</Text><View onClick={() => Taro.switchTab({ url: '/pages/events/index' })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}><Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>返回活动列表</Text></View></AppCard> : null}
+      {!loading && error ? <View style={{ padding: space(3), marginBottom: space(4), backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.brandSoft}` }}><Text style={{ color: palette.error }}>{error}</Text><View onClick={() => loadDetail({ forceRefresh: true })} style={{ marginTop: '10px', backgroundColor: palette.brandSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}`, alignSelf: 'flex-start' }}><Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text></View><View onClick={() => Taro.switchTab({ url: '/pages/events/index' })} style={{ marginTop: space(2), backgroundColor: palette.cardSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}`, alignSelf: 'flex-start' }}><Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>返回活动列表</Text></View></View> : null}
+      {!loading && !error && !displayEvent ? <AppCard radius='18px'><Text style={{ color: palette.subtext }}>未找到该活动。</Text><View onClick={() => Taro.switchTab({ url: '/pages/events/index' })} style={{ marginTop: '10px', backgroundColor: palette.brandSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}`, alignSelf: 'flex-start' }}><Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>返回活动列表</Text></View></AppCard> : null}
       {!loading && !error && displayEvent ? <EventContent event={displayEvent} preview={isPreview} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} /> : null}
     </View>
   )

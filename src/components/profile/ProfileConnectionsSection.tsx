@@ -6,7 +6,7 @@ import type { RequestSection } from '../../services/connection'
 import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
 import ProfileNoticeBox from './ProfileNoticeBox'
-import { profilePalette as palette } from './palette'
+import { palette } from '../../theme/palette'
 import { typography } from '../../theme/typography'
 
 function normalizeRolesForDisplay(roles: string[] = []) {
@@ -64,7 +64,7 @@ function LoadMoreButton(props: { visible: boolean; loading: boolean; onClick: ()
         transform: pressed ? 'scale(0.99)' : 'scale(1)',
       }}
     >
-      <Text style={{ ...typography.meta, color: props.loading ? palette.muted : palette.accentDeep, fontWeight: '700' }}>
+      <Text style={{ ...typography.meta, color: props.loading ? palette.muted : palette.brand, fontWeight: '700' }}>
         {props.loading ? '加载中...' : '加载更多'}
       </Text>
     </View>
@@ -123,8 +123,8 @@ export default function ProfileConnectionsSection(props: Props) {
                   flex: 1,
                   padding: '8px 6px',
                   borderRadius: '999px',
-                  backgroundColor: active ? (pressed ? palette.brandPress : palette.accentDeep) : pressed ? palette.activeBg : '#FFFFFF',
-                  border: `1px solid ${active ? palette.accentDeep : pressed ? palette.focus : palette.line}`,
+                  backgroundColor: active ? (pressed ? palette.brandPress : palette.brand) : pressed ? palette.activeBg : '#FFFFFF',
+                  border: `1px solid ${active ? palette.brand : pressed ? palette.focus : palette.line}`,
                   textAlign: 'center',
                   boxShadow: active ? `0 3px 10px ${palette.shadow}` : 'none',
                   transform: pressed ? 'scale(0.98)' : 'scale(1)',
@@ -151,8 +151,8 @@ export default function ProfileConnectionsSection(props: Props) {
               <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
                 <View onClick={() => onRespond(req._id, 'accept')} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: palette.green, marginRight: '10px', marginBottom: '8px' }}><Text style={{ ...typography.meta, color: '#FFF', fontWeight: '700' }}>同意</Text></View>
                 <View onClick={() => onRespond(req._id, 'reject')} style={{ padding: '6px 18px', borderRadius: '999px', backgroundColor: '#F5F0EB', marginRight: '10px', marginBottom: '8px' }}><Text style={{ ...typography.meta, color: palette.subtext }}>忽略</Text></View>
-                {req.fromUserId ? <Text onClick={() => onSafetyAction(req.fromUserId, 'block')} style={{ ...typography.caption, color: palette.accentDeep, marginRight: '12px', marginBottom: '8px' }}>拉黑</Text> : null}
-                {req.fromUserId ? <Text onClick={() => onReportUser(req.fromUserId)} style={{ ...typography.caption, color: palette.accentDeep, marginBottom: '8px' }}>举报</Text> : null}
+                {req.fromUserId ? <Text onClick={() => onSafetyAction(req.fromUserId, 'block')} style={{ ...typography.caption, color: palette.brand, marginRight: '12px', marginBottom: '8px' }}>拉黑</Text> : null}
+                {req.fromUserId ? <Text onClick={() => onReportUser(req.fromUserId)} style={{ ...typography.caption, color: palette.brand, marginBottom: '8px' }}>举报</Text> : null}
               </View>
             </ProfileCard>
           ))}
@@ -178,21 +178,21 @@ export default function ProfileConnectionsSection(props: Props) {
               ) : <View style={{ marginTop: '8px' }}><Text style={{ ...typography.caption, color: '#C5B5A5' }}>对方未填写微信号</Text></View>}
               {conn.otherChildInfo && (conn.otherChildInfo.ageRange.length > 0 || conn.otherChildInfo.status.length > 0 || conn.otherChildInfo.interests) ? (
                 <ProfileInputBox marginBottom='8px'>
-                  <Text style={{ ...typography.caption, color: palette.accentDeep, fontWeight: '700', marginBottom: '4px' }}>家庭教育关注</Text>
+                  <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700', marginBottom: '4px' }}>家庭教育关注</Text>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>{[renderStringArray(conn.otherChildInfo.ageRange), renderStringArray(conn.otherChildInfo.status)].filter(Boolean).join(' · ')}{conn.otherChildInfo.interests ? `\n${conn.otherChildInfo.interests}` : ''}</Text>
                 </ProfileInputBox>
               ) : null}
               {conn.otherEduServices ? (
                 <ProfileInputBox marginBottom='8px'>
-                  <Text style={{ ...typography.caption, color: palette.accentDeep, fontWeight: '700', marginBottom: '4px' }}>教育服务</Text>
+                  <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700', marginBottom: '4px' }}>教育服务</Text>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>{conn.otherEduServices}</Text>
                 </ProfileInputBox>
               ) : null}
               <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '10px' }}>
-                <Text onClick={() => onRemoveConnection(conn._id)} style={{ ...typography.caption, color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>删除连接</Text>
-                {conn.otherUserId ? <Text onClick={() => onSafetyAction(conn.otherUserId, 'block')} style={{ ...typography.caption, color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>拉黑</Text> : null}
-                {conn.otherUserId ? <Text onClick={() => onSafetyAction(conn.otherUserId, 'mute')} style={{ ...typography.caption, color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
-                {conn.otherUserId ? <Text onClick={() => onReportUser(conn.otherUserId)} style={{ ...typography.caption, color: palette.accentDeep, marginBottom: '6px' }}>举报</Text> : null}
+                <Text onClick={() => onRemoveConnection(conn._id)} style={{ ...typography.caption, color: palette.brand, marginRight: '12px', marginBottom: '6px' }}>删除连接</Text>
+                {conn.otherUserId ? <Text onClick={() => onSafetyAction(conn.otherUserId, 'block')} style={{ ...typography.caption, color: palette.brand, marginRight: '12px', marginBottom: '6px' }}>拉黑</Text> : null}
+                {conn.otherUserId ? <Text onClick={() => onSafetyAction(conn.otherUserId, 'mute')} style={{ ...typography.caption, color: palette.brand, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
+                {conn.otherUserId ? <Text onClick={() => onReportUser(conn.otherUserId)} style={{ ...typography.caption, color: palette.brand, marginBottom: '6px' }}>举报</Text> : null}
               </View>
             </ProfileCard>
           ))}
@@ -208,13 +208,13 @@ export default function ProfileConnectionsSection(props: Props) {
                   <Text style={{ ...typography.body, color: palette.text }}>{req.toName}</Text>
                   {req.toCity ? <Text style={{ ...typography.caption, color: palette.subtext }}> · {req.toCity}</Text> : null}
                 </View>
-                <View style={{ padding: '3px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6' }}><Text style={{ ...typography.micro, color: palette.accentDeep }}>等待回应</Text></View>
+                <View style={{ padding: '3px 10px', borderRadius: '999px', backgroundColor: '#FFF3E6' }}><Text style={{ ...typography.micro, color: palette.brand }}>等待回应</Text></View>
               </View>
               <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '10px' }}>
-                <Text onClick={() => onWithdrawRequest(req._id)} style={{ ...typography.caption, color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>撤回请求</Text>
-                {req.toUserId ? <Text onClick={() => onSafetyAction(req.toUserId, 'block')} style={{ ...typography.caption, color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>拉黑</Text> : null}
-                {req.toUserId ? <Text onClick={() => onSafetyAction(req.toUserId, 'mute')} style={{ ...typography.caption, color: palette.accentDeep, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
-                {req.toUserId ? <Text onClick={() => onReportUser(req.toUserId)} style={{ ...typography.caption, color: palette.accentDeep, marginBottom: '6px' }}>举报</Text> : null}
+                <Text onClick={() => onWithdrawRequest(req._id)} style={{ ...typography.caption, color: palette.brand, marginRight: '12px', marginBottom: '6px' }}>撤回请求</Text>
+                {req.toUserId ? <Text onClick={() => onSafetyAction(req.toUserId, 'block')} style={{ ...typography.caption, color: palette.brand, marginRight: '12px', marginBottom: '6px' }}>拉黑</Text> : null}
+                {req.toUserId ? <Text onClick={() => onSafetyAction(req.toUserId, 'mute')} style={{ ...typography.caption, color: palette.brand, marginRight: '12px', marginBottom: '6px' }}>静音</Text> : null}
+                {req.toUserId ? <Text onClick={() => onReportUser(req.toUserId)} style={{ ...typography.caption, color: palette.brand, marginBottom: '6px' }}>举报</Text> : null}
               </View>
             </ProfileCard>
           ))}

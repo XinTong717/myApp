@@ -1,5 +1,6 @@
 import { View } from '@tarojs/components'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 
 type CardSkeletonProps = {
   rows?: number
@@ -24,11 +25,11 @@ export function CardSkeleton(props: CardSkeletonProps) {
     <View style={{
       backgroundColor: palette.card,
       borderRadius: '22px',
-      padding: '16px',
+      padding: space(4),
       marginBottom: '14px',
       border: `1px solid ${palette.line}`,
     }}>
-      <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '12px' }}>
+      <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(3) }}>
         <View style={{ width: '42px', height: '42px', borderRadius: '15px', backgroundColor: palette.iconBg, marginRight: '10px' }} />
         <View style={{ flex: 1 }}>
           <SkeletonBar width='72%' height='16px' />

@@ -1,4 +1,5 @@
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 
 export const exploreTheme = {
   pageBg: palette.bg,
@@ -37,9 +38,9 @@ export const chip = (active: boolean, tone: 'brand' | 'user' | 'educator' | 'neu
 
   return {
     container: {
-      padding: '4px 10px',
+      padding: `${space(1)} 10px`,
       borderRadius: '999px',
-      marginRight: '8px',
+      marginRight: space(2),
       marginBottom: '6px',
       backgroundColor: active ? activeBg : exploreTheme.tag,
       border: `1px solid ${active ? activeBg : exploreTheme.borderSoft}`,
@@ -69,14 +70,14 @@ export const provinceChip = (active: boolean) => ({
 export const cardStyle = {
   backgroundColor: exploreTheme.card,
   borderRadius: '20px',
-  padding: '18px 16px',
+  padding: `18px ${space(4)}`,
   border: `1px solid ${exploreTheme.border}`,
 } as const
 
 export const panelStyle = {
   backgroundColor: exploreTheme.surface,
   borderRadius: '18px',
-  padding: '14px 12px',
+  padding: `14px ${space(3)}`,
   border: `1px solid ${exploreTheme.border}`,
 } as const
 
@@ -99,7 +100,7 @@ export const sheetStyle = {
   backgroundColor: exploreTheme.surface,
   borderTopLeftRadius: '24px',
   borderTopRightRadius: '24px',
-  padding: '18px 16px 24px',
+  padding: `18px ${space(4)} ${space(6)}`,
   boxSizing: 'border-box',
   borderTop: `1px solid ${exploreTheme.border}`,
 } as const

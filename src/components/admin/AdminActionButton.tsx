@@ -29,8 +29,8 @@ function getVariantStyle(variant: Variant, pressed: boolean, disabled: boolean) 
   switch (variant) {
     case 'primary':
       return {
-        backgroundColor: pressed ? palette.brandPress : palette.accentDeep,
-        borderColor: pressed ? palette.brandPress : palette.accentDeep,
+        backgroundColor: pressed ? palette.brandPress : palette.brand,
+        borderColor: pressed ? palette.brandPress : palette.brand,
         color: '#FFFFFF',
         shadow: `0 4px 12px ${palette.shadow}`,
       }
@@ -58,9 +58,9 @@ function getVariantStyle(variant: Variant, pressed: boolean, disabled: boolean) 
     case 'secondary':
     default:
       return {
-        backgroundColor: pressed ? palette.activeBg : palette.accentSoft,
-        borderColor: pressed ? palette.focus : palette.accentSoft,
-        color: palette.accentDeep,
+        backgroundColor: pressed ? palette.activeBg : palette.brandSoft,
+        borderColor: pressed ? palette.focus : palette.brandSoft,
+        color: palette.brand,
         shadow: pressed ? palette.focusRing : 'none',
       }
   }

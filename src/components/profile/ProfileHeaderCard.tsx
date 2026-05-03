@@ -1,6 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import ProfileCard from './ProfileCard'
-import { profilePalette as palette } from './palette'
+import { palette } from '../../theme/palette'
 
 export default function ProfileHeaderCard() {
   return (

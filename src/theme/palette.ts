@@ -48,13 +48,6 @@ export const palette = {
   disabledBg: '#D8CEC5',
   disabledText: '#FFF8F1',
 
-  // Backward-compatible aliases used by older pages/components.
-  accent: '#B85540',
-  accentDeep: '#B85540',
-  accentDark: '#A04A38',
-  accentLight: '#C76752',
-  accentSoft: '#FBE5E1',
-
   // Functional colors, kept earthy instead of default app-blue.
   green: '#6F7D62',
   greenSoft: '#EEF3EA',

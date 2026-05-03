@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
-import { profilePalette as palette } from './palette'
+import { palette } from '../../theme/palette'
 import { typography } from '../../theme/typography'
 
 type Props = {
@@ -36,7 +36,7 @@ export default function ProfileSecondaryButton({
         opacity: disabled ? 0.76 : 1,
       }}
     >
-      <Text style={{ ...typography.bodyStrong, color: disabled ? palette.muted : palette.accentDeep }}>
+      <Text style={{ ...typography.bodyStrong, color: disabled ? palette.muted : palette.brand }}>
         {text}
       </Text>
     </View>

@@ -1,5 +1,6 @@
 import { View } from '@tarojs/components'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 
 type AppCardProps = {
   children: any
@@ -13,7 +14,7 @@ type AppCardProps = {
 
 export default function AppCard({
   children,
-  padding = '16px',
+  padding = space(4),
   marginBottom = '14px',
   radius = '22px',
   backgroundColor = palette.card,

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type PillTone = 'brand' | 'neutral'
@@ -30,7 +31,7 @@ function getPillColors(active: boolean, pressed: boolean, tone: PillTone = 'bran
 }
 
 export function MultiPillSelect(props: BaseProps & { selected: string[]; onChange: (value: string[]) => void }) {
-  const { options, selected, onChange, tone = 'brand', marginBottom = '12px' } = props
+  const { options, selected, onChange, tone = 'brand', marginBottom = space(3) } = props
   const [pressedOption, setPressedOption] = useState('')
 
   return (
@@ -50,8 +51,8 @@ export function MultiPillSelect(props: BaseProps & { selected: string[]; onChang
             style={{
               padding: '6px 14px',
               borderRadius: '999px',
-              marginRight: '8px',
-              marginBottom: '8px',
+              marginRight: space(2),
+              marginBottom: space(2),
               backgroundColor: colors.backgroundColor,
               border: `1px solid ${colors.borderColor}`,
               boxShadow: colors.boxShadow,
@@ -67,7 +68,7 @@ export function MultiPillSelect(props: BaseProps & { selected: string[]; onChang
 }
 
 export function SinglePillSelect(props: BaseProps & { selected: string; onChange: (value: string) => void; allowClear?: boolean }) {
-  const { options, selected, onChange, tone = 'brand', allowClear = true, marginBottom = '12px' } = props
+  const { options, selected, onChange, tone = 'brand', allowClear = true, marginBottom = space(3) } = props
   const [pressedOption, setPressedOption] = useState('')
 
   return (
@@ -87,8 +88,8 @@ export function SinglePillSelect(props: BaseProps & { selected: string; onChange
             style={{
               padding: '6px 14px',
               borderRadius: '999px',
-              marginRight: '8px',
-              marginBottom: '8px',
+              marginRight: space(2),
+              marginBottom: space(2),
               backgroundColor: colors.backgroundColor,
               border: `1px solid ${colors.borderColor}`,
               boxShadow: colors.boxShadow,

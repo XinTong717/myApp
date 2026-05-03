@@ -1,5 +1,5 @@
 import { View, Text } from '@tarojs/components'
-import { palette } from './palette'
+import { palette } from '../../theme/palette'
 
 type Props = {
   text: string
