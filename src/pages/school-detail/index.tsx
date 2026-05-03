@@ -93,7 +93,7 @@ function SchoolContent(props: {
     <>
       {preview ? (
         <View style={{ backgroundColor: palette.warningSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '12px', border: `1px solid ${palette.line}` }}>
-          <Text style={{ fontSize: '12px', color: palette.subtext }}>正在加载完整详情，先显示列表中的基础信息。</Text>
+          <Text style={{ fontSize: '12px', color: palette.subtext }}>完整详情暂未加载成功，当前显示列表中的基础信息。</Text>
         </View>
       ) : null}
 
@@ -321,6 +321,21 @@ export default function SchoolDetailPage() {
             <Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
           </View>
         </View>
+      )}
+
+      {!loading && error && displaySchool && (
+        <SchoolContent
+          school={displaySchool}
+          preview
+          showCorrectionForm={showCorrectionForm}
+          correctionText={correctionText}
+          correctionSubmitting={correctionSubmitting}
+          correctionDone={correctionDone}
+          onShowCorrectionForm={() => setShowCorrectionForm(true)}
+          onCancelCorrection={() => { setShowCorrectionForm(false); setCorrectionText('') }}
+          onCorrectionTextChange={setCorrectionText}
+          onSubmitCorrection={handleSubmitCorrection}
+        />
       )}
 
       {!loading && !error && !displaySchool && <Text style={{ color: palette.subtext }}>未找到该学习社区</Text>}
