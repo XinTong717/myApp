@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
+import { elevation, radius } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type AppPrimaryButtonProps = {
@@ -30,13 +31,13 @@ export default function AppPrimaryButton({
       onTouchCancel={() => setPressed(false)}
       onClick={disabled ? undefined : onClick}
       style={{
-        background: disabled ? palette.disabledBg : pressed ? palette.brandPress : palette.primaryGradient,
-        borderRadius: '16px',
+        backgroundColor: disabled ? palette.disabledBg : pressed ? palette.brandPress : palette.brand,
+        borderRadius: radius.sm,
         padding: '14px',
         textAlign: 'center',
         marginBottom,
-        boxShadow: disabled ? 'none' : pressed ? `0 3px 10px ${palette.shadow}` : `0 6px 16px ${palette.shadow}`,
-        transform: pressed ? 'scale(0.99)' : 'scale(1)',
+        boxShadow: disabled ? 'none' : pressed ? elevation.pressed : elevation.card,
+        transform: pressed ? 'scale(0.98)' : 'scale(1)',
         opacity: disabled ? 0.9 : 1,
       }}
     >

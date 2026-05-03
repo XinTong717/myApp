@@ -5,9 +5,12 @@ import { getSchools } from '../../services/school'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
 import { space } from '../../theme/spacing'
+import { typography } from '../../theme/typography'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
+import AppChip from '../../components/common/AppChip'
+import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
@@ -27,20 +30,7 @@ const SCHOOL_SHARE = {
 type School = SchoolItem
 
 function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <View onClick={props.onClick} style={{
-      padding: `6px ${space(3)}`,
-      borderRadius: '999px',
-      marginRight: space(2),
-      marginBottom: space(2),
-      backgroundColor: props.active ? palette.brand : palette.tag,
-      border: `1px solid ${props.active ? palette.brand : palette.line}`,
-    }}>
-      <Text style={{ fontSize: '12px', color: props.active ? '#FFF' : palette.tagText }}>
-        {props.label}
-      </Text>
-    </View>
-  )
+  return <AppChip text={props.label} tone='brand' size='md' selected={props.active} interactive onClick={props.onClick} />
 }
 
 function splitTokens(value?: string) {
@@ -221,15 +211,15 @@ export default function SchoolsPage() {
       <AppCard padding={`18px ${space(4)}`}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(2) }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>学习社区库</Text>
+            <Text style={{ ...typography.title, color: palette.text }}>学习社区库</Text>
           </View>
           <View onClick={goToSubmit} style={{
             padding: `7px ${space(3)}`, borderRadius: '999px', background: palette.primaryGradient,
           }}>
-            <Text style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 'bold' }}>推荐新学习社区</Text>
+            <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '700' }}>推荐新学习社区</Text>
           </View>
         </View>
-        <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '20px' }}>
+        <Text style={{ ...typography.meta, color: palette.subtext }}>
           搜索、筛选、查看学习社区详情，也可以提交新的社区推荐，进入人工审核队列。
         </Text>
         <View style={{
@@ -245,7 +235,7 @@ export default function SchoolsPage() {
           />
         </View>
         <View style={{ marginTop: '6px' }}>
-          <Text style={{ fontSize: '11px', color: palette.muted }}>
+          <Text style={{ ...typography.micro, color: palette.muted }}>
             搜索仅覆盖当前结果；找不到时可先调整筛选，或推荐新的学习社区。
           </Text>
         </View>
@@ -254,14 +244,14 @@ export default function SchoolsPage() {
       <AppCard padding={space(3)} radius='18px'>
         <View style={{ marginBottom: space(2), display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.text }}>筛选</Text>
+            <Text style={{ ...typography.meta, fontWeight: '700', color: palette.text }}>筛选</Text>
             {!!activeFilterSummary && (
               <View style={{ marginTop: space(1) }}>
-                <Text style={{ fontSize: '11px', color: palette.subtext }}>{activeFilterSummary}</Text>
+                <Text style={{ ...typography.micro, color: palette.subtext }}>{activeFilterSummary}</Text>
               </View>
             )}
           </View>
-          <Text onClick={resetFilters} style={{ fontSize: '12px', color: palette.link }}>重置</Text>
+          <Text onClick={resetFilters} style={{ ...typography.caption, color: palette.link }}>重置</Text>
         </View>
 
         <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: '6px' }}>
@@ -290,7 +280,7 @@ export default function SchoolsPage() {
       </AppCard>
 
       <View style={{ marginBottom: '14px' }}>
-        <Text style={{ color: palette.muted, fontSize: '13px' }}>
+        <Text style={{ ...typography.meta, color: palette.muted }}>
           {loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 个学习社区`}
         </Text>
       </View>
@@ -298,29 +288,18 @@ export default function SchoolsPage() {
       {loading ? <ListSkeleton count={3} rows={3} /> : null}
 
       {error ? (
-        <View style={{
-          padding: space(3), marginBottom: space(4), backgroundColor: palette.errorSoft,
-          borderRadius: '14px', border: `1px solid ${palette.brandSoft}`,
-        }}>
-          <Text style={{ color: palette.error }}>{error}</Text>
-          <View onClick={() => loadSchools({ forceRefresh: true, useFilters: hasActiveFilters(), syncFilterSource: !hasActiveFilters() })} style={{ marginTop: '10px', backgroundColor: palette.brandSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}`, alignSelf: 'flex-start' }}>
-            <Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
-          </View>
-        </View>
+        <ErrorRetryCard
+          error={error}
+          onRetry={() => loadSchools({ forceRefresh: true, useFilters: hasActiveFilters(), syncFilterSource: !hasActiveFilters() })}
+        />
       ) : null}
 
       {!loading && filteredSchools.length === 0 ? (
-        <AppCard radius='18px'>
-          <Text style={{ color: palette.subtext, lineHeight: '22px' }}>没有匹配结果。可以先重置筛选，或把你知道的学习社区推荐进来。</Text>
-          <View style={{ display: 'flex', flexDirection: 'row', marginTop: space(3) }}>
-            <View onClick={resetFilters} style={{ backgroundColor: palette.brandSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}`, marginRight: space(2) }}>
-              <Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>重置筛选</Text>
-            </View>
-            <View onClick={goToSubmit} style={{ backgroundColor: palette.cardSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}` }}>
-              <Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>推荐新社区</Text>
-            </View>
-          </View>
-        </AppCard>
+        <EmptyCard
+          text='没有匹配结果。可以先重置筛选，或把你知道的学习社区推荐进来。'
+          actionText='重置筛选'
+          onAction={resetFilters}
+        />
       ) : null}
 
       {!loading && filteredSchools.map((item, index) => {
@@ -337,7 +316,7 @@ export default function SchoolsPage() {
                 <AppIcon name='school' size={38} backgroundColor={iconBg} bordered />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: '17px', fontWeight: 'bold', color: palette.text }}>
+                <Text style={{ ...typography.cardTitle, color: palette.text }}>
                   {item.canonical_name || item.name}
                 </Text>
               </View>
@@ -354,18 +333,18 @@ export default function SchoolsPage() {
               padding: space(3), marginBottom: '10px', border: `1px solid ${palette.line}`,
             }}>
               <View style={{ marginBottom: '6px' }}>
-                <Text style={{ color: palette.subtext, fontSize: '13px' }}>
+                <Text style={{ ...typography.meta, color: palette.subtext }}>
                   适合阶段：{item.age_range || '未填写'}
                 </Text>
               </View>
               <View>
-                <Text style={{ color: palette.subtext, fontSize: '13px' }}>
+                <Text style={{ ...typography.meta, color: palette.subtext }}>
                   费用：{item.fee || '未填写'}
                 </Text>
               </View>
             </View>
 
-            <Text style={{ color: palette.link, fontSize: '13px', fontWeight: 'bold' }}>
+            <Text style={{ ...typography.meta, color: palette.link, fontWeight: '700' }}>
               查看详情 ›
             </Text>
           </AppCard>

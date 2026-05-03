@@ -35,7 +35,7 @@ export const palette = {
   // Text and structure.
   text: '#1F1A17',
   subtext: '#5F5A55',
-  muted: '#928880',
+  muted: '#7A6F66',
   link: '#5F5A55',
   line: '#E9DED5',
   lineSoft: '#F1E8E0',

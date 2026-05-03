@@ -6,6 +6,7 @@ import { listEventSubmissions, getEventPublishPayload, reviewEventSubmission } f
 import { clearEventListCache } from '../../../services/event'
 import { callCloud } from '../../../services/cloud'
 import AdminActionButton from '../../../components/admin/AdminActionButton'
+import AppChip from '../../../components/common/AppChip'
 import FormInputBox from '../../../components/common/FormInputBox'
 import { palette } from '../../../theme/palette'
 import { typography } from '../../../theme/typography'
@@ -41,23 +42,7 @@ type PayloadResponse = {
 }
 
 function Pill(props: { label: string; active: boolean; onClick: () => void }) {
-  const [pressed, setPressed] = useState(false)
-  return (
-    <View
-      onTouchStart={() => setPressed(true)}
-      onTouchEnd={() => setPressed(false)}
-      onTouchCancel={() => setPressed(false)}
-      onClick={props.onClick}
-      style={{
-        padding: '6px 14px', borderRadius: '999px', marginRight: '8px', marginBottom: '8px',
-        backgroundColor: props.active ? (pressed ? palette.brandPress : palette.accentDeep) : pressed ? palette.activeBg : palette.tag,
-        border: `1px solid ${props.active ? palette.accentDeep : pressed ? palette.focus : palette.line}`,
-        transform: pressed ? 'scale(0.98)' : 'scale(1)',
-        boxShadow: props.active ? `0 3px 10px ${palette.shadow}` : 'none',
-      }}>
-      <Text style={{ ...typography.meta, color: props.active ? '#FFF' : palette.subtext, fontWeight: props.active ? '700' : '400' }}>{props.label}</Text>
-    </View>
-  )
+  return <AppChip text={props.label} tone='brand' size='md' selected={props.active} interactive onClick={props.onClick} />
 }
 
 function formatDateText(value?: string | null) {
@@ -311,7 +296,7 @@ export default function AdminEventReviewsPage() {
         <AdminActionButton text='刷新列表' variant='secondary' onClick={() => loadSubmissions(statusFilter)} marginBottom='14px' />
 
         {error ? (
-          <View style={{ padding: '12px', marginBottom: '14px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.accentSoft}` }}>
+          <View style={{ padding: '12px', marginBottom: '14px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.brandSoft}` }}>
             <Text style={{ ...typography.meta, color: palette.error }}>{error}</Text>
           </View>
         ) : null}
@@ -325,7 +310,7 @@ export default function AdminEventReviewsPage() {
                 borderRadius: '16px',
                 padding: '14px',
                 marginBottom: '10px',
-                border: `1px solid ${active ? palette.accentDeep : palette.line}`,
+                border: `1px solid ${active ? palette.brand : palette.line}`,
               }}>
                 <Text style={{ ...typography.cardTitle, color: palette.text }}>{item.title}</Text>
                 <View style={{ marginTop: '4px' }}>
@@ -349,17 +334,9 @@ export default function AdminEventReviewsPage() {
                   </Text>
                 </View>
                 <View style={{ marginTop: '8px', display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
-                  <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: palette.accentSoft, marginRight: '8px', marginBottom: '6px' }}>
-                    <Text style={{ ...typography.caption, color: palette.accentDeep }}>{item.status}</Text>
-                  </View>
-                  <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: palette.greenSoft, marginRight: '8px', marginBottom: '6px' }}>
-                    <Text style={{ ...typography.caption, color: palette.green }}>{item.isOnline ? '线上' : '线下'}</Text>
-                  </View>
-                  {item.publishedEventId ? (
-                    <View style={{ padding: '4px 10px', borderRadius: '999px', backgroundColor: palette.surfaceWarm, marginBottom: '6px' }}>
-                      <Text style={{ ...typography.caption, color: palette.accentDeep }}>event #{item.publishedEventId}</Text>
-                    </View>
-                  ) : null}
+                  <AppChip text={item.status} tone='brand' />
+                  <AppChip text={item.isOnline ? '线上' : '线下'} tone='green' />
+                  {item.publishedEventId ? <AppChip text={`event #${item.publishedEventId}`} tone='accent' /> : null}
                 </View>
               </View>
             )
@@ -377,12 +354,12 @@ export default function AdminEventReviewsPage() {
             <Text style={{ ...typography.sectionTitle, color: palette.text, marginBottom: '10px' }}>审核详情</Text>
 
             <View style={{ marginBottom: '10px' }}>
-              <Text style={{ ...typography.caption, color: palette.accentDeep, fontWeight: '700' }}>submissionId</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>submissionId</Text>
               <Text style={{ ...typography.meta, color: palette.text }}>{selectedSubmission._id}</Text>
             </View>
 
             <View style={{ marginBottom: '10px' }}>
-              <Text style={{ ...typography.caption, color: palette.accentDeep, fontWeight: '700' }}>发布时间建议 payload</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>发布时间建议 payload</Text>
               <View style={{ marginTop: '8px', backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', border: `1px solid ${palette.line}` }}>
                 <Text style={{ ...typography.caption, color: palette.subtext, whiteSpace: 'pre-wrap' }}>
                   {detailLoading ? '生成中...' : payloadText}
@@ -395,7 +372,7 @@ export default function AdminEventReviewsPage() {
 
             {(payloadResponse.warnings || []).length > 0 ? (
               <View style={{ marginBottom: '12px' }}>
-                <Text style={{ ...typography.caption, color: palette.accentDeep, fontWeight: '700' }}>Warnings</Text>
+                <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>Warnings</Text>
                 <View style={{ marginTop: '8px', backgroundColor: palette.warningSoft, borderRadius: '14px', padding: '12px', border: `1px solid ${palette.line}` }}>
                   {(payloadResponse.warnings || []).map((warning, idx) => (
                     <View key={`${idx}-${warning}`} style={{ marginBottom: idx === (payloadResponse.warnings || []).length - 1 ? '0' : '6px' }}>
@@ -407,7 +384,7 @@ export default function AdminEventReviewsPage() {
             ) : null}
 
             <View style={{ marginBottom: '12px' }}>
-              <Text style={{ ...typography.caption, color: palette.accentDeep, fontWeight: '700' }}>publishedEventId（手动备用路径）</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>publishedEventId（手动备用路径）</Text>
               <View style={{ marginTop: '8px' }}>
                 <FormInputBox focused={focusedField === 'publishedEventId'} marginBottom='0'>
                   <Input
@@ -423,7 +400,7 @@ export default function AdminEventReviewsPage() {
             </View>
 
             <View style={{ marginBottom: '12px' }}>
-              <Text style={{ ...typography.caption, color: palette.accentDeep, fontWeight: '700' }}>adminNote</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>adminNote</Text>
               <View style={{ marginTop: '8px' }}>
                 <FormInputBox focused={focusedField === 'adminNote'} marginBottom='0'>
                   <Textarea
