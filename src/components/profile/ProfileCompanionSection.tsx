@@ -4,7 +4,7 @@ import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
 import ProfileCounterText from './ProfileCounterText'
 import ProfileSectionHeading from './ProfileSectionHeading'
-import { profilePalette as palette } from './palette'
+import { palette } from '../../theme/palette'
 import { typography } from '../../theme/typography'
 
 type Props = {
