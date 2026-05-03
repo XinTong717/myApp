@@ -13,7 +13,6 @@ import type {
 } from '../types/domain'
 
 const EVENT_LIST_CACHE_KEY = 'cloud-cache:events:list:v3'
-const EVENT_LIST_LEGACY_CACHE_KEYS = ['cloud-cache:events:list:v1', 'cloud-cache:events:list:v2']
 const EVENT_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:events:detail:v2:'
 const EVENT_INTEREST_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:interest-info:v1:'
 const EVENT_CONTACT_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:contact-info:v1:'
@@ -76,10 +75,7 @@ async function readAnyEventListCache() {
 }
 
 export async function clearEventListCache() {
-  await Promise.all([
-    clearScopedCachedValue(EVENT_LIST_CACHE_KEY),
-    ...EVENT_LIST_LEGACY_CACHE_KEYS.map((key) => clearScopedCachedValue(key)),
-  ])
+  await clearScopedCachedValue(EVENT_LIST_CACHE_KEY)
 }
 
 export async function clearEventRuntimeCache(eventId: number) {
