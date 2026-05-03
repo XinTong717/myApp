@@ -4,6 +4,7 @@ import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimel
 import { getSchools } from '../../services/school'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
@@ -28,12 +29,12 @@ type School = SchoolItem
 function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
   return (
     <View onClick={props.onClick} style={{
-      padding: '6px 12px',
+      padding: `6px ${space(3)}`,
       borderRadius: '999px',
-      marginRight: '8px',
-      marginBottom: '8px',
-      backgroundColor: props.active ? palette.accentDeep : palette.tag,
-      border: `1px solid ${props.active ? palette.accentDeep : palette.line}`,
+      marginRight: space(2),
+      marginBottom: space(2),
+      backgroundColor: props.active ? palette.brand : palette.tag,
+      border: `1px solid ${props.active ? palette.brand : palette.line}`,
     }}>
       <Text style={{ fontSize: '12px', color: props.active ? '#FFF' : palette.tagText }}>
         {props.label}
@@ -214,16 +215,16 @@ export default function SchoolsPage() {
 
   return (
     <View style={{
-      padding: '16px', backgroundColor: palette.bg,
+      padding: space(4), backgroundColor: palette.bg,
       minHeight: '100vh', boxSizing: 'border-box',
     }}>
-      <AppCard padding='18px 16px'>
-        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '8px' }}>
+      <AppCard padding={`18px ${space(4)}`}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(2) }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: '22px', fontWeight: 'bold', color: palette.text }}>学习社区库</Text>
           </View>
           <View onClick={goToSubmit} style={{
-            padding: '7px 12px', borderRadius: '999px', background: palette.primaryGradient,
+            padding: `7px ${space(3)}`, borderRadius: '999px', background: palette.primaryGradient,
           }}>
             <Text style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 'bold' }}>推荐新学习社区</Text>
           </View>
@@ -233,7 +234,7 @@ export default function SchoolsPage() {
         </Text>
         <View style={{
           backgroundColor: palette.surface, borderRadius: '16px',
-          padding: '10px 12px', marginTop: '14px', border: `1px solid ${palette.line}`,
+          padding: `10px ${space(3)}`, marginTop: '14px', border: `1px solid ${palette.line}`,
         }}>
           <Input
             type='text'
@@ -250,12 +251,12 @@ export default function SchoolsPage() {
         </View>
       </AppCard>
 
-      <AppCard padding='12px' radius='18px'>
-        <View style={{ marginBottom: '8px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <AppCard padding={space(3)} radius='18px'>
+        <View style={{ marginBottom: space(2), display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.text }}>筛选</Text>
             {!!activeFilterSummary && (
-              <View style={{ marginTop: '4px' }}>
+              <View style={{ marginTop: space(1) }}>
                 <Text style={{ fontSize: '11px', color: palette.subtext }}>{activeFilterSummary}</Text>
               </View>
             )}
@@ -298,12 +299,12 @@ export default function SchoolsPage() {
 
       {error ? (
         <View style={{
-          padding: '12px', marginBottom: '16px', backgroundColor: palette.errorSoft,
+          padding: space(3), marginBottom: space(4), backgroundColor: palette.errorSoft,
           borderRadius: '14px', border: `1px solid ${palette.brandSoft}`,
         }}>
           <Text style={{ color: palette.error }}>{error}</Text>
-          <View onClick={() => loadSchools({ forceRefresh: true, useFilters: hasActiveFilters(), syncFilterSource: !hasActiveFilters() })} style={{ marginTop: '10px', backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', alignSelf: 'flex-start' }}>
-            <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
+          <View onClick={() => loadSchools({ forceRefresh: true, useFilters: hasActiveFilters(), syncFilterSource: !hasActiveFilters() })} style={{ marginTop: '10px', backgroundColor: palette.brandSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}`, alignSelf: 'flex-start' }}>
+            <Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>重新加载</Text>
           </View>
         </View>
       ) : null}
@@ -311,11 +312,11 @@ export default function SchoolsPage() {
       {!loading && filteredSchools.length === 0 ? (
         <AppCard radius='18px'>
           <Text style={{ color: palette.subtext, lineHeight: '22px' }}>没有匹配结果。可以先重置筛选，或把你知道的学习社区推荐进来。</Text>
-          <View style={{ display: 'flex', flexDirection: 'row', marginTop: '12px' }}>
-            <View onClick={resetFilters} style={{ backgroundColor: palette.accentSoft, borderRadius: '12px', padding: '8px 12px', marginRight: '8px' }}>
-              <Text style={{ color: palette.accentDeep, fontSize: '12px', fontWeight: 'bold' }}>重置筛选</Text>
+          <View style={{ display: 'flex', flexDirection: 'row', marginTop: space(3) }}>
+            <View onClick={resetFilters} style={{ backgroundColor: palette.brandSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}`, marginRight: space(2) }}>
+              <Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>重置筛选</Text>
             </View>
-            <View onClick={goToSubmit} style={{ backgroundColor: palette.cardSoft, borderRadius: '12px', padding: '8px 12px' }}>
+            <View onClick={goToSubmit} style={{ backgroundColor: palette.cardSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}` }}>
               <Text style={{ color: palette.brand, fontSize: '12px', fontWeight: 'bold' }}>推荐新社区</Text>
             </View>
           </View>
@@ -350,7 +351,7 @@ export default function SchoolsPage() {
 
             <View style={{
               backgroundColor: palette.surface, borderRadius: '16px',
-              padding: '12px', marginBottom: '10px', border: `1px solid ${palette.line}`,
+              padding: space(3), marginBottom: '10px', border: `1px solid ${palette.line}`,
             }}>
               <View style={{ marginBottom: '6px' }}>
                 <Text style={{ color: palette.subtext, fontSize: '13px' }}>
