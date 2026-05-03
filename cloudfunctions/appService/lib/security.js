@@ -1,7 +1,7 @@
 const { cloud } = require('./cloud')
 
 const HARD_BLOCK_ERR_CODES = new Set([87014])
-const SOFT_PASS_SCENES = new Set([1, 2])
+const SOFT_PASS_SCENES = new Set([2])
 
 function readErrCode(value) {
   const n = Number(value?.errCode ?? value?.errcode ?? value?.code ?? 0)
