@@ -2,7 +2,7 @@
   "name": "myApp",
   "version": "1.0.0",
   "private": true,
-  "description": "教育探索的青少年与家长的线上社区",
+  "description": "面向家长、教育者与成年同行者的教育探索社区",
   "templateInfo": {
     "name": "default",
     "typescript": true,
