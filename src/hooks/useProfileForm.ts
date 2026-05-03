@@ -10,6 +10,17 @@ const PROFILE_DRAFT_KEY = CACHE_KEY_PREFIXES.profileDraft
 const PROFILE_DRAFT_DEBOUNCE_MS = 1500
 const PROFILE_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
+export type PickerMultiChangeEvent = {
+  detail: { value: number[] }
+}
+
+export type PickerColumnChangeEvent = {
+  detail: {
+    column: number
+    value: number
+  }
+}
+
 type ProfileDraft = {
   updatedAt: number
   displayName: string
@@ -203,7 +214,7 @@ export function useProfileForm() {
       }
 
       if (!hasDraftContent(draft)) return
-      setScopedCachedValue(PROFILE_DRAFT_KEY, draft, PROFILE_DRAFT_TTL_MS).catch((err) => {
+      setScopedCachedValue(PROFILE_DRAFT_KEY, draft, PROFILE_DRAFT_TTL_MS).catch((err: unknown) => {
         console.warn('save profile draft skipped:', err)
       })
     }, PROFILE_DRAFT_DEBOUNCE_MS)
@@ -286,7 +297,7 @@ export function useProfileForm() {
     }
   }
 
-  const handlePickerChange = (e: any) => {
+  const handlePickerChange = (e: PickerMultiChangeEvent) => {
     const [provIdx, cityIdx] = e.detail.value
     const newProv = PROVINCES[provIdx] || ''
     const cities = LOCATION_DATA[newProv] || []
@@ -298,7 +309,7 @@ export function useProfileForm() {
     }
   }
 
-  const handlePickerColumnChange = (e: any) => {
+  const handlePickerColumnChange = (e: PickerColumnChangeEvent) => {
     if (e.detail.column === 0) {
       const newProv = PROVINCES[e.detail.value] || ''
       const firstCity = (LOCATION_DATA[newProv] || [])[0] || ''
