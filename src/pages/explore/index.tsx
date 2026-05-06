@@ -13,6 +13,8 @@ import { manageSafetyRelation, reportUser } from '../../services/safety'
 import { REPORT_REASON_OPTIONS } from '../../constants/safety'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import { palette } from '../../theme/palette'
+import { radius, space } from '../../theme/spacing'
+import { typography } from '../../theme/typography'
 import { exploreTheme } from './styles'
 import type {
   AppUser,
@@ -332,7 +334,7 @@ export default function ExplorePage() {
           fontSize: 11,
           anchorX: isUserCluster || isSchoolCluster ? -28 : item.type === 'school' ? -24 : -22,
           anchorY: isUserCluster || isSchoolCluster ? -31 : -30,
-          borderRadius: isUserCluster || isSchoolCluster ? 7 : 6,
+          borderRadius: isUserCluster || isSchoolCluster ? 8 : 8,
           borderWidth: isUserCluster || isSchoolCluster ? 1 : 0,
           borderColor: isUserCluster
             ? 'rgba(111,125,98,0.32)'
@@ -556,34 +558,34 @@ export default function ExplorePage() {
   return (
     <View style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
       {!loading && !hasProfile && (
-        <View onClick={goToProfile} style={{ backgroundColor: exploreTheme.card, padding: '12px 14px', borderBottom: `1px solid ${exploreTheme.border}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+        <View onClick={goToProfile} style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)}`, borderBottom: `1px solid ${exploreTheme.border}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: '14px', fontWeight: 'bold', color: exploreTheme.text }}>填写资料，出现在地图上</Text>
-            <View style={{ marginTop: '2px' }}><Text style={{ fontSize: '12px', color: exploreTheme.subtext }}>让同城家庭和同路人发现你</Text></View>
+            <Text style={{ ...typography.bodyStrong, color: exploreTheme.text }}>填写资料，出现在地图上</Text>
+            <View style={{ marginTop: space(1) }}><Text style={{ ...typography.caption, color: exploreTheme.subtext }}>让同城家庭和同路人发现你</Text></View>
           </View>
-          <View style={{ padding: '6px 14px', borderRadius: '999px', background: exploreTheme.gradient }}>
-            <Text style={{ fontSize: '12px', color: '#FFF', fontWeight: 'bold' }}>去填写</Text>
+          <View style={{ padding: `${space(2)} ${space(3)}`, borderRadius: radius.pill, backgroundColor: palette.brand }}>
+            <Text style={{ ...typography.caption, color: '#FFF' }}>去填写</Text>
           </View>
         </View>
       )}
 
-      <View style={{ backgroundColor: exploreTheme.card, padding: '10px 14px 6px', borderBottom: `1px solid ${exploreTheme.border}` }}>
-        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
+      <View style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)} ${space(2)}`, borderBottom: `1px solid ${exploreTheme.border}` }}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(2), flexWrap: 'wrap' }}>
           <FilterChip active={showSchools} tone='brand' text={schoolFilterText} onClick={() => { setShowSchools(!showSchools); closePopup() }} />
           <FilterChip active={showUsers} tone='user' text={`同路人 ${showUsers ? userCount : '—'}`} onClick={() => { setShowUsers(!showUsers); closePopup() }} />
           {showUsers && (
             <View
               onClick={() => setShowUserFilterSheet(true)}
               style={{
-                padding: '4px 10px',
-                borderRadius: '999px',
-                marginRight: '8px',
-                marginBottom: '6px',
+                padding: `${space(1)} ${space(2)}`,
+                borderRadius: radius.pill,
+                marginRight: space(2),
+                marginBottom: space(2),
                 backgroundColor: activeUserFilterCount > 0 ? palette.brandSoft : palette.tag,
                 border: `1px solid ${activeUserFilterCount > 0 ? palette.brandSoft : palette.lineSoft}`,
               }}
             >
-              <Text style={{ fontSize: '12px', fontWeight: 'bold', color: activeUserFilterCount > 0 ? palette.brand : palette.muted }}>
+              <Text style={{ ...typography.caption, color: activeUserFilterCount > 0 ? palette.brand : palette.muted }}>
                 筛选{activeUserFilterCount > 0 ? ` ${activeUserFilterCount}` : ''}
               </Text>
             </View>
@@ -592,7 +594,7 @@ export default function ExplorePage() {
         </View>
 
         {availableProvinces.length > 0 && (
-          <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: '26px' }}>
+          <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: space(6) }}>
             <View style={{ display: 'inline-flex', flexDirection: 'row' }}>
               <ProvinceChip active={!selectedProvince} text='全国' onClick={() => { setSelectedProvince(''); closePopup() }} />
               {availableProvinces.map((prov) => (
@@ -624,7 +626,7 @@ export default function ExplorePage() {
         onLabelTap={handleLabelTap}
       />
 
-      <View style={{ backgroundColor: exploreTheme.surface, padding: '5px 16px', borderTop: `1px solid ${exploreTheme.border}` }}>
+      <View style={{ backgroundColor: exploreTheme.surface, padding: `${space(1)} ${space(4)}`, borderTop: `1px solid ${exploreTheme.border}` }}>
         <Text style={{ fontSize: '10px', color: exploreTheme.muted }}>
           {hasUserClusters
             ? '近似坐标 · 点击聚合点位展开同城同路人 · 点击学校聚合点进入省份视图'
