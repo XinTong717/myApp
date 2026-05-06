@@ -334,7 +334,7 @@ export default function ExplorePage() {
           fontSize: 11,
           anchorX: isUserCluster || isSchoolCluster ? -28 : item.type === 'school' ? -24 : -22,
           anchorY: isUserCluster || isSchoolCluster ? -31 : -30,
-          borderRadius: isUserCluster || isSchoolCluster ? 8 : 8,
+          borderRadius: 8,
           borderWidth: isUserCluster || isSchoolCluster ? 1 : 0,
           borderColor: isUserCluster
             ? 'rgba(111,125,98,0.32)'
@@ -569,23 +569,23 @@ export default function ExplorePage() {
         </View>
       )}
 
-      <View style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)} ${space(2)}`, borderBottom: `1px solid ${exploreTheme.border}` }}>
-        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(2), flexWrap: 'wrap' }}>
+      <View style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)} ${space(3)}`, borderBottom: `1px solid ${exploreTheme.border}` }}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(3), flexWrap: 'wrap' }}>
           <FilterChip active={showSchools} tone='brand' text={schoolFilterText} onClick={() => { setShowSchools(!showSchools); closePopup() }} />
           <FilterChip active={showUsers} tone='user' text={`同路人 ${showUsers ? userCount : '—'}`} onClick={() => { setShowUsers(!showUsers); closePopup() }} />
           {showUsers && (
             <View
               onClick={() => setShowUserFilterSheet(true)}
               style={{
-                padding: `${space(1)} ${space(2)}`,
-                borderRadius: radius.pill,
+                padding: `${space(2)} ${space(3)}`,
+                borderRadius: radius.md,
                 marginRight: space(2),
                 marginBottom: space(2),
                 backgroundColor: activeUserFilterCount > 0 ? palette.brandSoft : palette.tag,
                 border: `1px solid ${activeUserFilterCount > 0 ? palette.brandSoft : palette.lineSoft}`,
               }}
             >
-              <Text style={{ ...typography.caption, color: activeUserFilterCount > 0 ? palette.brand : palette.muted }}>
+              <Text style={{ ...typography.meta, color: activeUserFilterCount > 0 ? palette.brand : palette.muted }}>
                 筛选{activeUserFilterCount > 0 ? ` ${activeUserFilterCount}` : ''}
               </Text>
             </View>
@@ -594,8 +594,8 @@ export default function ExplorePage() {
         </View>
 
         {availableProvinces.length > 0 && (
-          <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: space(6) }}>
-            <View style={{ display: 'inline-flex', flexDirection: 'row' }}>
+          <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: space(8) }}>
+            <View style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', paddingBottom: space(1) }}>
               <ProvinceChip active={!selectedProvince} text='全国' onClick={() => { setSelectedProvince(''); closePopup() }} />
               {availableProvinces.map((prov) => (
                 <ProvinceChip key={prov} active={prov === selectedProvince} text={prov} onClick={() => { setSelectedProvince(prov === selectedProvince ? '' : prov); closePopup() }} />
