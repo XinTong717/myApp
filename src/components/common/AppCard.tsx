@@ -17,8 +17,8 @@ type AppCardProps = {
 export default function AppCard({
   children,
   padding = space(4),
-  marginBottom = radius.lg,
-  radius: cardRadius = radius.lg,
+  marginBottom = space(4),
+  radius: cardRadius = radius.md,
   backgroundColor = palette.card,
   borderColor = palette.lineSoft,
   border = false,
