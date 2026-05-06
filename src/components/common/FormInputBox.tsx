@@ -1,6 +1,7 @@
 import { View } from '@tarojs/components'
 import type { PropsWithChildren } from 'react'
 import { palette } from '../../theme/palette'
+import { elevation, radius, space } from '../../theme/spacing'
 
 type Props = PropsWithChildren<{
   focused?: boolean
@@ -12,19 +13,19 @@ type Props = PropsWithChildren<{
 export default function FormInputBox({
   children,
   focused = false,
-  marginBottom = '16px',
-  padding = '10px 12px',
+  marginBottom = space(4),
+  padding = `${space(2)} ${space(3)}`,
   dashed = false,
 }: Props) {
   return (
     <View
       style={{
         backgroundColor: focused ? palette.focusSoft : palette.cardSoft,
-        borderRadius: '14px',
+        borderRadius: radius.md,
         padding,
         marginBottom,
         border: `1px ${dashed ? 'dashed' : 'solid'} ${focused ? palette.focus : palette.line}`,
-        boxShadow: focused ? palette.focusRing : 'none',
+        boxShadow: focused ? elevation.pressed : 'none',
       }}
     >
       {children}
