@@ -17,8 +17,8 @@ type Props = {
   setChildDropoutStatus: (value: string[]) => void
   childInterests: string
   setChildInterests: (value: string) => void
-  childAgeOptions: string[]
-  childStatusOptions: string[]
+  childAgeOptions: readonly string[]
+  childStatusOptions: readonly string[]
 }
 
 export default function ProfileParentSection(props: Props) {
