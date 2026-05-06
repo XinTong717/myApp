@@ -29,9 +29,9 @@ type Props = {
   pickerValue: number[]
   handlePickerChange: (e: PickerMultiChangeEvent) => void
   handlePickerColumnChange: (e: PickerColumnChangeEvent) => void
-  genderOptions: string[]
-  ageRangeOptions: string[]
-  roleOptions: string[]
+  genderOptions: readonly string[]
+  ageRangeOptions: readonly string[]
+  roleOptions: readonly string[]
 }
 
 type FocusField = 'displayName' | 'customCity' | 'contactId' | ''
