@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
-import { elevation, radius } from '../../theme/spacing'
+import { elevation, radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type AppPrimaryButtonProps = {
@@ -19,7 +19,7 @@ export default function AppPrimaryButton({
   loading = false,
   disabled: disabledProp = false,
   onClick,
-  marginBottom = '30px',
+  marginBottom = space(7),
 }: AppPrimaryButtonProps) {
   const [pressed, setPressed] = useState(false)
   const disabled = !!disabledProp || !!loading
@@ -32,8 +32,8 @@ export default function AppPrimaryButton({
       onClick={disabled ? undefined : onClick}
       style={{
         backgroundColor: disabled ? palette.disabledBg : pressed ? palette.brandPress : palette.brand,
-        borderRadius: radius.sm,
-        padding: '14px',
+        borderRadius: radius.md,
+        padding: space(4),
         textAlign: 'center',
         marginBottom,
         boxShadow: disabled ? 'none' : pressed ? elevation.pressed : elevation.card,
