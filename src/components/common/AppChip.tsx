@@ -46,7 +46,7 @@ export default function AppChip({
 }: AppChipProps) {
   const [pressed, setPressed] = useState(false)
   const colors = getTone(tone, selected, pressed && interactive)
-  const padding = size === 'md' ? `6px ${space(3)}` : `${space(1)} 10px`
+  const padding = size === 'md' ? `${space(2)} ${space(3)}` : `${space(1)} ${space(2)}`
   const textStyle = size === 'md' ? typography.meta : typography.caption
 
   return (
@@ -57,7 +57,7 @@ export default function AppChip({
       onClick={onClick}
       style={{
         padding,
-        borderRadius: radius.xs,
+        borderRadius: radius.pill,
         marginRight,
         marginBottom,
         backgroundColor: colors.bg,
@@ -66,7 +66,7 @@ export default function AppChip({
         boxShadow: selected ? elevation.pressed : 'none',
       }}
     >
-      <Text style={{ ...textStyle, color: colors.text, fontWeight: '400' }}>{text}</Text>
+      <Text style={{ ...textStyle, color: colors.text }}>{text}</Text>
     </View>
   )
 }
