@@ -5,19 +5,16 @@ export const palette = {
   brandDark: '#8F3C2F',
   brandLight: '#C76752',
   brandSoft: '#FBE5E1',
-  brandGlow: '#FFF0ED',
   accentDeep: '#8F3C2F',
 
   // Action color is a touch brighter than brand, but not old coral-orange.
   action: '#C76752',
   actionPress: '#B85540',
   actionSoft: '#FBE5E1',
-  primaryGradient: 'linear-gradient(135deg, #C76752 0%, #B85540 100%)',
 
   // Sunny secondary accent. Use sparingly for icon bubbles / soft highlights.
   accent2: '#D99A55',
   accent2Soft: '#FFEAD0',
-  accent2Glow: '#FFF6E6',
 
   // Warm paper surfaces.
   bg: '#FFF9F3',
@@ -44,7 +41,6 @@ export const palette = {
   // Focus and interaction. Warm, visible, not neon-app-blue.
   focus: '#D99A55',
   focusSoft: '#FFF6E6',
-  focusRing: '0 0 0 3px rgba(217, 154, 85, 0.22)',
   activeBg: '#FFF3EC',
   disabledBg: '#D8CEC5',
   disabledText: '#FFF8F1',
