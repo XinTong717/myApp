@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
+import { elevation, radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type Variant = 'primary' | 'success' | 'secondary' | 'danger' | 'neutral'
@@ -46,14 +47,14 @@ function getVariantStyle(variant: Variant, pressed: boolean, disabled: boolean) 
         backgroundColor: pressed ? '#F7DED9' : palette.errorSoft,
         borderColor: pressed ? palette.error : '#F5D1CC',
         color: palette.error,
-        shadow: pressed ? palette.focusRing : 'none',
+        shadow: pressed ? elevation.pressed : 'none',
       }
     case 'neutral':
       return {
         backgroundColor: pressed ? palette.activeBg : palette.tag,
         borderColor: pressed ? palette.focus : palette.line,
         color: palette.subtext,
-        shadow: pressed ? palette.focusRing : 'none',
+        shadow: pressed ? elevation.pressed : 'none',
       }
     case 'secondary':
     default:
@@ -61,7 +62,7 @@ function getVariantStyle(variant: Variant, pressed: boolean, disabled: boolean) 
         backgroundColor: pressed ? palette.activeBg : palette.brandSoft,
         borderColor: pressed ? palette.focus : palette.brandSoft,
         color: palette.brand,
-        shadow: pressed ? palette.focusRing : 'none',
+        shadow: pressed ? elevation.pressed : 'none',
       }
   }
 }
@@ -73,8 +74,8 @@ export default function AdminActionButton({
   disabled = false,
   variant = 'secondary',
   onClick,
-  marginRight = '8px',
-  marginBottom = '8px',
+  marginRight = space(2),
+  marginBottom = space(2),
 }: Props) {
   const [pressed, setPressed] = useState(false)
   const inactive = disabled || loading
@@ -89,8 +90,8 @@ export default function AdminActionButton({
       style={{
         backgroundColor: style.backgroundColor,
         border: `1px solid ${style.borderColor}`,
-        borderRadius: '14px',
-        padding: '10px 14px',
+        borderRadius: radius.md,
+        padding: `${space(2)} ${space(3)}`,
         marginRight,
         marginBottom,
         boxShadow: style.shadow,
@@ -98,7 +99,7 @@ export default function AdminActionButton({
         opacity: inactive ? 0.86 : 1,
       }}
     >
-      <Text style={{ ...typography.meta, color: style.color, fontWeight: '700' }}>
+      <Text style={{ ...typography.button, color: style.color }}>
         {loading ? loadingText : text}
       </Text>
     </View>
