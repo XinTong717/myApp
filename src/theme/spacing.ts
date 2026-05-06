@@ -16,11 +16,8 @@ export function space(scale: SpacingScale) {
 }
 
 export const radius = {
-  xs: '6px',
   sm: '8px',
   md: '12px',
-  lg: '14px',
-  xl: '20px',
   pill: '999px',
 } as const
 
