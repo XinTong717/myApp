@@ -83,7 +83,7 @@ function App({ children }: PropsWithChildren<unknown>) {
       }
 
       if (__WEAPP_IS_FALLBACK_CLOUD_ENV__) {
-        console.warn(`[cloud] ${__WEAPP_RUNTIME_ENV} build is using the fallback cloud env. Set TARO_APP_CLOUD_ENV in .env.development and .env.production to isolate test and production data.`)
+        console.warn(`[cloud] ${__WEAPP_RUNTIME_ENV__} build is using the fallback cloud env. Set TARO_APP_CLOUD_ENV in .env.development and .env.production to isolate test and production data.`)
       }
 
       setupWeappPrivacyAuthorization()
