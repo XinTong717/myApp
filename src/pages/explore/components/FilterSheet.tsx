@@ -1,7 +1,9 @@
 import { Text, View } from '@tarojs/components'
 import { palette } from '../../../theme/palette'
+import { radius, space } from '../../../theme/spacing'
+import { typography } from '../../../theme/typography'
 import { CHILD_AGE_OPTIONS } from '../../../constants/profile'
-import { exploreTheme, ghostButtonStyle, primaryButtonStyle, sheetStyle } from '../styles'
+import { exploreTheme } from '../styles'
 import type { ProfileCompletenessFilter, UserRoleFilter } from '../types'
 import { FilterChip } from './Chips'
 
@@ -46,22 +48,22 @@ export default function FilterSheet(props: FilterSheetProps) {
 
   return (
     <View onClick={onClose} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: exploreTheme.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
-      <View onClick={(event: any) => event?.stopPropagation?.()} style={sheetStyle}>
-        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '14px' }}>
+      <View onClick={(event: any) => event?.stopPropagation?.()} style={{ width: '100%', backgroundColor: exploreTheme.surface, borderTopLeftRadius: radius.md, borderTopRightRadius: radius.md, padding: `${space(4)} ${space(4)} ${space(6)}`, boxSizing: 'border-box', borderTop: `1px solid ${exploreTheme.border}` }}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(4) }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: '20px', fontWeight: 'bold', color: exploreTheme.text }}>筛选同路人</Text>
-            <View style={{ marginTop: '4px' }}>
-              <Text style={{ fontSize: '12px', color: exploreTheme.subtext }}>身份和孩子学段会同步影响地图聚合数字；学习社区点位不受影响</Text>
+            <Text style={{ ...typography.title, color: exploreTheme.text }}>筛选同路人</Text>
+            <View style={{ marginTop: space(1) }}>
+              <Text style={{ ...typography.caption, color: exploreTheme.subtext }}>身份和孩子学段会同步影响地图聚合数字；学习社区点位不受影响</Text>
             </View>
           </View>
-          <View onClick={onClose} style={{ width: '32px', height: '32px', borderRadius: '999px', backgroundColor: exploreTheme.tag, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: '16px', color: exploreTheme.tagText }}>✕</Text>
+          <View onClick={onClose} style={{ width: space(7), height: space(7), borderRadius: radius.pill, backgroundColor: exploreTheme.tag, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ ...typography.sectionTitle, color: exploreTheme.tagText }}>✕</Text>
           </View>
         </View>
 
-        <View style={{ marginBottom: '14px' }}>
-          <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.brand }}>身份</Text>
-          <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '8px' }}>
+        <View style={{ marginBottom: space(4) }}>
+          <Text style={{ ...typography.bodyStrong, color: palette.brand }}>身份</Text>
+          <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: space(2) }}>
             {ROLE_OPTIONS.map((role) => (
               <FilterChip
                 key={role}
@@ -79,9 +81,9 @@ export default function FilterSheet(props: FilterSheetProps) {
         </View>
 
         {selectedUserRole === '家长' && (
-          <View style={{ marginBottom: '14px' }}>
-            <Text style={{ fontSize: '13px', fontWeight: 'bold', color: palette.brand }}>孩子学段</Text>
-            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: '8px' }}>
+          <View style={{ marginBottom: space(4) }}>
+            <Text style={{ ...typography.bodyStrong, color: palette.brand }}>孩子学段</Text>
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: space(2) }}>
               {(['全部', ...CHILD_AGE_OPTIONS] as const).map((stage) => (
                 <FilterChip
                   key={stage}
@@ -98,18 +100,18 @@ export default function FilterSheet(props: FilterSheetProps) {
           </View>
         )}
 
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '10px 12px', marginBottom: '18px', border: `1px solid ${palette.line}` }}>
-          <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>
+        <View style={{ backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: `${space(3)} ${space(3)}`, marginBottom: space(5), border: `1px solid ${palette.line}` }}>
+          <Text style={{ ...typography.caption, color: palette.subtext }}>
             资料完整度和城市筛选已暂时收起，避免全国聚合数字和前端二次过滤结果不一致。后续若需要，会改为服务端统一筛选后再恢复。
           </Text>
         </View>
 
         <View style={{ display: 'flex', flexDirection: 'row' }}>
-          <View onClick={onReset} style={{ ...ghostButtonStyle, flex: 1, marginRight: '10px' }}>
-            <Text style={{ fontSize: '14px', color: exploreTheme.tagText, fontWeight: 'bold' }}>重置</Text>
+          <View onClick={onReset} style={{ flex: 1, marginRight: space(3), backgroundColor: exploreTheme.tag, borderRadius: radius.md, padding: space(4), textAlign: 'center' }}>
+            <Text style={{ ...typography.button, color: exploreTheme.tagText }}>重置</Text>
           </View>
-          <View onClick={onClose} style={{ ...primaryButtonStyle, flex: 1 }}>
-            <Text style={{ fontSize: '14px', color: '#FFF', fontWeight: 'bold' }}>完成</Text>
+          <View onClick={onClose} style={{ flex: 1, backgroundColor: palette.brand, borderRadius: radius.md, padding: space(4), textAlign: 'center' }}>
+            <Text style={{ ...typography.button, color: '#FFF' }}>完成</Text>
           </View>
         </View>
       </View>
