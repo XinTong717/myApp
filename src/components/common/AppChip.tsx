@@ -57,7 +57,7 @@ export default function AppChip({
       onClick={onClick}
       style={{
         padding,
-        borderRadius: radius.pill,
+        borderRadius: radius.sm,
         marginRight,
         marginBottom,
         backgroundColor: colors.bg,
