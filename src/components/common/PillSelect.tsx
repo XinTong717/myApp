@@ -50,7 +50,7 @@ export function MultiPillSelect(props: BaseProps & { selected: string[]; onChang
             onClick={() => onChange(active ? selected.filter((value) => value !== option) : [...selected, option])}
             style={{
               padding: `${space(2)} ${space(3)}`,
-              borderRadius: radius.sm,
+              borderRadius: radius.md,
               marginRight: space(2),
               marginBottom: space(2),
               backgroundColor: colors.backgroundColor,
@@ -87,7 +87,7 @@ export function SinglePillSelect(props: BaseProps & { selected: string; onChange
             onClick={() => onChange(active && allowClear ? '' : option)}
             style={{
               padding: `${space(2)} ${space(3)}`,
-              borderRadius: radius.sm,
+              borderRadius: radius.md,
               marginRight: space(2),
               marginBottom: space(2),
               backgroundColor: colors.backgroundColor,
