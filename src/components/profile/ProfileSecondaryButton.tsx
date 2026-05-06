@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
+import { elevation, radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type Props = {
@@ -14,7 +15,7 @@ export default function ProfileSecondaryButton({
   text,
   onClick,
   disabled = false,
-  marginBottom = '20px',
+  marginBottom = space(5),
 }: Props) {
   const [pressed, setPressed] = useState(false)
 
@@ -26,12 +27,12 @@ export default function ProfileSecondaryButton({
       onClick={disabled ? undefined : onClick}
       style={{
         marginBottom,
-        padding: '12px 16px',
-        borderRadius: '999px',
+        padding: `${space(3)} ${space(4)}`,
+        borderRadius: radius.pill,
         backgroundColor: disabled ? palette.surfaceSoft : pressed ? palette.activeBg : '#FFFFFF',
         border: `1px solid ${pressed ? palette.focus : palette.line}`,
         textAlign: 'center',
-        boxShadow: pressed ? palette.focusRing : 'none',
+        boxShadow: pressed ? elevation.pressed : 'none',
         transform: pressed ? 'scale(0.99)' : 'scale(1)',
         opacity: disabled ? 0.76 : 1,
       }}
