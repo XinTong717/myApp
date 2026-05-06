@@ -4,7 +4,7 @@ import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimel
 import { getSchools } from '../../services/school'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
+import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
@@ -31,6 +31,14 @@ type School = SchoolItem
 
 function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
   return <AppChip text={props.label} tone='brand' size='md' selected={props.active} interactive onClick={props.onClick} />
+}
+
+function MiniPrimaryButton(props: { text: string; onClick: () => void }) {
+  return (
+    <View onClick={props.onClick} style={{ padding: `${space(2)} ${space(3)}`, borderRadius: radius.md, backgroundColor: palette.brand }}>
+      <Text style={{ ...typography.button, color: '#FFFFFF' }}>{props.text}</Text>
+    </View>
+  )
 }
 
 function splitTokens(value?: string) {
@@ -208,23 +216,19 @@ export default function SchoolsPage() {
       padding: space(4), backgroundColor: palette.bg,
       minHeight: '100vh', boxSizing: 'border-box',
     }}>
-      <AppCard padding={`18px ${space(4)}`}>
+      <AppCard padding={`${space(4)} ${space(4)}`}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(2) }}>
           <View style={{ flex: 1 }}>
             <Text style={{ ...typography.title, color: palette.text }}>学习社区库</Text>
           </View>
-          <View onClick={goToSubmit} style={{
-            padding: `7px ${space(3)}`, borderRadius: '999px', background: palette.primaryGradient,
-          }}>
-            <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '700' }}>推荐新学习社区</Text>
-          </View>
+          <MiniPrimaryButton text='推荐新学习社区' onClick={goToSubmit} />
         </View>
         <Text style={{ ...typography.meta, color: palette.subtext }}>
           搜索、筛选、查看学习社区详情，也可以提交新的社区推荐，进入人工审核队列。
         </Text>
         <View style={{
-          backgroundColor: palette.surface, borderRadius: '16px',
-          padding: `10px ${space(3)}`, marginTop: '14px', border: `1px solid ${palette.line}`,
+          backgroundColor: palette.surface, borderRadius: radius.md,
+          padding: `${space(3)} ${space(3)}`, marginTop: space(4), border: `1px solid ${palette.line}`,
         }}>
           <Input
             type='text'
@@ -234,17 +238,17 @@ export default function SchoolsPage() {
             onInput={(e) => setKeyword(e.detail.value)}
           />
         </View>
-        <View style={{ marginTop: '6px' }}>
+        <View style={{ marginTop: space(2) }}>
           <Text style={{ ...typography.micro, color: palette.muted }}>
             搜索仅覆盖当前结果；找不到时可先调整筛选，或推荐新的学习社区。
           </Text>
         </View>
       </AppCard>
 
-      <AppCard padding={space(3)} radius='18px'>
+      <AppCard padding={space(3)} radius={radius.md}>
         <View style={{ marginBottom: space(2), display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ ...typography.meta, fontWeight: '700', color: palette.text }}>筛选</Text>
+            <Text style={{ ...typography.bodyStrong, color: palette.text }}>筛选</Text>
             {!!activeFilterSummary && (
               <View style={{ marginTop: space(1) }}>
                 <Text style={{ ...typography.micro, color: palette.subtext }}>{activeFilterSummary}</Text>
@@ -254,7 +258,7 @@ export default function SchoolsPage() {
           <Text onClick={resetFilters} style={{ ...typography.caption, color: palette.link }}>重置</Text>
         </View>
 
-        <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: '6px' }}>
+        <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: space(2) }}>
           <View style={{ display: 'flex', flexDirection: 'row' }}>
             {provinceOptions.map((option) => (
               <FilterChip key={option} label={option} active={isMultiActive(selectedProvinces, option)} onClick={() => setSelectedProvinces((current) => toggleMultiFilter(current, option))} />
@@ -262,7 +266,7 @@ export default function SchoolsPage() {
           </View>
         </ScrollView>
 
-        <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: '6px' }}>
+        <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: space(2) }}>
           <View style={{ display: 'flex', flexDirection: 'row' }}>
             {typeOptions.map((option) => (
               <FilterChip key={option} label={option} active={isMultiActive(selectedTypes, option)} onClick={() => setSelectedTypes((current) => toggleMultiFilter(current, option))} />
@@ -279,7 +283,7 @@ export default function SchoolsPage() {
         </ScrollView>
       </AppCard>
 
-      <View style={{ marginBottom: '14px' }}>
+      <View style={{ marginBottom: space(4) }}>
         <Text style={{ ...typography.meta, color: palette.muted }}>
           {loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 个学习社区`}
         </Text>
@@ -310,9 +314,9 @@ export default function SchoolsPage() {
         return (
           <AppCard key={item.id} onClick={() => goToDetail(item)}>
             <View style={{
-              display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: '10px',
+              display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(3),
             }}>
-              <View style={{ marginRight: '10px' }}>
+              <View style={{ marginRight: space(3) }}>
                 <AppIcon name='school' size={38} backgroundColor={iconBg} bordered />
               </View>
               <View style={{ flex: 1 }}>
@@ -322,17 +326,17 @@ export default function SchoolsPage() {
               </View>
             </View>
 
-            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '10px' }}>
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: space(3) }}>
               <AppTag text={getLocationSummary(item)} />
               {locationCount > 1 ? <AppTag text={`${locationCount} 个地点`} tone='brand' /> : null}
               <AppTag text={item.school_type || '未填写'} />
             </View>
 
             <View style={{
-              backgroundColor: palette.surface, borderRadius: '16px',
-              padding: space(3), marginBottom: '10px', border: `1px solid ${palette.line}`,
+              backgroundColor: palette.surface, borderRadius: radius.md,
+              padding: space(3), marginBottom: space(3), border: `1px solid ${palette.line}`,
             }}>
-              <View style={{ marginBottom: '6px' }}>
+              <View style={{ marginBottom: space(2) }}>
                 <Text style={{ ...typography.meta, color: palette.subtext }}>
                   适合阶段：{item.age_range || '未填写'}
                 </Text>
@@ -344,7 +348,7 @@ export default function SchoolsPage() {
               </View>
             </View>
 
-            <Text style={{ ...typography.meta, color: palette.link, fontWeight: '700' }}>
+            <Text style={{ ...typography.button, color: palette.link }}>
               查看详情 ›
             </Text>
           </AppCard>
