@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
+import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type PillTone = 'brand' | 'neutral'
@@ -49,8 +49,8 @@ export function MultiPillSelect(props: BaseProps & { selected: string[]; onChang
             onTouchCancel={() => setPressedOption('')}
             onClick={() => onChange(active ? selected.filter((value) => value !== option) : [...selected, option])}
             style={{
-              padding: '6px 14px',
-              borderRadius: '999px',
+              padding: `${space(2)} ${space(3)}`,
+              borderRadius: radius.sm,
               marginRight: space(2),
               marginBottom: space(2),
               backgroundColor: colors.backgroundColor,
@@ -59,7 +59,7 @@ export function MultiPillSelect(props: BaseProps & { selected: string[]; onChang
               transform: pressed ? 'scale(0.98)' : 'scale(1)',
             }}
           >
-            <Text style={{ ...typography.meta, color: colors.color, fontWeight: active ? '700' : '400' }}>{option}</Text>
+            <Text style={{ ...typography.meta, color: colors.color }}>{option}</Text>
           </View>
         )
       })}
@@ -86,8 +86,8 @@ export function SinglePillSelect(props: BaseProps & { selected: string; onChange
             onTouchCancel={() => setPressedOption('')}
             onClick={() => onChange(active && allowClear ? '' : option)}
             style={{
-              padding: '6px 14px',
-              borderRadius: '999px',
+              padding: `${space(2)} ${space(3)}`,
+              borderRadius: radius.sm,
               marginRight: space(2),
               marginBottom: space(2),
               backgroundColor: colors.backgroundColor,
@@ -96,7 +96,7 @@ export function SinglePillSelect(props: BaseProps & { selected: string; onChange
               transform: pressed ? 'scale(0.98)' : 'scale(1)',
             }}
           >
-            <Text style={{ ...typography.meta, color: colors.color, fontWeight: active ? '700' : '400' }}>{option}</Text>
+            <Text style={{ ...typography.meta, color: colors.color }}>{option}</Text>
           </View>
         )
       })}
