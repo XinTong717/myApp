@@ -1,5 +1,4 @@
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
 
 export const exploreTheme = {
   pageBg: palette.bg,
@@ -20,87 +19,4 @@ export const exploreTheme = {
   educatorSoft: palette.accent2Soft,
   shadow: palette.shadow,
   overlay: palette.overlay,
-  gradient: palette.primaryGradient,
 }
-
-export const chip = (active: boolean, tone: 'brand' | 'user' | 'educator' | 'neutral' = 'brand') => {
-  const activeBg = tone === 'user'
-    ? exploreTheme.userSoft
-    : tone === 'educator'
-      ? exploreTheme.educatorSoft
-      : exploreTheme.schoolSoft
-
-  const activeColor = tone === 'user'
-    ? palette.green
-    : tone === 'educator'
-      ? palette.accent2
-      : palette.brand
-
-  return {
-    container: {
-      padding: `${space(1)} 10px`,
-      borderRadius: '999px',
-      marginRight: space(2),
-      marginBottom: '6px',
-      backgroundColor: active ? activeBg : exploreTheme.tag,
-      border: `1px solid ${active ? activeBg : exploreTheme.borderSoft}`,
-    },
-    text: {
-      fontSize: '12px',
-      fontWeight: 'bold',
-      color: active ? activeColor : exploreTheme.muted,
-    },
-  } as const
-}
-
-export const provinceChip = (active: boolean) => ({
-  container: {
-    padding: '3px 10px',
-    borderRadius: '999px',
-    marginRight: '6px',
-    backgroundColor: active ? exploreTheme.action : palette.surfaceWarm,
-    border: `1px solid ${active ? exploreTheme.action : exploreTheme.borderSoft}`,
-  },
-  text: {
-    fontSize: '11px',
-    color: active ? '#FFF' : exploreTheme.tagText,
-  },
-} as const)
-
-export const cardStyle = {
-  backgroundColor: exploreTheme.card,
-  borderRadius: '20px',
-  padding: `18px ${space(4)}`,
-  border: `1px solid ${exploreTheme.border}`,
-} as const
-
-export const panelStyle = {
-  backgroundColor: exploreTheme.surface,
-  borderRadius: '18px',
-  padding: `14px ${space(3)}`,
-  border: `1px solid ${exploreTheme.border}`,
-} as const
-
-export const primaryButtonStyle = {
-  background: exploreTheme.gradient,
-  borderRadius: '16px',
-  padding: '14px',
-  textAlign: 'center',
-} as const
-
-export const ghostButtonStyle = {
-  backgroundColor: exploreTheme.tag,
-  borderRadius: '16px',
-  padding: '14px',
-  textAlign: 'center',
-} as const
-
-export const sheetStyle = {
-  width: '100%',
-  backgroundColor: exploreTheme.surface,
-  borderTopLeftRadius: '24px',
-  borderTopRightRadius: '24px',
-  padding: `18px ${space(4)} ${space(6)}`,
-  boxSizing: 'border-box',
-  borderTop: `1px solid ${exploreTheme.border}`,
-} as const
