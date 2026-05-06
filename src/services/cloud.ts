@@ -2,6 +2,10 @@ import Taro from '@tarojs/taro'
 import type { CloudResponse } from '../types/domain'
 
 const APP_SERVICE_NAME = 'appService'
+const LEGAL_CONSENT_REQUIRED_CODE = 'LEGAL_CONSENT_REQUIRED'
+const PROFILE_TAB_URL = '/pages/profile/index'
+
+let lastConsentRedirectAt = 0
 
 const ROUTED_ACTIONS = new Set([
   'getOpenId',
@@ -46,6 +50,19 @@ function createClientRequestId(name: string) {
   return `${name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+function handleLegalConsentRequired() {
+  const now = Date.now()
+  if (now - lastConsentRedirectAt < 1500) return
+  lastConsentRedirectAt = now
+
+  Taro.showToast({ title: '请先在“我的”页阅读并同意协议', icon: 'none' })
+  setTimeout(() => {
+    Taro.switchTab({ url: PROFILE_TAB_URL }).catch((err) => {
+      console.warn('switchTab profile for legal consent failed:', err)
+    })
+  }, 500)
+}
+
 export async function callCloud<T = Record<string, unknown>>(name: string, data: Record<string, unknown> = {}) {
   const clientRequestId = createClientRequestId(name)
 
@@ -74,6 +91,10 @@ export async function callCloud<T = Record<string, unknown>>(name: string, data:
       result.ok = false
       result.code = result.code || 'INVALID_CLOUD_RESPONSE'
       result.message = result.message || '服务返回格式异常，请稍后重试'
+    }
+
+    if (!result.ok && result.code === LEGAL_CONSENT_REQUIRED_CODE) {
+      handleLegalConsentRequired()
     }
 
     return result
