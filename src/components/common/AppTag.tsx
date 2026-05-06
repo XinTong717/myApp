@@ -1,6 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
+import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type AppTagTone = 'neutral' | 'brand' | 'green' | 'accent'
@@ -27,7 +27,7 @@ export default function AppTag({
   tone = 'neutral',
   marginRight = space(2),
   marginBottom = space(2),
-  padding = '5px 10px',
+  padding = `${space(1)} ${space(2)}`,
   backgroundColor,
   textColor,
 }: AppTagProps) {
@@ -36,7 +36,7 @@ export default function AppTag({
   return (
     <View style={{
       padding,
-      borderRadius: '999px',
+      borderRadius: radius.sm,
       backgroundColor: backgroundColor || colors.bg,
       marginRight,
       marginBottom,
