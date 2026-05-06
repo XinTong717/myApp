@@ -22,6 +22,7 @@ import ProfileSecondaryButton from '../../components/profile/ProfileSecondaryBut
 import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import AppIcon from '../../components/common/AppIcon'
 import { palette } from '../../theme/palette'
+import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 import { checkAdminAccess, requestAccountDeletion } from '../../services/profile'
 import { recordLegalConsent } from '../../services/legalConsent'
@@ -42,7 +43,7 @@ type ProfileStep = typeof PROFILE_STEPS[number]['key']
 
 function StepTabs(props: { activeStep: ProfileStep; onChange: (step: ProfileStep) => void }) {
   return (
-    <View style={{ display: 'flex', flexDirection: 'row', gap: '8px', marginBottom: '14px' }}>
+    <View style={{ backgroundColor: palette.card, borderRadius: radius.md, padding: space(1), marginBottom: space(4), border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row' }}>
       {PROFILE_STEPS.map((step, index) => {
         const active = props.activeStep === step.key
         return (
@@ -51,15 +52,14 @@ function StepTabs(props: { activeStep: ProfileStep; onChange: (step: ProfileStep
             onClick={() => props.onChange(step.key)}
             style={{
               flex: 1,
-              padding: '9px 8px',
-              borderRadius: '999px',
-              backgroundColor: active ? palette.accentDeep : '#FFFFFF',
-              border: `1px solid ${active ? palette.accentDeep : palette.line}`,
+              padding: `${space(3)} ${space(2)}`,
+              borderRadius: radius.sm,
+              backgroundColor: active ? palette.accentDeep : 'transparent',
               textAlign: 'center',
-              boxShadow: active ? '0 4px 12px rgba(184,85,64,0.16)' : 'none',
+              boxShadow: active ? `0 3px 10px ${palette.shadow}` : 'none',
             }}
           >
-            <Text style={{ ...typography.caption, fontWeight: active ? 'bold' : 'normal', color: active ? '#FFFFFF' : palette.subtext }}>
+            <Text style={{ ...typography.button, color: active ? '#FFFFFF' : palette.subtext }}>
               {index + 1}. {step.label}
             </Text>
           </View>
@@ -71,7 +71,7 @@ function StepTabs(props: { activeStep: ProfileStep; onChange: (step: ProfileStep
 
 function PrivacyDisclosureNotice() {
   return (
-    <View style={{ display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'flex-start', backgroundColor: palette.card, borderRadius: '16px', border: `1px solid ${palette.line}`, padding: '12px', marginBottom: '12px' }}>
+    <View style={{ display: 'flex', flexDirection: 'row', gap: space(3), alignItems: 'flex-start', backgroundColor: palette.card, borderRadius: radius.md, border: `1px solid ${palette.line}`, padding: space(3), marginBottom: space(3) }}>
       <AppIcon name='lock' size={24} bordered />
       <Text style={{ ...typography.caption, color: palette.subtext, flex: 1 }}>
         如果你选择出现在地图上，你的显示名、身份、城市、简介，以及“和这个生态的关系”会公开展示。联络标识、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。
@@ -91,9 +91,9 @@ function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; 
   }
 
   return (
-    <View onClick={props.onToggle} style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: props.checked ? '#FFF7F3' : palette.card, borderRadius: '16px', border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, padding: '12px', marginBottom: '12px' }}>
-      <View style={{ width: '20px', height: '20px', borderRadius: '6px', marginRight: '10px', marginTop: '1px', backgroundColor: props.checked ? palette.accentDeep : '#FFFFFF', border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>{props.checked ? '✓' : ''}</Text>
+    <View onClick={props.onToggle} style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: props.checked ? '#FFF7F3' : palette.card, borderRadius: radius.md, border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, padding: space(3), marginBottom: space(3) }}>
+      <View style={{ width: '20px', height: '20px', borderRadius: '6px', marginRight: space(3), marginTop: '1px', backgroundColor: props.checked ? palette.accentDeep : '#FFFFFF', border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: '13px', color: '#FFFFFF' }}>{props.checked ? '✓' : ''}</Text>
       </View>
       <View style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
         <Text style={{ ...typography.caption, color: palette.subtext }}>我已阅读并同意</Text>
@@ -217,11 +217,11 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '40px 20px', textAlign: 'center' }}><Text style={{ ...typography.body, color: palette.subtext }}>加载中...</Text></View>
+    return <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: `${space(8)} ${space(5)}`, textAlign: 'center' }}><Text style={{ ...typography.body, color: palette.subtext }}>加载中...</Text></View>
   }
 
   return (
-    <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '16px 16px 100px', boxSizing: 'border-box' }}>
+    <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: `${space(4)} ${space(4)} 100px`, boxSizing: 'border-box' }}>
       <ProfileHeaderCard />
       <ProfileAdminEntry isAdmin={isAdmin} onOpen={openAdminReviewPage} />
       <StepTabs activeStep={activeStep} onChange={setActiveStep} />
@@ -249,7 +249,7 @@ export default function ProfilePage() {
         <AppPrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
       </>}
 
-      <View style={{ marginBottom: '20px', alignItems: 'center' }}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}><Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>用户协议</Text><Text style={{ ...typography.caption, color: palette.subtext, marginLeft: '8px', marginRight: '8px' }}>·</Text><Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>隐私政策</Text></View></View>
+      <View style={{ marginBottom: space(5), alignItems: 'center' }}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}><Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>用户协议</Text><Text style={{ ...typography.caption, color: palette.subtext, marginLeft: space(2), marginRight: space(2) }}>·</Text><Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>隐私政策</Text></View></View>
 
       <ProfileConnectionsSection pendingRequests={pendingRequests} acceptedConnections={acceptedConnections} sentRequests={sentRequests} requestPages={requestPages} loadingMoreSection={loadingMoreSection} onLoadSection={loadRequestSection} onLoadMore={loadMoreRequests} onRespond={(requestId, action) => handleRespond(requestId, action, refreshRelations)} onWithdrawRequest={(connectionId) => handleWithdrawRequest(connectionId, refreshRelations)} onRemoveConnection={(connectionId) => handleRemoveConnection(connectionId, refreshRelations)} onSafetyAction={(targetUserId, action) => handleSafetyAction(targetUserId, action, () => { refreshRelations(); loadProfile() })} onReportUser={handleReportUser} />
     </View>
