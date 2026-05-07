@@ -233,14 +233,14 @@ export default function SchoolsPage() {
           <Input
             type='text'
             value={keyword}
-            placeholder={`搜索当前已加载的前 ${SCHOOL_LIST_LIMIT} 条结果`}
+            placeholder='搜索已收录社区，找不到可提交推荐'
             placeholderStyle={`color:${palette.muted}`}
             onInput={(e) => setKeyword(e.detail.value)}
           />
         </View>
         <View style={{ marginTop: space(2) }}>
           <Text style={{ ...typography.micro, color: palette.muted }}>
-            搜索仅覆盖当前结果；找不到时可先调整筛选，或推荐新的学习社区。
+            找不到时可先调整筛选，或推荐新的学习社区。
           </Text>
         </View>
       </AppCard>
