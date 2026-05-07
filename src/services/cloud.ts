@@ -7,7 +7,7 @@ const PROFILE_TAB_URL = '/pages/profile/index'
 
 let lastConsentRedirectAt = 0
 
-const ROUTED_ACTIONS = new Set([
+const PUBLIC_ACTIONS = [
   'getOpenId',
   'getSchools',
   'getSchoolMarkers',
@@ -36,10 +36,21 @@ const ROUTED_ACTIONS = new Set([
   'checkAdminAccess',
   'recordLegalConsent',
   'getLegalConsentStatus',
+]
+
+const ADMIN_REVIEW_ACTIONS = [
   'listEventSubmissions',
   'getEventPublishPayload',
   'publishEventDirect',
   'reviewEventSubmission',
+]
+
+// Keep migration / maintenance actions out of the client whitelist.
+// They should be invoked from CloudBase console or a dedicated ops-only function,
+// not from a public mini-program bundle.
+const ROUTED_ACTIONS = new Set([
+  ...PUBLIC_ACTIONS,
+  ...ADMIN_REVIEW_ACTIONS,
 ])
 
 function createClientRequestId(name: string) {
