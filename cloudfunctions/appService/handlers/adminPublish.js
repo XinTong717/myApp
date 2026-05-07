@@ -149,8 +149,8 @@ async function publishEventDirect(event, wxContext) {
 
     const payload = buildEventPayload(submission)
     const warnings = buildWarnings(submission, payload)
-    const blockingErrors = buildBlockingErrors(submission, payload)
-    if (blockingErrors.length > 0 && !force) {
+    const blockingErrors = buildBlockingErrors(submission, payload, { allowSecurityForce: force })
+    if (blockingErrors.length > 0) {
       return fail(requestId, 'PUBLISH_BLOCKED', `暂不能发布：${blockingErrors.join('；')}`, { warnings, blockingErrors })
     }
 
@@ -192,6 +192,7 @@ async function publishEventDirect(event, wxContext) {
         forceUsed: force,
         warnings,
         blockingErrors,
+        contentSecurityStatus: submission.contentSecurityStatus || '',
         adminNote: adminNote || '已发布到 events',
       },
     })
