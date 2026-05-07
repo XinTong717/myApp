@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
-import { elevation, radius, space } from '../../theme/spacing'
-import { typography } from '../../theme/typography'
+import { elevation, space } from '../../theme/spacing'
 
 type AppChipTone = 'neutral' | 'brand' | 'action' | 'green' | 'accent' | 'error'
 type AppChipSize = 'sm' | 'md'
@@ -15,7 +14,12 @@ type AppChipProps = {
   interactive?: boolean
   marginRight?: string
   marginBottom?: string
+  className?: string
   onClick?: () => void
+}
+
+function joinClassNames(...names: Array<string | false | null | undefined>) {
+  return names.filter(Boolean).join(' ')
 }
 
 function getTone(tone: AppChipTone, selected: boolean, pressed: boolean) {
@@ -42,12 +46,13 @@ export default function AppChip({
   interactive = false,
   marginRight = space(2),
   marginBottom = space(2),
+  className,
   onClick,
 }: AppChipProps) {
   const [pressed, setPressed] = useState(false)
   const colors = getTone(tone, selected, pressed && interactive)
   const padding = size === 'md' ? `${space(2)} ${space(3)}` : `${space(1)} ${space(2)}`
-  const textStyle = size === 'md' ? typography.meta : typography.caption
+  const textClass = size === 'md' ? 'text-meta' : 'text-caption'
 
   return (
     <View
@@ -55,18 +60,18 @@ export default function AppChip({
       onTouchEnd={() => setPressed(false)}
       onTouchCancel={() => setPressed(false)}
       onClick={onClick}
+      className={joinClassNames('app-chip', className)}
       style={{
-        padding,
-        borderRadius: radius.sm,
-        marginRight,
-        marginBottom,
-        backgroundColor: colors.bg,
-        border: `1px solid ${colors.border}`,
-        transform: pressed && interactive ? 'scale(0.97)' : 'scale(1)',
-        boxShadow: selected ? elevation.pressed : 'none',
+        '--chip-padding': padding,
+        '--chip-bg': colors.bg,
+        '--chip-border': colors.border,
+        '--chip-margin-right': marginRight,
+        '--chip-margin-bottom': marginBottom,
+        '--chip-transform': pressed && interactive ? 'scale(0.97)' : 'scale(1)',
+        '--chip-shadow': selected ? elevation.pressed : 'none',
       }}
     >
-      <Text style={{ ...textStyle, color: colors.text }}>{text}</Text>
+      <Text className={textClass} style={{ color: colors.text }}>{text}</Text>
     </View>
   )
 }
