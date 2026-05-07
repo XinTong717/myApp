@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
-import { elevation, radius, space } from '../../theme/spacing'
-import { typography } from '../../theme/typography'
+import { elevation, space } from '../../theme/spacing'
 
 type AppPrimaryButtonProps = {
   text: string
@@ -11,6 +10,11 @@ type AppPrimaryButtonProps = {
   disabled?: boolean
   onClick?: () => void
   marginBottom?: string
+  className?: string
+}
+
+function joinClassNames(...names: Array<string | false | null | undefined>) {
+  return names.filter(Boolean).join(' ')
 }
 
 export default function AppPrimaryButton({
@@ -20,6 +24,7 @@ export default function AppPrimaryButton({
   disabled: disabledProp = false,
   onClick,
   marginBottom = space(7),
+  className,
 }: AppPrimaryButtonProps) {
   const [pressed, setPressed] = useState(false)
   const disabled = !!disabledProp || !!loading
@@ -30,18 +35,16 @@ export default function AppPrimaryButton({
       onTouchEnd={() => setPressed(false)}
       onTouchCancel={() => setPressed(false)}
       onClick={disabled ? undefined : onClick}
+      className={joinClassNames('app-button', className)}
       style={{
-        backgroundColor: disabled ? palette.disabledBg : pressed ? palette.brandPress : palette.brand,
-        borderRadius: radius.md,
-        padding: space(4),
-        textAlign: 'center',
-        marginBottom,
-        boxShadow: disabled ? 'none' : pressed ? elevation.pressed : elevation.card,
-        transform: pressed ? 'scale(0.98)' : 'scale(1)',
-        opacity: disabled ? 0.9 : 1,
+        '--button-bg': disabled ? palette.disabledBg : pressed ? palette.brandPress : palette.brand,
+        '--button-margin-bottom': marginBottom,
+        '--button-shadow': disabled ? 'none' : pressed ? elevation.pressed : elevation.card,
+        '--button-transform': pressed ? 'scale(0.98)' : 'scale(1)',
+        '--button-opacity': disabled ? 0.9 : 1,
       }}
     >
-      <Text style={{ ...typography.button, color: disabled ? palette.disabledText : '#FFF' }}>
+      <Text className='text-button' style={{ color: disabled ? palette.disabledText : '#FFF' }}>
         {loading ? loadingText : text}
       </Text>
     </View>
