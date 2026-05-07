@@ -37,6 +37,14 @@ function buildContentSecurityFields(sec = {}) {
   }
 }
 
+function isContentSecurityCheckFailed(sec = {}) {
+  return sec.contentSecurityStatus === 'check_failed' || sec.code === 'CONTENT_SECURITY_FAILED_SOFT'
+}
+
+function resolvePendingReviewStatus(sec = {}) {
+  return isContentSecurityCheckFailed(sec) ? 'pending_security_review' : 'pending'
+}
+
 function pickStringFields(event, allowed) {
   const cleanData = { updatedAt: db.serverDate() }
   for (const key of allowed) {
@@ -183,7 +191,7 @@ async function submitCorrection(event, wxContext) {
   const sec = await runMsgSecCheck({ content, openid, scene: 2, blockedMessage: '内容包含不合规信息，请修改后重试', failedMessage: '内容审核失败，请稍后重试' })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
   try {
-    await db.collection('corrections').add({ data: { openid, schoolId, schoolName, content, ...buildContentSecurityFields(sec), status: 'pending', createdAt: db.serverDate() } })
+    await db.collection('corrections').add({ data: { openid, schoolId, schoolName, content, ...buildContentSecurityFields(sec), status: resolvePendingReviewStatus(sec), createdAt: db.serverDate() } })
     return ok(requestId, { message: '提交成功' })
   } catch (err) {
     console.error('appService submitCorrection error:', err)
@@ -208,12 +216,12 @@ async function submitCommunity(event, wxContext) {
   const recentCountRes = await db.collection('community_submissions').where({ openid, createdAt: _.gte(since) }).count()
   if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) return fail(requestId, 'DAILY_LIMIT_REACHED', '24小时内最多可提交5次推荐，请稍后再试')
   const normalizedKey = [cleanData.name, cleanData.province, cleanData.city].map((item) => String(item || '').trim().toLowerCase()).join('::')
-  const existing = await db.collection('community_submissions').where({ normalizedKey, status: _.in(['pending', 'approved', 'merged']) }).limit(1).get()
+  const existing = await db.collection('community_submissions').where({ normalizedKey, status: _.in(['pending', 'approved', 'merged', 'pending_security_review']) }).limit(1).get()
   if (existing.data.length > 0) return fail(requestId, 'DUPLICATE_SUBMISSION', '这个学习社区已在审核队列或已收录，无需重复提交')
   const submitter = await getUserProfileByOpenid(openid, ['displayName', 'roles', 'city']) || {}
   try {
-    await db.collection('community_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, name: cleanData.name, province: cleanData.province, city: cleanData.city, communityType: stringifyLabels(cleanData.communityType || []), communityTypes: cleanData.communityType || [], ageRange: stringifyLabels(cleanData.ageRange || []), ageRanges: cleanData.ageRange || [], officialUrl: cleanData.officialUrl || '', participationNote: cleanData.participationNote || '', feeNote: cleanData.feeNote || '', sourceNote: cleanData.sourceNote || '', recommendationNote: cleanData.recommendationNote || '', ...buildContentSecurityFields(sec), status: 'pending', adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
-    return ok(requestId, { message: '提交成功，感谢推荐' })
+    await db.collection('community_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, name: cleanData.name, province: cleanData.province, city: cleanData.city, communityType: stringifyLabels(cleanData.communityType || []), communityTypes: cleanData.communityType || [], ageRange: stringifyLabels(cleanData.ageRange || []), ageRanges: cleanData.ageRange || [], officialUrl: cleanData.officialUrl || '', participationNote: cleanData.participationNote || '', feeNote: cleanData.feeNote || '', sourceNote: cleanData.sourceNote || '', recommendationNote: cleanData.recommendationNote || '', ...buildContentSecurityFields(sec), status: resolvePendingReviewStatus(sec), adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
+    return ok(requestId, { message: isContentSecurityCheckFailed(sec) ? '提交成功，内容安全状态待人工复核' : '提交成功，感谢推荐' })
   } catch (err) {
     console.error('appService submitCommunity error:', err)
     return fail(requestId, 'SUBMIT_COMMUNITY_FAILED', '提交失败，请稍后重试')
@@ -250,12 +258,12 @@ async function submitEvent(event, wxContext) {
   const sec = await runMsgSecCheck({ content: [cleanData.title, stringifyLabels(cleanData.eventTypes || []), stringifyLabels(cleanData.audienceWho || []), cleanData.minAgeRequirement, cleanData.location, cleanData.fee, cleanData.feeDetail, cleanData.organizer, cleanData.organizerContact, cleanData.officialUrl, cleanData.signupNote, cleanData.description].filter(Boolean).join('\n'), openid, scene: 2 })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
   const normalizedKey = [cleanData.title, cleanData.province, cleanData.city, cleanData.startTime].map((item) => String(item || '').trim().toLowerCase()).join('::')
-  const existing = await db.collection('event_submissions').where({ normalizedKey, status: _.in(['pending', 'approved', 'merged']) }).limit(1).get()
+  const existing = await db.collection('event_submissions').where({ normalizedKey, status: _.in(['pending', 'approved', 'merged', 'pending_security_review']) }).limit(1).get()
   if (existing.data.length > 0) return fail(requestId, 'DUPLICATE_SUBMISSION', '这个活动已在审核队列或已收录，无需重复提交')
   const submitter = await getUserProfileByOpenid(openid, ['displayName', 'roles', 'city']) || {}
   try {
-    await db.collection('event_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, title: cleanData.title, province: cleanData.province, city: cleanData.city, eventType: cleanData.eventType || '', eventTypes: cleanData.eventTypes || [], audienceWho: stringifyLabels(cleanData.audienceWho || []), audienceWhoTags: cleanData.audienceWho || [], minAgeRequirement: cleanData.minAgeRequirement || '', startTime: cleanData.startTime, endTime: cleanData.endTime || '', isOnline: !!cleanData.isOnline, location: cleanData.location || '', fee: cleanData.fee || '', feeDetail: cleanData.feeDetail || '', organizer: cleanData.organizer || '', organizerContact: cleanData.organizerContact || '', officialUrl: cleanData.officialUrl || '', signupNote: cleanData.signupNote || '', description: cleanData.description || '', ...buildContentSecurityFields(sec), status: 'pending', adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
-    return ok(requestId, { message: '提交成功，已进入审核队列' })
+    await db.collection('event_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, title: cleanData.title, province: cleanData.province, city: cleanData.city, eventType: cleanData.eventType || '', eventTypes: cleanData.eventTypes || [], audienceWho: stringifyLabels(cleanData.audienceWho || []), audienceWhoTags: cleanData.audienceWho || [], minAgeRequirement: cleanData.minAgeRequirement || '', startTime: cleanData.startTime, endTime: cleanData.endTime || '', isOnline: !!cleanData.isOnline, location: cleanData.location || '', fee: cleanData.fee || '', feeDetail: cleanData.feeDetail || '', organizer: cleanData.organizer || '', organizerContact: cleanData.organizerContact || '', officialUrl: cleanData.officialUrl || '', signupNote: cleanData.signupNote || '', description: cleanData.description || '', ...buildContentSecurityFields(sec), status: resolvePendingReviewStatus(sec), adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
+    return ok(requestId, { message: isContentSecurityCheckFailed(sec) ? '提交成功，内容安全状态待人工复核' : '提交成功，已进入审核队列' })
   } catch (err) {
     console.error('appService submitEvent error:', err)
     return fail(requestId, 'SUBMIT_EVENT_FAILED', '提交失败，请稍后重试')
