@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text, Input, ScrollView } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
-import { radius, space } from '../../theme/spacing'
-import { typography } from '../../theme/typography'
+import AppPage from '../../components/common/AppPage'
+import AppPageHeader from '../../components/common/AppPageHeader'
+import AppMiniButton from '../../components/common/AppMiniButton'
+import AppSearchBox from '../../components/common/AppSearchBox'
+import AppFilterRow from '../../components/common/AppFilterRow'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
@@ -31,14 +34,6 @@ type School = SchoolItem
 
 function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
   return <AppChip text={props.label} tone='brand' size='md' selected={props.active} interactive onClick={props.onClick} />
-}
-
-function MiniPrimaryButton(props: { text: string; onClick: () => void }) {
-  return (
-    <View onClick={props.onClick} style={{ padding: `${space(2)} ${space(3)}`, borderRadius: radius.md, backgroundColor: palette.brand }}>
-      <Text style={{ ...typography.button, color: '#FFFFFF' }}>{props.text}</Text>
-    </View>
-  )
 }
 
 function splitTokens(value?: string) {
@@ -122,12 +117,8 @@ export default function SchoolsPage() {
       })
       const nextSchools = Array.isArray(result.schools) ? result.schools : []
       setSchools(nextSchools)
-      if (options.syncFilterSource) {
-        setFilterSourceSchools(nextSchools)
-      }
-      if (!result?.ok && nextSchools.length === 0) {
-        setError(result?.message || '读取学习社区数据失败')
-      }
+      if (options.syncFilterSource) setFilterSourceSchools(nextSchools)
+      if (!result?.ok && nextSchools.length === 0) setError(result?.message || '读取学习社区数据失败')
       return nextSchools
     } catch (err: any) {
       console.error('loadSchools error:', err)
@@ -172,10 +163,7 @@ export default function SchoolsPage() {
   })
 
   const optionSource = filterSourceSchools.length > 0 ? filterSourceSchools : schools
-
-  const provinceOptions = useMemo(() => {
-    return [ALL_FILTER, ...uniqueValues(optionSource.flatMap((item) => getLocations(item).map((location) => location.province || '')))]
-  }, [optionSource])
+  const provinceOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(optionSource.flatMap((item) => getLocations(item).map((location) => location.province || '')))], [optionSource])
   const typeOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(optionSource.flatMap((item) => splitTokens(item.school_type)))], [optionSource])
   const ageOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(optionSource.flatMap((item) => splitTokens(item.age_range)))], [optionSource])
 
@@ -212,99 +200,59 @@ export default function SchoolsPage() {
   }
 
   return (
-    <View style={{
-      padding: space(4), backgroundColor: palette.bg,
-      minHeight: '100vh', boxSizing: 'border-box',
-    }}>
-      <AppCard padding={`${space(4)} ${space(4)}`}>
-        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(2) }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ ...typography.title, color: palette.text }}>学习社区库</Text>
-          </View>
-          <MiniPrimaryButton text='推荐新学习社区' onClick={goToSubmit} />
-        </View>
-        <Text style={{ ...typography.meta, color: palette.subtext }}>
-          搜索、筛选、查看学习社区详情，也可以提交新的社区推荐，进入人工审核队列。
-        </Text>
-        <View style={{
-          backgroundColor: palette.surface, borderRadius: radius.md,
-          padding: `${space(3)} ${space(3)}`, marginTop: space(4), border: `1px solid ${palette.line}`,
-        }}>
-          <Input
-            type='text'
-            value={keyword}
-            placeholder='搜索已收录社区，找不到可提交推荐'
-            placeholderStyle={`color:${palette.muted}`}
-            onInput={(e) => setKeyword(e.detail.value)}
-          />
-        </View>
-        <View style={{ marginTop: space(2) }}>
-          <Text style={{ ...typography.micro, color: palette.muted }}>
-            找不到时可先调整筛选，或推荐新的学习社区。
-          </Text>
-        </View>
+    <AppPage>
+      <AppPageHeader
+        title='学习社区库'
+        description='搜索、筛选、查看学习社区详情，也可以提交新的社区推荐，进入人工审核队列。'
+        action={<AppMiniButton text='推荐新学习社区' onClick={goToSubmit} />}
+      />
+
+      <AppCard>
+        <AppSearchBox
+          value={keyword}
+          placeholder='搜索已收录社区，找不到可提交推荐'
+          helperText='找不到时可先调整筛选，或推荐新的学习社区。'
+          onInput={setKeyword}
+        />
       </AppCard>
 
-      <AppCard padding={space(3)} radius={radius.md}>
-        <View style={{ marginBottom: space(2), display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ ...typography.bodyStrong, color: palette.text }}>筛选</Text>
+      <AppCard padding='12px'>
+        <View className='app-filter-panel__heading'>
+          <View className='app-flex-1'>
+            <Text className='text-body-strong text-color-main'>筛选</Text>
             {!!activeFilterSummary && (
-              <View style={{ marginTop: space(1) }}>
-                <Text style={{ ...typography.micro, color: palette.subtext }}>{activeFilterSummary}</Text>
+              <View className='app-filter-panel__summary'>
+                <Text className='text-micro text-color-sub'>{activeFilterSummary}</Text>
               </View>
             )}
           </View>
-          <Text onClick={resetFilters} style={{ ...typography.caption, color: palette.link }}>重置</Text>
+          <Text onClick={resetFilters} className='text-caption text-color-link'>重置</Text>
         </View>
 
-        <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: space(2) }}>
-          <View style={{ display: 'flex', flexDirection: 'row' }}>
-            {provinceOptions.map((option) => (
-              <FilterChip key={option} label={option} active={isMultiActive(selectedProvinces, option)} onClick={() => setSelectedProvinces((current) => toggleMultiFilter(current, option))} />
-            ))}
-          </View>
-        </ScrollView>
-
-        <ScrollView scrollX style={{ whiteSpace: 'nowrap', marginBottom: space(2) }}>
-          <View style={{ display: 'flex', flexDirection: 'row' }}>
-            {typeOptions.map((option) => (
-              <FilterChip key={option} label={option} active={isMultiActive(selectedTypes, option)} onClick={() => setSelectedTypes((current) => toggleMultiFilter(current, option))} />
-            ))}
-          </View>
-        </ScrollView>
-
-        <ScrollView scrollX style={{ whiteSpace: 'nowrap' }}>
-          <View style={{ display: 'flex', flexDirection: 'row' }}>
-            {ageOptions.map((option) => (
-              <FilterChip key={option} label={option} active={isMultiActive(selectedAgeRanges, option)} onClick={() => setSelectedAgeRanges((current) => toggleMultiFilter(current, option))} />
-            ))}
-          </View>
-        </ScrollView>
+        <AppFilterRow title='地区'>
+          {provinceOptions.map((option) => (
+            <FilterChip key={option} label={option} active={isMultiActive(selectedProvinces, option)} onClick={() => setSelectedProvinces((current) => toggleMultiFilter(current, option))} />
+          ))}
+        </AppFilterRow>
+        <AppFilterRow title='类型'>
+          {typeOptions.map((option) => (
+            <FilterChip key={option} label={option} active={isMultiActive(selectedTypes, option)} onClick={() => setSelectedTypes((current) => toggleMultiFilter(current, option))} />
+          ))}
+        </AppFilterRow>
+        <AppFilterRow title='阶段'>
+          {ageOptions.map((option) => (
+            <FilterChip key={option} label={option} active={isMultiActive(selectedAgeRanges, option)} onClick={() => setSelectedAgeRanges((current) => toggleMultiFilter(current, option))} />
+          ))}
+        </AppFilterRow>
       </AppCard>
 
-      <View style={{ marginBottom: space(4) }}>
-        <Text style={{ ...typography.meta, color: palette.muted }}>
-          {loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 个学习社区`}
-        </Text>
+      <View className='app-count-line'>
+        <Text className='text-meta text-color-muted'>{loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 个学习社区`}</Text>
       </View>
 
       {loading ? <ListSkeleton count={3} rows={3} /> : null}
-
-      {error ? (
-        <ErrorRetryCard
-          error={error}
-          onRetry={() => loadSchools({ forceRefresh: true, useFilters: hasActiveFilters(), syncFilterSource: !hasActiveFilters() })}
-        />
-      ) : null}
-
-      {!loading && filteredSchools.length === 0 ? (
-        <EmptyCard
-          text='没有匹配结果。可以先重置筛选，或把你知道的学习社区推荐进来。'
-          actionText='重置筛选'
-          onAction={resetFilters}
-        />
-      ) : null}
+      {error ? <ErrorRetryCard error={error} onRetry={() => loadSchools({ forceRefresh: true, useFilters: hasActiveFilters(), syncFilterSource: !hasActiveFilters() })} /> : null}
+      {!loading && filteredSchools.length === 0 ? <EmptyCard text='没有匹配结果。可以先重置筛选，或把你知道的学习社区推荐进来。' actionText='重置筛选' onAction={resetFilters} /> : null}
 
       {!loading && filteredSchools.map((item, index) => {
         const iconBgRotation = [palette.iconBg, palette.brandSoft, palette.accent2Soft, palette.greenSoft]
@@ -313,47 +261,34 @@ export default function SchoolsPage() {
 
         return (
           <AppCard key={item.id} onClick={() => goToDetail(item)}>
-            <View style={{
-              display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(3),
-            }}>
-              <View style={{ marginRight: space(3) }}>
+            <View className='app-list-card__header'>
+              <View className='app-list-card__icon'>
                 <AppIcon name='school' size={38} backgroundColor={iconBg} bordered />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.cardTitle, color: palette.text }}>
-                  {item.canonical_name || item.name}
-                </Text>
+              <View className='app-flex-1'>
+                <Text className='text-card-title text-color-main'>{item.canonical_name || item.name}</Text>
               </View>
             </View>
 
-            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: space(3) }}>
+            <View className='app-list-card__tags'>
               <AppTag text={getLocationSummary(item)} />
               {locationCount > 1 ? <AppTag text={`${locationCount} 个地点`} tone='brand' /> : null}
               <AppTag text={item.school_type || '未填写'} />
             </View>
 
-            <View style={{
-              backgroundColor: palette.surface, borderRadius: radius.md,
-              padding: space(3), marginBottom: space(3), border: `1px solid ${palette.line}`,
-            }}>
-              <View style={{ marginBottom: space(2) }}>
-                <Text style={{ ...typography.meta, color: palette.subtext }}>
-                  适合阶段：{item.age_range || '未填写'}
-                </Text>
+            <View className='app-list-card__meta-box'>
+              <View className='app-list-card__meta-line'>
+                <Text className='text-meta text-color-sub'>适合阶段：{item.age_range || '未填写'}</Text>
               </View>
-              <View>
-                <Text style={{ ...typography.meta, color: palette.subtext }}>
-                  费用：{item.fee || '未填写'}
-                </Text>
+              <View className='app-list-card__meta-line'>
+                <Text className='text-meta text-color-sub'>费用：{item.fee || '未填写'}</Text>
               </View>
             </View>
 
-            <Text style={{ ...typography.button, color: palette.link }}>
-              查看详情 ›
-            </Text>
+            <Text className='text-button text-color-link'>查看详情 ›</Text>
           </AppCard>
         )
       })}
-    </View>
+    </AppPage>
   )
 }
