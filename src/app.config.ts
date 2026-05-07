@@ -14,6 +14,20 @@ export default defineAppConfig({
     { root: 'pages/event-detail', pages: ['index'] },
     { root: 'pages/admin', pages: ['event-reviews/index'] },
   ],
+  preloadRule: {
+    'pages/events/index': {
+      network: 'all',
+      packages: ['pages/event-detail'],
+    },
+    'pages/schools/index': {
+      network: 'all',
+      packages: ['pages/school-detail'],
+    },
+    'pages/profile/index': {
+      network: 'wifi',
+      packages: ['pkg/legal'],
+    },
+  },
   window: {
     navigationBarBackgroundColor: '#FFF9F3',
     navigationBarTextStyle: 'black',
