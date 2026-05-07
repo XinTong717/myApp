@@ -11,7 +11,13 @@ type AppCardProps = {
   borderColor?: string
   border?: boolean
   elevationLevel?: ElevationScale
+  className?: string
+  style?: Record<string, any>
   onClick?: () => void
+}
+
+function joinClassNames(...names: Array<string | false | null | undefined>) {
+  return names.filter(Boolean).join(' ')
 }
 
 export default function AppCard({
@@ -23,20 +29,25 @@ export default function AppCard({
   borderColor = palette.lineSoft,
   border = false,
   elevationLevel = 'card',
+  className,
+  style,
   onClick,
 }: AppCardProps) {
+  const cardStyle: Record<string, any> = {
+    '--card-bg': backgroundColor,
+    '--card-radius': cardRadius,
+    '--card-padding': padding,
+    '--card-margin-bottom': marginBottom,
+    '--card-border-color': borderColor,
+    '--card-shadow': elevation[elevationLevel],
+    ...style,
+  }
+
   return (
     <View
       onClick={onClick}
-      style={{
-        backgroundColor,
-        borderRadius: cardRadius,
-        padding,
-        marginBottom,
-        boxSizing: 'border-box',
-        border: border ? `1px solid ${borderColor}` : 'none',
-        boxShadow: elevation[elevationLevel],
-      }}
+      className={joinClassNames('app-card', border && 'app-card--bordered', elevationLevel === 'none' && 'app-card--flat', onClick && 'app-card--interactive', className)}
+      style={cardStyle}
     >
       {children}
     </View>
