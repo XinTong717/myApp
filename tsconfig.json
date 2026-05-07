@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2017",
-    "lib": ["ES2017", "DOM"],
+    "lib": ["ES5", "ES2015", "ES2016", "ES2017", "DOM"],
     "module": "commonjs",
     "removeComments": false,
     "preserveConstEnums": true,
@@ -23,7 +23,6 @@
       "node_modules/@types"
     ],
     "paths": {
-      // TS5090 leading './'
       "@/*": ["./src/*"]
     }
   },
