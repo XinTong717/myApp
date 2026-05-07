@@ -1,7 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
-import { radius, space } from '../../theme/spacing'
-import { typography } from '../../theme/typography'
+import { space } from '../../theme/spacing'
 
 type AppTagTone = 'neutral' | 'brand' | 'green' | 'accent'
 
@@ -13,6 +12,11 @@ type AppTagProps = {
   padding?: string
   backgroundColor?: string
   textColor?: string
+  className?: string
+}
+
+function joinClassNames(...names: Array<string | false | null | undefined>) {
+  return names.filter(Boolean).join(' ')
 }
 
 function getToneColors(tone: AppTagTone) {
@@ -30,18 +34,21 @@ export default function AppTag({
   padding = `${space(1)} ${space(2)}`,
   backgroundColor,
   textColor,
+  className,
 }: AppTagProps) {
   const colors = getToneColors(tone)
 
   return (
-    <View style={{
-      padding,
-      borderRadius: radius.sm,
-      backgroundColor: backgroundColor || colors.bg,
-      marginRight,
-      marginBottom,
-    }}>
-      <Text style={{ ...typography.caption, color: textColor || colors.text }}>{text}</Text>
+    <View
+      className={joinClassNames('app-tag', className)}
+      style={{
+        '--tag-padding': padding,
+        '--tag-bg': backgroundColor || colors.bg,
+        '--tag-margin-right': marginRight,
+        '--tag-margin-bottom': marginBottom,
+      }}
+    >
+      <Text className='text-caption' style={{ color: textColor || colors.text }}>{text}</Text>
     </View>
   )
 }
