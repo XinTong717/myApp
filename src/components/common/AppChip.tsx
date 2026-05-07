@@ -4,7 +4,7 @@ import { palette } from '../../theme/palette'
 import { elevation, space } from '../../theme/spacing'
 
 type AppChipTone = 'neutral' | 'brand' | 'action' | 'green' | 'accent' | 'error'
-type AppChipSize = 'sm' | 'md'
+type AppChipSize = 'sm' | 'md' | 'lg'
 
 type AppChipProps = {
   text: string
@@ -38,6 +38,12 @@ function getTone(tone: AppChipTone, selected: boolean, pressed: boolean) {
   return { bg: 'transparent', border: palette.lineSoft, text: palette.tagText }
 }
 
+function getSize(size: AppChipSize) {
+  if (size === 'lg') return { padding: `${space(3)} ${space(4)}`, textClass: 'text-body-strong' }
+  if (size === 'md') return { padding: `${space(2)} ${space(3)}`, textClass: 'text-caption' }
+  return { padding: `${space(1)} ${space(2)}`, textClass: 'text-micro' }
+}
+
 export default function AppChip({
   text,
   tone = 'neutral',
@@ -51,8 +57,7 @@ export default function AppChip({
 }: AppChipProps) {
   const [pressed, setPressed] = useState(false)
   const colors = getTone(tone, selected, pressed && interactive)
-  const padding = size === 'md' ? `${space(2)} ${space(3)}` : `${space(1)} ${space(2)}`
-  const textClass = size === 'md' ? 'text-meta' : 'text-caption'
+  const sizeStyle = getSize(size)
 
   return (
     <View
@@ -62,7 +67,7 @@ export default function AppChip({
       onClick={onClick}
       className={joinClassNames('app-chip', className)}
       style={{
-        '--chip-padding': padding,
+        '--chip-padding': sizeStyle.padding,
         '--chip-bg': colors.bg,
         '--chip-border': colors.border,
         '--chip-margin-right': marginRight,
@@ -71,7 +76,7 @@ export default function AppChip({
         '--chip-shadow': selected ? elevation.pressed : 'none',
       }}
     >
-      <Text className={textClass} style={{ color: colors.text }}>{text}</Text>
+      <Text className={sizeStyle.textClass} style={{ color: colors.text }}>{text}</Text>
     </View>
   )
 }
