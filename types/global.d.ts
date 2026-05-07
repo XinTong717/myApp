@@ -1,3 +1,5 @@
+/// <reference lib="es2017" />
+/// <reference lib="dom" />
 /// <reference types="@tarojs/taro" />
 
 declare module '*.png';
