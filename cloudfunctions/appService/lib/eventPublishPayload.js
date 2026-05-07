@@ -9,6 +9,9 @@ const EVENT_TYPE_MAP = {
   '其他': 'meetup',
 }
 
+const SECURITY_RECHECK_REQUIRED_STATUSES = new Set(['check_failed', 'failed', 'error', 'unchecked'])
+const SECURITY_BLOCKED_STATUSES = new Set(['blocked', 'review'])
+
 function parseDate(value) {
   if (!value) return null
   const date = new Date(value)
@@ -126,6 +129,10 @@ function buildEventPayload(submission) {
   }
 }
 
+function readContentSecurityStatus(submission) {
+  return String(submission.contentSecurityStatus || '').trim().toLowerCase()
+}
+
 function buildWarnings(submission, payload) {
   const warnings = []
   const start = parseDate(submission.startTime)
@@ -133,6 +140,7 @@ function buildWarnings(submission, payload) {
   const officialUrl = String(submission.officialUrl || '').trim()
   const signupNote = String(submission.signupNote || '').trim()
   const organizerContact = String(submission.organizerContact || '').trim()
+  const contentSecurityStatus = readContentSecurityStatus(submission)
   if (!officialUrl && !signupNote && !organizerContact) warnings.push('未提供公开链接、报名说明或组织者联系方式，发布前请确认活动可被用户实际联系到')
   if (!submission.location && !submission.isOnline) warnings.push('线下活动未填写具体地点，当前会用省市兜底')
   if (!submission.endTime) warnings.push('未填写结束时间，前端会按单点开始时间展示')
@@ -141,19 +149,24 @@ function buildWarnings(submission, payload) {
   if (submission.endTime && !end) warnings.push('结束时间格式异常，发布前需人工修正')
   if (!submission.organizer) warnings.push('未填写组织者，不建议直接发布')
   if (submission.fee === '付费' && !String(submission.feeDetail || '').trim()) warnings.push('该活动标记为付费，但未填写费用说明')
+  if (SECURITY_RECHECK_REQUIRED_STATUSES.has(contentSecurityStatus)) warnings.push('内容安全检查曾失败或未完成，发布前需要重新检查或使用强制发布并留痕')
   return warnings
 }
 
-function buildBlockingErrors(submission, payload) {
+function buildBlockingErrors(submission, payload, options = {}) {
   const errors = []
   const start = parseDate(payload.start_time)
   const end = parseDate(payload.end_time)
+  const contentSecurityStatus = readContentSecurityStatus(submission)
+  const allowSecurityForce = !!options.allowSecurityForce
   if (!payload.title) errors.push('缺少活动标题')
   if (!payload.organizer) errors.push('缺少组织者')
   if (!start) errors.push('开始时间格式异常')
   if (payload.end_time && !end) errors.push('结束时间格式异常')
   if (start && end && end.getTime() < start.getTime()) errors.push('结束时间早于开始时间')
   if (!String(submission.officialUrl || submission.signupNote || submission.organizerContact || '').trim()) errors.push('缺少公开链接、报名说明或组织者联系方式')
+  if (SECURITY_BLOCKED_STATUSES.has(contentSecurityStatus)) errors.push('内容安全检查未通过')
+  if (!allowSecurityForce && SECURITY_RECHECK_REQUIRED_STATUSES.has(contentSecurityStatus)) errors.push('内容安全检查未完成，请重新检查或使用强制发布')
   return errors
 }
 
