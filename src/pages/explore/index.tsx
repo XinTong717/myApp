@@ -308,10 +308,10 @@ export default function ExplorePage() {
           ? shortName(item.name)
           : shortName(item.name + (item.city ? ' · ' + item.city : ''), 10)
     const markerSize = isUserCluster || isSchoolCluster
-      ? 26
+      ? 30
       : item.type === 'school'
-        ? (isDenseMap ? 18 : 22)
-        : (isDenseMap ? 12 : 18)
+        ? (isDenseMap ? 22 : 26)
+        : (isDenseMap ? 16 : 22)
 
     return {
       id: item.id,
@@ -331,10 +331,10 @@ export default function ExplorePage() {
             : isSchoolCluster
               ? palette.brand
               : palette.text,
-          fontSize: 11,
-          anchorX: isUserCluster || isSchoolCluster ? -28 : item.type === 'school' ? -24 : -22,
-          anchorY: isUserCluster || isSchoolCluster ? -31 : -30,
-          borderRadius: 8,
+          fontSize: isUserCluster || isSchoolCluster ? 14 : 13,
+          anchorX: isUserCluster || isSchoolCluster ? -36 : item.type === 'school' ? -30 : -28,
+          anchorY: isUserCluster || isSchoolCluster ? -36 : -34,
+          borderRadius: 10,
           borderWidth: isUserCluster || isSchoolCluster ? 1 : 0,
           borderColor: isUserCluster
             ? 'rgba(111,125,98,0.32)'
@@ -342,13 +342,13 @@ export default function ExplorePage() {
               ? 'rgba(184,85,64,0.32)'
               : '#FFFFFF',
           bgColor: isUserCluster
-            ? 'rgba(246,250,244,0.94)'
+            ? 'rgba(246,250,244,0.96)'
             : isSchoolCluster
-              ? 'rgba(255,249,243,0.94)'
+              ? 'rgba(255,249,243,0.96)'
               : item.type === 'school'
-                ? 'rgba(255,255,255,0.88)'
-                : 'rgba(246,250,244,0.90)',
-          padding: 4,
+                ? 'rgba(255,255,255,0.92)'
+                : 'rgba(246,250,244,0.92)',
+          padding: 6,
           textAlign: 'center',
         },
       } : {}),
@@ -577,7 +577,7 @@ export default function ExplorePage() {
             <View
               onClick={() => setShowUserFilterSheet(true)}
               style={{
-                padding: `${space(2)} ${space(3)}`,
+                padding: `${space(3)} ${space(4)}`,
                 borderRadius: radius.md,
                 marginRight: space(2),
                 marginBottom: space(2),
@@ -585,7 +585,7 @@ export default function ExplorePage() {
                 border: `1px solid ${activeUserFilterCount > 0 ? palette.brandSoft : palette.lineSoft}`,
               }}
             >
-              <Text style={{ ...typography.meta, color: activeUserFilterCount > 0 ? palette.brand : palette.muted }}>
+              <Text style={{ ...typography.bodyStrong, color: activeUserFilterCount > 0 ? palette.brand : palette.muted }}>
                 筛选{activeUserFilterCount > 0 ? ` ${activeUserFilterCount}` : ''}
               </Text>
             </View>
@@ -626,8 +626,8 @@ export default function ExplorePage() {
         onLabelTap={handleLabelTap}
       />
 
-      <View style={{ backgroundColor: exploreTheme.surface, padding: `${space(1)} ${space(4)}`, borderTop: `1px solid ${exploreTheme.border}` }}>
-        <Text style={{ fontSize: '10px', color: exploreTheme.muted }}>
+      <View style={{ backgroundColor: exploreTheme.surface, padding: `${space(2)} ${space(4)}`, borderTop: `1px solid ${exploreTheme.border}` }}>
+        <Text style={{ fontSize: '13px', lineHeight: '18px', color: exploreTheme.muted }}>
           {hasUserClusters
             ? '近似坐标 · 点击聚合点位展开同城同路人 · 点击学校聚合点进入省份视图'
             : isDenseMap ? '近似坐标 · 全国视图会自动隐藏部分名称 · 点击标记查看详情' : '近似坐标 · 仅供浏览 · 点击标记或名称查看详情'}
