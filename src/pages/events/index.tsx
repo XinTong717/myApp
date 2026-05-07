@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ScrollView, View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
@@ -120,6 +120,8 @@ export default function EventsPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [interestCounts, setInterestCounts] = useState<InterestMap>({})
   const includeEnded = shouldIncludeEnded(statusFilter)
+  const loadedIncludeEndedRef = useRef<boolean | null>(null)
+  const loadSeqRef = useRef(0)
 
   useShareAppMessage(() => EVENT_SHARE.appMessage)
   useShareTimeline(() => EVENT_SHARE.timeline)
@@ -134,26 +136,39 @@ export default function EventsPage() {
   }
 
   const loadEvents = async (options: { forceRefresh?: boolean; includeEnded?: boolean } = {}) => {
+    const requestSeq = loadSeqRef.current + 1
+    loadSeqRef.current = requestSeq
+    const nextIncludeEnded = options.includeEnded ?? includeEnded
     try {
-      const nextIncludeEnded = options.includeEnded ?? includeEnded
       setLoading(true)
       setError('')
       const result = await getEvents({ forceRefresh: !!options.forceRefresh, includeInterestCounts: true, includeEnded: nextIncludeEnded })
+      if (requestSeq !== loadSeqRef.current) return
       const list = Array.isArray(result.events) ? (result.events as EventItemWithInterest[]) : []
       setEvents(list)
       applyInterestCounts(list)
+      loadedIncludeEndedRef.current = nextIncludeEnded
       if (!result?.ok && list.length === 0) setError(result?.message || '读取活动数据失败')
     } catch (err: any) {
+      if (requestSeq !== loadSeqRef.current) return
       console.error('loadEvents error:', err)
       setError(err?.message || '读取活动数据失败')
       Taro.showToast({ title: '活动数据读取失败', icon: 'none' })
     } finally {
-      setLoading(false)
+      if (requestSeq === loadSeqRef.current) setLoading(false)
     }
   }
 
-  useDidShow(() => { loadEvents({ includeEnded }) })
-  useEffect(() => { loadEvents({ includeEnded }) }, [includeEnded])
+  useDidShow(() => {
+    if (loadedIncludeEndedRef.current === includeEnded) return
+    loadEvents({ includeEnded })
+  })
+
+  useEffect(() => {
+    if (!includeEnded || loadedIncludeEndedRef.current === true) return
+    loadEvents({ includeEnded: true })
+  }, [includeEnded])
+
   usePullDownRefresh(async () => { await loadEvents({ forceRefresh: true, includeEnded }); Taro.stopPullDownRefresh() })
 
   const goToDetail = (item: EventItem) => { setDetailPreview('event', item.id, item); Taro.navigateTo({ url: `/pages/event-detail/index?id=${item.id}` }) }
