@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ScrollView, View, Text } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
-import { radius, space } from '../../theme/spacing'
-import { typography } from '../../theme/typography'
+import AppPage from '../../components/common/AppPage'
+import AppPageHeader from '../../components/common/AppPageHeader'
+import AppMiniButton from '../../components/common/AppMiniButton'
+import AppFilterRow from '../../components/common/AppFilterRow'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
@@ -93,18 +95,6 @@ function eventMatchesLocation(item: EventItemWithInterest, filter: string) {
 
 function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
   return <AppChip text={props.label} tone='action' size='md' selected={props.active} interactive onClick={props.onClick} />
-}
-
-function FilterRow(props: { title: string; children: any }) {
-  return <View style={{ marginBottom: space(2) }}><Text style={{ ...typography.bodyStrong, color: palette.subtext }}>{props.title}</Text><ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', marginTop: space(2) }}><View style={{ display: 'inline-flex', flexDirection: 'row' }}>{props.children}</View></ScrollView></View>
-}
-
-function MiniPrimaryButton(props: { text: string; onClick: () => void }) {
-  return (
-    <View onClick={props.onClick} style={{ backgroundColor: palette.brand, borderRadius: radius.md, padding: `${space(2)} ${space(3)}` }}>
-      <Text style={{ ...typography.button, color: '#FFFFFF' }}>{props.text}</Text>
-    </View>
-  )
 }
 
 export default function EventsPage() {
@@ -199,30 +189,30 @@ export default function EventsPage() {
   const hiddenEndedCount = events.length - events.filter((item) => !isEventEnded(item)).length
 
   return (
-    <View style={{ padding: space(4), backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
-      <AppCard padding={`${space(4)} ${space(4)}`}>
-        <Text style={{ ...typography.title, color: palette.text }}>活动</Text>
-        <View style={{ marginTop: space(2) }}>
-          <Text style={{ ...typography.meta, color: palette.subtext }}>可雀与自由学社的活动与社区计划。点进详情了解更多，也欢迎提交公开可参与的新活动。</Text>
-        </View>
-        <View style={{ marginTop: space(3), alignSelf: 'flex-start' }}>
-          <MiniPrimaryButton text='+ 推荐新活动' onClick={goToSubmit} />
-        </View>
-      </AppCard>
+    <AppPage>
+      <AppPageHeader
+        title='活动'
+        description='可雀与自由学社的活动与社区计划。点进详情了解更多，也欢迎提交公开可参与的新活动。'
+        action={<AppMiniButton text='+ 推荐新活动' onClick={goToSubmit} />}
+      />
 
-      <AppCard padding={space(3)} radius={radius.md}>
-        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(2) }}><View style={{ flex: 1 }}><Text style={{ ...typography.bodyStrong, color: palette.text }}>筛选活动</Text></View>{hasActiveFilters ? <Text onClick={resetFilters} style={{ ...typography.caption, color: palette.link, marginRight: space(3) }}>重置</Text> : null}<Text onClick={() => setShowAdvancedFilters((value) => !value)} style={{ ...typography.caption, color: palette.link }}>{showAdvancedFilters ? '收起' : `更多筛选${advancedActiveCount > 0 ? ` ${advancedActiveCount}` : ''}`}</Text></View>
-        <FilterRow title='地点'>{locationOptions.map((option) => <FilterChip key={option} label={option} active={locationFilter === option} onClick={() => setLocationFilter(option)} />)}</FilterRow>
+      <AppCard padding='12px'>
+        <View className='app-filter-panel__heading'>
+          <View className='app-flex-1'><Text className='text-body-strong text-color-main'>筛选活动</Text></View>
+          {hasActiveFilters ? <Text onClick={resetFilters} className='text-caption text-color-link'>重置</Text> : null}
+          <Text onClick={() => setShowAdvancedFilters((value) => !value)} className='text-caption text-color-link'>{showAdvancedFilters ? '收起' : `更多筛选${advancedActiveCount > 0 ? ` ${advancedActiveCount}` : ''}`}</Text>
+        </View>
+        <AppFilterRow title='地点'>{locationOptions.map((option) => <FilterChip key={option} label={option} active={locationFilter === option} onClick={() => setLocationFilter(option)} />)}</AppFilterRow>
         {showAdvancedFilters ? <>
-          <FilterRow title='活动类型'>{EVENT_TYPE_FILTER_OPTIONS.map((option) => <FilterChip key={option} label={option} active={typeFilter === option} onClick={() => setTypeFilter(option)} />)}</FilterRow>
-          <FilterRow title='参与对象'>{AUDIENCE_FILTER_OPTIONS.map((option) => <FilterChip key={option} label={option} active={audienceFilter === option} onClick={() => setAudienceFilter(option)} />)}</FilterRow>
-          <FilterRow title='最低年龄'>{MIN_AGE_FILTER_OPTIONS.map((option) => <FilterChip key={option} label={option} active={minAgeFilter === option} onClick={() => setMinAgeFilter(option)} />)}</FilterRow>
-          <FilterRow title='状态'>{STATUS_FILTER_OPTIONS.map((option) => <FilterChip key={option} label={option === '全部' || option === '未结束' ? option : (EVENT_STATUS_LABELS[option]?.text || option)} active={statusFilter === option} onClick={() => setStatusFilter(option)} />)}</FilterRow>
-          <FilterRow title='费用'>{FEE_FILTER_OPTIONS.map((option) => <FilterChip key={option} label={option} active={feeFilter === option} onClick={() => setFeeFilter(option)} />)}</FilterRow>
+          <AppFilterRow title='活动类型'>{EVENT_TYPE_FILTER_OPTIONS.map((option) => <FilterChip key={option} label={option} active={typeFilter === option} onClick={() => setTypeFilter(option)} />)}</AppFilterRow>
+          <AppFilterRow title='参与对象'>{AUDIENCE_FILTER_OPTIONS.map((option) => <FilterChip key={option} label={option} active={audienceFilter === option} onClick={() => setAudienceFilter(option)} />)}</AppFilterRow>
+          <AppFilterRow title='最低年龄'>{MIN_AGE_FILTER_OPTIONS.map((option) => <FilterChip key={option} label={option} active={minAgeFilter === option} onClick={() => setMinAgeFilter(option)} />)}</AppFilterRow>
+          <AppFilterRow title='状态'>{STATUS_FILTER_OPTIONS.map((option) => <FilterChip key={option} label={option === '全部' || option === '未结束' ? option : (EVENT_STATUS_LABELS[option]?.text || option)} active={statusFilter === option} onClick={() => setStatusFilter(option)} />)}</AppFilterRow>
+          <AppFilterRow title='费用'>{FEE_FILTER_OPTIONS.map((option) => <FilterChip key={option} label={option} active={feeFilter === option} onClick={() => setFeeFilter(option)} />)}</AppFilterRow>
         </> : null}
       </AppCard>
 
-      <View style={{ marginBottom: space(4), display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ ...typography.meta, color: palette.muted, flex: 1, marginRight: space(3) }}>{loading ? '加载中...' : `当前显示 ${visibleEvents.length} / ${events.length} 个活动${statusFilter === '未结束' && hiddenEndedCount > 0 ? `，已隐藏 ${hiddenEndedCount} 个已结束活动` : ''}`}</Text></View>
+      <View className='app-count-line'><Text className='text-meta text-color-muted'>{loading ? '加载中...' : `当前显示 ${visibleEvents.length} / ${events.length} 个活动${statusFilter === '未结束' && hiddenEndedCount > 0 ? `，已隐藏 ${hiddenEndedCount} 个已结束活动` : ''}`}</Text></View>
 
       {loading ? <ListSkeleton count={3} rows={3} /> : null}
       {!loading && error ? <ErrorRetryCard error={error} onRetry={() => loadEvents({ forceRefresh: true, includeEnded })} /> : null}
@@ -234,8 +224,27 @@ export default function EventsPage() {
         const interestedCount = interestCounts[item.id] || 0
         const firstLine = (item.description || '').split('\n').find((line) => line.trim()) || ''
         const summary = firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine
-        return <AppCard key={item.id} onClick={() => goToDetail(item)}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(3) }}><View style={{ marginRight: space(3) }}><AppIcon name='calendar' size={42} backgroundColor={getEventIconBg(item.event_type)} bordered /></View><View style={{ flex: 1 }}><Text style={{ ...typography.sectionTitle, color: palette.text }}>{item.title}</Text></View></View><View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: space(3) }}><AppTag text={typeLabel} padding={`${space(1)} ${space(2)}`} marginBottom={space(2)} />{statusInfo ? <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} padding={`${space(1)} ${space(2)}`} marginBottom={space(2)} /> : null}<AppTag text={item.is_online ? '线上' : (getEventCity(item) || '线下')} padding={`${space(1)} ${space(2)}`} marginBottom={space(2)} />{item.min_age_requirement ? <AppTag text={item.min_age_requirement} padding={`${space(1)} ${space(2)}`} marginBottom={space(2)} /> : null}{interestedCount > 0 ? <AppTag text={`#${interestedCount} 人感兴趣`} tone='accent' padding={`${space(1)} ${space(2)}`} marginBottom={space(2)} /> : null}</View><View style={{ backgroundColor: palette.surface, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${palette.line}` }}>{summary ? <View style={{ marginBottom: space(2) }}><Text style={{ ...typography.meta, color: palette.subtext }}>{summary}</Text></View> : null}<Text style={{ ...typography.meta, color: palette.subtext }}>费用：{item.fee || '免费'}</Text></View><Text style={{ ...typography.button, color: palette.link }}>查看详情 ›</Text></AppCard>
+        return (
+          <AppCard key={item.id} onClick={() => goToDetail(item)}>
+            <View className='app-list-card__header'>
+              <View className='app-list-card__icon'><AppIcon name='calendar' size={42} backgroundColor={getEventIconBg(item.event_type)} bordered /></View>
+              <View className='app-flex-1'><Text className='text-section-title text-color-main'>{item.title}</Text></View>
+            </View>
+            <View className='app-list-card__tags'>
+              <AppTag text={typeLabel} />
+              {statusInfo ? <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} /> : null}
+              <AppTag text={item.is_online ? '线上' : (getEventCity(item) || '线下')} />
+              {item.min_age_requirement ? <AppTag text={item.min_age_requirement} /> : null}
+              {interestedCount > 0 ? <AppTag text={`#${interestedCount} 人感兴趣`} tone='accent' /> : null}
+            </View>
+            <View className='app-list-card__meta-box'>
+              {summary ? <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>{summary}</Text></View> : null}
+              <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>费用：{item.fee || '免费'}</Text></View>
+            </View>
+            <Text className='text-button text-color-link'>查看详情 ›</Text>
+          </AppCard>
+        )
       })}
-    </View>
+    </AppPage>
   )
 }
