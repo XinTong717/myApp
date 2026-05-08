@@ -7,9 +7,11 @@ import { getDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
 import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
+import AppPage from '../../components/common/AppPage'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppInfoRow from '../../components/common/AppInfoRow'
+import AppIcon from '../../components/common/AppIcon'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
@@ -89,8 +91,8 @@ function SchoolContent(props: {
 
       <AppCard padding={`${space(4)} ${space(4)}`}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(3) }}>
-          <View style={{ width: space(8), height: space(8), borderRadius: radius.md, backgroundColor: palette.tag, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: space(3), border: `1px solid ${palette.line}` }}>
-            <Text style={{ ...typography.sectionTitle }}>🏫</Text>
+          <View style={{ marginRight: space(3) }}>
+            <AppIcon name='school' size={42} backgroundColor={palette.iconBg} bordered />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ ...typography.title, color: palette.text }}>{school.canonical_name || school.name}</Text>
@@ -145,7 +147,9 @@ function SchoolContent(props: {
         <AppCard marginBottom={space(4)}>
           {!showCorrectionForm && !correctionDone && (
             <View onClick={onShowCorrectionForm} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ ...typography.sectionTitle, marginRight: space(2) }}>✏️</Text>
+              <View style={{ marginRight: space(2) }}>
+                <AppIcon name='edit-pencil' size={32} backgroundColor={palette.brandSoft} bordered />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.bodyStrong, color: palette.text }}>信息有误？帮我们完善</Text>
                 <View style={{ marginTop: space(1) }}>
@@ -160,8 +164,11 @@ function SchoolContent(props: {
 
           {showCorrectionForm && !correctionDone && (
             <View>
-              <View style={{ marginBottom: space(3) }}>
-                <Text style={{ ...typography.bodyStrong, color: palette.text }}>✏️ 补充或修正信息</Text>
+              <View style={{ marginBottom: space(3), display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ marginRight: space(2) }}>
+                  <AppIcon name='edit-pencil' size={30} backgroundColor={palette.brandSoft} bordered />
+                </View>
+                <Text style={{ ...typography.bodyStrong, color: palette.text }}>补充或修正信息</Text>
               </View>
               <View style={{ marginBottom: space(2) }}>
                 <Text style={{ ...typography.caption, color: palette.subtext }}>请描述需要修正或补充的内容，例如：费用有调整、参与方式有变化、名称已更新、官网地址有误等。提交后我们会核实更新。</Text>
@@ -189,7 +196,9 @@ function SchoolContent(props: {
 
           {correctionDone && (
             <View style={{ textAlign: 'center', padding: `${space(2)} 0` }}>
-              <Text style={{ ...typography.sectionTitle, marginBottom: space(2) }}>✅</Text>
+              <View style={{ marginBottom: space(2), display: 'flex', justifyContent: 'center' }}>
+                <AppIcon name='check' size={36} backgroundColor={palette.greenSoft} color={palette.green} bordered />
+              </View>
               <View><Text style={{ ...typography.bodyStrong, color: palette.green }}>感谢反馈！我们会尽快核实</Text></View>
             </View>
           )}
@@ -286,7 +295,7 @@ export default function SchoolDetailPage() {
   const isPreview = !school && !!previewSchool
 
   return (
-    <View style={{ padding: space(4), backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
+    <AppPage>
       {loading && !displaySchool && <DetailSkeleton />}
 
       {loading && displaySchool ? (
@@ -344,6 +353,6 @@ export default function SchoolDetailPage() {
           onSubmitCorrection={handleSubmitCorrection}
         />
       )}
-    </View>
+    </AppPage>
   )
 }
