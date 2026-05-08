@@ -32,6 +32,4 @@ async function getFilterOptions(event) {
 
 module.exports = {
   getFilterOptions,
-  EVENT_FILTER_OPTIONS,
-  SCHOOL_FILTER_OPTIONS,
 }
