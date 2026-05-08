@@ -37,7 +37,7 @@ export function useExploreFilters(appUsers: AppUser[], selectedProvince: string)
       const roles = normalizeRolesForDisplay(user.roles || [])
       if (selectedUserRole !== '全部' && !roles.includes(selectedUserRole)) return false
       if (selectedProfileCompleteness === '有简介' && !String(user.bio || '').trim()) return false
-      if (selectedProfileCompleteness === '有联络说明' && !String(user.companionContext || '').trim()) return false
+      if (selectedProfileCompleteness === '有生态关系' && !String(user.companionContext || '').trim()) return false
       if (selectedUserCity !== '全部' && user.city !== selectedUserCity) return false
       return true
     })
