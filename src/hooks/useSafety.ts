@@ -5,19 +5,23 @@ import { SAFETY_CODE_MESSAGES } from '../constants/cloudMessages'
 import { getSafetyOverview } from '../services/profile'
 import { clearMapUsersCache } from '../services/map'
 import { manageSafetyRelation, reportUser } from '../services/safety'
-import type { SafetyItem } from '../types/domain'
+import type { SafetyItem, SafetyOverviewResult } from '../types/domain'
 import { logCloudFailure, resolveCloudMessage } from '../utils/cloudFeedback'
 
 export function useSafety() {
   const [blockedUsers, setBlockedUsers] = useState<SafetyItem[]>([])
   const [mutedUsers, setMutedUsers] = useState<SafetyItem[]>([])
 
+  const hydrateSafetyOverview = (r: SafetyOverviewResult) => {
+    setBlockedUsers(r.blocked || [])
+    setMutedUsers(r.muted || [])
+  }
+
   const loadSafetyOverview = async () => {
     try {
       const r = await getSafetyOverview()
       if (r?.ok) {
-        setBlockedUsers(r.blocked || [])
-        setMutedUsers(r.muted || [])
+        hydrateSafetyOverview(r)
       } else {
         logCloudFailure('getSafetyOverview', r)
       }
@@ -75,6 +79,7 @@ export function useSafety() {
   return {
     blockedUsers,
     mutedUsers,
+    hydrateSafetyOverview,
     loadSafetyOverview,
     handleSafetyAction,
     handleReportUser,
