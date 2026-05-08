@@ -7,7 +7,9 @@ const PROFILE_TAB_URL = '/pages/profile/index'
 
 let lastConsentRedirectAt = 0
 
-const PUBLIC_ACTIONS = [
+// Keep this list explicit. scripts/check-action-manifest.cjs parses literal
+// strings from ROUTED_ACTIONS to verify client/server/rate-limit consistency.
+const ROUTED_ACTIONS = new Set([
   'getOpenId',
   'getFilterOptions',
   'getSchools',
@@ -34,20 +36,10 @@ const PUBLIC_ACTIONS = [
   'checkAdminAccess',
   'recordLegalConsent',
   'getLegalConsentStatus',
-]
-
-const ADMIN_REVIEW_ACTIONS = [
   'listEventSubmissions',
   'getEventPublishPayload',
   'publishEventDirect',
   'reviewEventSubmission',
-]
-
-// Keep migration / maintenance actions out of the client whitelist.
-// Person-to-person request actions are also intentionally excluded from the audit build.
-const ROUTED_ACTIONS = new Set([
-  ...PUBLIC_ACTIONS,
-  ...ADMIN_REVIEW_ACTIONS,
 ])
 
 function createClientRequestId(name: string) {

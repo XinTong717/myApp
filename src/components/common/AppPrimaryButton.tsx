@@ -28,6 +28,13 @@ export default function AppPrimaryButton({
 }: AppPrimaryButtonProps) {
   const [pressed, setPressed] = useState(false)
   const disabled = !!disabledProp || !!loading
+  const buttonStyle = {
+    '--button-bg': disabled ? palette.disabledBg : pressed ? palette.brandPress : palette.brand,
+    '--button-margin-bottom': marginBottom,
+    '--button-shadow': disabled ? 'none' : pressed ? elevation.pressed : elevation.card,
+    '--button-transform': pressed ? 'scale(0.98)' : 'scale(1)',
+    '--button-opacity': disabled ? 0.9 : 1,
+  } as Record<string, string | number>
 
   return (
     <View
@@ -36,13 +43,7 @@ export default function AppPrimaryButton({
       onTouchCancel={() => setPressed(false)}
       onClick={disabled ? undefined : onClick}
       className={joinClassNames('app-button', className)}
-      style={{
-        '--button-bg': disabled ? palette.disabledBg : pressed ? palette.brandPress : palette.brand,
-        '--button-margin-bottom': marginBottom,
-        '--button-shadow': disabled ? 'none' : pressed ? elevation.pressed : elevation.card,
-        '--button-transform': pressed ? 'scale(0.98)' : 'scale(1)',
-        '--button-opacity': disabled ? 0.9 : 1,
-      }}
+      style={buttonStyle}
     >
       <Text className='text-button' style={{ color: disabled ? palette.disabledText : '#FFF' }}>
         {loading ? loadingText : text}

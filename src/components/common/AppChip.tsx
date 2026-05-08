@@ -58,6 +58,15 @@ export default function AppChip({
   const [pressed, setPressed] = useState(false)
   const colors = getTone(tone, selected, pressed && interactive)
   const sizeStyle = getSize(size)
+  const chipStyle = {
+    '--chip-padding': sizeStyle.padding,
+    '--chip-bg': colors.bg,
+    '--chip-border': colors.border,
+    '--chip-margin-right': marginRight,
+    '--chip-margin-bottom': marginBottom,
+    '--chip-transform': pressed && interactive ? 'scale(0.97)' : 'scale(1)',
+    '--chip-shadow': selected ? elevation.pressed : 'none',
+  } as Record<string, string>
 
   return (
     <View
@@ -66,15 +75,7 @@ export default function AppChip({
       onTouchCancel={() => setPressed(false)}
       onClick={onClick}
       className={joinClassNames('app-chip', className)}
-      style={{
-        '--chip-padding': sizeStyle.padding,
-        '--chip-bg': colors.bg,
-        '--chip-border': colors.border,
-        '--chip-margin-right': marginRight,
-        '--chip-margin-bottom': marginBottom,
-        '--chip-transform': pressed && interactive ? 'scale(0.97)' : 'scale(1)',
-        '--chip-shadow': selected ? elevation.pressed : 'none',
-      }}
+      style={chipStyle}
     >
       <Text className={sizeStyle.textClass} style={{ color: colors.text }}>{text}</Text>
     </View>

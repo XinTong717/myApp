@@ -1,13 +1,16 @@
 import { typographyTokens } from './typographyTokens'
 
-function toStyle(token: Exclude<keyof typeof typographyTokens, 'fontFamily' | 'serifFamily'>) {
+type TypographyTokenName = Exclude<keyof typeof typographyTokens, 'fontFamily' | 'serifFamily'>
+
+function toStyle(token: TypographyTokenName) {
   const item = typographyTokens[token]
+  const usesSerif = 'serif' in item && item.serif === true
   return {
     fontSize: `${item.px}px`,
     lineHeight: `${item.linePx}px`,
     fontWeight: item.weight,
     letterSpacing: item.letterSpacing,
-    ...(item.serif ? { fontFamily: typographyTokens.serifFamily } : {}),
+    ...(usesSerif ? { fontFamily: typographyTokens.serifFamily } : {}),
   }
 }
 

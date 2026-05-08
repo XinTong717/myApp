@@ -23,7 +23,7 @@ const EVENT_RUNTIME_TTL_MS = 45 * 1000
 type EventListPayload = { events?: EventItem[]; degraded?: boolean }
 type EventDetailPayload = { event?: EventItem | null }
 type EventInterestInfoPayload = Pick<EventInterestInfoResult, 'count' | 'hasInterested' | 'degraded'>
-type ContactInfoPayload = Pick<ContactInfoResult, 'contactInfo' | 'publicSignupInfo' | 'needCompleteProfile' | 'privateContactRequiresProfile' | 'privateContactRequiresInterest' | 'message'>
+type ContactInfoPayload = Pick<ContactInfoResult, 'contactInfo' | 'publicSignupInfo' | 'needCompleteProfile' | 'privateContactRequiresProfile' | 'message'>
 
 type GetEventsOptions = {
   forceRefresh?: boolean
@@ -63,7 +63,6 @@ function okContactInfo(payload: ContactInfoPayload): ContactInfoResult {
     publicSignupInfo: payload.publicSignupInfo,
     needCompleteProfile: !!payload.needCompleteProfile,
     privateContactRequiresProfile: !!payload.privateContactRequiresProfile,
-    privateContactRequiresInterest: !!payload.privateContactRequiresInterest,
     message: payload.message,
   }
 }
@@ -211,7 +210,6 @@ export async function getEventContactInfo(eventId: number, options: { forceRefre
       publicSignupInfo: result.publicSignupInfo,
       needCompleteProfile: !!result.needCompleteProfile,
       privateContactRequiresProfile: !!result.privateContactRequiresProfile,
-      privateContactRequiresInterest: !!result.privateContactRequiresInterest,
       message: result.message,
     }, EVENT_RUNTIME_TTL_MS)
   }

@@ -37,16 +37,17 @@ export default function AppTag({
   className,
 }: AppTagProps) {
   const colors = getToneColors(tone)
+  const tagStyle = {
+    '--tag-padding': padding,
+    '--tag-bg': backgroundColor || colors.bg,
+    '--tag-margin-right': marginRight,
+    '--tag-margin-bottom': marginBottom,
+  } as Record<string, string>
 
   return (
     <View
       className={joinClassNames('app-tag', className)}
-      style={{
-        '--tag-padding': padding,
-        '--tag-bg': backgroundColor || colors.bg,
-        '--tag-margin-right': marginRight,
-        '--tag-margin-bottom': marginBottom,
-      }}
+      style={tagStyle}
     >
       <Text className='text-caption' style={{ color: textColor || colors.text }}>{text}</Text>
     </View>
