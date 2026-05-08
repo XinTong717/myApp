@@ -29,10 +29,6 @@ const PUBLIC_ACTIONS = [
   'requestAccountDeletion',
   'getSafetyOverview',
   'getMapUsers',
-  'sendRequest',
-  'getMyRequests',
-  'respondRequest',
-  'manageConnection',
   'manageSafetyRelation',
   'reportUser',
   'checkAdminAccess',
@@ -48,8 +44,7 @@ const ADMIN_REVIEW_ACTIONS = [
 ]
 
 // Keep migration / maintenance actions out of the client whitelist.
-// They should be invoked from CloudBase console or a dedicated ops-only function,
-// not from a public mini-program bundle.
+// Person-to-person request actions are also intentionally excluded from the audit build.
 const ROUTED_ACTIONS = new Set([
   ...PUBLIC_ACTIONS,
   ...ADMIN_REVIEW_ACTIONS,
