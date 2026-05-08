@@ -13,7 +13,7 @@ function joinClassNames(...names: Array<string | false | null | undefined>) {
 export default function AppMiniButton({ text, onClick, className }: AppMiniButtonProps) {
   return (
     <View onClick={onClick} className={joinClassNames('app-mini-button', className)}>
-      <Text className='text-button text-color-white'>{text}</Text>
+      <Text className='text-caption text-color-white'>{text}</Text>
     </View>
   )
 }
