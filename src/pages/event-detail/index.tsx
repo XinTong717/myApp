@@ -10,6 +10,7 @@ import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import { palette } from '../../theme/palette'
 import { space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
+import AppPage from '../../components/common/AppPage'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
@@ -88,13 +89,13 @@ export default function EventDetailPage() {
   const displayEvent = event || previewEvent
   const isPreview = !event && !!previewEvent
   return (
-    <View style={{ padding: space(4), backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
+    <AppPage>
       {loading && !displayEvent ? <DetailSkeleton /> : null}
       {loading && displayEvent ? <EventContent event={displayEvent} preview={isPreview} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} onRetryDetail={() => loadDetail({ forceRefresh: true })} /> : null}
       {!loading && error && displayEvent ? <EventContent event={displayEvent} preview previewError={error} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} onRetryDetail={() => loadDetail({ forceRefresh: true })} /> : null}
       {!loading && error && !displayEvent ? <ErrorRetryCard error={error} onRetry={() => loadDetail({ forceRefresh: true })} secondaryText='返回活动列表' onSecondary={() => Taro.switchTab({ url: '/pages/events/index' })} /> : null}
       {!loading && !error && !displayEvent ? <EmptyCard text='未找到该活动。' actionText='返回活动列表' onAction={() => Taro.switchTab({ url: '/pages/events/index' })} /> : null}
       {!loading && !error && displayEvent ? <EventContent event={displayEvent} preview={isPreview} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} onRetryDetail={() => loadDetail({ forceRefresh: true })} /> : null}
-    </View>
+    </AppPage>
   )
 }
