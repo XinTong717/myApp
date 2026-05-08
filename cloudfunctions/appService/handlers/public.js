@@ -194,15 +194,15 @@ async function submitCorrection(event, wxContext) {
 async function submitCommunity(event, wxContext) {
   const requestId = resolveRequestId('submit-community', event)
   const openid = wxContext.OPENID
-  const cleanData = pickStringFields(event, ['name', 'province', 'city', 'communityType', 'communityTypeOther', 'ageRange', 'ageRangeOther', 'officialUrl', 'participationNote', 'feeNote', 'sourceNote', 'recommendationNote'])
+  const cleanData = pickStringFields(event, ['name', 'province', 'city', 'communityType', 'communityTypeOther', 'ageRange', 'ageRangeOther', 'officialUrl', 'publicAccountNote', 'participationNote', 'feeNote', 'sourceNote', 'recommendationNote'])
   cleanData.communityType = mergeOtherOption(cleanData.communityType || [], cleanData.communityTypeOther)
   cleanData.ageRange = mergeOtherOption(cleanData.ageRange || [], cleanData.ageRangeOther)
   if (!cleanData.name) return fail(requestId, 'NAME_REQUIRED', '请填写学习社区名称')
   if (!cleanData.province || !cleanData.city) return fail(requestId, 'CITY_REQUIRED', '请选择所在城市')
-  const lengthError = validateLength('学习社区名称', cleanData.name, 100) || validateLength('城市', cleanData.city, 30) || validateLength('公开主页', cleanData.officialUrl, 300) || validateLength('参与说明', cleanData.participationNote, 300) || validateLength('费用说明', cleanData.feeNote, 200) || validateLength('信息来源', cleanData.sourceNote, 300) || validateLength('推荐理由', cleanData.recommendationNote, 1000)
+  const lengthError = validateLength('学习社区名称', cleanData.name, 100) || validateLength('城市', cleanData.city, 30) || validateLength('公开主页', cleanData.officialUrl, 300) || validateLength('公众号/小红书/视频号', cleanData.publicAccountNote, 300) || validateLength('参与说明', cleanData.participationNote, 300) || validateLength('费用说明', cleanData.feeNote, 200) || validateLength('信息来源', cleanData.sourceNote, 300) || validateLength('推荐理由', cleanData.recommendationNote, 1000)
   if (lengthError) return fail(requestId, 'INVALID_LENGTH', lengthError)
-  if (cleanData.officialUrl && !/^https?:\/\//i.test(cleanData.officialUrl)) return fail(requestId, 'INVALID_OFFICIAL_URL', '公开主页需以 http:// 或 https:// 开头')
-  const sec = await runMsgSecCheck({ content: [cleanData.name, stringifyLabels(cleanData.communityType || []), stringifyLabels(cleanData.ageRange || []), cleanData.officialUrl, cleanData.participationNote, cleanData.feeNote, cleanData.sourceNote, cleanData.recommendationNote].filter(Boolean).join('\n'), openid, scene: 2 })
+  if (cleanData.officialUrl && !/^https?:\/\//i.test(cleanData.officialUrl)) return fail(requestId, 'INVALID_OFFICIAL_URL', '公开主页需以 http:// 或 https:// 开头；公众号、小红书、视频号请填到“公开账号/搜索关键词”')
+  const sec = await runMsgSecCheck({ content: [cleanData.name, stringifyLabels(cleanData.communityType || []), stringifyLabels(cleanData.ageRange || []), cleanData.officialUrl, cleanData.publicAccountNote, cleanData.participationNote, cleanData.feeNote, cleanData.sourceNote, cleanData.recommendationNote].filter(Boolean).join('\n'), openid, scene: 2 })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const recentCountRes = await db.collection('community_submissions').where({ openid, createdAt: _.gte(since) }).count()
@@ -212,7 +212,7 @@ async function submitCommunity(event, wxContext) {
   if (existing.data.length > 0) return fail(requestId, 'DUPLICATE_SUBMISSION', '这个学习社区已在审核队列或已收录，无需重复提交')
   const submitter = await getUserProfileByOpenid(openid, ['displayName', 'roles', 'city']) || {}
   try {
-    await db.collection('community_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, name: cleanData.name, province: cleanData.province, city: cleanData.city, communityType: stringifyLabels(cleanData.communityType || []), communityTypes: cleanData.communityType || [], ageRange: stringifyLabels(cleanData.ageRange || []), ageRanges: cleanData.ageRange || [], officialUrl: cleanData.officialUrl || '', participationNote: cleanData.participationNote || '', feeNote: cleanData.feeNote || '', sourceNote: cleanData.sourceNote || '', recommendationNote: cleanData.recommendationNote || '', ...buildContentSecurityFields(sec), status: 'pending', adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
+    await db.collection('community_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, name: cleanData.name, province: cleanData.province, city: cleanData.city, communityType: stringifyLabels(cleanData.communityType || []), communityTypes: cleanData.communityType || [], ageRange: stringifyLabels(cleanData.ageRange || []), ageRanges: cleanData.ageRange || [], officialUrl: cleanData.officialUrl || '', publicAccountNote: cleanData.publicAccountNote || '', participationNote: cleanData.participationNote || '', feeNote: cleanData.feeNote || '', sourceNote: cleanData.sourceNote || '', recommendationNote: cleanData.recommendationNote || '', ...buildContentSecurityFields(sec), status: 'pending', adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
     return ok(requestId, { message: '提交成功，感谢推荐' })
   } catch (err) {
     console.error('appService submitCommunity error:', err)
