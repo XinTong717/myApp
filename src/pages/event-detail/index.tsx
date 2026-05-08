@@ -8,9 +8,11 @@ import { getMe } from '../../services/profile'
 import { getDetailPreview } from '../../services/detailPreview'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
+import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
+import AppPage from '../../components/common/AppPage'
 import AppCard from '../../components/common/AppCard'
+import AppInfoRow from '../../components/common/AppInfoRow'
 import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
 import { DetailSkeleton } from '../../components/common/Skeleton'
@@ -29,29 +31,14 @@ function buildEventShare(event?: EventItem | null, eventId?: number) {
   }
 }
 
-function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
-  const handleCopy = () => {
-    if (props.value && props.copyable) Taro.setClipboardData({ data: props.value })
-  }
-  return (
-    <AppCard onClick={props.copyable ? handleCopy : undefined} backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.cardSoft}>
-      <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(1) }}>
-        <Text style={{ ...typography.caption, color: palette.brand, flex: 1 }}>{props.label}</Text>
-        {props.copyable && props.value ? <Text style={{ ...typography.micro, color: palette.subtext }}>点击复制</Text> : null}
-      </View>
-      <Text style={{ ...typography.body, color: palette.text }}>{props.value || '未填写'}</Text>
-    </AppCard>
-  )
-}
-
 function EventContent(props: { event: EventItem; preview?: boolean; previewError?: string; interestCount: number; hasInterested: boolean; interestLoading: boolean; hasProfile: boolean; contactInfo: string; contactMessage: string; contactLoading: boolean; publicSignupText: string; onToggleInterest: () => void; onRetryDetail?: () => void }) {
   const { event, preview, previewError, interestCount, hasInterested, interestLoading, hasProfile, contactInfo, contactMessage, contactLoading, publicSignupText, onToggleInterest, onRetryDetail } = props
   return (
     <>
-      {preview ? <View style={{ backgroundColor: palette.warningSoft, borderRadius: '14px', padding: `10px ${space(3)}`, marginBottom: space(3), border: `1px solid ${palette.line}` }}><Text style={{ ...typography.caption, color: palette.subtext }}>{previewError ? `完整详情加载失败，当前显示列表缓存信息：${previewError}` : '正在加载完整详情，先显示列表中的基础信息。'}</Text>{previewError && onRetryDetail ? <View onClick={onRetryDetail} style={{ marginTop: '8px' }}><Text style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>重新加载完整详情</Text></View> : null}</View> : null}
-      <AppCard radius='20px' padding={`18px ${space(4)}`}>
+      {preview ? <View style={{ backgroundColor: palette.warningSoft, borderRadius: radius.md, padding: `10px ${space(3)}`, marginBottom: space(3), border: `1px solid ${palette.line}` }}><Text style={{ ...typography.caption, color: palette.subtext }}>{previewError ? `完整详情加载失败，当前显示列表缓存信息：${previewError}` : '正在加载完整详情，先显示列表中的基础信息。'}</Text>{previewError && onRetryDetail ? <View onClick={onRetryDetail} style={{ marginTop: space(2) }}><Text style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>重新加载完整详情</Text></View> : null}</View> : null}
+      <AppCard radius={radius.lg} padding={`18px ${space(4)}`}>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(3) }}>
-          <View style={{ marginRight: '10px' }}><AppIcon name='calendar' size={42} backgroundColor={getEventIconBg(event.event_type)} bordered /></View>
+          <View style={{ marginRight: space(2) }}><AppIcon name='calendar' size={42} backgroundColor={getEventIconBg(event.event_type)} bordered /></View>
           <View style={{ flex: 1 }}><Text style={{ ...typography.title, color: palette.text }}>{event.title}</Text></View>
         </View>
         <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -61,16 +48,16 @@ function EventContent(props: { event: EventItem; preview?: boolean; previewError
           {interestCount > 0 ? <AppTag text={`${interestCount} 人感兴趣`} backgroundColor={palette.surfaceWarm} textColor={palette.brand} /> : null}
         </View>
       </AppCard>
-      <View onClick={preview || interestLoading ? undefined : onToggleInterest} style={{ backgroundColor: hasInterested ? palette.surfaceSoft : preview ? palette.disabledBg : palette.brand, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '14px' }}>
-        <Text style={{ ...typography.button, color: hasInterested || preview ? palette.subtext : '#FFF' }}>{preview ? '完整详情加载后可标记感兴趣' : interestLoading ? '处理中...' : hasInterested ? '已感兴趣，再点一次取消' : '我感兴趣'}</Text>
+      <View onClick={preview || interestLoading ? undefined : onToggleInterest} style={{ backgroundColor: hasInterested ? palette.surfaceSoft : preview ? palette.disabledBg : palette.brand, borderRadius: radius.md, padding: space(3), textAlign: 'center', marginBottom: space(3) }}>
+        <Text style={{ ...typography.button, color: hasInterested || preview ? palette.subtext : palette.card }}>{preview ? '完整详情加载后可标记感兴趣' : interestLoading ? '处理中...' : hasInterested ? '已感兴趣，再点一次取消' : '我感兴趣'}</Text>
       </View>
-      <InfoRow label='时间' value={formatEventTime(event)} />
-      <InfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />
-      <InfoRow label='费用' value={event.fee || '免费'} />
-      <InfoRow label='组织者' value={event.organizer} />
-      {!preview && publicSignupText ? <InfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}
-      {!preview && (contactLoading ? <AppCard backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.line}><Text style={{ ...typography.meta, color: palette.subtext }}>正在读取组织者联系方式...</Text></AppCard> : contactInfo ? <InfoRow label='组织者联系方式' value={contactInfo} copyable /> : <AppCard backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.line}><Text style={{ ...typography.caption, color: palette.brand, marginBottom: space(1) }}>组织者私人联系方式</Text><Text style={{ ...typography.meta, color: palette.subtext }}>{contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者私人联系方式。')}</Text></AppCard>)}
-      <AppCard radius='20px'><View style={{ marginBottom: '10px' }}><Text style={{ ...typography.cardTitle, color: palette.text }}>详细介绍</Text></View><Text style={{ ...typography.body, color: palette.text, whiteSpace: 'pre-wrap' }}>{event.description || '暂无详细介绍'}</Text></AppCard>
+      <AppInfoRow label='时间' value={formatEventTime(event)} />
+      <AppInfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />
+      <AppInfoRow label='费用' value={event.fee || '免费'} />
+      <AppInfoRow label='组织者' value={event.organizer} />
+      {!preview && publicSignupText ? <AppInfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}
+      {!preview && (contactLoading ? <AppCard backgroundColor={palette.cardSoft} radius={radius.md} padding={space(3)} marginBottom={space(3)} borderColor={palette.line}><Text style={{ ...typography.meta, color: palette.subtext }}>正在读取组织者联系方式...</Text></AppCard> : contactInfo ? <AppInfoRow label='组织者联系方式' value={contactInfo} copyable /> : <AppCard backgroundColor={palette.cardSoft} radius={radius.md} padding={space(3)} marginBottom={space(3)} borderColor={palette.line}><Text style={{ ...typography.caption, color: palette.brand, marginBottom: space(1) }}>组织者私人联系方式</Text><Text style={{ ...typography.meta, color: palette.subtext }}>{contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者私人联系方式。')}</Text></AppCard>)}
+      <AppCard radius={radius.lg}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.cardTitle, color: palette.text }}>详细介绍</Text></View><Text style={{ ...typography.body, color: palette.text, whiteSpace: 'pre-wrap' }}>{event.description || '暂无详细介绍'}</Text></AppCard>
     </>
   )
 }
@@ -102,13 +89,13 @@ export default function EventDetailPage() {
   const displayEvent = event || previewEvent
   const isPreview = !event && !!previewEvent
   return (
-    <View style={{ padding: space(4), backgroundColor: palette.bg, minHeight: '100vh', boxSizing: 'border-box' }}>
+    <AppPage>
       {loading && !displayEvent ? <DetailSkeleton /> : null}
       {loading && displayEvent ? <EventContent event={displayEvent} preview={isPreview} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} onRetryDetail={() => loadDetail({ forceRefresh: true })} /> : null}
       {!loading && error && displayEvent ? <EventContent event={displayEvent} preview previewError={error} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} onRetryDetail={() => loadDetail({ forceRefresh: true })} /> : null}
       {!loading && error && !displayEvent ? <ErrorRetryCard error={error} onRetry={() => loadDetail({ forceRefresh: true })} secondaryText='返回活动列表' onSecondary={() => Taro.switchTab({ url: '/pages/events/index' })} /> : null}
       {!loading && !error && !displayEvent ? <EmptyCard text='未找到该活动。' actionText='返回活动列表' onAction={() => Taro.switchTab({ url: '/pages/events/index' })} /> : null}
       {!loading && !error && displayEvent ? <EventContent event={displayEvent} preview={isPreview} interestCount={interestCount} hasInterested={hasInterested} interestLoading={interestLoading} hasProfile={hasProfile} contactInfo={contactInfo} contactMessage={contactMessage} contactLoading={contactLoading} publicSignupText={publicSignupText} onToggleInterest={handleToggleInterest} onRetryDetail={() => loadDetail({ forceRefresh: true })} /> : null}
-    </View>
+    </AppPage>
   )
 }
