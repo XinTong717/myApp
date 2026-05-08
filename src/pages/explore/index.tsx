@@ -14,6 +14,7 @@ import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import { palette } from '../../theme/palette'
 import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
+import AppPage from '../../components/common/AppPage'
 import { exploreTheme } from './styles'
 import type {
   AppUser,
@@ -523,7 +524,7 @@ export default function ExplorePage() {
   }
 
   return (
-    <View style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
+    <AppPage flush style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
       {!loading && !hasProfile && (
         <View onClick={goToProfile} style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)}`, borderBottom: `1px solid ${exploreTheme.border}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
@@ -631,6 +632,6 @@ export default function ExplorePage() {
         onReport={handleReportUser}
         onBlock={handleBlockUser}
       />
-    </View>
+    </AppPage>
   )
 }
