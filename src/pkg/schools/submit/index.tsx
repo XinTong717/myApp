@@ -14,7 +14,21 @@ import AppIcon from '../../../components/common/AppIcon'
 const COMMUNITY_TYPE_OPTIONS = ['项目制学习', '线下社区', '线上社区', '混合型', '家庭共学', '其他']
 const AGE_RANGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段', '混龄', '成人为主', '其他']
 
-type FocusField = 'name' | 'customCity' | 'communityTypeOther' | 'ageRangeOther' | 'officialUrl' | 'participationNote' | 'feeNote' | 'sourceNote' | 'recommendationNote' | ''
+type FocusField =
+  | 'name'
+  | 'customCity'
+  | 'communityTypeOther'
+  | 'ageRangeOther'
+  | 'officialUrl'
+  | 'publicAccountNote'
+  | 'participationNote'
+  | 'feeNote'
+  | 'sourceNote'
+  | 'recommendationNote'
+  | ''
+
+type PickerMultiChangeEvent = { detail: { value: number[] } }
+type PickerColumnChangeEvent = { detail: { column: number; value: number } }
 
 function setBeforeUnloadAlert(enabled: boolean, message: string) {
   const taroAny = Taro as any
@@ -24,6 +38,16 @@ function setBeforeUnloadAlert(enabled: boolean, message: string) {
   } catch (err) {
     console.warn('setBeforeUnloadAlert skipped:', err)
   }
+}
+
+async function showSubmittedModal() {
+  await Taro.showModal({
+    title: '已进入审核',
+    content: '你的学习社区推荐已提交到人工审核队列，通常不会立即展示。审核通过后才会出现在学习社区库中。',
+    showCancel: false,
+    confirmText: '知道了',
+  })
+  Taro.navigateBack()
 }
 
 export default function SubmitCommunityPage() {
@@ -40,6 +64,7 @@ export default function SubmitCommunityPage() {
   const [ageRange, setAgeRange] = useState<string[]>([])
   const [ageRangeOther, setAgeRangeOther] = useState('')
   const [officialUrl, setOfficialUrl] = useState('')
+  const [publicAccountNote, setPublicAccountNote] = useState('')
   const [participationNote, setParticipationNote] = useState('')
   const [feeNote, setFeeNote] = useState('')
   const [sourceNote, setSourceNote] = useState('')
@@ -48,8 +73,8 @@ export default function SubmitCommunityPage() {
   const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
   const hasUnsavedContent = !!(
     name.trim() || province || cityOption || customCity.trim() || communityType.length > 0 || communityTypeOther.trim() ||
-    ageRange.length > 0 || ageRangeOther.trim() || officialUrl.trim() || participationNote.trim() || feeNote.trim() ||
-    sourceNote.trim() || recommendationNote.trim()
+    ageRange.length > 0 || ageRangeOther.trim() || officialUrl.trim() || publicAccountNote.trim() || participationNote.trim() ||
+    feeNote.trim() || sourceNote.trim() || recommendationNote.trim()
   )
 
   useEffect(() => {
@@ -62,6 +87,7 @@ export default function SubmitCommunityPage() {
     const cities = province ? (LOCATION_DATA[province] || ['其他']) : ['请先选择省份']
     return [PROVINCES, cities]
   }, [province])
+
   const pickerValue = useMemo(() => {
     const provIdx = Math.max(0, PROVINCES.indexOf(province))
     const cities = province ? (LOCATION_DATA[province] || []) : []
@@ -69,7 +95,7 @@ export default function SubmitCommunityPage() {
     return [provIdx, Math.max(0, cities.indexOf(normalizedCityOption))]
   }, [province, cityOption])
 
-  const handlePickerChange = (e: any) => {
+  const handlePickerChange = (e: PickerMultiChangeEvent) => {
     const [provIdx, cityIdx] = e.detail.value
     const nextProvince = PROVINCES[provIdx] || ''
     const cities = LOCATION_DATA[nextProvince] || []
@@ -79,7 +105,7 @@ export default function SubmitCommunityPage() {
     if (nextCityOption !== '其他') setCustomCity('')
   }
 
-  const handlePickerColumnChange = (e: any) => {
+  const handlePickerColumnChange = (e: PickerColumnChangeEvent) => {
     if (e.detail.column === 0) {
       const nextProvince = PROVINCES[e.detail.value] || ''
       const firstCity = (LOCATION_DATA[nextProvince] || [])[0] || ''
@@ -106,17 +132,24 @@ export default function SubmitCommunityPage() {
     try {
       setSubmitting(true)
       const result = await submitCommunity({
-        name: name.trim(), province, city: currentCity, communityType,
+        name: name.trim(),
+        province,
+        city: currentCity,
+        communityType,
         communityTypeOther: communityType.includes('其他') ? communityTypeOther.trim() : '',
-        ageRange, ageRangeOther: ageRange.includes('其他') ? ageRangeOther.trim() : '',
-        officialUrl: officialUrl.trim(), participationNote: participationNote.trim(), feeNote: feeNote.trim(),
-        sourceNote: sourceNote.trim(), recommendationNote: recommendationNote.trim(),
+        ageRange,
+        ageRangeOther: ageRange.includes('其他') ? ageRangeOther.trim() : '',
+        officialUrl: officialUrl.trim(),
+        publicAccountNote: publicAccountNote.trim(),
+        participationNote: participationNote.trim(),
+        feeNote: feeNote.trim(),
+        sourceNote: sourceNote.trim(),
+        recommendationNote: recommendationNote.trim(),
       })
       if (result?.ok) {
         submittedRef.current = true
         setBeforeUnloadAlert(false, '')
-        Taro.showToast({ title: '提交成功，感谢推荐', icon: 'success' })
-        setTimeout(() => Taro.navigateBack(), 700)
+        await showSubmittedModal()
       } else {
         Taro.showToast({ title: result?.message || '提交失败', icon: 'none' })
       }
@@ -137,18 +170,43 @@ export default function SubmitCommunityPage() {
       </View>
 
       <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', border: `1px solid ${palette.line}` }}>
-        <SectionTitle text='学习社区名称' /><FormInputBox focused={focusedField === 'name'}><Input value={name} placeholder='例如：某某共学社区' onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField('')} onInput={(e) => setName(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
-        <SectionTitle text='所在城市' /><Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}><FormInputBox marginBottom={cityOption === '其他' ? '8px' : '16px'}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ ...typography.body, flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text><Text style={{ ...typography.caption, color: palette.subtext }}>▼</Text></View></FormInputBox></Picker>
+        <SectionTitle text='学习社区名称' />
+        <FormInputBox focused={focusedField === 'name'}><Input value={name} placeholder='例如：某某共学社区' onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField('')} onInput={(e) => setName(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
+
+        <SectionTitle text='所在城市' />
+        <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
+          <FormInputBox marginBottom={cityOption === '其他' ? '8px' : '16px'}>
+            <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ ...typography.body, flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text><Text style={{ ...typography.caption, color: palette.subtext }}>▼</Text></View>
+          </FormInputBox>
+        </Picker>
         {cityOption === '其他' && <View style={{ marginBottom: '16px' }}><View style={{ marginBottom: '6px' }}><Text style={{ ...typography.caption, color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View><FormInputBox focused={focusedField === 'customCity'} marginBottom='0'><Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onFocus={() => setFocusedField('customCity')} onBlur={() => setFocusedField('')} onInput={(e) => setCustomCity(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
-        <SectionTitle text='社区类型（可多选）' /><MultiPillSelect options={COMMUNITY_TYPE_OPTIONS} selected={communityType} onChange={setCommunityType} />
+
+        <SectionTitle text='社区类型（可多选）' />
+        <MultiPillSelect options={COMMUNITY_TYPE_OPTIONS} selected={communityType} onChange={setCommunityType} />
         {communityType.includes('其他') && <View style={{ marginBottom: '16px' }}><View style={{ marginBottom: '6px' }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充社区类型中的“其他”。</Text></View><FormInputBox focused={focusedField === 'communityTypeOther'} marginBottom='0'><Input value={communityTypeOther} placeholder='例如：森林学校 / 驻留计划' onFocus={() => setFocusedField('communityTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setCommunityTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
-        <SectionTitle text='适合阶段（可多选）' /><MultiPillSelect options={AGE_RANGE_OPTIONS} selected={ageRange} onChange={setAgeRange} />
+
+        <SectionTitle text='适合阶段（可多选）' />
+        <MultiPillSelect options={AGE_RANGE_OPTIONS} selected={ageRange} onChange={setAgeRange} />
         {ageRange.includes('其他') && <View style={{ marginBottom: '16px' }}><View style={{ marginBottom: '6px' }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充适合阶段中的“其他”。</Text></View><FormInputBox focused={focusedField === 'ageRangeOther'} marginBottom='0'><Input value={ageRangeOther} placeholder='例如：大学生 / 家庭混龄共学' onFocus={() => setFocusedField('ageRangeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setAgeRangeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
-        <SectionTitle text='公开主页 / 官网 / 公众号 / 小红书（选填）' /><FormInputBox focused={focusedField === 'officialUrl'}><Input value={officialUrl} placeholder='https://... 或公众号名称 / 小红书账号' onFocus={() => setFocusedField('officialUrl')} onBlur={() => setFocusedField('')} onInput={(e) => setOfficialUrl(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
-        <SectionTitle text='参与方式说明（选填）' /><FormInputBox focused={focusedField === 'participationNote'} marginBottom='12px'><Textarea value={participationNote} placeholder='例如：线下驻留、周末活动、线上项目制等' maxlength={300} onFocus={() => setFocusedField('participationNote')} onBlur={() => setFocusedField('')} onInput={(e) => setParticipationNote(e.detail.value)} style={{ width: '100%', minHeight: '70px', ...typography.body, color: palette.text }} /></FormInputBox>
-        <SectionTitle text='参考费用（选填）' /><FormInputBox focused={focusedField === 'feeNote'} marginBottom='12px'><Textarea value={feeNote} placeholder='例如：按月、按学期、按活动收费，或未公开' maxlength={200} onFocus={() => setFocusedField('feeNote')} onBlur={() => setFocusedField('')} onInput={(e) => setFeeNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', ...typography.body, color: palette.text }} /></FormInputBox>
-        <SectionTitle text='你从哪里知道它（选填）' /><FormInputBox focused={focusedField === 'sourceNote'} marginBottom='12px'><Textarea value={sourceNote} placeholder='例如：官网、朋友推荐、公开文章、线下探访' maxlength={200} onFocus={() => setFocusedField('sourceNote')} onBlur={() => setFocusedField('')} onInput={(e) => setSourceNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', ...typography.body, color: palette.text }} /></FormInputBox>
-        <SectionTitle text='推荐理由 / 补充说明（选填）' /><FormInputBox focused={focusedField === 'recommendationNote'} marginBottom='8px'><Textarea value={recommendationNote} placeholder='补充任何有助于审核的信息，比如公开活动、特色、适合什么样的家庭等' maxlength={500} onFocus={() => setFocusedField('recommendationNote')} onBlur={() => setFocusedField('')} onInput={(e) => setRecommendationNote(e.detail.value)} style={{ width: '100%', minHeight: '90px', ...typography.body, color: palette.text }} /></FormInputBox><View style={{ marginBottom: '16px' }}><Text style={{ ...typography.micro, color: palette.muted }}>{recommendationNote.length}/500</Text></View>
+
+        <SectionTitle text='公开主页 / 官网（选填）' />
+        <FormInputBox focused={focusedField === 'officialUrl'}><Input value={officialUrl} placeholder='https://...' onFocus={() => setFocusedField('officialUrl')} onBlur={() => setFocusedField('')} onInput={(e) => setOfficialUrl(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
+
+        <SectionTitle text='公开账号 / 搜索关键词（选填）' />
+        <FormInputBox focused={focusedField === 'publicAccountNote'}><Input value={publicAccountNote} placeholder='例如：公众号名称 / 小红书号 / 视频号名称' onFocus={() => setFocusedField('publicAccountNote')} onBlur={() => setFocusedField('')} onInput={(e) => setPublicAccountNote(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
+
+        <SectionTitle text='参与方式说明（选填）' />
+        <FormInputBox focused={focusedField === 'participationNote'} marginBottom='12px'><Textarea value={participationNote} placeholder='例如：线下驻留、周末活动、线上项目制等' maxlength={300} onFocus={() => setFocusedField('participationNote')} onBlur={() => setFocusedField('')} onInput={(e) => setParticipationNote(e.detail.value)} style={{ width: '100%', minHeight: '70px', ...typography.body, color: palette.text }} /></FormInputBox>
+
+        <SectionTitle text='参考费用（选填）' />
+        <FormInputBox focused={focusedField === 'feeNote'} marginBottom='12px'><Textarea value={feeNote} placeholder='例如：按月、按学期、按活动收费，或未公开' maxlength={200} onFocus={() => setFocusedField('feeNote')} onBlur={() => setFocusedField('')} onInput={(e) => setFeeNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', ...typography.body, color: palette.text }} /></FormInputBox>
+
+        <SectionTitle text='你从哪里知道它（选填）' />
+        <FormInputBox focused={focusedField === 'sourceNote'} marginBottom='12px'><Textarea value={sourceNote} placeholder='例如：官网、朋友推荐、公开文章、线下探访' maxlength={200} onFocus={() => setFocusedField('sourceNote')} onBlur={() => setFocusedField('')} onInput={(e) => setSourceNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', ...typography.body, color: palette.text }} /></FormInputBox>
+
+        <SectionTitle text='推荐理由 / 补充说明（选填）' />
+        <FormInputBox focused={focusedField === 'recommendationNote'} marginBottom='8px'><Textarea value={recommendationNote} placeholder='补充任何有助于审核的信息，比如公开活动、特色、适合什么样的家庭等' maxlength={500} onFocus={() => setFocusedField('recommendationNote')} onBlur={() => setFocusedField('')} onInput={(e) => setRecommendationNote(e.detail.value)} style={{ width: '100%', minHeight: '90px', ...typography.body, color: palette.text }} /></FormInputBox>
+        <View style={{ marginBottom: '16px' }}><Text style={{ ...typography.micro, color: palette.muted }}>{recommendationNote.length}/500</Text></View>
       </View>
 
       <View style={{ display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'flex-start', backgroundColor: palette.cardSoft, borderRadius: '16px', padding: '12px 14px', marginTop: '14px', marginBottom: '20px', border: `1px dashed ${palette.line}` }}><AppIcon name='lock' size={22} bordered /><Text style={{ ...typography.caption, color: palette.subtext, flex: 1 }}>你的提交会先进入审核，不会自动公开。请只提交公开可验证的信息，不要填写第三方未公开的私人联系方式或未公开的未成年人信息。</Text></View>
