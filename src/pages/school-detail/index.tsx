@@ -9,6 +9,7 @@ import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
+import AppInfoRow from '../../components/common/AppInfoRow'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
@@ -29,19 +30,6 @@ function buildSchoolShare(school?: School | null, schoolId?: number) {
       query: id ? `id=${id}` : '',
     },
   }
-}
-
-function InfoRow(props: { label: string; value?: string }) {
-  return (
-    <AppCard radius={radius.md} padding={`${space(3)} ${space(4)}`} marginBottom={space(3)} borderColor={palette.lineSoft}>
-      <View style={{ marginBottom: space(2) }}>
-        <Text style={{ ...typography.bodyStrong, color: palette.brand }}>{props.label}</Text>
-      </View>
-      <Text style={{ ...typography.cardTitle, color: palette.text }}>
-        {props.value || '未填写'}
-      </Text>
-    </AppCard>
-  )
 }
 
 function splitTokens(value?: string) {
@@ -147,11 +135,11 @@ function SchoolContent(props: {
         )}
       </AppCard>
 
-      <InfoRow label='公开说明' value={school.xuji_note} />
-      <InfoRow label='参与前了解' value={school.residency_req} />
-      <InfoRow label='参与方式参考' value={school.admission_req} />
-      <InfoRow label='参考费用' value={school.fee} />
-      <InfoRow label='相关说明' value={school.output_direction} />
+      <AppInfoRow variant='prominent' label='公开说明' value={school.xuji_note} />
+      <AppInfoRow variant='prominent' label='参与前了解' value={school.residency_req} />
+      <AppInfoRow variant='prominent' label='参与方式参考' value={school.admission_req} />
+      <AppInfoRow variant='prominent' label='参考费用' value={school.fee} />
+      <AppInfoRow variant='prominent' label='相关说明' value={school.output_direction} />
 
       {!preview ? (
         <AppCard marginBottom={space(4)}>

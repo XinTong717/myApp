@@ -13,6 +13,7 @@ import { typography } from '../../theme/typography'
 import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
+import AppInfoRow from '../../components/common/AppInfoRow'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import type { EventItem } from '../events/shared'
@@ -27,21 +28,6 @@ function buildEventShare(event?: EventItem | null, eventId?: number) {
     appMessage: { title, path: id ? `/pages/event-detail/index?id=${id}` : '/pages/events/index' },
     timeline: { title, query: id ? `id=${id}` : '' },
   }
-}
-
-function InfoRow(props: { label: string; value?: string; copyable?: boolean }) {
-  const handleCopy = () => {
-    if (props.value && props.copyable) Taro.setClipboardData({ data: props.value })
-  }
-  return (
-    <AppCard onClick={props.copyable ? handleCopy : undefined} backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.cardSoft}>
-      <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(1) }}>
-        <Text style={{ ...typography.caption, color: palette.brand, flex: 1 }}>{props.label}</Text>
-        {props.copyable && props.value ? <Text style={{ ...typography.micro, color: palette.subtext }}>点击复制</Text> : null}
-      </View>
-      <Text style={{ ...typography.body, color: palette.text }}>{props.value || '未填写'}</Text>
-    </AppCard>
-  )
 }
 
 function EventContent(props: { event: EventItem; preview?: boolean; previewError?: string; interestCount: number; hasInterested: boolean; interestLoading: boolean; hasProfile: boolean; contactInfo: string; contactMessage: string; contactLoading: boolean; publicSignupText: string; onToggleInterest: () => void; onRetryDetail?: () => void }) {
@@ -64,12 +50,12 @@ function EventContent(props: { event: EventItem; preview?: boolean; previewError
       <View onClick={preview || interestLoading ? undefined : onToggleInterest} style={{ backgroundColor: hasInterested ? palette.surfaceSoft : preview ? palette.disabledBg : palette.brand, borderRadius: '16px', padding: '14px', textAlign: 'center', marginBottom: '14px' }}>
         <Text style={{ ...typography.button, color: hasInterested || preview ? palette.subtext : '#FFF' }}>{preview ? '完整详情加载后可标记感兴趣' : interestLoading ? '处理中...' : hasInterested ? '已感兴趣，再点一次取消' : '我感兴趣'}</Text>
       </View>
-      <InfoRow label='时间' value={formatEventTime(event)} />
-      <InfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />
-      <InfoRow label='费用' value={event.fee || '免费'} />
-      <InfoRow label='组织者' value={event.organizer} />
-      {!preview && publicSignupText ? <InfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}
-      {!preview && (contactLoading ? <AppCard backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.line}><Text style={{ ...typography.meta, color: palette.subtext }}>正在读取组织者联系方式...</Text></AppCard> : contactInfo ? <InfoRow label='组织者联系方式' value={contactInfo} copyable /> : <AppCard backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.line}><Text style={{ ...typography.caption, color: palette.brand, marginBottom: space(1) }}>组织者私人联系方式</Text><Text style={{ ...typography.meta, color: palette.subtext }}>{contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者私人联系方式。')}</Text></AppCard>)}
+      <AppInfoRow label='时间' value={formatEventTime(event)} />
+      <AppInfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />
+      <AppInfoRow label='费用' value={event.fee || '免费'} />
+      <AppInfoRow label='组织者' value={event.organizer} />
+      {!preview && publicSignupText ? <AppInfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}
+      {!preview && (contactLoading ? <AppCard backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.line}><Text style={{ ...typography.meta, color: palette.subtext }}>正在读取组织者联系方式...</Text></AppCard> : contactInfo ? <AppInfoRow label='组织者联系方式' value={contactInfo} copyable /> : <AppCard backgroundColor={palette.cardSoft} radius='14px' padding={space(3)} marginBottom='10px' borderColor={palette.line}><Text style={{ ...typography.caption, color: palette.brand, marginBottom: space(1) }}>组织者私人联系方式</Text><Text style={{ ...typography.meta, color: palette.subtext }}>{contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者私人联系方式。')}</Text></AppCard>)}
       <AppCard radius='20px'><View style={{ marginBottom: '10px' }}><Text style={{ ...typography.cardTitle, color: palette.text }}>详细介绍</Text></View><Text style={{ ...typography.body, color: palette.text, whiteSpace: 'pre-wrap' }}>{event.description || '暂无详细介绍'}</Text></AppCard>
     </>
   )
