@@ -13,13 +13,13 @@ export default function AppPageHeader({ title, description, action, className }:
     <AppCard className={className} padding='16px'>
       <View className='app-page-header__title-row'>
         <View className='app-page-header__title-wrap'>
-          <Text className='text-title text-color-main'>{title}</Text>
+          <Text className='text-section-title text-color-main'>{title}</Text>
         </View>
         {action ? <View className='app-page-header__action'>{action}</View> : null}
       </View>
       {description ? (
         <View className='app-page-header__description'>
-          <Text className='text-meta text-color-sub'>{description}</Text>
+          <Text className='text-caption text-color-sub'>{description}</Text>
         </View>
       ) : null}
     </AppCard>
