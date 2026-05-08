@@ -1,27 +1,31 @@
-import { View, Text } from '@tarojs/components'
+import { Text, View } from '@tarojs/components'
+import AppPage from '../../../components/common/AppPage'
+import AppCard from '../../../components/common/AppCard'
 import { palette } from '../../../theme/palette'
+import { space } from '../../../theme/spacing'
+import { typography } from '../../../theme/typography'
 
 function Section(props: { title: string; children: any }) {
   return (
-    <View style={{ backgroundColor: palette.card, borderRadius: '18px', padding: '16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
-      <View style={{ marginBottom: '8px' }}>
-        <Text style={{ fontSize: '15px', fontWeight: 'bold', color: palette.text }}>{props.title}</Text>
+    <AppCard padding={space(4)} marginBottom={space(3)}>
+      <View style={{ marginBottom: space(2) }}>
+        <Text style={{ ...typography.bodyStrong, color: palette.text }}>{props.title}</Text>
       </View>
       {props.children}
-    </View>
+    </AppCard>
   )
 }
 
 function BodyText(props: { children: any }) {
-  return <Text style={{ fontSize: '13px', color: palette.subtext, lineHeight: '22px' }}>{props.children}</Text>
+  return <Text style={{ ...typography.meta, color: palette.subtext, lineHeight: '22px' }}>{props.children}</Text>
 }
 
 export default function UserAgreementPage() {
   return (
-    <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '16px', boxSizing: 'border-box' }}>
-      <View style={{ marginBottom: '14px' }}>
-        <Text style={{ fontSize: '24px', fontWeight: 'bold', color: palette.text }}>用户协议</Text>
-        <View style={{ marginTop: '6px' }}><Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>更新日期：2026-05-08</Text></View>
+    <AppPage>
+      <View style={{ marginBottom: space(4) }}>
+        <Text style={{ ...typography.title, color: palette.text }}>用户协议</Text>
+        <View style={{ marginTop: space(1) }}><Text style={{ ...typography.micro, color: palette.subtext }}>更新日期：2026-05-08</Text></View>
       </View>
 
       <Section title='1. 协议范围'>
@@ -51,6 +55,6 @@ export default function UserAgreementPage() {
       <Section title='7. 风险自担'>
         <BodyText>通过本产品获取的信息、查看的成员目录资料或参与的线下活动，均需要你基于自身判断谨慎决策。涉及未成年人、线下见面、付费活动、长期项目、资质承诺或人身安全时，请额外核验并采取必要保护措施。可雀不是学校资质认证机构、活动安全担保方、交易担保方或人际关系撮合方。</BodyText>
       </Section>
-    </View>
+    </AppPage>
   )
 }
