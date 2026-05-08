@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
+import { getFilterOptions, type AppFilterOptions } from '../../services/filterOptions'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
 import AppPage from '../../components/common/AppPage'
@@ -15,10 +16,9 @@ import AppIcon from '../../components/common/AppIcon'
 import AppChip from '../../components/common/AppChip'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import { ListSkeleton } from '../../components/common/Skeleton'
+import { SCHOOL_FILTER_FALLBACKS } from '../../constants/filterOptions'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
-const ALL_FILTER = '全部'
-const SCHOOL_LIST_LIMIT = 200
 const SCHOOL_SHARE = {
   appMessage: {
     title: '可雀学习社区库｜找到适合教育探索的场域',
@@ -43,7 +43,7 @@ function splitTokens(value?: string) {
     .filter(Boolean)
 }
 
-function uniqueValues(values: string[], max = 16) {
+function uniqueValues(values: string[], max = SCHOOL_FILTER_FALLBACKS.maxDynamicOptions) {
   return Array.from(new Set(values.filter(Boolean))).slice(0, max)
 }
 
@@ -72,14 +72,14 @@ function getLocationHaystack(item: School) {
   return getLocations(item).map(formatLocation).join(' ')
 }
 
-function toggleMultiFilter(current: string[], option: string) {
-  if (option === ALL_FILTER) return []
+function toggleMultiFilter(current: string[], option: string, allOption: string) {
+  if (option === allOption) return []
   if (current.includes(option)) return current.filter((item) => item !== option)
   return [...current, option]
 }
 
-function isMultiActive(current: string[], option: string) {
-  return option === ALL_FILTER ? current.length === 0 : current.includes(option)
+function isMultiActive(current: string[], option: string, allOption: string) {
+  return option === allOption ? current.length === 0 : current.includes(option)
 }
 
 function formatSelectedSummary(values: string[], label: string) {
@@ -90,6 +90,7 @@ function formatSelectedSummary(values: string[], label: string) {
 export default function SchoolsPage() {
   const [schools, setSchools] = useState<School[]>([])
   const [filterSourceSchools, setFilterSourceSchools] = useState<School[]>([])
+  const [filterSettings, setFilterSettings] = useState<AppFilterOptions['school']>(SCHOOL_FILTER_FALLBACKS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [keyword, setKeyword] = useState('')
@@ -97,9 +98,18 @@ export default function SchoolsPage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedAgeRanges, setSelectedAgeRanges] = useState<string[]>([])
   const didInitRef = useRef(false)
+  const allFilter = filterSettings.allOption || SCHOOL_FILTER_FALLBACKS.allOption
+  const listLimit = Number(filterSettings.listLimit || SCHOOL_FILTER_FALLBACKS.listLimit)
+  const maxDynamicOptions = Number(filterSettings.maxDynamicOptions || SCHOOL_FILTER_FALLBACKS.maxDynamicOptions)
 
   useShareAppMessage(() => SCHOOL_SHARE.appMessage)
   useShareTimeline(() => SCHOOL_SHARE.timeline)
+
+  useEffect(() => {
+    getFilterOptions().then((options) => setFilterSettings(options.school)).catch((err) => {
+      console.warn('load school filter options skipped:', err)
+    })
+  }, [])
 
   const hasActiveFilters = () => selectedProvinces.length > 0 || selectedTypes.length > 0 || selectedAgeRanges.length > 0
 
@@ -110,7 +120,7 @@ export default function SchoolsPage() {
       const useFilters = options.useFilters !== false
       const result = await getSchools({
         forceRefresh: !!options.forceRefresh,
-        limit: SCHOOL_LIST_LIMIT,
+        limit: listLimit,
         ...(useFilters && selectedProvinces.length > 0 ? { province: selectedProvinces } : {}),
         ...(useFilters && selectedTypes.length > 0 ? { schoolType: selectedTypes } : {}),
         ...(useFilters && selectedAgeRanges.length > 0 ? { ageRange: selectedAgeRanges } : {}),
@@ -131,7 +141,7 @@ export default function SchoolsPage() {
   }
 
   const loadFilterOptions = async (forceRefresh = false) => {
-    const result = await getSchools({ forceRefresh, limit: SCHOOL_LIST_LIMIT })
+    const result = await getSchools({ forceRefresh, limit: listLimit })
     const list = Array.isArray(result.schools) ? result.schools : []
     setFilterSourceSchools(list)
     return list
@@ -163,9 +173,9 @@ export default function SchoolsPage() {
   })
 
   const optionSource = filterSourceSchools.length > 0 ? filterSourceSchools : schools
-  const provinceOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(optionSource.flatMap((item) => getLocations(item).map((location) => location.province || '')))], [optionSource])
-  const typeOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(optionSource.flatMap((item) => splitTokens(item.school_type)))], [optionSource])
-  const ageOptions = useMemo(() => [ALL_FILTER, ...uniqueValues(optionSource.flatMap((item) => splitTokens(item.age_range)))], [optionSource])
+  const provinceOptions = useMemo(() => [allFilter, ...uniqueValues(optionSource.flatMap((item) => getLocations(item).map((location) => location.province || '')), maxDynamicOptions)], [optionSource, allFilter, maxDynamicOptions])
+  const typeOptions = useMemo(() => [allFilter, ...uniqueValues(optionSource.flatMap((item) => splitTokens(item.school_type)), maxDynamicOptions)], [optionSource, allFilter, maxDynamicOptions])
+  const ageOptions = useMemo(() => [allFilter, ...uniqueValues(optionSource.flatMap((item) => splitTokens(item.age_range)), maxDynamicOptions)], [optionSource, allFilter, maxDynamicOptions])
 
   const filteredSchools = useMemo(() => {
     const q = keyword.trim().toLowerCase()
@@ -231,17 +241,17 @@ export default function SchoolsPage() {
 
         <AppFilterRow title='地区'>
           {provinceOptions.map((option) => (
-            <FilterChip key={option} label={option} active={isMultiActive(selectedProvinces, option)} onClick={() => setSelectedProvinces((current) => toggleMultiFilter(current, option))} />
+            <FilterChip key={option} label={option} active={isMultiActive(selectedProvinces, option, allFilter)} onClick={() => setSelectedProvinces((current) => toggleMultiFilter(current, option, allFilter))} />
           ))}
         </AppFilterRow>
         <AppFilterRow title='类型'>
           {typeOptions.map((option) => (
-            <FilterChip key={option} label={option} active={isMultiActive(selectedTypes, option)} onClick={() => setSelectedTypes((current) => toggleMultiFilter(current, option))} />
+            <FilterChip key={option} label={option} active={isMultiActive(selectedTypes, option, allFilter)} onClick={() => setSelectedTypes((current) => toggleMultiFilter(current, option, allFilter))} />
           ))}
         </AppFilterRow>
         <AppFilterRow title='阶段'>
           {ageOptions.map((option) => (
-            <FilterChip key={option} label={option} active={isMultiActive(selectedAgeRanges, option)} onClick={() => setSelectedAgeRanges((current) => toggleMultiFilter(current, option))} />
+            <FilterChip key={option} label={option} active={isMultiActive(selectedAgeRanges, option, allFilter)} onClick={() => setSelectedAgeRanges((current) => toggleMultiFilter(current, option, allFilter))} />
           ))}
         </AppFilterRow>
       </AppCard>
