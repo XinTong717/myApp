@@ -24,7 +24,7 @@ import AppIcon from '../../components/common/AppIcon'
 import { palette } from '../../theme/palette'
 import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
-import { checkAdminAccess, requestAccountDeletion } from '../../services/profile'
+import { checkAdminAccess, getProfileBootstrap, requestAccountDeletion } from '../../services/profile'
 import { recordLegalConsent } from '../../services/legalConsent'
 import { useConnections } from '../../hooks/useConnections'
 import { useSafety } from '../../hooks/useSafety'
@@ -113,11 +113,11 @@ export default function ProfilePage() {
 
   const form = useProfileForm()
   const {
-    loading, saving, privacySaving, displayName, setDisplayName, gender, setGender, ageRange, setAgeRange, roles, setRoles, province, cityOption, customCity, setCustomCity, contactId, setContactId, allowIncomingRequests, isVisibleOnMap, childAgeRange, setChildAgeRange, childDropoutStatus, setChildDropoutStatus, childInterests, setChildInterests, eduServices, setEduServices, companionContext, setCompanionContext, bio, setBio, isParent, isEducator, isCompanion, currentCity, pickerRange, pickerValue, loadProfile, handleSave, handleUpdatePrivacySetting, handlePickerChange, handlePickerColumnChange,
+    loading, saving, privacySaving, displayName, setDisplayName, gender, setGender, ageRange, setAgeRange, roles, setRoles, province, cityOption, customCity, setCustomCity, contactId, setContactId, allowIncomingRequests, isVisibleOnMap, childAgeRange, setChildAgeRange, childDropoutStatus, setChildDropoutStatus, childInterests, setChildInterests, eduServices, setEduServices, companionContext, setCompanionContext, bio, setBio, isParent, isEducator, isCompanion, currentCity, pickerRange, pickerValue, loadProfile, applyRemoteProfile, handleSave, handleUpdatePrivacySetting, handlePickerChange, handlePickerColumnChange,
   } = form
 
-  const { pendingRequests, acceptedConnections, sentRequests, requestPages, loadingMoreSection, loadRequests, loadRequestSection, loadMoreRequests, refreshLoadedRequests, handleRespond, handleWithdrawRequest, handleRemoveConnection } = useConnections()
-  const { blockedUsers, mutedUsers, loadSafetyOverview, handleSafetyAction, handleReportUser } = useSafety()
+  const { pendingRequests, acceptedConnections, sentRequests, requestPages, loadingMoreSection, hydrateRequests, loadRequests, loadRequestSection, loadMoreRequests, refreshLoadedRequests, handleRespond, handleWithdrawRequest, handleRemoveConnection } = useConnections()
+  const { blockedUsers, mutedUsers, hydrateSafetyOverview, loadSafetyOverview, handleSafetyAction, handleReportUser } = useSafety()
 
   const loadAdminAccess = async () => {
     try {
@@ -129,14 +129,41 @@ export default function ProfilePage() {
     }
   }
 
+  const loadProfileBootstrap = async () => {
+    const result = await getProfileBootstrap()
+    const profileData = result.profile?.ok ? result.profile.data : null
+    const requestsData = result.pendingRequests?.ok ? result.pendingRequests.data : null
+    const safetyData = result.safetyOverview?.ok ? result.safetyOverview.data : null
+    const adminData = result.adminAccess?.ok ? result.adminAccess.data : null
+
+    const fallbackTasks: Promise<unknown>[] = []
+
+    if (profileData?.ok) await applyRemoteProfile(profileData.profile || null)
+    else fallbackTasks.push(loadProfile())
+
+    if (requestsData?.ok) hydrateRequests('pending', requestsData)
+    else fallbackTasks.push(loadRequests('pending', { force: true }))
+
+    if (safetyData?.ok) hydrateSafetyOverview(safetyData)
+    else fallbackTasks.push(loadSafetyOverview())
+
+    if (adminData?.ok) setIsAdmin(!!adminData.isAdmin)
+    else fallbackTasks.push(loadAdminAccess())
+
+    await Promise.all(fallbackTasks)
+  }
+
   const refreshProfilePage = (force = false) => {
     const now = Date.now()
     if (!force && now - lastAutoRefreshAtRef.current < PROFILE_REFRESH_TTL) return
     lastAutoRefreshAtRef.current = now
-    loadProfile()
-    loadRequests('pending')
-    loadSafetyOverview()
-    loadAdminAccess()
+    loadProfileBootstrap().catch((err) => {
+      console.error('loadProfileBootstrap error:', err)
+      loadProfile()
+      loadRequests('pending')
+      loadSafetyOverview()
+      loadAdminAccess()
+    })
   }
 
   const refreshRelations = () => {

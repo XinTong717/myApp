@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { getMyRequests, manageConnection, respondRequest, type RequestSection } from '../services/connection'
-import type { AcceptedConnection, PendingRequest, RequestPages, SentRequest } from '../types/domain'
+import type { AcceptedConnection, GetMyRequestsResult, PendingRequest, RequestPages, SentRequest } from '../types/domain'
 import { CONNECTION_CODE_MESSAGES } from '../constants/cloudMessages'
 import { logCloudFailure, resolveCloudMessage } from '../utils/cloudFeedback'
 
@@ -25,7 +25,7 @@ export function useConnections() {
   const [loadingMoreSection, setLoadingMoreSection] = useState<RequestSection | ''>('')
   const loadedSectionsRef = useRef<Record<string, boolean>>({})
 
-  const applyRequestResult = (section: RequestSection, r: any, mode: 'replace' | 'append' = 'replace') => {
+  const applyRequestResult = (section: RequestSection, r: GetMyRequestsResult, mode: 'replace' | 'append' = 'replace') => {
     const append = mode === 'append'
 
     if (section === 'pending' || section === 'all') {
@@ -49,6 +49,11 @@ export function useConnections() {
       return
     }
     loadedSectionsRef.current[section] = true
+  }
+
+  const hydrateRequests = (section: RequestSection, r: GetMyRequestsResult) => {
+    applyRequestResult(section, r, 'replace')
+    markLoaded(section)
   }
 
   const loadRequests = async (section: RequestSection = 'pending', options: { force?: boolean; offset?: number; append?: boolean } = {}) => {
@@ -157,6 +162,7 @@ export function useConnections() {
     sentRequests,
     requestPages,
     loadingMoreSection,
+    hydrateRequests,
     loadRequests,
     loadRequestSection,
     loadMoreRequests,

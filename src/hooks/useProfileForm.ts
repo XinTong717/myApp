@@ -156,6 +156,13 @@ export function useProfileForm() {
     }
   }
 
+  const applyRemoteProfile = async (remoteProfile: UserProfile | null | undefined) => {
+    applyProfile(remoteProfile || null)
+    await loadDraftIfEmpty(remoteProfile || null)
+    draftReadyRef.current = true
+    setLoading(false)
+  }
+
   const loadProfile = async () => {
     const seq = refreshSeqRef.current + 1
     refreshSeqRef.current = seq
@@ -358,6 +365,7 @@ export function useProfileForm() {
     pickerRange,
     pickerValue,
     loadProfile,
+    applyRemoteProfile,
     handleSave,
     handleUpdatePrivacySetting,
     handlePickerChange,

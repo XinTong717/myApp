@@ -89,7 +89,7 @@ export default function ExplorePage() {
   const reportLockRef = useRef(false)
   const blockLockRef = useRef(false)
 
-  const loadData = async (options: { forceRefreshMapUsers?: boolean } = {}) => {
+  const loadData = async (options: { forceRefreshMapUsers?: boolean; refreshSchools?: boolean } = {}) => {
     const requestSeq = loadSeqRef.current + 1
     loadSeqRef.current = requestSeq
 
@@ -101,6 +101,7 @@ export default function ExplorePage() {
       role: roleSnapshot,
       childAgeRange: childAgeRangeSnapshot,
     })
+    const shouldLoadSchools = options.refreshSchools || !schoolsLoaded
 
     try {
       setLoading(true)
@@ -108,7 +109,7 @@ export default function ExplorePage() {
       setIsNavigatingAway(false)
 
       const [schoolRes, mapUsersRes, myRes] = await Promise.all([
-        getSchoolMarkers({ limit: 200 }),
+        shouldLoadSchools ? getSchoolMarkers({ limit: 200, forceRefresh: !!options.refreshSchools }) : Promise.resolve(null),
         getMapUsers({
           forceRefresh: !!options.forceRefreshMapUsers,
           province: provinceSnapshot || undefined,
@@ -120,13 +121,15 @@ export default function ExplorePage() {
 
       if (requestSeq !== loadSeqRef.current) return
 
-      if (schoolRes?.ok && Array.isArray(schoolRes.schools)) {
-        setSchools(schoolRes.schools)
-      } else {
-        setSchools([])
-        logCloudFailure('getSchoolMarkersInExplore', schoolRes)
+      if (schoolRes) {
+        if (schoolRes?.ok && Array.isArray(schoolRes.schools)) {
+          setSchools(schoolRes.schools)
+        } else {
+          setSchools([])
+          logCloudFailure('getSchoolMarkersInExplore', schoolRes)
+        }
+        setSchoolsLoaded(true)
       }
-      setSchoolsLoaded(true)
 
       if (mapUsersRes?.ok) {
         setAppUsers(Array.isArray(mapUsersRes.users) ? mapUsersRes.users : [])
@@ -151,23 +154,31 @@ export default function ExplorePage() {
     }
   }
 
-  const refreshData = (options: { force?: boolean; forceRefreshMapUsers?: boolean } = {}) => {
+  const refreshData = (options: { force?: boolean; forceRefreshMapUsers?: boolean; refreshSchools?: boolean } = {}) => {
     const now = Date.now()
+    const requestKey = createExploreLoadKey({
+      province: selectedProvince,
+      role: selectedUserRole,
+      childAgeRange: selectedChildAgeRange,
+    })
+    const isSameMapUsersKey = mapUsersLoadedKey === requestKey
     const shouldSkip =
       !options.force &&
       hasLoadedOnceRef.current &&
+      schoolsLoaded &&
+      isSameMapUsersKey &&
       now - lastAutoRefreshAtRef.current < EXPLORE_REFRESH_TTL
   
     if (shouldSkip) return
   
     hasLoadedOnceRef.current = true
     lastAutoRefreshAtRef.current = now
-    loadData({ forceRefreshMapUsers: !!options.forceRefreshMapUsers })
+    loadData({ forceRefreshMapUsers: !!options.forceRefreshMapUsers, refreshSchools: !!options.refreshSchools })
   }
   
   useDidShow(async () => {
     const shouldForceRefresh = await consumeExploreForceRefreshFlag()
-    refreshData({ force: shouldForceRefresh, forceRefreshMapUsers: shouldForceRefresh })
+    refreshData({ force: shouldForceRefresh, forceRefreshMapUsers: shouldForceRefresh, refreshSchools: shouldForceRefresh })
   })
   
   useEffect(() => {
@@ -175,7 +186,7 @@ export default function ExplorePage() {
       isFirstRunRef.current = false
       return
     }
-    refreshData({ force: true })
+    refreshData()
   }, [selectedProvince, selectedUserRole, selectedChildAgeRange])
 
   const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
@@ -620,7 +631,7 @@ export default function ExplorePage() {
         shouldShowSchoolLabels={shouldShowSchoolLabels}
         hasUserClusters={hasUserClusters}
         hasSchoolClusters={hasSchoolClusters}
-        onReload={() => loadData({ forceRefreshMapUsers: true })}
+        onReload={() => loadData({ forceRefreshMapUsers: true, refreshSchools: true })}
         onMarkerTap={handleMarkerTap}
         onCalloutTap={handleCalloutTap}
         onLabelTap={handleLabelTap}
