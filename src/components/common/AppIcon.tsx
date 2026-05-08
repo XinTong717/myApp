@@ -1,7 +1,7 @@
 import { View } from '@tarojs/components'
 import { palette } from '../../theme/palette'
 
-type IconName = 'lock' | 'mapPin' | 'calendar' | 'user' | 'school' | 'spark'
+type IconName = 'lock' | 'mapPin' | 'calendar' | 'user' | 'school' | 'spark' | 'edit-pencil' | 'check'
 
 type Props = {
   name: IconName
@@ -213,6 +213,74 @@ function SparkShape({ size, color }: { size: number; color: string }) {
   )
 }
 
+function EditPencilShape({ size, color }: { size: number; color: string }) {
+  const stroke = Math.max(2, Math.round(size * 0.08))
+  return (
+    <View style={{ position: 'relative', width: `${size}px`, height: `${size}px` }}>
+      <View
+        style={{
+          position: 'absolute',
+          left: `${Math.round(size * 0.27)}px`,
+          top: `${Math.round(size * 0.49)}px`,
+          width: `${Math.round(size * 0.46)}px`,
+          height: `${stroke}px`,
+          borderRadius: '999px',
+          backgroundColor: color,
+          transform: 'rotate(-38deg)',
+          transformOrigin: 'center center',
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          left: `${Math.round(size * 0.26)}px`,
+          top: `${Math.round(size * 0.66)}px`,
+          width: `${Math.round(size * 0.18)}px`,
+          height: `${stroke}px`,
+          borderRadius: '999px',
+          backgroundColor: color,
+          transform: 'rotate(-38deg)',
+          transformOrigin: 'center center',
+        }}
+      />
+    </View>
+  )
+}
+
+function CheckShape({ size, color }: { size: number; color: string }) {
+  const stroke = Math.max(2, Math.round(size * 0.09))
+  return (
+    <View style={{ position: 'relative', width: `${size}px`, height: `${size}px` }}>
+      <View
+        style={{
+          position: 'absolute',
+          left: `${Math.round(size * 0.28)}px`,
+          top: `${Math.round(size * 0.55)}px`,
+          width: `${Math.round(size * 0.18)}px`,
+          height: `${stroke}px`,
+          borderRadius: '999px',
+          backgroundColor: color,
+          transform: 'rotate(45deg)',
+          transformOrigin: 'right center',
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          left: `${Math.round(size * 0.40)}px`,
+          top: `${Math.round(size * 0.50)}px`,
+          width: `${Math.round(size * 0.36)}px`,
+          height: `${stroke}px`,
+          borderRadius: '999px',
+          backgroundColor: color,
+          transform: 'rotate(-45deg)',
+          transformOrigin: 'left center',
+        }}
+      />
+    </View>
+  )
+}
+
 function IconShape({ name, size, color }: { name: IconName; size: number; color: string }) {
   switch (name) {
     case 'lock':
@@ -227,6 +295,10 @@ function IconShape({ name, size, color }: { name: IconName; size: number; color:
       return <SchoolShape size={size} color={color} />
     case 'spark':
       return <SparkShape size={size} color={color} />
+    case 'edit-pencil':
+      return <EditPencilShape size={size} color={color} />
+    case 'check':
+      return <CheckShape size={size} color={color} />
     default:
       return <SparkShape size={size} color={color} />
   }
