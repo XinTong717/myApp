@@ -55,7 +55,7 @@ export type MarkerItem = {
 }
 
 export type UserRoleFilter = '全部' | '家长' | '教育者' | '同行者'
-export type ProfileCompletenessFilter = '全部' | '有简介' | '有联络说明'
+export type ProfileCompletenessFilter = '全部' | '有简介' | '有生态关系'
 
 export function normalizeRolesForDisplay(roles: string[] = []): string[] {
   return roles.map((role) => (role === '其他' ? '同行者' : role))
