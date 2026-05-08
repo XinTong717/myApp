@@ -90,7 +90,7 @@ function eventMatchesLocation(item: EventItemWithInterest, filter: string) {
 }
 
 function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
-  return <AppChip text={props.label} tone='action' size='md' selected={props.active} interactive onClick={props.onClick} />
+  return <AppChip text={props.label} tone='brand' size='md' selected={props.active} interactive onClick={props.onClick} />
 }
 
 export default function EventsPage() {
@@ -196,7 +196,7 @@ export default function EventsPage() {
       <AppPageHeader
         title='活动'
         description='可雀与自由学社的活动与社区计划。点进详情了解更多，也欢迎提交公开可参与的新活动。'
-        action={<AppMiniButton text='+ 推荐新活动' onClick={goToSubmit} />}
+        action={<AppMiniButton text='推荐新活动' onClick={goToSubmit} />}
       />
 
       <AppCard padding='12px'>
@@ -231,7 +231,7 @@ export default function EventsPage() {
           <AppCard key={item.id} onClick={() => goToDetail(item)}>
             <View className='app-list-card__header'>
               <View className='app-list-card__icon'><AppIcon name='calendar' size={42} backgroundColor={getEventIconBg(item.event_type)} bordered /></View>
-              <View className='app-flex-1'><Text className='text-section-title text-color-main'>{item.title}</Text></View>
+              <View className='app-flex-1'><Text className='text-card-title text-color-main'>{item.title}</Text></View>
             </View>
             <View className='app-list-card__tags'>
               <AppTag text={typeLabel} />
