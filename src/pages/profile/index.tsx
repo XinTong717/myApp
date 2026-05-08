@@ -8,7 +8,6 @@ import {
   CHILD_AGE_OPTIONS,
   CHILD_STATUS_OPTIONS,
 } from '../../constants/profile'
-import ProfileHeaderCard from '../../components/profile/ProfileHeaderCard'
 import ProfileAdminEntry from '../../components/profile/ProfileAdminEntry'
 import ProfilePrivacySection from '../../components/profile/ProfilePrivacySection'
 import ProfileBasicSection from '../../components/profile/ProfileBasicSection'
@@ -18,6 +17,8 @@ import ProfileCompanionSection from '../../components/profile/ProfileCompanionSe
 import ProfileBioSection from '../../components/profile/ProfileBioSection'
 import ProfileNoticeBox from '../../components/profile/ProfileNoticeBox'
 import ProfileSecondaryButton from '../../components/profile/ProfileSecondaryButton'
+import AppPage from '../../components/common/AppPage'
+import AppPageHeader from '../../components/common/AppPageHeader'
 import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import AppIcon from '../../components/common/AppIcon'
 import { palette } from '../../theme/palette'
@@ -235,12 +236,12 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: `${space(8)} ${space(5)}`, textAlign: 'center' }}><Text style={{ ...typography.body, color: palette.subtext }}>加载中...</Text></View>
+    return <AppPage style={{ paddingTop: space(8), textAlign: 'center' }}><Text style={{ ...typography.body, color: palette.subtext }}>加载中...</Text></AppPage>
   }
 
   return (
-    <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: `${space(4)} ${space(4)} 100px`, boxSizing: 'border-box' }}>
-      <ProfileHeaderCard />
+    <AppPage style={{ paddingBottom: '100px' }}>
+      <AppPageHeader title='我的' description='填写资料、设置成员目录可见性，并管理安全与隐私。' />
       <ProfileAdminEntry isAdmin={isAdmin} onOpen={openAdminReviewPage} />
       <StepTabs activeStep={activeStep} onChange={setActiveStep} />
 
@@ -268,6 +269,6 @@ export default function ProfilePage() {
       </>}
 
       <View style={{ marginBottom: space(5), alignItems: 'center' }}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}><Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>用户协议</Text><Text style={{ ...typography.caption, color: palette.subtext, marginLeft: space(2), marginRight: space(2) }}>·</Text><Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>隐私政策</Text></View></View>
-    </View>
+    </AppPage>
   )
 }
