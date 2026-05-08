@@ -31,6 +31,9 @@ type FocusField =
   | 'description'
   | ''
 
+type PickerMultiChangeEvent = { detail: { value: number[] } }
+type PickerColumnChangeEvent = { detail: { column: number; value: number } }
+
 function combineDateTime(date: string, time: string) {
   if (!date || !time) return ''
   return `${date}T${time}:00${CHINA_TIMEZONE_OFFSET}`
@@ -47,6 +50,16 @@ function setBeforeUnloadAlert(enabled: boolean, message: string) {
   } catch (err) {
     console.warn('setBeforeUnloadAlert skipped:', err)
   }
+}
+
+async function showSubmittedModal() {
+  await Taro.showModal({
+    title: '已进入审核',
+    content: '你的活动已提交到人工审核队列，通常不会立即展示。审核通过后才会出现在活动列表中。',
+    showCancel: false,
+    confirmText: '知道了',
+  })
+  Taro.navigateBack()
 }
 
 export default function SubmitEventPage() {
@@ -102,7 +115,7 @@ export default function SubmitEventPage() {
     return [provIdx, Math.max(0, cities.indexOf(normalizedCityOption))]
   }, [province, cityOption])
 
-  const handlePickerChange = (e: any) => {
+  const handlePickerChange = (e: PickerMultiChangeEvent) => {
     const [provIdx, cityIdx] = e.detail.value
     const nextProvince = PROVINCES[provIdx] || ''
     const cities = LOCATION_DATA[nextProvince] || []
@@ -112,7 +125,7 @@ export default function SubmitEventPage() {
     if (nextCityOption !== '其他') setCustomCity('')
   }
 
-  const handlePickerColumnChange = (e: any) => {
+  const handlePickerColumnChange = (e: PickerColumnChangeEvent) => {
     if (e.detail.column === 0) {
       const nextProvince = PROVINCES[e.detail.value] || ''
       const firstCity = (LOCATION_DATA[nextProvince] || [])[0] || ''
@@ -165,8 +178,7 @@ export default function SubmitEventPage() {
       if (result?.ok) {
         submittedRef.current = true
         setBeforeUnloadAlert(false, '')
-        Taro.showToast({ title: '提交成功', icon: 'success' })
-        setTimeout(() => Taro.navigateBack(), 700)
+        await showSubmittedModal()
       } else {
         Taro.showToast({ title: result?.message || '提交失败', icon: 'none' })
       }
@@ -200,7 +212,7 @@ export default function SubmitEventPage() {
         <SectionTitle text='开始时间' /><View style={{ display: 'flex', flexDirection: 'row', marginBottom: '12px' }}><Picker mode='date' value={startDate} onChange={(e) => setStartDate(e.detail.value)}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: startDate ? palette.text : palette.muted }}>{startDate || '选择日期'}</Text></FormInputBox></Picker><Picker mode='time' value={startTime} onChange={(e) => setStartTime(e.detail.value)}><View style={{ width: '120px', marginLeft: '8px' }}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: startTime ? palette.text : palette.muted }}>{startTime || '选择时间'}</Text></FormInputBox></View></Picker></View>
         <View style={{ marginTop: '-6px', marginBottom: '12px' }}><Text style={{ ...typography.micro, color: palette.muted }}>时间按中国标准时间 UTC+8 保存。</Text></View>
         <SectionTitle text='结束时间（选填）' /><View style={{ display: 'flex', flexDirection: 'row', marginBottom: '16px' }}><Picker mode='date' value={endDate} onChange={(e) => setEndDate(e.detail.value)}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: endDate ? palette.text : palette.muted }}>{endDate || '选择日期'}</Text></FormInputBox></Picker><Picker mode='time' value={endTime} onChange={(e) => setEndTime(e.detail.value)}><View style={{ width: '120px', marginLeft: '8px' }}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: endTime ? palette.text : palette.muted }}>{endTime || '选择时间'}</Text></FormInputBox></View></Picker></View>
-        <SectionTitle text='线上活动' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isOnline ? '是，主要在线上进行' : '否，主要在线下进行'}</Text><Switch checked={isOnline} color={palette.accentDeep} onChange={(e) => setIsOnline(!!e.detail.value)} /></View></FormInputBox>
+        <SectionTitle text='线上活动' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isOnline ? '是，主要在线上进行' : '否，主要线下进行'}</Text><Switch checked={isOnline} color={palette.accentDeep} onChange={(e) => setIsOnline(!!e.detail.value)} /></View></FormInputBox>
         <SectionTitle text={isOnline ? '平台 / 线上说明（选填）' : '地点说明（选填）'} /><FormInputBox focused={focusedField === 'location'}><Input value={location} placeholder={isOnline ? '例如：腾讯会议 / Zoom' : '例如：杭州西湖区某空间'} onFocus={() => setFocusedField('location')} onBlur={() => setFocusedField('')} onInput={(e) => setLocation(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
         <SectionTitle text='费用' /><SinglePillSelect options={FEE_OPTIONS} selected={fee} onChange={(value) => { setFee(value); if (value !== '付费') setFeeDetail('') }} />
         {fee === '付费' && <View style={{ marginBottom: '16px' }}><View style={{ marginBottom: '6px' }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充费用说明，例如：单次 49 元 / 四次 199 元。</Text></View><FormInputBox focused={focusedField === 'feeDetail'} marginBottom='0'><Input value={feeDetail} placeholder='例如：单次 49 元' onFocus={() => setFocusedField('feeDetail')} onBlur={() => setFocusedField('')} onInput={(e) => setFeeDetail(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}

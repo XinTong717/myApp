@@ -100,7 +100,6 @@ export type ContactInfoResult = CloudResponse<{
   }
   needCompleteProfile?: boolean
   privateContactRequiresProfile?: boolean
-  privateContactRequiresInterest?: boolean
 }>
 
 export type EventInterestInfoResult = CloudResponse<{

@@ -5,7 +5,9 @@ import { clearMapUsersCache } from './map'
 import { STORAGE_FLAGS } from '../constants/storageFlags'
 import type {
   AdminAccessResult,
+  CloudResponse,
   GetMeResult,
+  GetMyRequestsResult,
   SafetyOverviewResult,
   SimpleActionResult,
   UpdatePrivacySettingsResult,
@@ -23,6 +25,19 @@ const ADMIN_ACCESS_TTL_MS = 24 * 60 * 60 * 1000
 type ProfilePayload = { profile?: UserProfile | null }
 type SafetyOverviewPayload = Pick<SafetyOverviewResult, 'blocked' | 'muted'>
 type AdminAccessPayload = Pick<AdminAccessResult, 'isAdmin' | 'admin'>
+type BootstrapPart<T> = {
+  ok: boolean
+  data?: T | null
+  code?: string
+  message?: string
+}
+export type ProfileBootstrapResult = CloudResponse<{
+  profile?: BootstrapPart<GetMeResult>
+  pendingRequests?: BootstrapPart<GetMyRequestsResult>
+  safetyOverview?: BootstrapPart<SafetyOverviewResult>
+  adminAccess?: BootstrapPart<AdminAccessResult>
+  legalConsent?: BootstrapPart<Record<string, unknown>>
+}>
 
 function okProfile(payload: ProfilePayload, meta: { stale?: boolean } = {}): GetMeResult {
   return { ok: true, profile: payload.profile || null, ...(meta.stale ? { stale: true } : {}) }
@@ -54,6 +69,21 @@ export async function clearSafetyOverviewCache() {
 
 export async function clearAdminAccessCache() {
   await clearScopedCachedValue(ADMIN_ACCESS_CACHE_KEY)
+}
+
+export async function getProfileBootstrap() {
+  const result = await callCloud<ProfileBootstrapResult>('getProfileBootstrap')
+  const profileData = result.profile?.ok ? result.profile.data : null
+  const safetyData = result.safetyOverview?.ok ? result.safetyOverview.data : null
+  const adminData = result.adminAccess?.ok ? result.adminAccess.data : null
+
+  await Promise.all([
+    profileData?.ok ? setScopedCachedValue(PROFILE_CACHE_KEY, { profile: profileData.profile || null }, PROFILE_TTL_MS) : Promise.resolve(),
+    safetyData?.ok ? setScopedCachedValue(SAFETY_OVERVIEW_CACHE_KEY, { blocked: safetyData.blocked || [], muted: safetyData.muted || [] }, SAFETY_OVERVIEW_TTL_MS) : Promise.resolve(),
+    adminData?.ok ? setScopedCachedValue(ADMIN_ACCESS_CACHE_KEY, { isAdmin: !!adminData.isAdmin, admin: adminData.admin }, ADMIN_ACCESS_TTL_MS) : Promise.resolve(),
+  ])
+
+  return result
 }
 
 export async function getMe(options: { forceRefresh?: boolean; allowStale?: boolean } = {}) {
