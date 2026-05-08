@@ -86,7 +86,8 @@ async function loadSafetyRelations(openid) {
 
 function toPublicUser(user, openid, requesterHasProfile) {
   const roles = normalizeRoles(user.roles)
-  const expanded = requesterHasProfile || user.openid === openid
+  const isSelf = user.openid === openid
+  const expanded = isSelf || (requesterHasProfile && user.allowIncomingRequests !== false)
   const payload = {
     _id: user._id,
     displayName: user.displayName,
@@ -96,7 +97,7 @@ function toPublicUser(user, openid, requesterHasProfile) {
     bio: user.bio,
     companionContext: user.companionContext || '',
     hasExpandedProfile: expanded,
-    isSelf: user.openid === openid,
+    isSelf,
   }
 
   if (!expanded) return payload
@@ -204,10 +205,11 @@ async function getMapUsers(event, wxContext) {
   const pageLimit = normalizeLimit(event.limit)
 
   try {
-    const [mySafetyRes, blockedByRes, requesterProfile] = await Promise.all([
-      ...await loadSafetyRelations(openid),
+    const [safetyResults, requesterProfile] = await Promise.all([
+      loadSafetyRelations(openid),
       loadRequesterProfile(openid),
     ])
+    const [mySafetyRes, blockedByRes] = safetyResults
     const requesterHasProfile = hasCompletedProfile(requesterProfile)
 
     if (!province) {
@@ -228,7 +230,7 @@ async function getMapUsers(event, wxContext) {
         displayName: _.neq(''),
         isVisibleOnMap: _.neq(false),
       })
-      .field({ displayName: true, roles: true, province: true, city: true, bio: true, companionContext: true, openid: true, contactId: true, contactNote: true, wechatId: true, childAgeRange: true, childDropoutStatus: true, childInterests: true, eduServices: true })
+      .field({ displayName: true, roles: true, province: true, city: true, bio: true, companionContext: true, openid: true, allowIncomingRequests: true, contactId: true, contactNote: true, wechatId: true, childAgeRange: true, childDropoutStatus: true, childInterests: true, eduServices: true })
       .skip(offset)
       .limit(pageLimit + 1)
       .get()
