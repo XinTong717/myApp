@@ -1,6 +1,7 @@
 const { ok, fail, resolveRequestId } = require('./lib/response')
 const { cloud } = require('./lib/cloud')
 const { rateLimit } = require('./lib/rateLimit')
+const filterOptionHandlers = require('./handlers/filterOptions')
 const publicHandlers = require('./handlers/public')
 const eventContactHandlers = require('./handlers/eventContact')
 const userHandlers = require('./handlers/userProfile')
@@ -92,6 +93,7 @@ async function getProfileBootstrap(event, wxContext) {
 }
 
 const publicActionHandlers = {
+  ...filterOptionHandlers,
   ...legalConsentHandlers,
   ...publicHandlers,
   ...eventContactHandlers,

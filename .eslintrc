@@ -2,6 +2,17 @@
   "extends": ["taro/react"],
   "rules": {
     "react/jsx-uses-react": "off",
-    "react/react-in-jsx-scope": "off"
+    "react/react-in-jsx-scope": "off",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "JSXAttribute[name.name='style'] ObjectExpression > Property[key.name='fontSize']",
+        "message": "Do not use inline style={{ fontSize }}. Use typography tokens or .text-* classes."
+      },
+      {
+        "selector": "JSXAttribute[name.name='style'] ObjectExpression > Property[key.value='fontSize']",
+        "message": "Do not use inline style={{ fontSize }}. Use typography tokens or .text-* classes."
+      }
+    ]
   }
 }

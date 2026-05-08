@@ -19,7 +19,6 @@ import { exploreTheme } from './styles'
 import type {
   AppUser,
   MarkerItem,
-  ProfileCompletenessFilter,
   School,
   UserRoleFilter,
 } from './types'
@@ -30,6 +29,7 @@ import FilterSheet from './components/FilterSheet'
 import UserPopup from './components/UserPopup'
 import ClusterPopup from './components/ClusterPopup'
 import { buildExploreMarkers, shortName, uniqueSchoolsById } from './utils/markerBuilders'
+import { useExploreFilters } from './hooks/useExploreFilters'
 
 const markerSchoolIcon = '/assets/marker-school.png'
 const markerUserIcon = '/assets/marker-user.png'
@@ -74,11 +74,6 @@ export default function ExplorePage() {
   const [selectedCluster, setSelectedCluster] = useState<MarkerItem | null>(null)
   const [mapMountReady, setMapMountReady] = useState(false)
   const [isNavigatingAway, setIsNavigatingAway] = useState(false)
-  const [showUserFilterSheet, setShowUserFilterSheet] = useState(false)
-  const [selectedUserRole, setSelectedUserRole] = useState<UserRoleFilter>('全部')
-  const [selectedProfileCompleteness, setSelectedProfileCompleteness] = useState<ProfileCompletenessFilter>('全部')
-  const [selectedUserCity, setSelectedUserCity] = useState('全部')
-  const [selectedChildAgeRange, setSelectedChildAgeRange] = useState('全部')
   const [schoolsLoaded, setSchoolsLoaded] = useState(false)
   const [mapUsersLoadedKey, setMapUsersLoadedKey] = useState('')
   const loadSeqRef = useRef(0)
@@ -88,6 +83,23 @@ export default function ExplorePage() {
   const sendRequestLockRef = useRef(false)
   const reportLockRef = useRef(false)
   const blockLockRef = useRef(false)
+
+  const {
+    showUserFilterSheet,
+    setShowUserFilterSheet,
+    selectedUserRole,
+    setSelectedUserRole,
+    selectedProfileCompleteness,
+    setSelectedProfileCompleteness,
+    selectedUserCity,
+    setSelectedUserCity,
+    selectedChildAgeRange,
+    setSelectedChildAgeRange,
+    userCityOptions,
+    activeUserFilterCount,
+    resetUserFilters,
+    filteredAppUsersForMap,
+  } = useExploreFilters(appUsers, selectedProvince)
 
   const loadData = async (options: { forceRefreshMapUsers?: boolean; refreshSchools?: boolean } = {}) => {
     const requestSeq = loadSeqRef.current + 1
@@ -190,45 +202,6 @@ export default function ExplorePage() {
   }, [selectedProvince, selectedUserRole, selectedChildAgeRange])
 
   const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
-
-  const userCityOptions = useMemo(() => {
-    const citySet = new Set<string>()
-    appUsers.forEach((user) => {
-      if (selectedProvince && user.province !== selectedProvince) return
-      if (user.city) citySet.add(user.city)
-    })
-    return ['全部', ...Array.from(citySet).sort()]
-  }, [appUsers, selectedProvince])
-
-  const activeUserFilterCount = [
-    selectedUserRole !== '全部',
-    selectedProfileCompleteness !== '全部',
-    selectedUserCity !== '全部',
-    selectedUserRole === '家长' && selectedChildAgeRange !== '全部',
-  ].filter(Boolean).length
-
-  const resetUserFilters = () => {
-    setSelectedUserRole('全部')
-    setSelectedProfileCompleteness('全部')
-    setSelectedUserCity('全部')
-    setSelectedChildAgeRange('全部')
-  }
-
-  const applyClientUserFilters = (user: AppUser) => {
-    const roles = normalizeRolesForDisplay(user.roles || [])
-
-    if (selectedUserRole !== '全部' && !roles.includes(selectedUserRole)) return false
-    if (selectedProfileCompleteness === '有简介' && !String(user.bio || '').trim()) return false
-    if (selectedProfileCompleteness === '有联络说明' && !String(user.companionContext || '').trim()) return false
-    if (selectedUserCity !== '全部' && user.city !== selectedUserCity) return false
-
-    return true
-  }
-
-  const filteredAppUsersForMap = useMemo(
-    () => appUsers.filter((user) => applyClientUserFilters(user)),
-    [appUsers, selectedUserRole, selectedProfileCompleteness, selectedUserCity]
-  )
 
   const allMarkers = useMemo(() => buildExploreMarkers({
     schools,
@@ -351,7 +324,7 @@ export default function ExplorePage() {
             ? 'rgba(111,125,98,0.32)'
             : isSchoolCluster
               ? 'rgba(184,85,64,0.32)'
-              : '#FFFFFF',
+              : palette.card,
           bgColor: isUserCluster
             ? 'rgba(246,250,244,0.96)'
             : isSchoolCluster
@@ -512,17 +485,17 @@ export default function ExplorePage() {
     }
 
     if (item.type === 'user_cluster' && item.provinceStat) {
-        setSelectedUser(null)
-        setSelectedCluster(null)
-        setSelectedProvince(item.markerProv)
-        return
-      }
-      
-      if (item.type === 'user_cluster') {
-        setSelectedUser(null)
-        setSelectedCluster(item)
-        return
-      }
+      setSelectedUser(null)
+      setSelectedCluster(null)
+      setSelectedProvince(item.markerProv)
+      return
+    }
+    
+    if (item.type === 'user_cluster') {
+      setSelectedUser(null)
+      setSelectedCluster(item)
+      return
+    }
 
     setSelectedCluster(null)
     setSelectedUser(item)
@@ -575,7 +548,7 @@ export default function ExplorePage() {
             <View style={{ marginTop: space(1) }}><Text style={{ ...typography.caption, color: exploreTheme.subtext }}>让同城家庭和同路人发现你</Text></View>
           </View>
           <View style={{ padding: `${space(2)} ${space(3)}`, borderRadius: radius.pill, backgroundColor: palette.brand }}>
-            <Text style={{ ...typography.caption, color: '#FFF' }}>去填写</Text>
+            <Text style={{ ...typography.caption, color: palette.card }}>去填写</Text>
           </View>
         </View>
       )}
@@ -638,7 +611,7 @@ export default function ExplorePage() {
       />
 
       <View style={{ backgroundColor: exploreTheme.surface, padding: `${space(2)} ${space(4)}`, borderTop: `1px solid ${exploreTheme.border}` }}>
-        <Text style={{ fontSize: '13px', lineHeight: '18px', color: exploreTheme.muted }}>
+        <Text className='text-micro text-color-muted'>
           {hasUserClusters
             ? '近似坐标 · 点击聚合点位展开同城同路人 · 点击学校聚合点进入省份视图'
             : isDenseMap ? '近似坐标 · 全国视图会自动隐藏部分名称 · 点击标记查看详情' : '近似坐标 · 仅供浏览 · 点击标记或名称查看详情'}
