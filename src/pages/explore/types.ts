@@ -18,9 +18,14 @@ export type AppUser = {
   city?: string
   bio?: string
   companionContext?: string
+  contactId?: string
+  contactNote?: string
+  childAgeRange?: string[]
+  childDropoutStatus?: string[]
+  childInterests?: string
+  eduServices?: string
+  hasExpandedProfile?: boolean
   isSelf?: boolean
-  requestCooldownDays?: number
-  requestCooldownUntil?: string
 }
 
 export type MarkerItem = {
@@ -35,9 +40,14 @@ export type MarkerItem = {
   bio?: string
   roles?: string[]
   companionContext?: string
+  contactId?: string
+  contactNote?: string
+  childAgeRange?: string[]
+  childDropoutStatus?: string[]
+  childInterests?: string
+  eduServices?: string
+  hasExpandedProfile?: boolean
   isSelf?: boolean
-  requestCooldownDays?: number
-  requestCooldownUntil?: string
   clusterUsers?: AppUser[]
   clusterSchools?: School[]
   schoolPointCount?: number
