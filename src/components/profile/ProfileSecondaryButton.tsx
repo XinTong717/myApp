@@ -17,6 +17,19 @@ export default function ProfileSecondaryButton({
   marginBottom = space(5),
 }: Props) {
   const [pressed, setPressed] = useState(false)
+  const buttonStyle = {
+    '--chip-padding': `${space(3)} ${space(4)}`,
+    '--chip-margin-right': '0',
+    '--chip-margin-bottom': marginBottom,
+    '--chip-bg': disabled ? palette.surfaceSoft : pressed ? palette.activeBg : palette.card,
+    '--chip-border': pressed ? palette.focus : palette.line,
+    '--chip-shadow': pressed ? elevation.pressed : 'none',
+    '--chip-transform': pressed ? 'scale(0.99)' : 'scale(1)',
+    width: '100%',
+    borderRadius: radius.pill,
+    justifyContent: 'center',
+    opacity: disabled ? 0.76 : 1,
+  } as Record<string, string | number>
 
   return (
     <View
@@ -25,19 +38,7 @@ export default function ProfileSecondaryButton({
       onTouchCancel={() => setPressed(false)}
       onClick={disabled ? undefined : onClick}
       className='app-chip'
-      style={{
-        '--chip-padding': `${space(3)} ${space(4)}`,
-        '--chip-margin-right': '0',
-        '--chip-margin-bottom': marginBottom,
-        '--chip-bg': disabled ? palette.surfaceSoft : pressed ? palette.activeBg : palette.card,
-        '--chip-border': pressed ? palette.focus : palette.line,
-        '--chip-shadow': pressed ? elevation.pressed : 'none',
-        '--chip-transform': pressed ? 'scale(0.99)' : 'scale(1)',
-        width: '100%',
-        borderRadius: radius.pill,
-        justifyContent: 'center',
-        opacity: disabled ? 0.76 : 1,
-      }}
+      style={buttonStyle}
     >
       <Text className={disabled ? 'text-body-strong text-color-muted' : 'text-body-strong text-color-brand'}>
         {text}
