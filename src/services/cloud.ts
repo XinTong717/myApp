@@ -9,6 +9,7 @@ let lastConsentRedirectAt = 0
 
 const PUBLIC_ACTIONS = [
   'getOpenId',
+  'getFilterOptions',
   'getSchools',
   'getSchoolMarkers',
   'getSchoolDetail',
