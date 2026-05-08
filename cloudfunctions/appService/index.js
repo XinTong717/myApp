@@ -27,8 +27,6 @@ const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
 
 const CONSENT_REQUIRED_ACTIONS = new Set([
   'saveProfile',
-  'updatePrivacySettings',
-  'requestAccountDeletion',
   'submitEvent',
   'submitCommunity',
   'submitCorrection',
@@ -48,6 +46,51 @@ async function getOpenId(event, wxContext) {
   })
 }
 
+function toBootstrapPart(settled) {
+  if (settled.status === 'fulfilled') {
+    const value = settled.value || {}
+    return {
+      ok: value.ok !== false,
+      data: value,
+      code: value.code || '',
+      message: value.message || '',
+    }
+  }
+
+  return {
+    ok: false,
+    data: null,
+    code: 'BOOTSTRAP_PART_FAILED',
+    message: '该模块加载失败，可稍后重试',
+  }
+}
+
+async function getProfileBootstrap(event, wxContext) {
+  const requestId = resolveRequestId('profile-bootstrap', event)
+  const pendingEvent = {
+    ...event,
+    section: 'pending',
+    offset: 0,
+    limit: Number(event.limit || 50),
+  }
+
+  const [profile, pendingRequests, safetyOverview, adminAccess, legalConsent] = await Promise.allSettled([
+    userHandlers.getMe(event, wxContext),
+    requestHandlers.getMyRequests(pendingEvent, wxContext),
+    userHandlers.getSafetyOverview(event, wxContext),
+    adminHandlers.checkAdminAccess(event, wxContext),
+    legalConsentHandlers.getLegalConsentStatus(event, wxContext),
+  ])
+
+  return ok(requestId, {
+    profile: toBootstrapPart(profile),
+    pendingRequests: toBootstrapPart(pendingRequests),
+    safetyOverview: toBootstrapPart(safetyOverview),
+    adminAccess: toBootstrapPart(adminAccess),
+    legalConsent: toBootstrapPart(legalConsent),
+  })
+}
+
 const publicActionHandlers = {
   ...legalConsentHandlers,
   ...publicHandlers,
@@ -56,6 +99,7 @@ const publicActionHandlers = {
 }
 
 const userActionHandlers = {
+  getProfileBootstrap,
   ...userHandlers,
   ...requestHandlers,
 }
