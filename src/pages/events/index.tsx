@@ -4,7 +4,6 @@ import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimel
 import { getEvents } from '../../services/event'
 import { getFilterOptions, type AppFilterOptions } from '../../services/filterOptions'
 import { setDetailPreview } from '../../services/detailPreview'
-import { palette } from '../../theme/palette'
 import AppPage from '../../components/common/AppPage'
 import AppPageHeader from '../../components/common/AppPageHeader'
 import AppMiniButton from '../../components/common/AppMiniButton'
