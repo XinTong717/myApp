@@ -1,4 +1,5 @@
-import { View, Text } from '@tarojs/components'
+import { Text } from '@tarojs/components'
+import AppCard from '../common/AppCard'
 import { palette } from '../../theme/palette'
 import { space } from '../../theme/spacing'
 
@@ -10,16 +11,16 @@ type Props = {
 
 export default function ProfileNoticeBox({ text, dashed = true, marginBottom = space(3) }: Props) {
   return (
-    <View
-      style={{
-        backgroundColor: '#FFFDF9',
-        borderRadius: '16px',
-        padding: `${space(3)} 14px`,
-        marginBottom,
-        border: dashed ? `1px dashed ${palette.line}` : `1px solid ${palette.line}`,
-      }}
+    <AppCard
+      backgroundColor={palette.cardSoft}
+      radius='16px'
+      padding={`${space(3)} 14px`}
+      marginBottom={marginBottom}
+      borderColor={palette.line}
+      dashed={dashed}
+      flat
     >
-      <Text style={{ fontSize: '12px', color: palette.subtext, lineHeight: '18px' }}>{text}</Text>
-    </View>
+      <Text className='text-micro text-color-sub'>{text}</Text>
+    </AppCard>
   )
 }
