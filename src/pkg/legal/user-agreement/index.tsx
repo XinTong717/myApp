@@ -1,7 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import AppPage from '../../../components/common/AppPage'
 import AppCard from '../../../components/common/AppCard'
-import { palette } from '../../../theme/palette'
 import { space } from '../../../theme/spacing'
 
 type SectionProps = { title: string; children: any }
