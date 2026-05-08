@@ -22,6 +22,7 @@ const PUBLIC_ACTIONS = [
   'toggleEventInterest',
   'getEventContactInfo',
   'getMe',
+  'getProfileBootstrap',
   'saveProfile',
   'updatePrivacySettings',
   'requestAccountDeletion',
