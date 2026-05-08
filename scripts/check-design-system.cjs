@@ -2,10 +2,14 @@
 
 const fs = require('fs')
 const path = require('path')
+const { execSync } = require('child_process')
 
 const repoRoot = path.resolve(__dirname, '..')
 const srcRoot = path.join(repoRoot, 'src')
+const DEFAULT_BASE_REF = process.env.DESIGN_SYSTEM_CHECK_BASE || 'origin/main'
 
+// Keep this narrow. Existing legacy files can be cleaned gradually; new or changed
+// files should not add raw color or typography drift.
 const ALLOWED_HEX = new Set([
   'src/app.config.ts',
   'src/theme/palette.ts',
@@ -28,7 +32,26 @@ function toRepoPath(filePath) {
   return path.relative(repoRoot, filePath).split(path.sep).join('/')
 }
 
-const files = walk(srcRoot).filter((file) => file.endsWith('.tsx') || file.endsWith('.ts'))
+function changedSourceFiles() {
+  try {
+    const output = execSync(`git diff --name-only ${DEFAULT_BASE_REF}...HEAD -- src`, {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    return output
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter((item) => item && (item.endsWith('.tsx') || item.endsWith('.ts')))
+      .map((item) => path.join(repoRoot, item))
+      .filter((item) => fs.existsSync(item))
+  } catch (err) {
+    console.warn(`[design-system] could not diff against ${DEFAULT_BASE_REF}; scanning all src files instead.`)
+    return walk(srcRoot).filter((file) => file.endsWith('.tsx') || file.endsWith('.ts'))
+  }
+}
+
+const files = changedSourceFiles()
 const violations = []
 const hexRe = /#[0-9A-Fa-f]{6}\b/g
 const fontSizeRe = /fontSize\s*:/g
@@ -54,10 +77,11 @@ for (const file of files) {
 if (violations.length > 0) {
   console.log('\nDesign system check failed')
   console.log('==========================')
+  console.log(`Checked ${files.length} changed source file(s) against ${DEFAULT_BASE_REF}.`)
   violations.slice(0, 120).forEach((item) => console.log(`- ${item}`))
   if (violations.length > 120) console.log(`...and ${violations.length - 120} more`)
   console.log('\nMove colors to palette/CSS vars and font sizes to typography/text classes, or add a narrow allowlist exception with a reason.')
   process.exit(1)
 }
 
-console.log('Design system check passed. 🎨')
+console.log(`Design system check passed for ${files.length} changed source file(s). 🎨`)
