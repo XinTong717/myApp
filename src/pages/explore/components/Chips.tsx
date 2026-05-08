@@ -11,7 +11,7 @@ function mapTone(tone: ExploreChipTone | undefined) {
 }
 
 export function FilterChip(props: { active: boolean; tone?: ExploreChipTone; text: string; onClick: () => void }) {
-  return <AppChip text={props.text} tone={mapTone(props.tone)} size='lg' selected={props.active} interactive onClick={props.onClick} />
+  return <AppChip text={props.text} tone={mapTone(props.tone)} size='md' selected={props.active} interactive onClick={props.onClick} />
 }
 
 export function ProvinceChip(props: { active: boolean; text: string; onClick: () => void }) {
