@@ -25,6 +25,8 @@ type Props = {
   setCustomCity: (value: string) => void
   contactId: string
   setContactId: (value: string) => void
+  contactNote: string
+  setContactNote: (value: string) => void
   pickerRange: string[][]
   pickerValue: number[]
   handlePickerChange: (e: PickerMultiChangeEvent) => void
@@ -34,7 +36,7 @@ type Props = {
   roleOptions: readonly string[]
 }
 
-type FocusField = 'displayName' | 'customCity' | 'contactId' | ''
+type FocusField = 'displayName' | 'customCity' | 'contactId' | 'contactNote' | ''
 
 export default function ProfileBasicSection(props: Props) {
   const {
@@ -53,6 +55,8 @@ export default function ProfileBasicSection(props: Props) {
     setCustomCity,
     contactId,
     setContactId,
+    contactNote,
+    setContactNote,
     pickerRange,
     pickerValue,
     handlePickerChange,
@@ -91,7 +95,7 @@ export default function ProfileBasicSection(props: Props) {
       <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
         <ProfileInputBox marginBottom={cityOption === '其他' ? '8px' : '12px'}>
           <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ ...typography.body, flex: 1, color: province ? palette.text : '#C5B5A5' }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text>
+            <Text style={{ ...typography.body, flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text>
             <Text style={{ ...typography.caption, color: palette.subtext }}>▼</Text>
           </View>
         </ProfileInputBox>
@@ -112,15 +116,28 @@ export default function ProfileBasicSection(props: Props) {
         </View>
       )}
 
-      <SectionTitle text='微信号（选填）' />
-      <ProfileHelperText text='可填写微信号、绑定手机号或 QQ。仅在你同意联络请求后向对方展示；不要填写孩子或第三方联系方式。' />
+      <SectionTitle text='公开渠道（选填）' />
+      <ProfileHelperText text='可填写个人微信、公众号、小红书、个人网站或公开邮箱。仅对已登录并完成个人资料的用户可见；不建议填写手机号，也不要填写孩子或第三方联系方式。' />
       <ProfileInputBox focused={focusedField === 'contactId'}>
         <Input
           value={contactId}
-          placeholder='例如：你的微信号 / 绑定手机号 / QQ'
+          placeholder='例如：微信号 / 公众号 / 小红书 / 网站 / 邮箱'
           onFocus={() => setFocusedField('contactId')}
           onBlur={() => setFocusedField('')}
           onInput={(e) => setContactId(e.detail.value)}
+          style={{ ...typography.body, color: palette.text }}
+        />
+      </ProfileInputBox>
+
+      <SectionTitle text='添加备注说明（选填）' />
+      <ProfileHelperText text='例如：添加微信时请备注“可雀”；或说明更推荐通过公众号/邮箱联系。' />
+      <ProfileInputBox focused={focusedField === 'contactNote'}>
+        <Input
+          value={contactNote}
+          placeholder='例如：添加时请备注“可雀”'
+          onFocus={() => setFocusedField('contactNote')}
+          onBlur={() => setFocusedField('')}
+          onInput={(e) => setContactNote(e.detail.value)}
           style={{ ...typography.body, color: palette.text }}
         />
       </ProfileInputBox>
