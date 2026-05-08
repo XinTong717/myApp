@@ -17,8 +17,9 @@ export default function ProfileNoticeBox({ text, dashed = true, marginBottom = s
       padding={`${space(3)} 14px`}
       marginBottom={marginBottom}
       borderColor={palette.line}
-      dashed={dashed}
-      flat
+      border
+      elevationLevel='none'
+      style={dashed ? { borderStyle: 'dashed' } : undefined}
     >
       <Text className='text-micro text-color-sub'>{text}</Text>
     </AppCard>
