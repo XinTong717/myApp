@@ -121,6 +121,7 @@ export type UserProfile = {
   province?: string
   city?: string
   contactId?: string
+  contactNote?: string
   allowIncomingRequests?: boolean
   isVisibleOnMap?: boolean
   childAgeRange?: string[]
@@ -173,9 +174,14 @@ export type MapUser = {
   city?: string
   bio?: string
   companionContext?: string
+  contactId?: string
+  contactNote?: string
+  childAgeRange?: string[]
+  childDropoutStatus?: string[]
+  childInterests?: string
+  eduServices?: string
+  hasExpandedProfile?: boolean
   isSelf?: boolean
-  requestCooldownDays?: number
-  requestCooldownUntil?: string
 }
 
 export type MapProvinceStat = {
