@@ -46,6 +46,7 @@ function normalizeProfile(profile) {
     province: String(profile.province || '').trim(),
     city: String(profile.city || '').trim(),
     contactId: String(profile.contactId || profile.wechatId || '').trim(),
+    contactNote: String(profile.contactNote || '').trim(),
     allowIncomingRequests: profile.allowIncomingRequests !== false,
     isVisibleOnMap: profile.isVisibleOnMap !== false,
     childAgeRange: normalizeStringArray(profile.childAgeRange).filter((item) => CHILD_AGE_WHITELIST.includes(item)),

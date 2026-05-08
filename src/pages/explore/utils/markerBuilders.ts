@@ -165,9 +165,14 @@ function buildUserMarker(user: AppUser, props: Pick<MarkerItem, 'id' | 'latitude
     bio: user.bio,
     roles: normalizeRolesForDisplay(user.roles || []),
     companionContext: user.companionContext || '',
+    contactId: user.contactId || '',
+    contactNote: user.contactNote || '',
+    childAgeRange: user.childAgeRange || [],
+    childDropoutStatus: user.childDropoutStatus || [],
+    childInterests: user.childInterests || '',
+    eduServices: user.eduServices || '',
+    hasExpandedProfile: !!user.hasExpandedProfile,
     isSelf: !!user.isSelf,
-    requestCooldownDays: user.requestCooldownDays || 0,
-    requestCooldownUntil: user.requestCooldownUntil || '',
   }
 }
 

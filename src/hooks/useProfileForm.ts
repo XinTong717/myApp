@@ -31,6 +31,7 @@ type ProfileDraft = {
   cityOption: string
   customCity: string
   contactId: string
+  contactNote: string
   childAgeRange: string[]
   childDropoutStatus: string[]
   childInterests: string
@@ -43,7 +44,7 @@ function hasDraftContent(draft: Partial<ProfileDraft> | null) {
   if (!draft) return false
   return !!(
     draft.displayName || draft.gender || draft.ageRange || draft.province || draft.cityOption || draft.customCity ||
-    draft.contactId || draft.childInterests || draft.eduServices || draft.companionContext || draft.bio ||
+    draft.contactId || draft.contactNote || draft.childInterests || draft.eduServices || draft.companionContext || draft.bio ||
     (Array.isArray(draft.roles) && draft.roles.length > 0) ||
     (Array.isArray(draft.childAgeRange) && draft.childAgeRange.length > 0) ||
     (Array.isArray(draft.childDropoutStatus) && draft.childDropoutStatus.length > 0)
@@ -66,6 +67,7 @@ export function useProfileForm() {
   const [cityOption, setCityOption] = useState('')
   const [customCity, setCustomCity] = useState('')
   const [contactId, setContactId] = useState('')
+  const [contactNote, setContactNote] = useState('')
   const [allowIncomingRequests, setAllowIncomingRequests] = useState(true)
   const [isVisibleOnMap, setIsVisibleOnMap] = useState(true)
 
@@ -91,6 +93,7 @@ export function useProfileForm() {
     setCityOption(draft.cityOption || '')
     setCustomCity(draft.customCity || '')
     setContactId(draft.contactId || '')
+    setContactNote(draft.contactNote || '')
     setChildAgeRange(Array.isArray(draft.childAgeRange) ? draft.childAgeRange : [])
     setChildDropoutStatus(Array.isArray(draft.childDropoutStatus) ? draft.childDropoutStatus : [])
     setChildInterests(draft.childInterests || '')
@@ -121,6 +124,7 @@ export function useProfileForm() {
     }
 
     setContactId(p.contactId || '')
+    setContactNote(p.contactNote || '')
     setAllowIncomingRequests(p.allowIncomingRequests !== false)
     setIsVisibleOnMap(p.isVisibleOnMap !== false)
     setChildAgeRange(Array.isArray(p.childAgeRange) ? p.childAgeRange : [])
@@ -212,6 +216,7 @@ export function useProfileForm() {
         cityOption,
         customCity,
         contactId,
+        contactNote,
         childAgeRange,
         childDropoutStatus,
         childInterests,
@@ -227,7 +232,7 @@ export function useProfileForm() {
     }, PROFILE_DRAFT_DEBOUNCE_MS)
 
     return () => clearTimeout(timer)
-  }, [displayName, gender, ageRange, roles, province, cityOption, customCity, contactId, childAgeRange, childDropoutStatus, childInterests, eduServices, companionContext, bio, saving])
+  }, [displayName, gender, ageRange, roles, province, cityOption, customCity, contactId, contactNote, childAgeRange, childDropoutStatus, childInterests, eduServices, companionContext, bio, saving])
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -252,6 +257,7 @@ export function useProfileForm() {
         province,
         city: currentCity,
         contactId: contactId.trim(),
+        contactNote: contactNote.trim(),
         allowIncomingRequests,
         isVisibleOnMap,
         childAgeRange: isParent ? childAgeRange : [],
@@ -344,6 +350,8 @@ export function useProfileForm() {
     setCustomCity,
     contactId,
     setContactId,
+    contactNote,
+    setContactNote,
     allowIncomingRequests,
     isVisibleOnMap,
     childAgeRange,

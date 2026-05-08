@@ -1,12 +1,11 @@
 const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
-const { normalizeRoles } = require('../lib/normalize')
+const { normalizeRoles, normalizeStringArray } = require('../lib/normalize')
 
 const $ = db.command.aggregate
 const MAP_USERS_PROVINCE_LIMIT = 300
 const MAP_USERS_SUMMARY_SCAN_LIMIT = 1000
 const MAP_USERS_MAX_PAGE_LIMIT = 300
-const REJECTED_REQUEST_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
 function normalizeProvince(value) {
   return String(value || '').trim()
@@ -38,6 +37,10 @@ function matchesChildAgeRange(user, childAgeRange) {
   if (!childAgeRange || childAgeRange === '全部') return true
   const ranges = Array.isArray(user.childAgeRange) ? user.childAgeRange : []
   return ranges.includes(childAgeRange)
+}
+
+function hasCompletedProfile(user) {
+  return !!(user && user.displayName && user.province && user.city)
 }
 
 function buildHiddenSets(openid, mySafetyRes, blockedByRes) {
@@ -81,55 +84,47 @@ async function loadSafetyRelations(openid) {
   ])
 }
 
-function getCooldownInfo(record) {
-  if (!record) return { requestCooldownDays: 0, requestCooldownUntil: '' }
-  const ts = new Date(record.respondedAt || record.updatedAt || '').getTime()
-  if (!Number.isFinite(ts)) return { requestCooldownDays: 0, requestCooldownUntil: '' }
-  const untilMs = ts + REJECTED_REQUEST_COOLDOWN_MS
-  const remainingMs = untilMs - Date.now()
-  if (remainingMs <= 0) return { requestCooldownDays: 0, requestCooldownUntil: '' }
-  return {
-    requestCooldownDays: Math.ceil(remainingMs / (24 * 60 * 60 * 1000)),
-    requestCooldownUntil: new Date(untilMs).toISOString(),
-  }
-}
-
-async function loadRejectedCooldownMap(openid, targetOpenids) {
-  const uniqueTargets = Array.from(new Set((targetOpenids || []).filter((item) => item && item !== openid)))
-  if (!openid || uniqueTargets.length === 0) return new Map()
-
-  const rows = []
-  for (let i = 0; i < uniqueTargets.length; i += 20) {
-    const chunk = uniqueTargets.slice(i, i + 20)
-    const res = await db.collection('connections')
-      .where({ fromOpenid: openid, toOpenid: _.in(chunk), status: 'rejected' })
-      .field({ toOpenid: true, respondedAt: true, updatedAt: true })
-      .limit(chunk.length)
-      .get()
-    rows.push(...(res.data || []))
-  }
-
-  const map = new Map()
-  rows.forEach((record) => {
-    const info = getCooldownInfo(record)
-    if (info.requestCooldownDays > 0) map.set(record.toOpenid, info)
-  })
-  return map
-}
-
-function toPublicUser(user, openid, cooldownMap = new Map()) {
-  const cooldown = cooldownMap.get(user.openid) || { requestCooldownDays: 0, requestCooldownUntil: '' }
-  return {
+function toPublicUser(user, openid, requesterHasProfile) {
+  const roles = normalizeRoles(user.roles)
+  const isSelf = user.openid === openid
+  const expanded = isSelf || (requesterHasProfile && user.allowIncomingRequests !== false)
+  const payload = {
     _id: user._id,
     displayName: user.displayName,
-    roles: normalizeRoles(user.roles),
+    roles,
     province: user.province,
     city: user.city,
     bio: user.bio,
     companionContext: user.companionContext || '',
-    isSelf: user.openid === openid,
-    requestCooldownDays: cooldown.requestCooldownDays || 0,
-    requestCooldownUntil: cooldown.requestCooldownUntil || '',
+    hasExpandedProfile: expanded,
+    isSelf,
+  }
+
+  if (!expanded) return payload
+
+  return {
+    ...payload,
+    contactId: String(user.contactId || user.wechatId || '').trim(),
+    contactNote: String(user.contactNote || '').trim(),
+    childAgeRange: roles.includes('家长') ? normalizeStringArray(user.childAgeRange) : [],
+    childDropoutStatus: roles.includes('家长') ? normalizeStringArray(user.childDropoutStatus) : [],
+    childInterests: roles.includes('家长') ? String(user.childInterests || '').trim() : '',
+    eduServices: roles.includes('教育者') ? String(user.eduServices || '').trim() : '',
+  }
+}
+
+async function loadRequesterProfile(openid) {
+  if (!openid) return null
+  try {
+    const res = await db.collection('users')
+      .where({ openid })
+      .field({ displayName: true, province: true, city: true })
+      .limit(1)
+      .get()
+    return (res.data || [])[0] || null
+  } catch (err) {
+    console.warn('load requester profile degraded:', err)
+    return null
   }
 }
 
@@ -210,7 +205,12 @@ async function getMapUsers(event, wxContext) {
   const pageLimit = normalizeLimit(event.limit)
 
   try {
-    const [mySafetyRes, blockedByRes] = await loadSafetyRelations(openid)
+    const [safetyResults, requesterProfile] = await Promise.all([
+      loadSafetyRelations(openid),
+      loadRequesterProfile(openid),
+    ])
+    const [mySafetyRes, blockedByRes] = safetyResults
+    const requesterHasProfile = hasCompletedProfile(requesterProfile)
 
     if (!province) {
       const provinceStats = await getProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, blockedByRes })
@@ -230,7 +230,7 @@ async function getMapUsers(event, wxContext) {
         displayName: _.neq(''),
         isVisibleOnMap: _.neq(false),
       })
-      .field({ displayName: true, roles: true, province: true, city: true, bio: true, companionContext: true, openid: true, childAgeRange: true })
+      .field({ displayName: true, roles: true, province: true, city: true, bio: true, companionContext: true, openid: true, allowIncomingRequests: true, contactId: true, contactNote: true, wechatId: true, childAgeRange: true, childDropoutStatus: true, childInterests: true, eduServices: true })
       .skip(offset)
       .limit(pageLimit + 1)
       .get()
@@ -243,8 +243,7 @@ async function getMapUsers(event, wxContext) {
       .filter((user) => matchesRole(user, role))
       .filter((user) => matchesChildAgeRange(user, childAgeRange))
 
-    const cooldownMap = await loadRejectedCooldownMap(openid, pageUsers.map((user) => user.openid))
-    const users = pageUsers.map((user) => toPublicUser(user, openid, cooldownMap))
+    const users = pageUsers.map((user) => toPublicUser(user, openid, requesterHasProfile))
 
     return ok(requestId, {
       users,

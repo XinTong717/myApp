@@ -1,5 +1,5 @@
-export const CURRENT_TERMS_VERSION = '2026-05-01'
-export const CURRENT_PRIVACY_VERSION = '2026-05-01'
+export const CURRENT_TERMS_VERSION = '2026-05-08'
+export const CURRENT_PRIVACY_VERSION = '2026-05-08'
 
 export const LEGAL_CONSENT_STORAGE_KEY = 'legal-consent:v1'
 

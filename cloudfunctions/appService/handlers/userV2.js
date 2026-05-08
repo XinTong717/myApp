@@ -28,19 +28,11 @@ function buildSafetyDocId(ownerOpenid, targetOpenid) {
   return `safety_${ownerOpenid}_${targetOpenid}`
 }
 
-function validateSearchableContactId(value) {
+function validatePublicContactChannel(value) {
   const text = String(value || '').trim()
   if (!text) return ''
-  if (text.length < 5 || text.length > 50) return '请输入可被搜索到的微信号、绑定手机号或QQ号'
-  if (/\s/.test(text)) return '请输入可被搜索到的微信号、绑定手机号或QQ号'
-
-  const isWechatId = /^[a-zA-Z][-_a-zA-Z0-9]{4,49}$/.test(text)
-  const isMainlandPhone = /^1[3-9]\d{9}$/.test(text)
-  const isQQ = /^[1-9]\d{4,11}$/.test(text)
-
-  if (!isWechatId && !isMainlandPhone && !isQQ) {
-    return '请输入可被搜索到的微信号、绑定手机号或QQ号'
-  }
+  if (text.length > 120) return '公开渠道不能超过120字'
+  if (/\b(?:https?:\/\/)?(?:t\.me|telegram\.me|wa\.me)\b/i.test(text)) return '暂不支持填写境外即时通讯链接'
   return ''
 }
 
@@ -66,7 +58,7 @@ async function getMe(event, wxContext) {
 async function saveProfile(event, wxContext) {
   const requestId = resolveRequestId('save-profile', event)
   const openid = wxContext.OPENID
-  const ALLOWED_FIELDS = ['displayName', 'gender', 'ageRange', 'roles', 'province', 'city', 'contactId', 'childAgeRange', 'childDropoutStatus', 'childInterests', 'eduServices', 'bio', 'companionContext', 'allowIncomingRequests', 'isVisibleOnMap']
+  const ALLOWED_FIELDS = ['displayName', 'gender', 'ageRange', 'roles', 'province', 'city', 'contactId', 'contactNote', 'childAgeRange', 'childDropoutStatus', 'childInterests', 'eduServices', 'bio', 'companionContext', 'allowIncomingRequests', 'isVisibleOnMap']
   const BOOLEAN_FIELDS = ['allowIncomingRequests', 'isVisibleOnMap']
   const ARRAY_FIELDS = ['roles', 'childAgeRange', 'childDropoutStatus']
   const GENDER_WHITELIST = ['男', '女', '其他', '不想说']
@@ -103,10 +95,11 @@ async function saveProfile(event, wxContext) {
     validateLength('简介', cleanData.bio, 200) ||
     validateLength('和生态的关系', cleanData.companionContext, 150) ||
     validateLength('家庭教育关注说明', cleanData.childInterests, 300) ||
-    validateLength('教育服务', cleanData.eduServices, 500)
+    validateLength('教育服务', cleanData.eduServices, 500) ||
+    validateLength('添加备注说明', cleanData.contactNote, 120)
   if (lengthError) return fail(requestId, 'INVALID_LENGTH', lengthError)
 
-  const contactError = validateSearchableContactId(cleanData.contactId)
+  const contactError = validatePublicContactChannel(cleanData.contactId)
   if (contactError) return fail(requestId, 'INVALID_CONTACT_ID', contactError)
 
   if (!selectedRoles.includes('同行者')) cleanData.companionContext = ''
@@ -118,7 +111,7 @@ async function saveProfile(event, wxContext) {
   if (!selectedRoles.includes('教育者')) cleanData.eduServices = ''
 
   const securityResult = await runMsgSecCheck({
-    content: [cleanData.displayName, cleanData.bio, cleanData.childInterests, cleanData.eduServices, cleanData.companionContext].filter(Boolean).join('\n'),
+    content: [cleanData.displayName, cleanData.bio, cleanData.contactId, cleanData.contactNote, cleanData.childInterests, cleanData.eduServices, cleanData.companionContext].filter(Boolean).join('\n'),
     openid,
     scene: 1,
   })
@@ -214,6 +207,7 @@ async function requestAccountDeletion(event, wxContext) {
           ageRange: '',
           roles: [],
           contactId: '',
+          contactNote: '',
           bio: '',
           companionContext: '',
           childAgeRange: [],
@@ -229,7 +223,7 @@ async function requestAccountDeletion(event, wxContext) {
       })
     }
 
-    return ok(requestId, { message: '注销申请已提交。你的公开资料已先匿名化并从地图隐藏，联络标识已清空，新的联络请求也已暂停。' })
+    return ok(requestId, { message: '注销申请已提交。你的公开资料已先匿名化并从地图隐藏，公开渠道已清空。' })
   } catch (err) {
     console.error('appService requestAccountDeletion error:', err)
     return fail(requestId, 'REQUEST_ACCOUNT_DELETION_FAILED', '提交注销申请失败，请稍后重试')

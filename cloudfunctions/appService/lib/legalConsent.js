@@ -1,7 +1,7 @@
 const { db } = require('./cloud')
 
-const CURRENT_TERMS_VERSION = '2026-05-01'
-const CURRENT_PRIVACY_VERSION = '2026-05-01'
+const CURRENT_TERMS_VERSION = '2026-05-08'
+const CURRENT_PRIVACY_VERSION = '2026-05-08'
 const CONSENT_COLLECTION = 'user_consents'
 
 function normalizeServerDate(value) {

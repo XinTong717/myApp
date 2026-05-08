@@ -5,7 +5,6 @@ const filterOptionHandlers = require('./handlers/filterOptions')
 const publicHandlers = require('./handlers/public')
 const eventContactHandlers = require('./handlers/eventContact')
 const userHandlers = require('./handlers/userProfile')
-const requestHandlers = require('./handlers/requests')
 const mapUserHandlers = require('./handlers/mapUsers')
 const adminHandlers = require('./handlers/admin')
 const adminPublishHandlers = require('./handlers/adminPublish')
@@ -18,7 +17,6 @@ const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
   'submitEvent',
   'submitCommunity',
   'submitCorrection',
-  'sendRequest',
   'reportUser',
   'toggleEventInterest',
   'getEventContactInfo',
@@ -31,9 +29,6 @@ const CONSENT_REQUIRED_ACTIONS = new Set([
   'submitEvent',
   'submitCommunity',
   'submitCorrection',
-  'sendRequest',
-  'respondRequest',
-  'manageConnection',
   'manageSafetyRelation',
   'reportUser',
   'toggleEventInterest',
@@ -68,16 +63,9 @@ function toBootstrapPart(settled) {
 
 async function getProfileBootstrap(event, wxContext) {
   const requestId = resolveRequestId('profile-bootstrap', event)
-  const pendingEvent = {
-    ...event,
-    section: 'pending',
-    offset: 0,
-    limit: Number(event.limit || 50),
-  }
 
-  const [profile, pendingRequests, safetyOverview, adminAccess, legalConsent] = await Promise.allSettled([
+  const [profile, safetyOverview, adminAccess, legalConsent] = await Promise.allSettled([
     userHandlers.getMe(event, wxContext),
-    requestHandlers.getMyRequests(pendingEvent, wxContext),
     userHandlers.getSafetyOverview(event, wxContext),
     adminHandlers.checkAdminAccess(event, wxContext),
     legalConsentHandlers.getLegalConsentStatus(event, wxContext),
@@ -85,7 +73,6 @@ async function getProfileBootstrap(event, wxContext) {
 
   return ok(requestId, {
     profile: toBootstrapPart(profile),
-    pendingRequests: toBootstrapPart(pendingRequests),
     safetyOverview: toBootstrapPart(safetyOverview),
     adminAccess: toBootstrapPart(adminAccess),
     legalConsent: toBootstrapPart(legalConsent),
@@ -102,8 +89,13 @@ const publicActionHandlers = {
 
 const userActionHandlers = {
   getProfileBootstrap,
-  ...userHandlers,
-  ...requestHandlers,
+  getMe: userHandlers.getMe,
+  saveProfile: userHandlers.saveProfile,
+  updatePrivacySettings: userHandlers.updatePrivacySettings,
+  requestAccountDeletion: userHandlers.requestAccountDeletion,
+  getSafetyOverview: userHandlers.getSafetyOverview,
+  manageSafetyRelation: userHandlers.manageSafetyRelation,
+  reportUser: userHandlers.reportUser,
 }
 
 const adminActionHandlers = {
@@ -111,9 +103,8 @@ const adminActionHandlers = {
   ...adminPublishHandlers,
 }
 
-// Operational / migration actions are intentionally not registered in appService.
-// Keep public user traffic and maintenance endpoints separated; run maintenance
-// from CloudBase console or a dedicated ops-only function when needed.
+// Person-to-person request actions are intentionally not registered in the audit build.
+// Keep member discovery as a one-way public directory, not an in-app matching flow.
 const actionHandlers = {
   getOpenId,
   ...publicActionHandlers,

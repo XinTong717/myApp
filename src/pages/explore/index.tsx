@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { REPORT_CODE_MESSAGES, REQUEST_CODE_MESSAGES, SAFETY_CODE_MESSAGES } from '../../constants/cloudMessages'
+import { REPORT_CODE_MESSAGES, SAFETY_CODE_MESSAGES } from '../../constants/cloudMessages'
 import { getSchoolMarkers } from '../../services/school'
 import { getMe } from '../../services/profile'
 import { clearMapUsersCache, getMapUsers } from '../../services/map'
 import { setDetailPreview } from '../../services/detailPreview'
 import { STORAGE_FLAGS } from '../../constants/storageFlags'
 import type { MapProvinceStat } from '../../types/domain'
-import { sendRequest } from '../../services/connection'
 import { manageSafetyRelation, reportUser } from '../../services/safety'
 import { REPORT_REASON_OPTIONS } from '../../constants/safety'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
@@ -80,7 +79,6 @@ export default function ExplorePage() {
   const hasLoadedOnceRef = useRef(false)
   const isFirstRunRef = useRef(true)
   const lastAutoRefreshAtRef = useRef(0)
-  const sendRequestLockRef = useRef(false)
   const reportLockRef = useRef(false)
   const blockLockRef = useRef(false)
 
@@ -419,7 +417,7 @@ export default function ExplorePage() {
 
     const confirm = await Taro.showModal({
       title: '确认拉黑',
-      content: '拉黑后，你将不再看到对方，且当前待处理或已建立的联络都会断开。',
+      content: '拉黑后，你将不再看到这位用户。',
       confirmText: '确认拉黑',
       cancelText: '取消',
     })
@@ -441,26 +439,6 @@ export default function ExplorePage() {
       Taro.showToast({ title: '操作失败', icon: 'none' })
     } finally {
       blockLockRef.current = false
-    }
-  }
-
-  const sendRequestToUser = async (targetUserId: string) => {
-    if (sendRequestLockRef.current) return
-
-    try {
-      sendRequestLockRef.current = true
-      Taro.showLoading({ title: '发送中...' })
-      const result = await sendRequest(targetUserId)
-      Taro.hideLoading()
-      const message = resolveCloudMessage(result, REQUEST_CODE_MESSAGES, result?.ok ? '请求已发送' : '发送失败')
-      Taro.showToast({ title: message, icon: result?.ok ? 'success' : 'none' })
-      if (result?.ok) closePopup()
-      else logCloudFailure('sendRequestFromExplore', result)
-    } catch (err) {
-      Taro.hideLoading()
-      Taro.showToast({ title: '发送失败，请稍后重试', icon: 'none' })
-    } finally {
-      sendRequestLockRef.current = false
     }
   }
 
@@ -505,9 +483,7 @@ export default function ExplorePage() {
     if (!selectedUser) return
     if (selectedUser.isSelf || !hasProfile) {
       navigateToProfileSafely()
-      return
     }
-    await sendRequestToUser(String(selectedUser.originalId))
   }
 
   function getMarkerIdFromMapEvent(e: any): number {
@@ -535,6 +511,13 @@ export default function ExplorePage() {
       bio: user.bio,
       roles: normalizeRolesForDisplay(user.roles || []),
       companionContext: user.companionContext || '',
+      contactId: user.contactId || '',
+      contactNote: user.contactNote || '',
+      childAgeRange: user.childAgeRange || [],
+      childDropoutStatus: user.childDropoutStatus || [],
+      childInterests: user.childInterests || '',
+      eduServices: user.eduServices || '',
+      hasExpandedProfile: !!user.hasExpandedProfile,
       isSelf: !!user.isSelf,
     })
   }
@@ -544,8 +527,8 @@ export default function ExplorePage() {
       {!loading && !hasProfile && (
         <View onClick={goToProfile} style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)}`, borderBottom: `1px solid ${exploreTheme.border}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ ...typography.bodyStrong, color: exploreTheme.text }}>填写资料，出现在地图上</Text>
-            <View style={{ marginTop: space(1) }}><Text style={{ ...typography.caption, color: exploreTheme.subtext }}>让同城家庭和同路人发现你</Text></View>
+            <Text style={{ ...typography.bodyStrong, color: exploreTheme.text }}>填写资料，查看成员目录</Text>
+            <View style={{ marginTop: space(1) }}><Text style={{ ...typography.caption, color: exploreTheme.subtext }}>完成资料后可查看扩展公开资料，也可以选择出现在地图上</Text></View>
           </View>
           <View style={{ padding: `${space(2)} ${space(3)}`, borderRadius: radius.pill, backgroundColor: palette.brand }}>
             <Text style={{ ...typography.caption, color: palette.card }}>去填写</Text>
@@ -614,7 +597,7 @@ export default function ExplorePage() {
         <Text className='text-micro text-color-muted'>
           {hasUserClusters
             ? '近似坐标 · 点击聚合点位展开同城同路人 · 点击学校聚合点进入省份视图'
-            : isDenseMap ? '近似坐标 · 全国视图会自动隐藏部分名称 · 点击标记查看详情' : '近似坐标 · 仅供浏览 · 点击标记或名称查看详情'}
+            : isDenseMap ? '近似坐标 · 全国视图会自动隐藏部分名称 · 点击标记查看成员资料' : '近似坐标 · 仅供浏览 · 点击标记或名称查看资料'}
         </Text>
       </View>
 
