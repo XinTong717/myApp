@@ -5,6 +5,7 @@ const READ_ACTION_RATE_LIMITS = {
   getOpenId: { limit: 30, windowMs: MINUTE },
   getMe: { limit: 60, windowMs: MINUTE },
   getProfileBootstrap: { limit: 30, windowMs: MINUTE },
+  getFilterOptions: { limit: 30, windowMs: MINUTE },
   getMapUsers: { limit: 30, windowMs: MINUTE },
   getMyRequests: { limit: 30, windowMs: MINUTE },
   getSafetyOverview: { limit: 30, windowMs: MINUTE },
