@@ -9,14 +9,10 @@ const srcRoot = path.join(repoRoot, 'src')
 const DEFAULT_BASE_REF = process.env.DESIGN_SYSTEM_CHECK_BASE || 'origin/main'
 
 // Keep this narrow. Existing legacy files can be cleaned gradually; new or changed
-// files should not add raw color or typography drift.
+// files should not add raw color drift. Inline JSX fontSize is enforced by ESLint.
 const ALLOWED_HEX = new Set([
   'src/app.config.ts',
   'src/theme/palette.ts',
-])
-
-const ALLOWED_FONT_SIZE = new Set([
-  'src/theme/typography.ts',
 ])
 
 function walk(dir) {
@@ -54,7 +50,6 @@ function changedSourceFiles() {
 const files = changedSourceFiles()
 const violations = []
 const hexRe = /#[0-9A-Fa-f]{6}\b/g
-const fontSizeRe = /fontSize\s*:/g
 
 for (const file of files) {
   const rel = toRepoPath(file)
@@ -66,11 +61,6 @@ for (const file of files) {
       violations.push(`${rel}:${index + 1} uses raw hex color. Use palette/CSS vars instead.`)
     }
     hexRe.lastIndex = 0
-
-    if (!ALLOWED_FONT_SIZE.has(rel) && fontSizeRe.test(line)) {
-      violations.push(`${rel}:${index + 1} uses raw fontSize. Use typography/.text-* instead.`)
-    }
-    fontSizeRe.lastIndex = 0
   })
 }
 
@@ -80,7 +70,7 @@ if (violations.length > 0) {
   console.log(`Checked ${files.length} changed source file(s) against ${DEFAULT_BASE_REF}.`)
   violations.slice(0, 120).forEach((item) => console.log(`- ${item}`))
   if (violations.length > 120) console.log(`...and ${violations.length - 120} more`)
-  console.log('\nMove colors to palette/CSS vars and font sizes to typography/text classes, or add a narrow allowlist exception with a reason.')
+  console.log('\nMove colors to palette/CSS vars, or add a narrow allowlist exception with a reason.')
   process.exit(1)
 }
 
