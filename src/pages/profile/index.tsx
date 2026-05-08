@@ -11,7 +11,6 @@ import {
 import ProfileHeaderCard from '../../components/profile/ProfileHeaderCard'
 import ProfileAdminEntry from '../../components/profile/ProfileAdminEntry'
 import ProfilePrivacySection from '../../components/profile/ProfilePrivacySection'
-import ProfileConnectionsSection from '../../components/profile/ProfileConnectionsSection'
 import ProfileBasicSection from '../../components/profile/ProfileBasicSection'
 import ProfileParentSection from '../../components/profile/ProfileParentSection'
 import ProfileEducatorSection from '../../components/profile/ProfileEducatorSection'
@@ -26,7 +25,6 @@ import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 import { checkAdminAccess, getProfileBootstrap, requestAccountDeletion } from '../../services/profile'
 import { recordLegalConsent } from '../../services/legalConsent'
-import { useConnections } from '../../hooks/useConnections'
 import { useSafety } from '../../hooks/useSafety'
 import { useProfileForm } from '../../hooks/useProfileForm'
 
@@ -36,7 +34,7 @@ const PRIVACY_POLICY_URL = '/pkg/legal/privacy-policy/index'
 const PROFILE_STEPS = [
   { key: 'basic', label: '基本资料' },
   { key: 'identity', label: '身份补充' },
-  { key: 'privacy', label: '隐私联络' },
+  { key: 'privacy', label: '目录设置' },
 ] as const
 
 type ProfileStep = typeof PROFILE_STEPS[number]['key']
@@ -59,7 +57,7 @@ function StepTabs(props: { activeStep: ProfileStep; onChange: (step: ProfileStep
               boxShadow: active ? `0 3px 10px ${palette.shadow}` : 'none',
             }}
           >
-            <Text style={{ ...typography.button, color: active ? '#FFFFFF' : palette.subtext }}>
+            <Text style={{ ...typography.button, color: active ? palette.card : palette.subtext }}>
               {index + 1}. {step.label}
             </Text>
           </View>
@@ -74,7 +72,7 @@ function PrivacyDisclosureNotice() {
     <View style={{ display: 'flex', flexDirection: 'row', gap: space(3), alignItems: 'flex-start', backgroundColor: palette.card, borderRadius: radius.md, border: `1px solid ${palette.line}`, padding: space(3), marginBottom: space(3) }}>
       <AppIcon name='lock' size={24} bordered />
       <Text style={{ ...typography.caption, color: palette.subtext, flex: 1 }}>
-        如果你选择出现在地图上，你的显示名、身份、城市、简介，以及“和这个生态的关系”会公开展示。联络标识、家庭教育关注信息和教育服务内容仅在你同意联络请求后对特定用户可见。请避免填写可直接识别未成年人的敏感细节。
+        如果你选择出现在地图上，显示名、身份、城市、简介，以及“和这个生态的关系”会作为公开资料展示。公开渠道、添加备注、家庭教育关注信息和教育服务内容仅对已登录并完成个人资料的用户可见。平台不提供私信、好友申请或双边联络请求。
       </Text>
     </View>
   )
@@ -91,9 +89,9 @@ function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; 
   }
 
   return (
-    <View onClick={props.onToggle} style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: props.checked ? '#FFF7F3' : palette.card, borderRadius: radius.md, border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, padding: space(3), marginBottom: space(3) }}>
-      <View style={{ width: '20px', height: '20px', borderRadius: '6px', marginRight: space(3), marginTop: '1px', backgroundColor: props.checked ? palette.accentDeep : '#FFFFFF', border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: '13px', color: '#FFFFFF' }}>{props.checked ? '✓' : ''}</Text>
+    <View onClick={props.onToggle} style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: props.checked ? palette.surfaceWarm : palette.card, borderRadius: radius.md, border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, padding: space(3), marginBottom: space(3) }}>
+      <View style={{ width: '20px', height: '20px', borderRadius: '6px', marginRight: space(3), marginTop: '1px', backgroundColor: props.checked ? palette.accentDeep : palette.card, border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ ...typography.micro, color: palette.card }}>{props.checked ? '✓' : ''}</Text>
       </View>
       <View style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
         <Text style={{ ...typography.caption, color: palette.subtext }}>我已阅读并同意</Text>
@@ -113,11 +111,10 @@ export default function ProfilePage() {
 
   const form = useProfileForm()
   const {
-    loading, saving, privacySaving, displayName, setDisplayName, gender, setGender, ageRange, setAgeRange, roles, setRoles, province, cityOption, customCity, setCustomCity, contactId, setContactId, allowIncomingRequests, isVisibleOnMap, childAgeRange, setChildAgeRange, childDropoutStatus, setChildDropoutStatus, childInterests, setChildInterests, eduServices, setEduServices, companionContext, setCompanionContext, bio, setBio, isParent, isEducator, isCompanion, currentCity, pickerRange, pickerValue, loadProfile, applyRemoteProfile, handleSave, handleUpdatePrivacySetting, handlePickerChange, handlePickerColumnChange,
+    loading, saving, privacySaving, displayName, setDisplayName, gender, setGender, ageRange, setAgeRange, roles, setRoles, province, cityOption, customCity, setCustomCity, contactId, setContactId, contactNote, setContactNote, allowIncomingRequests, isVisibleOnMap, childAgeRange, setChildAgeRange, childDropoutStatus, setChildDropoutStatus, childInterests, setChildInterests, eduServices, setEduServices, companionContext, setCompanionContext, bio, setBio, isParent, isEducator, isCompanion, currentCity, pickerRange, pickerValue, loadProfile, applyRemoteProfile, handleSave, handleUpdatePrivacySetting, handlePickerChange, handlePickerColumnChange,
   } = form
 
-  const { pendingRequests, acceptedConnections, sentRequests, requestPages, loadingMoreSection, hydrateRequests, loadRequests, loadRequestSection, loadMoreRequests, refreshLoadedRequests, handleRespond, handleWithdrawRequest, handleRemoveConnection } = useConnections()
-  const { blockedUsers, mutedUsers, hydrateSafetyOverview, loadSafetyOverview, handleSafetyAction, handleReportUser } = useSafety()
+  const { blockedUsers, mutedUsers, hydrateSafetyOverview, loadSafetyOverview, handleSafetyAction } = useSafety()
 
   const loadAdminAccess = async () => {
     try {
@@ -132,7 +129,6 @@ export default function ProfilePage() {
   const loadProfileBootstrap = async () => {
     const result = await getProfileBootstrap()
     const profileData = result.profile?.ok ? result.profile.data : null
-    const requestsData = result.pendingRequests?.ok ? result.pendingRequests.data : null
     const safetyData = result.safetyOverview?.ok ? result.safetyOverview.data : null
     const adminData = result.adminAccess?.ok ? result.adminAccess.data : null
 
@@ -140,9 +136,6 @@ export default function ProfilePage() {
 
     if (profileData?.ok) await applyRemoteProfile(profileData.profile || null)
     else fallbackTasks.push(loadProfile())
-
-    if (requestsData?.ok) hydrateRequests('pending', requestsData)
-    else fallbackTasks.push(loadRequests('pending', { force: true }))
 
     if (safetyData?.ok) hydrateSafetyOverview(safetyData)
     else fallbackTasks.push(loadSafetyOverview())
@@ -160,14 +153,12 @@ export default function ProfilePage() {
     loadProfileBootstrap().catch((err) => {
       console.error('loadProfileBootstrap error:', err)
       loadProfile()
-      loadRequests('pending')
       loadSafetyOverview()
       loadAdminAccess()
     })
   }
 
-  const refreshRelations = () => {
-    refreshLoadedRequests()
+  const refreshSafety = () => {
     loadSafetyOverview()
   }
 
@@ -182,7 +173,7 @@ export default function ProfilePage() {
   const handleRequestAccountDeletion = async () => {
     const firstConfirm = await Taro.showModal({
       title: '申请账号注销',
-      content: '提交后，你的公开资料会立即先从地图隐藏，联络标识会被清空，并暂停新的联络请求。管理员随后处理剩余历史记录；如需确认进度，可通过官方联系方式联系我们。',
+      content: '提交后，你的公开资料会立即先从地图隐藏，公开渠道会被清空。管理员随后处理剩余历史记录；如需确认进度，可通过官方联系方式联系我们。',
       confirmText: '继续',
       cancelText: '取消',
     })
@@ -226,9 +217,9 @@ export default function ProfilePage() {
   const confirmMapDisclosureIfNeeded = async () => {
     if (!isVisibleOnMap) return true
     const confirm = await Taro.showModal({
-      title: '确认公开展示',
-      content: '保存后，你的显示名、身份、城市、简介，以及“和这个生态的关系”会出现在同路人地图上。联络标识不会公开；家庭教育关注信息和教育服务内容仅在你同意联络后可见。确认公开展示并保存吗？',
-      confirmText: '公开并保存',
+      title: '确认加入成员目录',
+      content: '保存后，你的显示名、身份、城市、简介，以及“和这个生态的关系”会出现在同路人地图上。公开渠道和身份补充信息仅对已登录并完成资料的用户可见。确认保存吗？',
+      confirmText: '保存',
       cancelText: '先不保存',
     })
     return !!confirm.confirm
@@ -254,7 +245,7 @@ export default function ProfilePage() {
       <StepTabs activeStep={activeStep} onChange={setActiveStep} />
 
       {activeStep === 'basic' && <>
-        <ProfileBasicSection displayName={displayName} setDisplayName={setDisplayName} gender={gender} setGender={setGender} ageRange={ageRange} setAgeRange={setAgeRange} roles={roles} setRoles={setRoles} province={province} cityOption={cityOption} currentCity={currentCity} customCity={customCity} setCustomCity={setCustomCity} contactId={contactId} setContactId={setContactId} pickerRange={pickerRange} pickerValue={pickerValue} handlePickerChange={handlePickerChange} handlePickerColumnChange={handlePickerColumnChange} genderOptions={GENDER_OPTIONS} ageRangeOptions={AGE_RANGE_OPTIONS} roleOptions={ROLE_OPTIONS} />
+        <ProfileBasicSection displayName={displayName} setDisplayName={setDisplayName} gender={gender} setGender={setGender} ageRange={ageRange} setAgeRange={setAgeRange} roles={roles} setRoles={setRoles} province={province} cityOption={cityOption} currentCity={currentCity} customCity={customCity} setCustomCity={setCustomCity} contactId={contactId} setContactId={setContactId} contactNote={contactNote} setContactNote={setContactNote} pickerRange={pickerRange} pickerValue={pickerValue} handlePickerChange={handlePickerChange} handlePickerColumnChange={handlePickerColumnChange} genderOptions={GENDER_OPTIONS} ageRangeOptions={AGE_RANGE_OPTIONS} roleOptions={ROLE_OPTIONS} />
         <ProfileBioSection bio={bio} setBio={setBio} />
         <ProfileNoticeBox text='先完成显示名、身份和城市，就可以被地图正确识别。简介会公开展示，请避免填写孩子姓名、具体学校、住址等敏感细节。' />
         <ProfileSecondaryButton text='下一步：身份补充' onClick={goNextStep} />
@@ -265,20 +256,18 @@ export default function ProfilePage() {
         {isEducator && <ProfileEducatorSection eduServices={eduServices} setEduServices={setEduServices} />}
         {isCompanion && <ProfileCompanionSection companionContext={companionContext} setCompanionContext={setCompanionContext} />}
         {!isParent && !isEducator && !isCompanion && <ProfileNoticeBox text='你还没有选择身份。回到“基本资料”选择家长、教育者或同行者后，这里会出现对应的补充信息。' />}
-        <ProfileNoticeBox text='家长与教育者补充信息不会在地图卡片直接公开；同行者填写的“和这个生态的关系”会随地图卡片公开展示，请不要写入敏感身份或未成年人细节。' />
-        <ProfileSecondaryButton text='下一步：隐私与联络' onClick={goNextStep} />
+        <ProfileNoticeBox text='家长与教育者补充信息不会在地图卡片直接公开；同行者填写的“和这个生态的关系”会随地图卡片公开展示。请不要写入敏感身份、未成年人姓名或具体住址。' />
+        <ProfileSecondaryButton text='下一步：目录设置' onClick={goNextStep} />
       </>}
 
       {activeStep === 'privacy' && <>
-        <ProfilePrivacySection privacySaving={privacySaving} allowIncomingRequests={allowIncomingRequests} isVisibleOnMap={isVisibleOnMap} blockedUsers={blockedUsers} mutedUsers={mutedUsers} onUpdatePrivacySetting={handleUpdatePrivacySetting} onSafetyAction={(targetUserId, action) => handleSafetyAction(targetUserId, action, () => { refreshRelations(); loadProfile() })} onRequestAccountDeletion={handleRequestAccountDeletion} />
+        <ProfilePrivacySection privacySaving={privacySaving} allowIncomingRequests={allowIncomingRequests} isVisibleOnMap={isVisibleOnMap} blockedUsers={blockedUsers} mutedUsers={mutedUsers} onUpdatePrivacySetting={handleUpdatePrivacySetting} onSafetyAction={(targetUserId, action) => handleSafetyAction(targetUserId, action, () => { refreshSafety(); loadProfile() })} onRequestAccountDeletion={handleRequestAccountDeletion} />
         <PrivacyDisclosureNotice />
         <LegalAgreementConsent checked={legalAgreed} onToggle={() => setLegalAgreed((value) => !value)} onOpenUserAgreement={openUserAgreement} onOpenPrivacyPolicy={openPrivacyPolicy} />
         <AppPrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
       </>}
 
       <View style={{ marginBottom: space(5), alignItems: 'center' }}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}><Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>用户协议</Text><Text style={{ ...typography.caption, color: palette.subtext, marginLeft: space(2), marginRight: space(2) }}>·</Text><Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>隐私政策</Text></View></View>
-
-      <ProfileConnectionsSection pendingRequests={pendingRequests} acceptedConnections={acceptedConnections} sentRequests={sentRequests} requestPages={requestPages} loadingMoreSection={loadingMoreSection} onLoadSection={loadRequestSection} onLoadMore={loadMoreRequests} onRespond={(requestId, action) => handleRespond(requestId, action, refreshRelations)} onWithdrawRequest={(connectionId) => handleWithdrawRequest(connectionId, refreshRelations)} onRemoveConnection={(connectionId) => handleRemoveConnection(connectionId, refreshRelations)} onSafetyAction={(targetUserId, action) => handleSafetyAction(targetUserId, action, () => { refreshRelations(); loadProfile() })} onReportUser={handleReportUser} />
     </View>
   )
 }
