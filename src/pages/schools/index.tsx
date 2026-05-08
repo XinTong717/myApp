@@ -273,7 +273,7 @@ export default function SchoolsPage() {
           <AppCard key={item.id} onClick={() => goToDetail(item)}>
             <View className='app-list-card__header'>
               <View className='app-list-card__icon'>
-                <AppIcon name='school' size={38} backgroundColor={iconBg} bordered />
+                <AppIcon name='school' size={42} backgroundColor={iconBg} bordered />
               </View>
               <View className='app-flex-1'>
                 <Text className='text-card-title text-color-main'>{item.canonical_name || item.name}</Text>
