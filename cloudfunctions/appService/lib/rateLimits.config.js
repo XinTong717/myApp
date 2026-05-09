@@ -7,7 +7,6 @@ const READ_ACTION_RATE_LIMITS = {
   getProfileBootstrap: { limit: 30, windowMs: MINUTE },
   getFilterOptions: { limit: 30, windowMs: MINUTE },
   getMapUsers: { limit: 30, windowMs: MINUTE },
-  getMyRequests: { limit: 30, windowMs: MINUTE },
   getSafetyOverview: { limit: 30, windowMs: MINUTE },
   getLegalConsentStatus: { limit: 30, windowMs: MINUTE },
   getEventInterestInfo: { limit: 60, windowMs: MINUTE },
@@ -40,10 +39,6 @@ const ADMIN_ACTION_RATE_LIMITS = {
   reviewEventSubmission: { limit: 60, windowMs: MINUTE },
   getEventPublishPayload: { limit: 120, windowMs: MINUTE },
   listEventSubmissions: { limit: 120, windowMs: MINUTE },
-  reconcileEventInterestCounts: { limit: 10, windowMs: MINUTE },
-  cleanupRateLimits: { limit: 10, windowMs: MINUTE },
-  migrateSchoolLocations: { limit: 10, windowMs: MINUTE },
-  validateSchoolLocationsMigration: { limit: 30, windowMs: MINUTE },
 }
 
 const ACTION_RATE_LIMITS = {
