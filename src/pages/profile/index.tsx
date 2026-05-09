@@ -21,6 +21,8 @@ import AppPage from '../../components/common/AppPage'
 import AppPageHeader from '../../components/common/AppPageHeader'
 import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import AppIcon from '../../components/common/AppIcon'
+import AppRow from '../../components/common/AppRow'
+import AppSegmentedTabs from '../../components/common/AppSegmentedTabs'
 import { palette } from '../../theme/palette'
 import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
@@ -40,42 +42,14 @@ const PROFILE_STEPS = [
 
 type ProfileStep = typeof PROFILE_STEPS[number]['key']
 
-function StepTabs(props: { activeStep: ProfileStep; onChange: (step: ProfileStep) => void }) {
-  return (
-    <View style={{ backgroundColor: palette.card, borderRadius: radius.md, padding: space(1), marginBottom: space(4), border: `1px solid ${palette.line}`, display: 'flex', flexDirection: 'row' }}>
-      {PROFILE_STEPS.map((step, index) => {
-        const active = props.activeStep === step.key
-        return (
-          <View
-            key={step.key}
-            onClick={() => props.onChange(step.key)}
-            style={{
-              flex: 1,
-              padding: `${space(3)} ${space(2)}`,
-              borderRadius: radius.sm,
-              backgroundColor: active ? palette.accentDeep : 'transparent',
-              textAlign: 'center',
-              boxShadow: active ? `0 3px 10px ${palette.shadow}` : 'none',
-            }}
-          >
-            <Text style={{ ...typography.button, color: active ? palette.card : palette.subtext }}>
-              {index + 1}. {step.label}
-            </Text>
-          </View>
-        )
-      })}
-    </View>
-  )
-}
-
 function PrivacyDisclosureNotice() {
   return (
-    <View style={{ display: 'flex', flexDirection: 'row', gap: space(3), alignItems: 'flex-start', backgroundColor: palette.card, borderRadius: radius.md, border: `1px solid ${palette.line}`, padding: space(3), marginBottom: space(3) }}>
+    <AppRow align='flex-start' gap={space(3)} marginBottom={space(3)} style={{ backgroundColor: palette.card, borderRadius: radius.md, border: `1px solid ${palette.line}`, padding: space(3) }}>
       <AppIcon name='lock' size={24} bordered />
       <Text style={{ ...typography.caption, color: palette.subtext, flex: 1 }}>
         如果你选择出现在地图上，显示名、身份、城市、简介，以及“和这个生态的关系”会作为公开资料展示。公开渠道、添加备注、家庭教育关注信息和教育服务内容仅对已登录并完成个人资料的用户可见。平台不提供私信、好友申请或双边联络请求。
       </Text>
-    </View>
+    </AppRow>
   )
 }
 
@@ -90,7 +64,7 @@ function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; 
   }
 
   return (
-    <View onClick={props.onToggle} style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: props.checked ? palette.surfaceWarm : palette.card, borderRadius: radius.md, border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, padding: space(3), marginBottom: space(3) }}>
+    <AppRow onClick={props.onToggle} align='flex-start' marginBottom={space(3)} style={{ backgroundColor: props.checked ? palette.surfaceWarm : palette.card, borderRadius: radius.md, border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, padding: space(3) }}>
       <View style={{ width: '20px', height: '20px', borderRadius: '6px', marginRight: space(3), marginTop: '1px', backgroundColor: props.checked ? palette.accentDeep : palette.card, border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ ...typography.micro, color: palette.card }}>{props.checked ? '✓' : ''}</Text>
       </View>
@@ -100,7 +74,7 @@ function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; 
         <Text style={{ ...typography.caption, color: palette.subtext }}>和</Text>
         <Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>《隐私政策》</Text>
       </View>
-    </View>
+    </AppRow>
   )
 }
 
@@ -243,7 +217,7 @@ export default function ProfilePage() {
     <AppPage style={{ paddingBottom: '100px' }}>
       <AppPageHeader title='我的' description='填写资料、设置成员目录可见性，并管理安全与隐私。' />
       <ProfileAdminEntry isAdmin={isAdmin} onOpen={openAdminReviewPage} />
-      <StepTabs activeStep={activeStep} onChange={setActiveStep} />
+      <AppSegmentedTabs options={PROFILE_STEPS} value={activeStep} onChange={setActiveStep} />
 
       {activeStep === 'basic' && <>
         <ProfileBasicSection displayName={displayName} setDisplayName={setDisplayName} gender={gender} setGender={setGender} ageRange={ageRange} setAgeRange={setAgeRange} roles={roles} setRoles={setRoles} province={province} cityOption={cityOption} currentCity={currentCity} customCity={customCity} setCustomCity={setCustomCity} contactId={contactId} setContactId={setContactId} contactNote={contactNote} setContactNote={setContactNote} pickerRange={pickerRange} pickerValue={pickerValue} handlePickerChange={handlePickerChange} handlePickerColumnChange={handlePickerColumnChange} genderOptions={GENDER_OPTIONS} ageRangeOptions={AGE_RANGE_OPTIONS} roleOptions={ROLE_OPTIONS} />
