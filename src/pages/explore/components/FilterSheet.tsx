@@ -3,6 +3,7 @@ import { palette } from '../../../theme/palette'
 import { radius, space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
 import { CHILD_AGE_OPTIONS } from '../../../constants/profile'
+import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
 import { exploreTheme } from '../styles'
 import type { ProfileCompletenessFilter, UserRoleFilter } from '../types'
 import { FilterChip } from './Chips'
@@ -107,11 +108,11 @@ export default function FilterSheet(props: FilterSheetProps) {
         </View>
 
         <View style={{ display: 'flex', flexDirection: 'row' }}>
-          <View onClick={onReset} style={{ flex: 1, marginRight: space(3), backgroundColor: exploreTheme.tag, borderRadius: radius.md, padding: space(4), textAlign: 'center' }}>
-            <Text style={{ ...typography.button, color: exploreTheme.tagText }}>重置</Text>
+          <View style={{ flex: 1, marginRight: space(3) }}>
+            <AppPrimaryButton text='重置' variant='ghost' size='md' marginBottom='0' onClick={onReset} />
           </View>
-          <View onClick={onClose} style={{ flex: 1, backgroundColor: palette.brand, borderRadius: radius.md, padding: space(4), textAlign: 'center' }}>
-            <Text style={{ ...typography.button, color: '#FFF' }}>完成</Text>
+          <View style={{ flex: 1 }}>
+            <AppPrimaryButton text='完成' variant='primary' size='md' marginBottom='0' onClick={onClose} />
           </View>
         </View>
       </View>
