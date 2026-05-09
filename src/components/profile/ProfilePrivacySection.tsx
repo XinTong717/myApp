@@ -4,10 +4,13 @@ import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
 import ProfileSectionHeading from './ProfileSectionHeading'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type Props = {
   privacySaving: boolean
+  // Legacy persisted field name. Product meaning is now expandedProfileVisible:
+  // whether logged-in users with completed profiles can view extended public profile details.
   allowIncomingRequests: boolean
   isVisibleOnMap: boolean
   blockedUsers: SafetyItem[]
@@ -34,10 +37,10 @@ export default function ProfilePrivacySection(props: Props) {
       <ProfileSectionHeading title='成员目录与安全' />
       <ProfileInputBox>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ flex: 1, paddingRight: '12px' }}>
-            <Text style={{ ...typography.caption, color: palette.text }}>扩展公开资料可见性</Text>
-            <View style={{ marginTop: '4px' }}>
-              <Text style={{ ...typography.micro, color: palette.subtext }}>关闭后，已登录并完成资料的用户也无法看到你的公开渠道、添加备注和身份补充信息。</Text>
+          <View style={{ flex: 1, paddingRight: space(3) }}>
+            <Text style={{ ...typography.bodyStrong, color: palette.text }}>扩展公开资料可见性</Text>
+            <View style={{ marginTop: space(1) }}>
+              <Text style={{ ...typography.caption, color: palette.subtext }}>关闭后，已登录并完成资料的用户也无法看到你的公开渠道、添加备注和身份补充信息。</Text>
             </View>
           </View>
           <Switch checked={allowIncomingRequests} disabled={privacySaving} color={palette.brand} onChange={(e) => onUpdatePrivacySetting('allowIncomingRequests', !!e.detail.value)} />
@@ -45,10 +48,10 @@ export default function ProfilePrivacySection(props: Props) {
       </ProfileInputBox>
       <ProfileInputBox>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ flex: 1, paddingRight: '12px' }}>
-            <Text style={{ ...typography.caption, color: palette.text }}>地图可见性</Text>
-            <View style={{ marginTop: '4px' }}>
-              <Text style={{ ...typography.micro, color: palette.subtext }}>关闭后，你的显示名、城市、身份和简介不会再出现在探索地图上。</Text>
+          <View style={{ flex: 1, paddingRight: space(3) }}>
+            <Text style={{ ...typography.bodyStrong, color: palette.text }}>地图可见性</Text>
+            <View style={{ marginTop: space(1) }}>
+              <Text style={{ ...typography.caption, color: palette.subtext }}>关闭后，你的显示名、城市、身份和简介不会再出现在探索地图上。</Text>
             </View>
           </View>
           <Switch checked={isVisibleOnMap} disabled={privacySaving} color={palette.brand} onChange={(e) => onUpdatePrivacySetting('isVisibleOnMap', !!e.detail.value)} />
@@ -56,28 +59,28 @@ export default function ProfilePrivacySection(props: Props) {
       </ProfileInputBox>
       <ProfileInputBox>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ flex: 1, paddingRight: '12px' }}>
-            <Text style={{ ...typography.caption, color: palette.text }}>账号注销 / 数据删除</Text>
-            <View style={{ marginTop: '4px' }}>
-              <Text style={{ ...typography.micro, color: palette.subtext }}>提交后会先隐藏你的地图资料、清空公开渠道，后续由管理员处理删除申请。</Text>
+          <View style={{ flex: 1, paddingRight: space(3) }}>
+            <Text style={{ ...typography.bodyStrong, color: palette.text }}>账号注销 / 数据删除</Text>
+            <View style={{ marginTop: space(1) }}>
+              <Text style={{ ...typography.caption, color: palette.subtext }}>提交后会先隐藏你的地图资料、清空公开渠道，后续由管理员处理删除申请。</Text>
             </View>
           </View>
-          <Text onClick={onRequestAccountDeletion} style={{ ...typography.micro, color: palette.brand, fontWeight: 'bold' }}>申请</Text>
+          <Text onClick={onRequestAccountDeletion} style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>申请</Text>
         </View>
       </ProfileInputBox>
       {(blockedUsers.length > 0 || mutedUsers.length > 0) && (
         <View>
           {blockedUsers.length > 0 && (
-            <View style={{ marginBottom: '10px' }}>
-              <Text style={{ ...typography.micro, color: palette.brand, fontWeight: 'bold' }}>已拉黑</Text>
+            <View style={{ marginBottom: space(3) }}>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>已拉黑</Text>
               {blockedUsers.map((item) => (
-                <ProfileInputBox key={item._id} marginBottom='8px'>
+                <ProfileInputBox key={item._id} marginBottom={space(2)}>
                   <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ ...typography.micro, color: palette.text }}>{item.targetName || '未知用户'}</Text>
-                      {item.targetCity ? <Text style={{ ...typography.micro, color: palette.subtext }}> · {item.targetCity}</Text> : null}
+                      <Text style={{ ...typography.caption, color: palette.text }}>{item.targetName || '未知用户'}</Text>
+                      {item.targetCity ? <Text style={{ ...typography.caption, color: palette.subtext }}> · {item.targetCity}</Text> : null}
                     </View>
-                    <Text onClick={() => onSafetyAction(item.targetUserId, 'unblock')} style={{ ...typography.micro, color: palette.brand, fontWeight: 'bold' }}>解除拉黑</Text>
+                    <Text onClick={() => onSafetyAction(item.targetUserId, 'unblock')} style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>解除拉黑</Text>
                   </View>
                 </ProfileInputBox>
               ))}
@@ -85,15 +88,15 @@ export default function ProfilePrivacySection(props: Props) {
           )}
           {mutedUsers.length > 0 && (
             <View>
-              <Text style={{ ...typography.micro, color: palette.brand, fontWeight: 'bold' }}>已静音</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>已静音</Text>
               {mutedUsers.map((item) => (
-                <ProfileInputBox key={item._id} marginBottom='8px'>
+                <ProfileInputBox key={item._id} marginBottom={space(2)}>
                   <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ ...typography.micro, color: palette.text }}>{item.targetName || '未知用户'}</Text>
-                      {item.targetCity ? <Text style={{ ...typography.micro, color: palette.subtext }}> · {item.targetCity}</Text> : null}
+                      <Text style={{ ...typography.caption, color: palette.text }}>{item.targetName || '未知用户'}</Text>
+                      {item.targetCity ? <Text style={{ ...typography.caption, color: palette.subtext }}> · {item.targetCity}</Text> : null}
                     </View>
-                    <Text onClick={() => onSafetyAction(item.targetUserId, 'unmute')} style={{ ...typography.micro, color: palette.brand, fontWeight: 'bold' }}>取消静音</Text>
+                    <Text onClick={() => onSafetyAction(item.targetUserId, 'unmute')} style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>取消静音</Text>
                   </View>
                 </ProfileInputBox>
               ))}
