@@ -4,6 +4,7 @@ const { rateLimit } = require('./lib/rateLimit')
 const filterOptionHandlers = require('./handlers/filterOptions')
 const publicHandlers = require('./handlers/public')
 const eventContactHandlers = require('./handlers/eventContact')
+const eventCorrectionHandlers = require('./handlers/eventCorrections')
 const userHandlers = require('./handlers/userProfile')
 const mapUserHandlers = require('./handlers/mapUsers')
 const adminHandlers = require('./handlers/admin')
@@ -17,6 +18,7 @@ const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
   'submitEvent',
   'submitCommunity',
   'submitCorrection',
+  'submitEventCorrection',
   'reportUser',
   'toggleEventInterest',
   'getEventContactInfo',
@@ -29,6 +31,7 @@ const CONSENT_REQUIRED_ACTIONS = new Set([
   'submitEvent',
   'submitCommunity',
   'submitCorrection',
+  'submitEventCorrection',
   'manageSafetyRelation',
   'reportUser',
   'toggleEventInterest',
@@ -84,6 +87,7 @@ const publicActionHandlers = {
   ...legalConsentHandlers,
   ...publicHandlers,
   ...eventContactHandlers,
+  ...eventCorrectionHandlers,
   ...mapUserHandlers,
 }
 

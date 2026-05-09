@@ -220,3 +220,7 @@ export async function submitEvent(data: Record<string, unknown>) {
   const dedupeKey = String(data?.title || '') + ':' + String(data?.startTime || '')
   return runExclusive(`submitEvent:${dedupeKey}`, () => callCloud<CloudResponse>('submitEvent', data))
 }
+
+export async function submitEventCorrection(eventId: number, eventTitle: string, content: string) {
+  return runExclusive(`submitEventCorrection:${eventId}`, () => callCloud<CloudResponse>('submitEventCorrection', { eventId, eventTitle, content }))
+}

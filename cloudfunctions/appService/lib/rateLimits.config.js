@@ -23,6 +23,7 @@ const READ_ACTION_RATE_LIMITS = {
 const WRITE_ACTION_RATE_LIMITS = {
   recordLegalConsent: { limit: 10, windowMs: DAY },
   submitCorrection: { limit: 5, windowMs: DAY },
+  submitEventCorrection: { limit: 5, windowMs: DAY },
   submitCommunity: { limit: 5, windowMs: DAY },
   submitEvent: { limit: 5, windowMs: DAY },
   sendRequest: { limit: 20, windowMs: DAY },

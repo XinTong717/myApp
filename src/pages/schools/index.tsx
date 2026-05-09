@@ -5,6 +5,7 @@ import { getSchools } from '../../services/school'
 import { getFilterOptions, type AppFilterOptions } from '../../services/filterOptions'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 import AppPage from '../../components/common/AppPage'
 import AppPageHeader from '../../components/common/AppPageHeader'
 import AppMiniButton from '../../components/common/AppMiniButton'
@@ -226,7 +227,7 @@ export default function SchoolsPage() {
         />
       </AppCard>
 
-      <AppCard padding='12px'>
+      <AppCard padding={space(3)}>
         <View className='app-filter-panel__heading'>
           <View className='app-flex-1'>
             <Text className='text-body-strong text-color-main'>筛选</Text>
@@ -294,8 +295,6 @@ export default function SchoolsPage() {
                 <Text className='text-meta text-color-sub'>费用：{item.fee || '未填写'}</Text>
               </View>
             </View>
-
-            <Text className='text-button text-color-link'>查看详情 ›</Text>
           </AppCard>
         )
       })}

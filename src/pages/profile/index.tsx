@@ -23,6 +23,7 @@ import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import AppIcon from '../../components/common/AppIcon'
 import AppRow from '../../components/common/AppRow'
 import AppSegmentedTabs from '../../components/common/AppSegmentedTabs'
+import AppCheckbox from '../../components/common/AppCheckbox'
 import { palette } from '../../theme/palette'
 import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
@@ -65,9 +66,7 @@ function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; 
 
   return (
     <AppRow onClick={props.onToggle} align='flex-start' marginBottom={space(3)} style={{ backgroundColor: props.checked ? palette.surfaceWarm : palette.card, borderRadius: radius.md, border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, padding: space(3) }}>
-      <View style={{ width: '20px', height: '20px', borderRadius: '6px', marginRight: space(3), marginTop: '1px', backgroundColor: props.checked ? palette.accentDeep : palette.card, border: `1px solid ${props.checked ? palette.accentDeep : palette.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ ...typography.micro, color: palette.card }}>{props.checked ? '✓' : ''}</Text>
-      </View>
+      <AppCheckbox checked={props.checked} marginTop={space(1)} />
       <View style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
         <Text style={{ ...typography.caption, color: palette.subtext }}>我已阅读并同意</Text>
         <Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>《用户协议》</Text>
@@ -214,7 +213,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <AppPage style={{ paddingBottom: '100px' }}>
+    <AppPage style={{ paddingBottom: space(8) }}>
       <AppPageHeader title='我的' description='填写资料、设置成员目录可见性，并管理安全与隐私。' />
       <ProfileAdminEntry isAdmin={isAdmin} onOpen={openAdminReviewPage} />
       <AppSegmentedTabs options={PROFILE_STEPS} value={activeStep} onChange={setActiveStep} />
