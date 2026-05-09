@@ -3,7 +3,7 @@ import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
 import { elevation, radius, space } from '../../theme/spacing'
 
-type AppButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success'
+type AppButtonVariant = 'primary' | 'secondary' | 'ghost' | 'neutral' | 'danger' | 'dangerSoft' | 'success'
 type AppButtonSize = 'lg' | 'md' | 'sm'
 type AppButtonAppearance = 'full' | 'inline'
 
@@ -50,6 +50,24 @@ function getVariantStyle(variant: AppButtonVariant, pressed: boolean, disabled: 
       text: palette.brand,
       border: palette.lineSoft,
       shadow: 'none',
+    }
+  }
+
+  if (variant === 'neutral') {
+    return {
+      bg: pressed ? palette.activeBg : palette.tag,
+      text: palette.subtext,
+      border: pressed ? palette.focus : palette.line,
+      shadow: pressed ? elevation.pressed : 'none',
+    }
+  }
+
+  if (variant === 'dangerSoft') {
+    return {
+      bg: pressed ? '#F7DED9' : palette.errorSoft,
+      text: palette.error,
+      border: pressed ? palette.error : '#F5D1CC',
+      shadow: pressed ? elevation.pressed : 'none',
     }
   }
 
