@@ -14,6 +14,7 @@ import AppIcon from '../../components/common/AppIcon'
 import AppChip from '../../components/common/AppChip'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import { ListSkeleton } from '../../components/common/Skeleton'
+import { space } from '../../theme/spacing'
 import { ALL_FILTER, EVENT_DEFAULT_STATUS_FILTER, EVENT_FILTER_FALLBACKS } from '../../constants/filterOptions'
 import {
   type EventItem,
@@ -198,7 +199,7 @@ export default function EventsPage() {
         action={<AppMiniButton text='推荐新活动' onClick={goToSubmit} />}
       />
 
-      <AppCard padding='12px'>
+      <AppCard padding={space(3)}>
         <View className='app-filter-panel__heading'>
           <View className='app-flex-1'><Text className='text-body-strong text-color-main'>筛选活动</Text></View>
           {hasActiveFilters ? <Text onClick={resetFilters} className='text-caption text-color-link'>重置</Text> : null}
@@ -243,7 +244,6 @@ export default function EventsPage() {
               {summary ? <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>{summary}</Text></View> : null}
               <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>费用：{item.fee || '免费'}</Text></View>
             </View>
-            <Text className='text-button text-color-link'>查看详情 ›</Text>
           </AppCard>
         )
       })}
