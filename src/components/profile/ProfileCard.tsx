@@ -1,7 +1,7 @@
-import { View } from '@tarojs/components'
 import type { PropsWithChildren } from 'react'
+import AppCard from '../common/AppCard'
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
+import { radius, space } from '../../theme/spacing'
 
 type Props = PropsWithChildren<{
   marginBottom?: string
@@ -12,22 +12,23 @@ type Props = PropsWithChildren<{
 
 export default function ProfileCard({
   children,
-  marginBottom = '14px',
+  marginBottom = space(3),
   padding = space(4),
   backgroundColor = palette.card,
   borderStyle,
 }: Props) {
   return (
-    <View
-      style={{
-        backgroundColor,
-        borderRadius: '20px',
-        padding,
-        marginBottom,
-        border: borderStyle || `1px solid ${palette.line}`,
-      }}
+    <AppCard
+      padding={padding}
+      marginBottom={marginBottom}
+      radius={radius.md}
+      backgroundColor={backgroundColor}
+      borderColor={palette.line}
+      border={!!borderStyle}
+      elevationLevel='none'
+      style={borderStyle ? { border: borderStyle } : undefined}
     >
       {children}
-    </View>
+    </AppCard>
   )
 }
