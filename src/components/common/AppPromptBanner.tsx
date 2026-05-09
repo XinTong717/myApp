@@ -1,5 +1,7 @@
 import { Text, View } from '@tarojs/components'
 import AppIcon from './AppIcon'
+import AppRow from './AppRow'
+import AppStack from './AppStack'
 import { palette } from '../../theme/palette'
 import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
@@ -35,29 +37,27 @@ export default function AppPromptBanner({
   const colors = getTone(tone)
 
   return (
-    <View
+    <AppRow
       onClick={onClick}
+      gap={space(3)}
       style={{
         backgroundColor: colors.bg,
         padding: `${space(3)} ${space(4)}`,
         borderRadius: flush ? '0' : radius.md,
         border: flush ? 'none' : `1px solid ${colors.border}`,
         borderBottom: flush ? `1px solid ${colors.border}` : undefined,
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
       }}
     >
-      {icon ? <View style={{ marginRight: space(3) }}><AppIcon name={icon} size={34} backgroundColor={colors.iconBg} color={colors.iconColor} bordered /></View> : null}
-      <View style={{ flex: 1, paddingRight: actionText ? space(3) : '0' }}>
+      {icon ? <AppIcon name={icon} size={34} backgroundColor={colors.iconBg} color={colors.iconColor} bordered /> : null}
+      <AppStack gap={space(1)} style={{ flex: 1, paddingRight: actionText ? space(3) : '0' }}>
         <Text style={{ ...typography.bodyStrong, color: palette.text }}>{title}</Text>
-        {description ? <View style={{ marginTop: space(1) }}><Text style={{ ...typography.caption, color: palette.subtext }}>{description}</Text></View> : null}
-      </View>
+        {description ? <Text style={{ ...typography.caption, color: palette.subtext }}>{description}</Text> : null}
+      </AppStack>
       {actionText ? (
         <View style={{ padding: `${space(2)} ${space(3)}`, borderRadius: radius.pill, backgroundColor: colors.actionBg }}>
           <Text style={{ ...typography.caption, color: '#FFF' }}>{actionText}</Text>
         </View>
       ) : null}
-    </View>
+    </AppRow>
   )
 }
