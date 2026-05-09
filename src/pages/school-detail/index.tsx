@@ -12,6 +12,7 @@ import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppInfoRow from '../../components/common/AppInfoRow'
 import AppIcon from '../../components/common/AppIcon'
+import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
@@ -156,9 +157,7 @@ function SchoolContent(props: {
                   <Text style={{ ...typography.caption, color: palette.subtext }}>补充、修正或更新这个学习社区的信息</Text>
                 </View>
               </View>
-              <View style={{ padding: `${space(2)} ${space(3)}`, borderRadius: radius.pill, backgroundColor: palette.brandSoft }}>
-                <Text style={{ ...typography.caption, color: palette.brand }}>填写</Text>
-              </View>
+              <AppPrimaryButton text='填写' variant='secondary' size='sm' appearance='inline' marginBottom='0' />
             </View>
           )}
 
@@ -184,12 +183,8 @@ function SchoolContent(props: {
                 <Text style={{ ...typography.micro, color: palette.muted }}>{correctionText.length}/500</Text>
               </View>
               <View style={{ display: 'flex', flexDirection: 'row' }}>
-                <View onClick={correctionSubmitting ? undefined : onCancelCorrection} style={{ padding: `${space(2)} ${space(4)}`, borderRadius: radius.pill, backgroundColor: palette.tag, marginRight: space(3) }}>
-                  <Text style={{ ...typography.meta, color: palette.tagText }}>取消</Text>
-                </View>
-                <View onClick={correctionSubmitting ? undefined : onSubmitCorrection} style={{ padding: `${space(2)} ${space(5)}`, borderRadius: radius.pill, backgroundColor: correctionSubmitting ? palette.muted : palette.brand }}>
-                  <Text style={{ ...typography.meta, color: '#FFF' }}>{correctionSubmitting ? '提交中...' : '提交'}</Text>
-                </View>
+                <AppPrimaryButton text='取消' variant='ghost' size='sm' appearance='inline' marginBottom='0' marginRight={space(3)} disabled={correctionSubmitting} onClick={onCancelCorrection} />
+                <AppPrimaryButton text='提交' loadingText='提交中...' loading={correctionSubmitting} variant='primary' size='sm' appearance='inline' marginBottom='0' onClick={onSubmitCorrection} />
               </View>
             </View>
           )}
@@ -316,8 +311,8 @@ export default function SchoolDetailPage() {
       {!loading && error && (
         <View style={{ padding: space(3), marginBottom: space(4), backgroundColor: palette.errorSoft, borderRadius: radius.md, border: `1px solid ${palette.line}` }}>
           <Text style={{ ...typography.body, color: palette.error }}>{error}</Text>
-          <View onClick={() => loadDetail({ forceRefresh: true })} style={{ marginTop: space(3), backgroundColor: palette.brandSoft, borderRadius: radius.md, padding: `${space(2)} ${space(3)}`, alignSelf: 'flex-start' }}>
-            <Text style={{ ...typography.caption, color: palette.brand }}>重新加载</Text>
+          <View style={{ marginTop: space(3) }}>
+            <AppPrimaryButton text='重新加载' variant='secondary' size='sm' appearance='inline' marginBottom='0' onClick={() => loadDetail({ forceRefresh: true })} />
           </View>
         </View>
       )}
