@@ -12,8 +12,7 @@ import { manageSafetyRelation, reportUser } from '../../services/safety'
 import { REPORT_REASON_OPTIONS } from '../../constants/safety'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import { palette } from '../../theme/palette'
-import { radius, space } from '../../theme/spacing'
-import { typography } from '../../theme/typography'
+import { space } from '../../theme/spacing'
 import AppPage from '../../components/common/AppPage'
 import AppPromptBanner from '../../components/common/AppPromptBanner'
 import { exploreTheme } from './styles'
@@ -543,21 +542,12 @@ export default function ExplorePage() {
           <FilterChip active={showSchools} tone='brand' text={schoolFilterText} onClick={() => { setShowSchools(!showSchools); closePopup() }} />
           <FilterChip active={showUsers} tone='user' text={`同路人 ${showUsers ? userCount : '—'}`} onClick={() => { setShowUsers(!showUsers); closePopup() }} />
           {showUsers && (
-            <View
+            <FilterChip
+              active={activeUserFilterCount > 0}
+              tone='neutral'
+              text={`筛选${activeUserFilterCount > 0 ? ` ${activeUserFilterCount}` : ''}`}
               onClick={() => setShowUserFilterSheet(true)}
-              style={{
-                padding: `${space(3)} ${space(4)}`,
-                borderRadius: radius.md,
-                marginRight: space(2),
-                marginBottom: space(2),
-                backgroundColor: activeUserFilterCount > 0 ? palette.brandSoft : palette.tag,
-                border: `1px solid ${activeUserFilterCount > 0 ? palette.brandSoft : palette.lineSoft}`,
-              }}
-            >
-              <Text style={{ ...typography.bodyStrong, color: activeUserFilterCount > 0 ? palette.brand : palette.muted }}>
-                筛选{activeUserFilterCount > 0 ? ` ${activeUserFilterCount}` : ''}
-              </Text>
-            </View>
+            />
           )}
           <View style={{ flex: 1 }} />
         </View>
