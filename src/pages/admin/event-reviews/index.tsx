@@ -6,9 +6,12 @@ import { listEventSubmissions, getEventPublishPayload, reviewEventSubmission } f
 import { clearEventListCache } from '../../../services/event'
 import { callCloud } from '../../../services/cloud'
 import AdminActionButton from '../../../components/admin/AdminActionButton'
+import AppPage from '../../../components/common/AppPage'
+import AppCard from '../../../components/common/AppCard'
 import AppChip from '../../../components/common/AppChip'
 import FormInputBox from '../../../components/common/FormInputBox'
 import { palette } from '../../../theme/palette'
+import { radius, space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
 
 const STATUS_OPTIONS = ['pending', 'merged', 'rejected'] as const
@@ -240,43 +243,43 @@ export default function AdminEventReviewsPage() {
 
   if (checking) {
     return (
-      <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '40px 20px', textAlign: 'center' }}>
+      <AppPage style={{ paddingTop: space(8), textAlign: 'center' }}>
         <Text style={{ ...typography.body, color: palette.subtext }}>检查管理员权限中...</Text>
-      </View>
+      </AppPage>
     )
   }
 
   if (!isAdmin) {
     return (
-      <View style={{ minHeight: '100vh', backgroundColor: palette.bg, padding: '16px', boxSizing: 'border-box' }}>
-        <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '18px 16px', border: `1px solid ${palette.line}` }}>
+      <AppPage>
+        <AppCard border>
           <Text style={{ ...typography.title, color: palette.text }}>活动审核台</Text>
-          <View style={{ marginTop: '8px' }}>
+          <View style={{ marginTop: space(2) }}>
             <Text style={{ ...typography.meta, color: palette.subtext }}>
               {error || '你当前没有管理员权限。请先在 CloudBase 创建 admin_users 集合，并把你的 openid 加进去。'}
             </Text>
           </View>
-        </View>
-      </View>
+        </AppCard>
+      </AppPage>
     )
   }
 
   return (
     <ScrollView scrollY style={{ minHeight: '100vh', backgroundColor: palette.bg }}>
-      <View style={{ padding: '16px', boxSizing: 'border-box' }}>
-        <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '18px 16px', marginBottom: '14px', border: `1px solid ${palette.line}` }}>
+      <View style={{ padding: space(4), boxSizing: 'border-box' }}>
+        <AppCard border>
           <Text style={{ ...typography.title, color: palette.text }}>活动审核台</Text>
-          <View style={{ marginTop: '6px' }}>
+          <View style={{ marginTop: space(2) }}>
             <Text style={{ ...typography.meta, color: palette.subtext }}>
               这里是管理员专用页面。你可以查看 event_submissions，生成建议版 events payload，并一键发布到 CloudBase events 集合；也保留手动回填作为备用路径。
             </Text>
           </View>
-          <View style={{ marginTop: '10px', backgroundColor: palette.cardSoft, borderRadius: '12px', padding: '10px 12px' }}>
+          <View style={{ marginTop: space(3), backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: `${space(2)} ${space(3)}` }}>
             <Text style={{ ...typography.caption, color: palette.subtext }}>当前管理员：{adminName}</Text>
           </View>
-        </View>
+        </AppCard>
 
-        <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: '8px' }}>
+        <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: space(2) }}>
           {STATUS_OPTIONS.map((option) => (
             <Pill
               key={option}
@@ -292,89 +295,83 @@ export default function AdminEventReviewsPage() {
           ))}
         </View>
 
-        <AdminActionButton text='刷新列表' variant='secondary' onClick={() => loadSubmissions(statusFilter)} marginBottom='14px' />
+        <AdminActionButton text='刷新列表' variant='secondary' onClick={() => loadSubmissions(statusFilter)} marginBottom={space(3)} />
 
         {error ? (
-          <View style={{ padding: '12px', marginBottom: '14px', backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.brandSoft}` }}>
+          <View style={{ padding: space(3), marginBottom: space(3), backgroundColor: palette.errorSoft, borderRadius: radius.md, border: `1px solid ${palette.brandSoft}` }}>
             <Text style={{ ...typography.meta, color: palette.error }}>{error}</Text>
           </View>
         ) : null}
 
-        <View style={{ marginBottom: '14px' }}>
+        <View style={{ marginBottom: space(3) }}>
           {submissions.map((item) => {
             const active = item._id === selectedId
             return (
-              <View key={item._id} onClick={() => openItem(item)} style={{
-                backgroundColor: palette.card,
-                borderRadius: '16px',
-                padding: '14px',
-                marginBottom: '10px',
-                border: `1px solid ${active ? palette.brand : palette.line}`,
-              }}>
+              <AppCard key={item._id} onClick={() => openItem(item)} padding={space(3)} marginBottom={space(3)} borderColor={active ? palette.brand : palette.line}>
                 <Text style={{ ...typography.cardTitle, color: palette.text }}>{item.title}</Text>
-                <View style={{ marginTop: '4px' }}>
+                <View style={{ marginTop: space(1) }}>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>
                     {item.province}{item.city ? ` · ${item.city}` : ''}{item.eventType ? ` · ${item.eventType}` : ''}
                   </Text>
                 </View>
-                <View style={{ marginTop: '4px' }}>
+                <View style={{ marginTop: space(1) }}>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>
                     主办方：{item.organizer || '未填写'}
                   </Text>
                 </View>
-                <View style={{ marginTop: '4px' }}>
+                <View style={{ marginTop: space(1) }}>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>
                     提交人：{item.submitterDisplayName || '未知'}{item.submitterCity ? ` · ${item.submitterCity}` : ''}
                   </Text>
                 </View>
-                <View style={{ marginTop: '4px' }}>
+                <View style={{ marginTop: space(1) }}>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>
                     开始时间：{formatDateText(item.startTime)}
                   </Text>
                 </View>
-                <View style={{ marginTop: '8px', display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
+                <View style={{ marginTop: space(2), display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
                   <AppChip text={item.status} tone='brand' />
                   <AppChip text={item.isOnline ? '线上' : '线下'} tone='green' />
                   {item.publishedEventId ? <AppChip text={`event #${item.publishedEventId}`} tone='accent' /> : null}
                 </View>
-              </View>
+              </AppCard>
             )
           })}
 
           {submissions.length === 0 ? (
-            <View style={{ backgroundColor: palette.card, borderRadius: '16px', padding: '18px 16px', border: `1px solid ${palette.line}` }}>
+            <AppCard border>
               <Text style={{ ...typography.meta, color: palette.subtext }}>当前筛选下没有活动提交记录。</Text>
-            </View>
+            </AppCard>
           ) : null}
         </View>
 
         {selectedSubmission ? (
-          <View style={{ backgroundColor: palette.card, borderRadius: '20px', padding: '16px', marginBottom: '20px', border: `1px solid ${palette.line}` }}>
-            <Text style={{ ...typography.sectionTitle, color: palette.text, marginBottom: '10px' }}>审核详情</Text>
+          <AppCard marginBottom={space(5)} border>
+            <Text style={{ ...typography.sectionTitle, color: palette.text, marginBottom: space(2) }}>审核详情</Text>
 
-            <View style={{ marginBottom: '10px' }}>
+            <View style={{ marginBottom: space(2) }}>
               <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>submissionId</Text>
               <Text style={{ ...typography.meta, color: palette.text }}>{selectedSubmission._id}</Text>
             </View>
 
-            <View style={{ marginBottom: '10px' }}>
+            <View style={{ marginBottom: space(2) }}>
               <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>发布时间建议 payload</Text>
-              <View style={{ marginTop: '8px', backgroundColor: palette.cardSoft, borderRadius: '14px', padding: '12px', border: `1px solid ${palette.line}` }}>
+              <View style={{ marginTop: space(2), backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), border: `1px solid ${palette.line}` }}>
                 <Text style={{ ...typography.caption, color: palette.subtext, whiteSpace: 'pre-wrap' }}>
                   {detailLoading ? '生成中...' : payloadText}
                 </Text>
               </View>
-              <View style={{ marginTop: '8px' }}>
+              <View style={{ marginTop: space(2) }}>
                 <AdminActionButton text='复制 payload JSON' variant='secondary' onClick={handleCopyPayload} />
               </View>
             </View>
 
             {(payloadResponse.warnings || []).length > 0 ? (
-              <View style={{ marginBottom: '12px' }}>
+              <View style={{ marginBottom: space(3) }}>
                 <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>Warnings</Text>
-                <View style={{ marginTop: '8px', backgroundColor: palette.warningSoft, borderRadius: '14px', padding: '12px', border: `1px solid ${palette.line}` }}>
+                <View style={{ marginTop: space(2), backgroundColor: palette.warningSoft, borderRadius: radius.md, padding: space(3), border: `1px solid ${palette.line}` }}>
                   {(payloadResponse.warnings || []).map((warning, idx) => (
-                    <View key={`${idx}-${warning}`} style={{ marginBottom: idx === (payloadResponse.warnings || []).length - 1 ? '0' : '6px' }}>
+                    <View key={`${idx}-${warning}`} style={{ marginBottom: idx === (payloadResponse.warnings || []).length - 1 ? '0' : space(2) }}>
                       <Text style={{ ...typography.caption, color: palette.subtext }}>• {warning}</Text>
                     </View>
                   ))}
@@ -382,9 +379,9 @@ export default function AdminEventReviewsPage() {
               </View>
             ) : null}
 
-            <View style={{ marginBottom: '12px' }}>
+            <View style={{ marginBottom: space(3) }}>
               <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>publishedEventId（手动备用路径）</Text>
-              <View style={{ marginTop: '8px' }}>
+              <View style={{ marginTop: space(2) }}>
                 <FormInputBox focused={focusedField === 'publishedEventId'} marginBottom='0'>
                   <Input
                     value={publishedEventId}
@@ -398,9 +395,9 @@ export default function AdminEventReviewsPage() {
               </View>
             </View>
 
-            <View style={{ marginBottom: '12px' }}>
+            <View style={{ marginBottom: space(3) }}>
               <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>adminNote</Text>
-              <View style={{ marginTop: '8px' }}>
+              <View style={{ marginTop: space(2) }}>
                 <FormInputBox focused={focusedField === 'adminNote'} marginBottom='0'>
                   <Textarea
                     value={adminNote}
@@ -421,7 +418,7 @@ export default function AdminEventReviewsPage() {
               <AdminActionButton text='拒绝' disabled={reviewLoading} variant='danger' onClick={() => handleReview('reject')} />
               <AdminActionButton text='重置待审核' disabled={reviewLoading} variant='neutral' onClick={() => handleReview('reset_pending')} marginRight='0' />
             </View>
-          </View>
+          </AppCard>
         ) : null}
       </View>
     </ScrollView>
