@@ -7,19 +7,19 @@ type AppSegmentedTabOption<T extends string> = {
   label: string
 }
 
-type AppSegmentedTabsProps<T extends string> = {
-  options: AppSegmentedTabOption<T>[]
-  value: T
-  onChange: (value: T) => void
+type AppSegmentedTabsProps<const TOptions extends readonly AppSegmentedTabOption<string>[]> = {
+  options: TOptions
+  value: TOptions[number]['key']
+  onChange: (value: TOptions[number]['key']) => void
   marginBottom?: string
 }
 
-export default function AppSegmentedTabs<T extends string>({
+export default function AppSegmentedTabs<const TOptions extends readonly AppSegmentedTabOption<string>[]>({
   options,
   value,
   onChange,
   marginBottom = space(4),
-}: AppSegmentedTabsProps<T>) {
+}: AppSegmentedTabsProps<TOptions>) {
   return (
     <View
       style={{
