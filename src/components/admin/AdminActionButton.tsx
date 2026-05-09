@@ -1,8 +1,5 @@
-import { useState } from 'react'
-import { View, Text } from '@tarojs/components'
-import { palette } from '../../theme/palette'
-import { elevation, radius, space } from '../../theme/spacing'
-import { typography } from '../../theme/typography'
+import { space } from '../../theme/spacing'
+import AppPrimaryButton from '../common/AppPrimaryButton'
 
 type Variant = 'primary' | 'success' | 'secondary' | 'danger' | 'neutral'
 
@@ -17,54 +14,10 @@ type Props = {
   marginBottom?: string
 }
 
-function getVariantStyle(variant: Variant, pressed: boolean, disabled: boolean) {
-  if (disabled) {
-    return {
-      backgroundColor: palette.disabledBg,
-      borderColor: palette.disabledBg,
-      color: palette.disabledText,
-      shadow: 'none',
-    }
-  }
-
-  switch (variant) {
-    case 'primary':
-      return {
-        backgroundColor: pressed ? palette.brandPress : palette.brand,
-        borderColor: pressed ? palette.brandPress : palette.brand,
-        color: '#FFFFFF',
-        shadow: `0 4px 12px ${palette.shadow}`,
-      }
-    case 'success':
-      return {
-        backgroundColor: pressed ? '#606E55' : palette.green,
-        borderColor: pressed ? '#606E55' : palette.green,
-        color: '#FFFFFF',
-        shadow: `0 4px 12px ${palette.shadow}`,
-      }
-    case 'danger':
-      return {
-        backgroundColor: pressed ? '#F7DED9' : palette.errorSoft,
-        borderColor: pressed ? palette.error : '#F5D1CC',
-        color: palette.error,
-        shadow: pressed ? elevation.pressed : 'none',
-      }
-    case 'neutral':
-      return {
-        backgroundColor: pressed ? palette.activeBg : palette.tag,
-        borderColor: pressed ? palette.focus : palette.line,
-        color: palette.subtext,
-        shadow: pressed ? elevation.pressed : 'none',
-      }
-    case 'secondary':
-    default:
-      return {
-        backgroundColor: pressed ? palette.activeBg : palette.brandSoft,
-        borderColor: pressed ? palette.focus : palette.brandSoft,
-        color: palette.brand,
-        shadow: pressed ? elevation.pressed : 'none',
-      }
-  }
+function mapVariant(variant: Variant) {
+  if (variant === 'danger') return 'dangerSoft'
+  if (variant === 'neutral') return 'neutral'
+  return variant
 }
 
 export default function AdminActionButton({
@@ -77,31 +30,18 @@ export default function AdminActionButton({
   marginRight = space(2),
   marginBottom = space(2),
 }: Props) {
-  const [pressed, setPressed] = useState(false)
-  const inactive = disabled || loading
-  const style = getVariantStyle(variant, pressed, inactive)
-
   return (
-    <View
-      onTouchStart={() => !inactive && setPressed(true)}
-      onTouchEnd={() => setPressed(false)}
-      onTouchCancel={() => setPressed(false)}
-      onClick={inactive ? undefined : onClick}
-      style={{
-        backgroundColor: style.backgroundColor,
-        border: `1px solid ${style.borderColor}`,
-        borderRadius: radius.md,
-        padding: `${space(2)} ${space(3)}`,
-        marginRight,
-        marginBottom,
-        boxShadow: style.shadow,
-        transform: pressed ? 'scale(0.98)' : 'scale(1)',
-        opacity: inactive ? 0.86 : 1,
-      }}
-    >
-      <Text style={{ ...typography.button, color: style.color }}>
-        {loading ? loadingText : text}
-      </Text>
-    </View>
+    <AppPrimaryButton
+      text={text}
+      loadingText={loadingText}
+      loading={loading}
+      disabled={disabled}
+      variant={mapVariant(variant)}
+      size='sm'
+      appearance='inline'
+      marginRight={marginRight}
+      marginBottom={marginBottom}
+      onClick={onClick}
+    />
   )
 }
