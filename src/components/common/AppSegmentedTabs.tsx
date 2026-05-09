@@ -7,7 +7,7 @@ type AppSegmentedTabOption<T extends string> = {
   label: string
 }
 
-type AppSegmentedTabsProps<const TOptions extends readonly AppSegmentedTabOption<string>[]> = {
+type AppSegmentedTabsProps<TOptions extends readonly AppSegmentedTabOption<string>[]> = {
   options: TOptions
   value: TOptions[number]['key']
   onChange: (value: TOptions[number]['key']) => void
