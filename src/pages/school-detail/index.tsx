@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { View, Text, Textarea } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { registerCurrentPageShare } from '../../utils/share'
 import { getSchoolDetail, submitCorrection } from '../../services/school'
@@ -13,6 +13,7 @@ import AppTag from '../../components/common/AppTag'
 import AppInfoRow from '../../components/common/AppInfoRow'
 import AppIcon from '../../components/common/AppIcon'
 import AppPrimaryButton from '../../components/common/AppPrimaryButton'
+import CorrectionCard from '../../components/common/CorrectionCard'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
 
@@ -145,59 +146,20 @@ function SchoolContent(props: {
       <AppInfoRow variant='prominent' label='相关说明' value={school.output_direction} />
 
       {!preview ? (
-        <AppCard marginBottom={space(4)}>
-          {!showCorrectionForm && !correctionDone && (
-            <View onClick={onShowCorrectionForm} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ marginRight: space(2) }}>
-                <AppIcon name='edit-pencil' size={32} backgroundColor={palette.brandSoft} bordered />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.bodyStrong, color: palette.text }}>信息有误？帮我们完善</Text>
-                <View style={{ marginTop: space(1) }}>
-                  <Text style={{ ...typography.caption, color: palette.subtext }}>补充、修正或更新这个学习社区的信息</Text>
-                </View>
-              </View>
-              <AppPrimaryButton text='填写' variant='secondary' size='sm' appearance='inline' marginBottom='0' />
-            </View>
-          )}
-
-          {showCorrectionForm && !correctionDone && (
-            <View>
-              <View style={{ marginBottom: space(3), display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ marginRight: space(2) }}>
-                  <AppIcon name='edit-pencil' size={30} backgroundColor={palette.brandSoft} bordered />
-                </View>
-                <Text style={{ ...typography.bodyStrong, color: palette.text }}>补充或修正信息</Text>
-              </View>
-              <View style={{ marginBottom: space(2) }}>
-                <Text style={{ ...typography.caption, color: palette.subtext }}>请描述需要修正或补充的内容，例如：费用有调整、参与方式有变化、名称已更新、官网地址有误等。提交后我们会核实更新。</Text>
-              </View>
-              <Textarea
-                value={correctionText}
-                onInput={(e) => onCorrectionTextChange(e.detail.value)}
-                placeholder='请输入需要修正或补充的信息...'
-                maxlength={500}
-                style={{ width: '100%', minHeight: '100px', padding: space(3), backgroundColor: palette.surface, borderRadius: radius.md, border: `1px solid ${palette.line}`, ...typography.body, color: palette.text, boxSizing: 'border-box' }}
-              />
-              <View style={{ marginTop: space(1), marginBottom: space(3) }}>
-                <Text style={{ ...typography.micro, color: palette.muted }}>{correctionText.length}/500</Text>
-              </View>
-              <View style={{ display: 'flex', flexDirection: 'row' }}>
-                <AppPrimaryButton text='取消' variant='ghost' size='sm' appearance='inline' marginBottom='0' marginRight={space(3)} disabled={correctionSubmitting} onClick={onCancelCorrection} />
-                <AppPrimaryButton text='提交' loadingText='提交中...' loading={correctionSubmitting} variant='primary' size='sm' appearance='inline' marginBottom='0' onClick={onSubmitCorrection} />
-              </View>
-            </View>
-          )}
-
-          {correctionDone && (
-            <View style={{ textAlign: 'center', padding: `${space(2)} 0` }}>
-              <View style={{ marginBottom: space(2), display: 'flex', justifyContent: 'center' }}>
-                <AppIcon name='check' size={36} backgroundColor={palette.greenSoft} color={palette.green} bordered />
-              </View>
-              <View><Text style={{ ...typography.bodyStrong, color: palette.green }}>感谢反馈！我们会尽快核实</Text></View>
-            </View>
-          )}
-        </AppCard>
+        <CorrectionCard
+          showForm={showCorrectionForm}
+          value={correctionText}
+          submitting={correctionSubmitting}
+          done={correctionDone}
+          entryTitle='信息有误？帮我们完善'
+          entryDescription='补充、修正或更新这个学习社区的信息'
+          formTitle='补充或修正信息'
+          formDescription='请描述需要修正或补充的内容，例如：费用有调整、参与方式有变化、名称已更新、官网地址有误等。提交后我们会核实更新。'
+          onOpen={onShowCorrectionForm}
+          onCancel={onCancelCorrection}
+          onChange={onCorrectionTextChange}
+          onSubmit={onSubmitCorrection}
+        />
       ) : null}
     </>
   )
