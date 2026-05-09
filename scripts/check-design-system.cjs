@@ -7,8 +7,9 @@ const repoRoot = path.resolve(__dirname, '..')
 const DEFAULT_BASE_REF = process.env.DESIGN_SYSTEM_CHECK_BASE || 'origin/main'
 
 // Existing legacy files can be cleaned gradually. This check blocks newly added
-// raw design-system drift in source diffs: raw hex colors, inline fontSize, and
-// bare borderRadius pixel literals. Use palette / typography / radius tokens instead.
+// raw design-system drift in source diffs: raw hex colors, inline fontSize,
+// bare borderRadius pixel literals, and bare spacing pixel literals. Use
+// palette / typography / radius / space tokens instead.
 const ALLOWED_HEX = new Set([
   'src/app.config.ts',
   'src/theme/palette.ts',
@@ -22,9 +23,14 @@ const ALLOWED_BORDER_RADIUS = new Set([
   'src/components/common/AppIcon.tsx',
 ])
 
+const ALLOWED_SPACING_PIXEL = new Set([
+  'src/components/common/AppIcon.tsx',
+])
+
 const hexRe = /#[0-9A-Fa-f]{6}\b/g
 const fontSizeRe = /\bfontSize\s*:/
 const borderRadiusPixelRe = /\bborderRadius\s*:\s*['"]\d+px['"]/
+const spacingPixelRe = /\b(padding|margin|marginTop|marginBottom|marginLeft|marginRight)\s*:\s*['"][^'"]*\d+px[^'"]*['"]/
 const violations = []
 
 function getDiff() {
@@ -76,6 +82,10 @@ for (const line of getDiff().split(/\r?\n/)) {
       violations.push(`${currentFile}:${newLineNumber || '?'} adds raw borderRadius pixel literal. Use radius tokens instead.`)
     }
 
+    if (!ALLOWED_SPACING_PIXEL.has(currentFile) && spacingPixelRe.test(content)) {
+      violations.push(`${currentFile}:${newLineNumber || '?'} adds raw spacing pixel literal. Use space() tokens instead.`)
+    }
+
     newLineNumber += 1
     continue
   }
@@ -91,7 +101,7 @@ if (violations.length > 0) {
   console.log(`Checked added source lines against ${DEFAULT_BASE_REF}.`)
   violations.slice(0, 120).forEach((item) => console.log(`- ${item}`))
   if (violations.length > 120) console.log(`...and ${violations.length - 120} more`)
-  console.log('\nMove values to palette / typography / radius tokens, or add a narrow allowlist exception with a reason.')
+  console.log('\nMove values to palette / typography / radius / spacing tokens, or add a narrow allowlist exception with a reason.')
   process.exit(1)
 }
 
