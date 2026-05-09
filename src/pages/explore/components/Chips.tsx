@@ -15,7 +15,7 @@ export function FilterChip(props: { active: boolean; tone?: ExploreChipTone; tex
 }
 
 export function ProvinceChip(props: { active: boolean; text: string; onClick: () => void }) {
-  return <AppChip text={props.text} tone='action' size='md' selected={props.active} interactive marginBottom='0' onClick={props.onClick} />
+  return <AppChip text={props.text} tone='brand' size='md' selected={props.active} interactive marginBottom='0' onClick={props.onClick} />
 }
 
 export function Tag(props: { text: string; tone?: 'brand' | 'user' | 'neutral' }) {

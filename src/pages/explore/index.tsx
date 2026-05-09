@@ -15,6 +15,7 @@ import { palette } from '../../theme/palette'
 import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 import AppPage from '../../components/common/AppPage'
+import AppPromptBanner from '../../components/common/AppPromptBanner'
 import { exploreTheme } from './styles'
 import type {
   AppUser,
@@ -526,15 +527,15 @@ export default function ExplorePage() {
   return (
     <AppPage flush style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
       {!loading && !hasProfile && (
-        <View onClick={goToProfile} style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)}`, borderBottom: `1px solid ${exploreTheme.border}`, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ ...typography.bodyStrong, color: exploreTheme.text }}>填写资料，查看成员目录</Text>
-            <View style={{ marginTop: space(1) }}><Text style={{ ...typography.caption, color: exploreTheme.subtext }}>完成资料后可查看扩展公开资料，也可以选择出现在地图上</Text></View>
-          </View>
-          <View style={{ padding: `${space(2)} ${space(3)}`, borderRadius: radius.pill, backgroundColor: palette.brand }}>
-            <Text style={{ ...typography.caption, color: palette.card }}>去填写</Text>
-          </View>
-        </View>
+        <AppPromptBanner
+          title='填写资料，查看成员目录'
+          description='完成资料后可查看扩展公开资料，也可以选择出现在地图上'
+          actionText='去填写'
+          icon='user'
+          tone='brand'
+          flush
+          onClick={goToProfile}
+        />
       )}
 
       <View style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)} ${space(3)}`, borderBottom: `1px solid ${exploreTheme.border}` }}>
