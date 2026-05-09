@@ -166,6 +166,7 @@ const failClosedActions = new Set(extractSetStrings(appServiceSource, 'FAIL_CLOS
 const appServiceMissingRoute = diff(appServiceActions, new Set([...routedActions, ...ROUTE_EXEMPT_ACTIONS]))
 const routedMissingHandler = diff(routedActions, new Set([...appServiceActions, ...STANDALONE_ALLOWED_ACTIONS]))
 const appServiceMissingRateLimit = diff(appServiceActions, new Set([...rateLimitedActions, ...RATE_LIMIT_EXEMPT_ACTIONS]))
+const staleRateLimitActions = diff(rateLimitedActions, appServiceActions)
 const failClosedMissingRateLimit = diff(failClosedActions, rateLimitedActions)
 const failClosedMissingHandler = diff(failClosedActions, appServiceActions)
 
@@ -179,6 +180,7 @@ console.log(`fail-closed actions: ${failClosedActions.size}`)
 printList('appService actions missing from frontend ROUTED_ACTIONS:', appServiceMissingRoute)
 printList('frontend ROUTED_ACTIONS without appService handler:', routedMissingHandler)
 printList('appService actions missing rate-limit config:', appServiceMissingRateLimit)
+printList('rate-limit config actions without appService handler:', staleRateLimitActions)
 printList('fail-closed actions missing rate-limit config:', failClosedMissingRateLimit)
 printList('fail-closed actions missing appService handler:', failClosedMissingHandler)
 
@@ -186,6 +188,7 @@ const failed = [
   appServiceMissingRoute,
   routedMissingHandler,
   appServiceMissingRateLimit,
+  staleRateLimitActions,
   failClosedMissingRateLimit,
   failClosedMissingHandler,
 ].some((items) => items.length > 0)
