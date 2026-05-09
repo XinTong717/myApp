@@ -1,5 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
+import { typography } from '../../theme/typography'
 
 type Props = {
   title: string
@@ -10,14 +12,14 @@ type Props = {
 export default function ProfileSectionHeading({
   title,
   description,
-  marginBottom = '10px',
+  marginBottom = space(3),
 }: Props) {
   return (
     <View style={{ marginBottom }}>
-      <Text style={{ fontSize: '16px', fontWeight: 'bold', color: palette.text }}>{title}</Text>
+      <Text style={{ ...typography.cardTitle, color: palette.text }}>{title}</Text>
       {description ? (
-        <View style={{ marginTop: '4px' }}>
-          <Text style={{ fontSize: '12px', color: palette.subtext }}>{description}</Text>
+        <View style={{ marginTop: space(1) }}>
+          <Text style={{ ...typography.caption, color: palette.subtext }}>{description}</Text>
         </View>
       ) : null}
     </View>
