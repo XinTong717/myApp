@@ -2,6 +2,7 @@ import { Text, View } from '@tarojs/components'
 import { palette } from '../../../theme/palette'
 import { radius, space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
+import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
 import { exploreTheme } from '../styles'
 import type { MarkerItem } from '../types'
 import { Tag } from './Chips'
@@ -32,28 +33,6 @@ const panelStyle = {
   padding: `${space(3)} ${space(3)}`,
   border: `1px solid ${exploreTheme.border}`,
 } as const
-
-function SheetButton(props: { text: string; tone: 'primary' | 'ghost' | 'danger'; disabled?: boolean; onClick?: () => void }) {
-  const isPrimary = props.tone === 'primary'
-  const isDanger = props.tone === 'danger'
-  return (
-    <View
-      onClick={props.disabled ? undefined : props.onClick}
-      style={{
-        backgroundColor: props.disabled ? exploreTheme.tag : isPrimary ? palette.brand : isDanger ? palette.errorSoft : exploreTheme.tag,
-        borderRadius: radius.md,
-        padding: space(3),
-        textAlign: 'center',
-        border: isPrimary ? 'none' : `1px solid ${isDanger ? palette.errorSoft : exploreTheme.border}`,
-        opacity: props.disabled ? 0.72 : 1,
-      }}
-    >
-      <Text style={{ ...typography.button, color: props.disabled ? exploreTheme.muted : isPrimary ? palette.card : isDanger ? palette.error : exploreTheme.tagText }}>
-        {props.text}
-      </Text>
-    </View>
-  )
-}
 
 function InfoBlock(props: { title: string; text?: string | string[] }) {
   const lines = Array.isArray(props.text) ? props.text.filter(Boolean) : [props.text].filter(Boolean)
@@ -128,15 +107,15 @@ export default function UserPopup(props: UserPopupProps) {
           </View>
         ) : null}
 
-        {user.isSelf ? <SheetButton text='去看我的资料' tone='ghost' onClick={onPrimaryAction} /> : !hasProfile ? <SheetButton text='去填写资料' tone='primary' onClick={onPrimaryAction} /> : null}
+        {user.isSelf ? <AppPrimaryButton text='去看我的资料' variant='ghost' size='md' marginBottom='0' onClick={onPrimaryAction} /> : !hasProfile ? <AppPrimaryButton text='去填写资料' variant='primary' size='md' marginBottom='0' onClick={onPrimaryAction} /> : null}
 
         {!user.isSelf && (
           <View style={{ display: 'flex', flexDirection: 'row', marginTop: user.isSelf || !hasProfile ? space(3) : 0 }}>
             <View style={{ flex: 1, marginRight: space(2) }}>
-              <SheetButton text='举报' tone='ghost' onClick={() => onReport(String(user.originalId))} />
+              <AppPrimaryButton text='举报' variant='ghost' size='md' marginBottom='0' onClick={() => onReport(String(user.originalId))} />
             </View>
             <View style={{ flex: 1 }}>
-              <SheetButton text='拉黑' tone='danger' onClick={() => onBlock(String(user.originalId))} />
+              <AppPrimaryButton text='拉黑' variant='danger' size='md' marginBottom='0' onClick={() => onBlock(String(user.originalId))} />
             </View>
           </View>
         )}
