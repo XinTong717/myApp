@@ -1,6 +1,7 @@
 import { Text, View } from '@tarojs/components'
 import AppPage from '../../../components/common/AppPage'
 import AppCard from '../../../components/common/AppCard'
+import { CURRENT_TERMS_VERSION } from '../../../constants/legal'
 import { palette } from '../../../theme/palette'
 import { space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
@@ -17,7 +18,7 @@ function Section(props: { title: string; children: any }) {
 }
 
 function BodyText(props: { children: any }) {
-  return <Text style={{ ...typography.meta, color: palette.subtext, lineHeight: '22px' }}>{props.children}</Text>
+  return <Text style={{ ...typography.meta, color: palette.subtext }}>{props.children}</Text>
 }
 
 export default function UserAgreementPage() {
@@ -25,7 +26,7 @@ export default function UserAgreementPage() {
     <AppPage>
       <View style={{ marginBottom: space(4) }}>
         <Text style={{ ...typography.title, color: palette.text }}>用户协议</Text>
-        <View style={{ marginTop: space(1) }}><Text style={{ ...typography.micro, color: palette.subtext }}>更新日期：2026-05-08</Text></View>
+        <View style={{ marginTop: space(1) }}><Text style={{ ...typography.micro, color: palette.subtext }}>更新日期：{CURRENT_TERMS_VERSION}</Text></View>
       </View>
 
       <Section title='1. 协议范围'>
