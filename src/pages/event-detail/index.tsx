@@ -15,6 +15,7 @@ import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
 import AppInfoRow from '../../components/common/AppInfoRow'
+import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import type { EventItem } from '../events/shared'
@@ -48,9 +49,16 @@ function EventContent(props: { event: EventItem; preview?: boolean; previewError
           {interestCount > 0 ? <AppTag text={`${interestCount} 人感兴趣`} backgroundColor={palette.surfaceWarm} textColor={palette.brand} /> : null}
         </View>
       </AppCard>
-      <View onClick={preview || interestLoading ? undefined : onToggleInterest} style={{ backgroundColor: hasInterested ? palette.surfaceSoft : preview ? palette.disabledBg : palette.brand, borderRadius: radius.md, padding: space(3), textAlign: 'center', marginBottom: space(3) }}>
-        <Text style={{ ...typography.button, color: hasInterested || preview ? palette.subtext : '#FFF' }}>{preview ? '完整详情加载后可标记感兴趣' : interestLoading ? '处理中...' : hasInterested ? '已感兴趣，再点一次取消' : '我感兴趣'}</Text>
-      </View>
+      <AppPrimaryButton
+        text={preview ? '完整详情加载后可标记感兴趣' : hasInterested ? '已感兴趣，再点一次取消' : '我感兴趣'}
+        loadingText='处理中...'
+        loading={interestLoading}
+        disabled={!!preview}
+        variant={hasInterested ? 'secondary' : 'primary'}
+        size='md'
+        marginBottom={space(3)}
+        onClick={onToggleInterest}
+      />
       <AppInfoRow label='时间' value={formatEventTime(event)} />
       <AppInfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />
       <AppInfoRow label='费用' value={event.fee || '免费'} />
