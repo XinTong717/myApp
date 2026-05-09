@@ -1,4 +1,7 @@
 import { Text, View } from '@tarojs/components'
+import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
+import { typography } from '../../theme/typography'
 
 type Props = {
   current: number
@@ -10,12 +13,12 @@ type Props = {
 export default function ProfileCounterText({
   current,
   max,
-  marginTop = '4px',
-  marginBottom = '8px',
+  marginTop = space(1),
+  marginBottom = space(2),
 }: Props) {
   return (
     <View style={{ marginTop, marginBottom }}>
-      <Text style={{ fontSize: '11px', color: '#C5B5A5' }}>{current}/{max}</Text>
+      <Text style={{ ...typography.micro, color: palette.muted }}>{current}/{max}</Text>
     </View>
   )
 }
