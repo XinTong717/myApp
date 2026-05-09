@@ -1,7 +1,8 @@
 import { View, Text } from '@tarojs/components'
 import AppCard from './AppCard'
+import AppPrimaryButton from './AppPrimaryButton'
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
+import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type EmptyCardProps = {
@@ -26,11 +27,11 @@ type LoadMoreButtonProps = {
 
 export function EmptyCard({ text, actionText, onAction }: EmptyCardProps) {
   return (
-    <AppCard radius='18px'>
+    <AppCard radius={radius.md}>
       <Text style={{ ...typography.body, color: palette.subtext }}>{text}</Text>
       {actionText && onAction ? (
-        <View onClick={onAction} style={{ marginTop: space(3), backgroundColor: palette.brandSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}`, alignSelf: 'flex-start' }}>
-          <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>{actionText}</Text>
+        <View style={{ marginTop: space(3), alignSelf: 'flex-start' }}>
+          <AppPrimaryButton text={actionText} variant='secondary' size='sm' appearance='inline' marginBottom='0' onClick={onAction} />
         </View>
       ) : null}
     </AppCard>
@@ -39,16 +40,16 @@ export function EmptyCard({ text, actionText, onAction }: EmptyCardProps) {
 
 export function ErrorRetryCard({ error, retryText = '重新加载', secondaryText, onRetry, onSecondary }: ErrorRetryCardProps) {
   return (
-    <View style={{ padding: space(3), marginBottom: space(4), backgroundColor: palette.errorSoft, borderRadius: '14px', border: `1px solid ${palette.brandSoft}` }}>
+    <View style={{ padding: space(3), marginBottom: space(4), backgroundColor: palette.errorSoft, borderRadius: radius.md, border: `1px solid ${palette.brandSoft}` }}>
       <Text style={{ ...typography.meta, color: palette.error }}>{error}</Text>
       {onRetry ? (
-        <View onClick={onRetry} style={{ marginTop: '10px', backgroundColor: palette.brandSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}`, alignSelf: 'flex-start' }}>
-          <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>{retryText}</Text>
+        <View style={{ marginTop: space(3), alignSelf: 'flex-start' }}>
+          <AppPrimaryButton text={retryText} variant='secondary' size='sm' appearance='inline' marginBottom='0' onClick={onRetry} />
         </View>
       ) : null}
       {secondaryText && onSecondary ? (
-        <View onClick={onSecondary} style={{ marginTop: space(2), backgroundColor: palette.cardSoft, borderRadius: '12px', padding: `${space(2)} ${space(3)}`, alignSelf: 'flex-start' }}>
-          <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>{secondaryText}</Text>
+        <View style={{ marginTop: space(2), alignSelf: 'flex-start' }}>
+          <AppPrimaryButton text={secondaryText} variant='ghost' size='sm' appearance='inline' marginBottom='0' onClick={onSecondary} />
         </View>
       ) : null}
     </View>
@@ -62,9 +63,9 @@ export function LoadMoreButton({ visible = true, loading = false, onClick }: Loa
       onClick={loading ? undefined : onClick}
       style={{
         margin: `${space(1)} 0 ${space(4)}`,
-        padding: `10px ${space(3)}`,
-        borderRadius: '999px',
-        backgroundColor: loading ? palette.surfaceSoft : '#FFFFFF',
+        padding: `${space(2)} ${space(3)}`,
+        borderRadius: radius.pill,
+        backgroundColor: loading ? palette.surfaceSoft : palette.card,
         border: `1px solid ${palette.line}`,
         textAlign: 'center',
       }}
