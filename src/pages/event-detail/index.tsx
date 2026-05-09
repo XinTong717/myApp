@@ -16,6 +16,7 @@ import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
 import AppInfoRow from '../../components/common/AppInfoRow'
 import AppPrimaryButton from '../../components/common/AppPrimaryButton'
+import AppPromptBanner from '../../components/common/AppPromptBanner'
 import CorrectionCard from '../../components/common/CorrectionCard'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
@@ -35,15 +36,15 @@ function buildEventShare(event?: EventItem | null, eventId?: number) {
 
 function PreviewNotice(props: { error?: string; onRetry?: () => void }) {
   return (
-    <View style={{ backgroundColor: palette.warningSoft, borderRadius: radius.md, padding: `${space(2)} ${space(3)}`, marginBottom: space(3), border: `1px solid ${palette.line}` }}>
-      <Text style={{ ...typography.caption, color: palette.subtext }}>
-        {props.error ? `完整详情加载失败，当前显示列表缓存信息：${props.error}` : '正在加载完整详情，先显示列表中的基础信息。'}
-      </Text>
-      {props.error && props.onRetry ? (
-        <View onClick={props.onRetry} style={{ marginTop: space(2) }}>
-          <Text style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>重新加载完整详情</Text>
-        </View>
-      ) : null}
+    <View style={{ marginBottom: space(3) }}>
+      <AppPromptBanner
+        title={props.error ? '完整详情加载失败' : '正在加载完整详情'}
+        description={props.error ? `当前显示列表缓存信息：${props.error}` : '先显示列表中的基础信息。'}
+        actionText={props.error && props.onRetry ? '重新加载' : undefined}
+        icon='calendar'
+        tone='warning'
+        onClick={props.error ? props.onRetry : undefined}
+      />
     </View>
   )
 }
@@ -360,14 +361,14 @@ export default function EventDetailPage() {
     />
   )
 
-  return (
-    <AppPage>
-      {loading && !displayEvent ? <DetailSkeleton /> : null}
-      {loading && displayEvent ? renderEventContent(displayEvent) : null}
-      {!loading && error && displayEvent ? renderEventContent(displayEvent, true, error) : null}
-      {!loading && error && !displayEvent ? <ErrorRetryCard error={error} onRetry={() => loadDetail({ forceRefresh: true })} secondaryText='返回活动列表' onSecondary={() => Taro.switchTab({ url: '/pages/events/index' })} /> : null}
-      {!loading && !error && !displayEvent ? <EmptyCard text='未找到该活动。' actionText='返回活动列表' onAction={() => Taro.switchTab({ url: '/pages/events/index' })} /> : null}
-      {!loading && !error && displayEvent ? renderEventContent(displayEvent) : null}
-    </AppPage>
-  )
+  const renderBody = () => {
+    if (loading && !displayEvent) return <DetailSkeleton />
+    if (loading && displayEvent) return renderEventContent(displayEvent)
+    if (error && displayEvent) return renderEventContent(displayEvent, true, error)
+    if (error && !displayEvent) return <ErrorRetryCard error={error} onRetry={() => loadDetail({ forceRefresh: true })} secondaryText='返回活动列表' onSecondary={() => Taro.switchTab({ url: '/pages/events/index' })} />
+    if (!displayEvent) return <EmptyCard text='未找到该活动。' actionText='返回活动列表' onAction={() => Taro.switchTab({ url: '/pages/events/index' })} />
+    return renderEventContent(displayEvent)
+  }
+
+  return <AppPage>{renderBody()}</AppPage>
 }
