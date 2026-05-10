@@ -39,7 +39,7 @@ export default function ProfileParentSection(props: Props) {
     <ProfileCard>
       <ProfileSectionHeading
         title='家庭教育关注'
-        description='仅在你主动同意联络请求后展示，用于帮助对方理解你当前在寻找什么支持'
+        description='这部分属于扩展公开资料；已登录并完成资料的用户可在成员目录中查看，用于理解你当前在寻找什么支持。'
       />
       <SectionTitle text='孩子学段（可多选）' />
       <MultiPillSelect options={childAgeOptions} selected={childAgeRange} onChange={setChildAgeRange} />

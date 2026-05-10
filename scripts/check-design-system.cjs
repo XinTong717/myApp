@@ -17,6 +17,9 @@ const ALLOWED_HEX = new Set([
 
 const ALLOWED_FONT_SIZE = new Set([
   'src/components/common/AppIcon.tsx',
+  // WeChat Map marker labels require numeric fontSize in native marker config.
+  // This is not normal page UI styling.
+  'src/pages/explore/index.tsx',
 ])
 
 const ALLOWED_BORDER_RADIUS = new Set([
