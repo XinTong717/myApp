@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Input, Textarea, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../../../constants/location'
-import { submitCommunity } from '../../../services/school'
+import { submitSchool } from '../../../services/school'
 import SectionTitle from '../../../components/profile/SectionTitle'
 import { palette } from '../../../theme/palette'
 import { space } from '../../../theme/spacing'
@@ -14,13 +14,13 @@ import AppPromptBanner from '../../../components/common/AppPromptBanner'
 import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
 import FormInputBox from '../../../components/common/FormInputBox'
 
-const COMMUNITY_TYPE_OPTIONS = ['项目制学习', '线下社区', '线上社区', '混合型', '家庭共学', '其他']
+const SCHOOL_TYPE_OPTIONS = ['项目制学习', '线下社区', '线上社区', '混合型', '家庭共学', '其他']
 const AGE_RANGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段', '混龄', '成人为主', '其他']
 
 type FocusField =
   | 'name'
   | 'customCity'
-  | 'communityTypeOther'
+  | 'schoolTypeOther'
   | 'ageRangeOther'
   | 'officialUrl'
   | 'publicAccountNote'
@@ -53,7 +53,7 @@ async function showSubmittedModal() {
   Taro.navigateBack()
 }
 
-export default function SubmitCommunityPage() {
+export default function SubmitSchoolPage() {
   const [submitting, setSubmitting] = useState(false)
   const submitLockRef = useRef(false)
   const submittedRef = useRef(false)
@@ -62,8 +62,8 @@ export default function SubmitCommunityPage() {
   const [province, setProvince] = useState('')
   const [cityOption, setCityOption] = useState('')
   const [customCity, setCustomCity] = useState('')
-  const [communityType, setCommunityType] = useState<string[]>([])
-  const [communityTypeOther, setCommunityTypeOther] = useState('')
+  const [schoolType, setSchoolType] = useState<string[]>([])
+  const [schoolTypeOther, setSchoolTypeOther] = useState('')
   const [ageRange, setAgeRange] = useState<string[]>([])
   const [ageRangeOther, setAgeRangeOther] = useState('')
   const [officialUrl, setOfficialUrl] = useState('')
@@ -75,7 +75,7 @@ export default function SubmitCommunityPage() {
 
   const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
   const hasUnsavedContent = !!(
-    name.trim() || province || cityOption || customCity.trim() || communityType.length > 0 || communityTypeOther.trim() ||
+    name.trim() || province || cityOption || customCity.trim() || schoolType.length > 0 || schoolTypeOther.trim() ||
     ageRange.length > 0 || ageRangeOther.trim() || officialUrl.trim() || publicAccountNote.trim() || participationNote.trim() ||
     feeNote.trim() || sourceNote.trim() || recommendationNote.trim()
   )
@@ -124,7 +124,7 @@ export default function SubmitCommunityPage() {
     if (!name.trim()) { Taro.showToast({ title: '请填写学习社区名称', icon: 'none' }); return }
     if (!province || !currentCity) { Taro.showToast({ title: '请选择所在城市', icon: 'none' }); return }
     if (cityOption === '其他' && !customCity.trim()) { Taro.showToast({ title: '请输入真实城市名', icon: 'none' }); return }
-    if (communityType.includes('其他') && !communityTypeOther.trim()) { Taro.showToast({ title: '请补充社区类型中的“其他”', icon: 'none' }); return }
+    if (schoolType.includes('其他') && !schoolTypeOther.trim()) { Taro.showToast({ title: '请补充社区类型中的“其他”', icon: 'none' }); return }
     if (ageRange.includes('其他') && !ageRangeOther.trim()) { Taro.showToast({ title: '请补充适合阶段中的“其他”', icon: 'none' }); return }
 
     submitLockRef.current = true
@@ -134,12 +134,12 @@ export default function SubmitCommunityPage() {
 
     try {
       setSubmitting(true)
-      const result = await submitCommunity({
+      const result = await submitSchool({
         name: name.trim(),
         province,
         city: currentCity,
-        communityType,
-        communityTypeOther: communityType.includes('其他') ? communityTypeOther.trim() : '',
+        schoolType,
+        schoolTypeOther: schoolType.includes('其他') ? schoolTypeOther.trim() : '',
         ageRange,
         ageRangeOther: ageRange.includes('其他') ? ageRangeOther.trim() : '',
         officialUrl: officialUrl.trim(),
@@ -157,7 +157,7 @@ export default function SubmitCommunityPage() {
         Taro.showToast({ title: result?.message || '提交失败', icon: 'none' })
       }
     } catch (err) {
-      console.error('submitCommunity error:', err)
+      console.error('submitSchool error:', err)
       Taro.showToast({ title: '提交失败，请稍后重试', icon: 'none' })
     } finally {
       setSubmitting(false)
@@ -185,8 +185,8 @@ export default function SubmitCommunityPage() {
         {cityOption === '其他' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View><FormInputBox focused={focusedField === 'customCity'} marginBottom='0'><Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onFocus={() => setFocusedField('customCity')} onBlur={() => setFocusedField('')} onInput={(e) => setCustomCity(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
 
         <SectionTitle text='社区类型（可多选）' />
-        <MultiPillSelect options={COMMUNITY_TYPE_OPTIONS} selected={communityType} onChange={setCommunityType} />
-        {communityType.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充社区类型中的“其他”。</Text></View><FormInputBox focused={focusedField === 'communityTypeOther'} marginBottom='0'><Input value={communityTypeOther} placeholder='例如：森林学校 / 驻留计划' onFocus={() => setFocusedField('communityTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setCommunityTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
+        <MultiPillSelect options={SCHOOL_TYPE_OPTIONS} selected={schoolType} onChange={setSchoolType} />
+        {schoolType.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充社区类型中的“其他”。</Text></View><FormInputBox focused={focusedField === 'schoolTypeOther'} marginBottom='0'><Input value={schoolTypeOther} placeholder='例如：森林学校 / 驻留计划' onFocus={() => setFocusedField('schoolTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setSchoolTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
 
         <SectionTitle text='适合阶段（可多选）' />
         <MultiPillSelect options={AGE_RANGE_OPTIONS} selected={ageRange} onChange={setAgeRange} />
