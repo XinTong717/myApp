@@ -16,7 +16,7 @@ const { ACTION_RATE_LIMITS } = require('./lib/rateLimits.config')
 
 const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
   'submitEvent',
-  'submitCommunity',
+  'submitSchool',
   'submitCorrection',
   'submitEventCorrection',
   'reportUser',
@@ -29,7 +29,7 @@ const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
 const CONSENT_REQUIRED_ACTIONS = new Set([
   'saveProfile',
   'submitEvent',
-  'submitCommunity',
+  'submitSchool',
   'submitCorrection',
   'submitEventCorrection',
   'manageSafetyRelation',

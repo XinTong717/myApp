@@ -7,8 +7,8 @@ import type {
   SchoolListResult,
   SchoolMarkerItem,
   SchoolMarkerListResult,
-  SubmitCommunityResult,
   SubmitCorrectionResult,
+  SubmitSchoolResult,
 } from '../types/domain'
 
 const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v4:'
@@ -163,9 +163,9 @@ export async function getSchoolDetail(schoolId: number, options: { forceRefresh?
   return result
 }
 
-export async function submitCommunity(data: Record<string, unknown>) {
+export async function submitSchool(data: Record<string, unknown>) {
   const dedupeKey = [data?.name, data?.province, data?.city].map((item) => String(item || '').trim()).join(':')
-  return runExclusive(`submitCommunity:${dedupeKey}`, () => callCloud<SubmitCommunityResult>('submitCommunity', data))
+  return runExclusive(`submitSchool:${dedupeKey}`, () => callCloud<SubmitSchoolResult>('submitSchool', data))
 }
 
 export async function submitCorrection(schoolId: number, schoolName: string, content: string) {
