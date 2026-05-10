@@ -11,9 +11,9 @@ import type {
   SubmitSchoolResult,
 } from '../types/domain'
 
-const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v4:'
+const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v1:'
 const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v1:'
-const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v2:'
+const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v1:'
 const SCHOOL_LIST_TTL_MS = 30 * 60 * 1000
 const SCHOOL_MARKERS_TTL_MS = 30 * 60 * 1000
 const SCHOOL_DETAIL_TTL_MS = 15 * 60 * 1000
