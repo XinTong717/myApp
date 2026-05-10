@@ -9,6 +9,7 @@ import type {
   EventInterestInfoResult,
   EventItem,
   EventListResult,
+  FavoriteEventsResult,
   SubmitCorrectionResult,
   ToggleEventInterestResult,
 } from '../types/domain'
@@ -184,6 +185,10 @@ export async function getEventInterestInfo(eventId: number, options: { forceRefr
     }, EVENT_RUNTIME_TTL_MS)
   }
   return result
+}
+
+export async function listFavoriteEvents(limit = 20) {
+  return callCloud<FavoriteEventsResult>('listFavoriteEvents', { limit })
 }
 
 export async function toggleEventInterest(eventId: number) {
