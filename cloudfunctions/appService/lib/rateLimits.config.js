@@ -11,6 +11,7 @@ const READ_ACTION_RATE_LIMITS = {
   getLegalConsentStatus: { limit: 30, windowMs: MINUTE },
   getEventInterestInfo: { limit: 60, windowMs: MINUTE },
   getEventInterestCountsBatch: { limit: 60, windowMs: MINUTE },
+  getMyFavoriteEvents: { limit: 60, windowMs: MINUTE },
   getEventContactInfo: { limit: 30, windowMs: MINUTE },
   getEvents: { limit: 60, windowMs: MINUTE },
   getEventDetail: { limit: 120, windowMs: MINUTE },
