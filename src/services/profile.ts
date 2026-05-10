@@ -51,7 +51,7 @@ function okAdminAccess(payload: AdminAccessPayload): AdminAccessResult {
 
 async function flagExploreRefresh() {
   try {
-    await Taro.setStorage({ key: STORAGE_FLAGS.exploreForceRefresh, data: String(Date.now()) })
+    Taro.setStorageSync(STORAGE_FLAGS.exploreForceRefresh, String(Date.now()))
   } catch (err) {
     console.warn('flagExploreRefresh skipped:', err)
   }
