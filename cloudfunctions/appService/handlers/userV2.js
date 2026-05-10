@@ -21,7 +21,7 @@ function buildSafetyDocId(ownerOpenid, targetOpenid) {
   return `safety_${ownerOpenid}_${targetOpenid}`
 }
 
-function validatePublicContactChannel(value) {
+function validatePublicChannel(value) {
   const text = String(value || '').trim()
   if (!text) return ''
   if (text.length > 120) return '公开渠道不能超过120字'
@@ -43,8 +43,8 @@ async function getMe(event, wxContext) {
 async function saveProfile(event, wxContext) {
   const requestId = resolveRequestId('save-profile', event)
   const openid = wxContext.OPENID
-  const ALLOWED_FIELDS = ['displayName', 'gender', 'ageRange', 'roles', 'province', 'city', 'contactId', 'contactNote', 'childAgeRange', 'childDropoutStatus', 'childInterests', 'eduServices', 'bio', 'companionContext', 'allowIncomingRequests', 'isVisibleOnMap']
-  const BOOLEAN_FIELDS = ['allowIncomingRequests', 'isVisibleOnMap']
+  const ALLOWED_FIELDS = ['displayName', 'gender', 'ageRange', 'roles', 'province', 'city', 'publicChannel', 'publicChannelNote', 'childAgeRange', 'childDropoutStatus', 'childInterests', 'eduServices', 'bio', 'companionContext', 'expandedProfileVisible', 'isVisibleOnMap']
+  const BOOLEAN_FIELDS = ['expandedProfileVisible', 'isVisibleOnMap']
   const ARRAY_FIELDS = ['roles', 'childAgeRange', 'childDropoutStatus']
   const GENDER_WHITELIST = ['男', '女', '其他', '不想说']
   const AGE_RANGE_WHITELIST = ['18-25', '26-35', '36-45', '46-55', '55以上']
@@ -81,11 +81,11 @@ async function saveProfile(event, wxContext) {
     validateLength('和生态的关系', cleanData.companionContext, 150) ||
     validateLength('家庭教育关注说明', cleanData.childInterests, 300) ||
     validateLength('教育服务', cleanData.eduServices, 500) ||
-    validateLength('添加备注说明', cleanData.contactNote, 120)
+    validateLength('公开渠道备注', cleanData.publicChannelNote, 120)
   if (lengthError) return fail(requestId, 'INVALID_LENGTH', lengthError)
 
-  const contactError = validatePublicContactChannel(cleanData.contactId)
-  if (contactError) return fail(requestId, 'INVALID_CONTACT_ID', contactError)
+  const publicChannelError = validatePublicChannel(cleanData.publicChannel)
+  if (publicChannelError) return fail(requestId, 'INVALID_PUBLIC_CHANNEL', publicChannelError)
 
   if (!selectedRoles.includes('同行者')) cleanData.companionContext = ''
   if (!selectedRoles.includes('家长')) {
@@ -96,14 +96,14 @@ async function saveProfile(event, wxContext) {
   if (!selectedRoles.includes('教育者')) cleanData.eduServices = ''
 
   const securityResult = await runMsgSecCheck({
-    content: [cleanData.displayName, cleanData.bio, cleanData.contactId, cleanData.contactNote, cleanData.childInterests, cleanData.eduServices, cleanData.companionContext].filter(Boolean).join('\n'),
+    content: [cleanData.displayName, cleanData.bio, cleanData.publicChannel, cleanData.publicChannelNote, cleanData.childInterests, cleanData.eduServices, cleanData.companionContext].filter(Boolean).join('\n'),
     openid,
     scene: 1,
   })
   if (!securityResult.ok) return fail(requestId, securityResult.code || 'CONTENT_SECURITY_BLOCKED', securityResult.message)
 
   const dataToSave = {
-    allowIncomingRequests: cleanData.allowIncomingRequests !== false,
+    expandedProfileVisible: cleanData.expandedProfileVisible !== false,
     isVisibleOnMap: cleanData.isVisibleOnMap !== false,
     ...cleanData,
     openid,
@@ -134,7 +134,7 @@ async function updatePrivacySettings(event, wxContext) {
   const requestId = resolveRequestId('update-privacy', event)
   const openid = wxContext.OPENID
   const updates = {}
-  if (event.allowIncomingRequests !== undefined) updates.allowIncomingRequests = !!event.allowIncomingRequests
+  if (event.expandedProfileVisible !== undefined) updates.expandedProfileVisible = !!event.expandedProfileVisible
   if (event.isVisibleOnMap !== undefined) updates.isVisibleOnMap = !!event.isVisibleOnMap
   if (Object.keys(updates).length === 0) return fail(requestId, 'BAD_REQUEST', '没有可更新的隐私设置')
   try {
@@ -191,15 +191,15 @@ async function requestAccountDeletion(event, wxContext) {
           gender: '',
           ageRange: '',
           roles: [],
-          contactId: '',
-          contactNote: '',
+          publicChannel: '',
+          publicChannelNote: '',
           bio: '',
           companionContext: '',
           childAgeRange: [],
           childDropoutStatus: [],
           childInterests: '',
           eduServices: '',
-          allowIncomingRequests: false,
+          expandedProfileVisible: false,
           isVisibleOnMap: false,
           deletionStatus: 'pending',
           deletionRequestedAt: db.serverDate(),
