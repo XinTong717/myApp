@@ -9,13 +9,11 @@ import { typography } from '../../theme/typography'
 
 type Props = {
   privacySaving: boolean
-  // Legacy persisted field name. Product meaning is now expandedProfileVisible:
-  // whether logged-in users with completed profiles can view extended public profile details.
-  allowIncomingRequests: boolean
+  expandedProfileVisible: boolean
   isVisibleOnMap: boolean
   blockedUsers: SafetyItem[]
   mutedUsers: SafetyItem[]
-  onUpdatePrivacySetting: (field: 'allowIncomingRequests' | 'isVisibleOnMap', value: boolean) => void
+  onUpdatePrivacySetting: (field: 'expandedProfileVisible' | 'isVisibleOnMap', value: boolean) => void
   onSafetyAction: (targetUserId: string, action: 'block' | 'unblock' | 'mute' | 'unmute') => void
   onRequestAccountDeletion: () => void
 }
@@ -23,7 +21,7 @@ type Props = {
 export default function ProfilePrivacySection(props: Props) {
   const {
     privacySaving,
-    allowIncomingRequests,
+    expandedProfileVisible,
     isVisibleOnMap,
     blockedUsers,
     mutedUsers,
@@ -43,7 +41,7 @@ export default function ProfilePrivacySection(props: Props) {
               <Text style={{ ...typography.caption, color: palette.subtext }}>关闭后，已登录并完成资料的用户也无法看到你的公开渠道、添加备注和身份补充信息。</Text>
             </View>
           </View>
-          <Switch checked={allowIncomingRequests} disabled={privacySaving} color={palette.brand} onChange={(e) => onUpdatePrivacySetting('allowIncomingRequests', !!e.detail.value)} />
+          <Switch checked={expandedProfileVisible} disabled={privacySaving} color={palette.brand} onChange={(e) => onUpdatePrivacySetting('expandedProfileVisible', !!e.detail.value)} />
         </View>
       </ProfileInputBox>
       <ProfileInputBox>
