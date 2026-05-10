@@ -1,7 +1,7 @@
 import { Text } from '@tarojs/components'
 import AppCard from '../common/AppCard'
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
+import { radius, space } from '../../theme/spacing'
 
 type Props = {
   text: string
@@ -13,8 +13,8 @@ export default function ProfileNoticeBox({ text, dashed = true, marginBottom = s
   return (
     <AppCard
       backgroundColor={palette.cardSoft}
-      radius='16px'
-      padding={`${space(3)} 14px`}
+      radius={radius.md}
+      padding={`${space(3)} ${space(4)}`}
       marginBottom={marginBottom}
       borderColor={palette.line}
       border
