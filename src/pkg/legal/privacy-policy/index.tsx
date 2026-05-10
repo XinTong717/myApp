@@ -1,5 +1,5 @@
 import { Text, View } from '@tarojs/components'
-import { CURRENT_PRIVACY_VERSION } from '../../../constants/legal'
+import { CURRENT_PRIVACY_VERSION, LEGAL_CONTACT_EMAIL, LEGAL_OPERATOR_NAME } from '../../../constants/legal'
 import AppPage from '../../../components/common/AppPage'
 import AppCard from '../../../components/common/AppCard'
 import { palette } from '../../../theme/palette'
@@ -34,7 +34,7 @@ export default function PrivacyPolicyPage() {
       </Section>
 
       <Section title='2. 运营主体与联系方式'>
-        <BodyText>本产品由杭州可雀科技有限责任公司运营。若你需要查询、更正、删除个人信息，撤回公开展示，或反馈隐私与安全问题，可以通过邮箱 504302201@qq.com 联系我们，也可以优先使用小程序内现有入口处理资料修改、地图展示和扩展公开资料可见性设置。</BodyText>
+        <BodyText>本产品由{LEGAL_OPERATOR_NAME}运营。若你需要查询、更正、删除个人信息，撤回公开展示，或反馈隐私与安全问题，可以通过指定联系邮箱 {LEGAL_CONTACT_EMAIL} 联系我们，也可以优先使用小程序内现有入口处理资料修改、地图展示和扩展公开资料可见性设置。</BodyText>
       </Section>
 
       <Section title='3. 我们会收集哪些信息'>

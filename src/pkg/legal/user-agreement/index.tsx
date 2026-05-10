@@ -1,5 +1,5 @@
 import { Text, View } from '@tarojs/components'
-import { CURRENT_TERMS_VERSION } from '../../../constants/legal'
+import { CURRENT_TERMS_VERSION, LEGAL_CONTACT_EMAIL } from '../../../constants/legal'
 import AppPage from '../../../components/common/AppPage'
 import AppCard from '../../../components/common/AppCard'
 import { palette } from '../../../theme/palette'
@@ -30,7 +30,7 @@ export default function UserAgreementPage() {
       </View>
 
       <Section title='1. 协议范围'>
-        <BodyText>本协议适用于可雀小程序提供的学习社区浏览、活动查看、同路人地图、成员目录、资料填写、信息提交与纠错等功能。若你对本协议、隐私或安全处理有疑问，可以通过邮箱 504302201@qq.com 联系我们。</BodyText>
+        <BodyText>本协议适用于可雀小程序提供的学习社区浏览、活动查看、同路人地图、成员目录、资料填写、信息提交与纠错等功能。若你对本协议、隐私或安全处理有疑问，可以通过指定联系邮箱 {LEGAL_CONTACT_EMAIL} 联系我们。</BodyText>
       </Section>
 
       <Section title='2. 账号与使用资格'>
