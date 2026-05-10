@@ -325,6 +325,22 @@ async function listEvents(options = {}) {
     .slice(0, limit)
 }
 
+async function listEventsByIds(eventIds = []) {
+  const ids = uniqueNumbers(eventIds).slice(0, EVENT_LIST_LIMIT)
+  if (ids.length === 0) return []
+
+  const res = await db.collection('events')
+    .where({ id: _.in(ids) })
+    .field(EVENT_FIELD_SELECTION)
+    .limit(EVENT_LIST_LIMIT)
+    .get()
+
+  const orderMap = new Map(ids.map((id, index) => [id, index]))
+  return (res.data || [])
+    .filter((event) => isReadableStatus(event.status))
+    .sort((a, b) => (orderMap.get(Number(a.id)) ?? 9999) - (orderMap.get(Number(b.id)) ?? 9999))
+}
+
 async function getEventById(eventId) {
   if (!isFinitePositiveNumber(eventId)) return null
 
@@ -346,5 +362,6 @@ module.exports = {
   listSchoolMarkers,
   getSchoolById,
   listEvents,
+  listEventsByIds,
   getEventById,
 }
