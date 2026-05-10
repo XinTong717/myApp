@@ -88,7 +88,7 @@ export type SchoolDetailResult = CloudResponse<{
   school?: SchoolItem | null
 }>
 
-export type SubmitCommunityResult = CloudResponse<Record<string, never>>
+export type SubmitSchoolResult = CloudResponse<Record<string, never>>
 
 export type SubmitCorrectionResult = CloudResponse<Record<string, never>>
 
