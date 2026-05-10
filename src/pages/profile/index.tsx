@@ -17,6 +17,8 @@ import ProfileCompanionSection from '../../components/profile/ProfileCompanionSe
 import ProfileBioSection from '../../components/profile/ProfileBioSection'
 import ProfileNoticeBox from '../../components/profile/ProfileNoticeBox'
 import ProfileSecondaryButton from '../../components/profile/ProfileSecondaryButton'
+import ProfileFavoriteEventsCard from '../../components/profile/ProfileFavoriteEventsCard'
+import ProfileFeedbackCard from '../../components/profile/ProfileFeedbackCard'
 import AppPage from '../../components/common/AppPage'
 import AppPageHeader from '../../components/common/AppPageHeader'
 import AppPrimaryButton from '../../components/common/AppPrimaryButton'
@@ -87,6 +89,7 @@ export default function ProfilePage() {
   const {
     loading, saving, privacySaving, displayName, setDisplayName, gender, setGender, ageRange, setAgeRange, roles, setRoles, province, cityOption, customCity, setCustomCity, publicChannel, setPublicChannel, publicChannelNote, setPublicChannelNote, expandedProfileVisible, isVisibleOnMap, childAgeRange, setChildAgeRange, childDropoutStatus, setChildDropoutStatus, childInterests, setChildInterests, eduServices, setEduServices, companionContext, setCompanionContext, bio, setBio, isParent, isEducator, isCompanion, currentCity, pickerRange, pickerValue, loadProfile, applyRemoteProfile, handleSave, handleUpdatePrivacySetting, handlePickerChange, handlePickerColumnChange,
   } = form
+  const hasCompletedProfile = !!(displayName.trim() && province && currentCity)
 
   const { blockedUsers, mutedUsers, hydrateSafetyOverview, loadSafetyOverview, handleSafetyAction } = useSafety()
 
@@ -199,13 +202,24 @@ export default function ProfilePage() {
     return !!confirm.confirm
   }
 
+  const showSavedNextStep = async () => {
+    const result = await Taro.showModal({
+      title: '已保存资料',
+      content: isVisibleOnMap ? '你已加入成员目录。现在可以去地图看看附近的同路人，也可以继续完善资料。' : '资料已保存。你可以去地图浏览学习社区和活动，也可以稍后再决定是否出现在成员目录。',
+      confirmText: '去看同路人',
+      cancelText: '留在这里',
+    })
+    if (result.confirm) Taro.switchTab({ url: '/pages/explore/index' })
+  }
+
   const handleConfirmedSave = async () => {
     if (!legalAgreed) { Taro.showToast({ title: '请先阅读并同意用户协议和隐私政策', icon: 'none' }); return }
     const mapDisclosureOk = await confirmMapDisclosureIfNeeded()
     if (!mapDisclosureOk) return
     const consentResult = await recordLegalConsent()
     if (!consentResult.ok) { Taro.showToast({ title: consentResult.message || '协议确认失败，请稍后重试', icon: 'none' }); return }
-    await handleSave()
+    const saved = await handleSave()
+    if (saved) await showSavedNextStep()
   }
 
   if (loading) {
@@ -216,6 +230,7 @@ export default function ProfilePage() {
     <AppPage style={{ paddingBottom: space(8) }}>
       <AppPageHeader title='我的' description='填写资料、设置成员目录可见性，并管理安全与隐私。' />
       <ProfileAdminEntry isAdmin={isAdmin} onOpen={openAdminReviewPage} />
+      <ProfileFavoriteEventsCard enabled={hasCompletedProfile} />
       <AppSegmentedTabs options={PROFILE_STEPS} value={activeStep} onChange={setActiveStep} />
 
       {activeStep === 'basic' && <>
@@ -240,6 +255,8 @@ export default function ProfilePage() {
         <LegalAgreementConsent checked={legalAgreed} onToggle={() => setLegalAgreed((value) => !value)} onOpenUserAgreement={openUserAgreement} onOpenPrivacyPolicy={openPrivacyPolicy} />
         <AppPrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
       </>}
+
+      <ProfileFeedbackCard />
 
       <AppRow justify='center' wrap marginBottom={space(5)}>
         <Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>用户协议</Text>

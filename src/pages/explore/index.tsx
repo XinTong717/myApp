@@ -35,6 +35,7 @@ import { useExploreFilters } from './hooks/useExploreFilters'
 const markerSchoolIcon = '/assets/marker-school.png'
 const markerUserIcon = '/assets/marker-user.png'
 const EXPLORE_REFRESH_TTL = 30 * 1000
+const EXPLORE_ONBOARDING_KEY = 'explore-onboarding:v1'
 
 
 type ExploreLoadKeyInput = {
@@ -58,6 +59,23 @@ async function consumeExploreForceRefreshFlag() {
   } catch (err) {
     console.warn('consumeExploreForceRefreshFlag skipped:', err)
     return false
+  }
+}
+
+function showExploreOnboardingOnce() {
+  try {
+    if (Taro.getStorageSync(EXPLORE_ONBOARDING_KEY)) return
+    Taro.setStorageSync(EXPLORE_ONBOARDING_KEY, 'seen')
+    setTimeout(() => {
+      Taro.showModal({
+        title: '欢迎来到可雀',
+        content: '这里可以看学习社区、活动，也可以在成员目录里发现教育探索路上的同路人。\n\n平台不提供私信或自动撮合；你选择公开什么，别人才能看到什么。',
+        confirmText: '开始探索',
+        cancelText: '先逛逛',
+      }).catch((err) => console.warn('explore onboarding skipped:', err))
+    }, 450)
+  } catch (err) {
+    console.warn('explore onboarding storage skipped:', err)
   }
 }
 
@@ -100,6 +118,10 @@ export default function ExplorePage() {
     resetUserFilters,
     filteredAppUsersForMap,
   } = useExploreFilters(appUsers, selectedProvince)
+
+  useEffect(() => {
+    showExploreOnboardingOnce()
+  }, [])
 
   const loadData = async (options: { forceRefreshMapUsers?: boolean; refreshSchools?: boolean } = {}) => {
     const requestSeq = loadSeqRef.current + 1
@@ -591,8 +613,8 @@ export default function ExplorePage() {
       <View style={{ backgroundColor: exploreTheme.surface, padding: `${space(2)} ${space(4)}`, borderTop: `1px solid ${exploreTheme.border}` }}>
         <Text className='text-micro text-color-muted'>
           {hasUserClusters
-            ? '近似坐标 · 点击聚合点位展开同城同路人 · 点击学校聚合点进入省份视图'
-            : isDenseMap ? '近似坐标 · 全国视图会自动隐藏部分名称 · 点击标记查看成员资料' : '近似坐标 · 仅供浏览 · 点击标记或名称查看资料'}
+            ? '地图位置仅作分布展示，不代表精确住址 · 点击聚合点位展开同城同路人 · 点击学校聚合点进入省份视图'
+            : isDenseMap ? '地图位置仅作分布展示，不代表精确住址 · 全国视图会自动隐藏部分名称 · 点击标记查看成员资料' : '地图位置仅作分布展示，不代表精确住址 · 点击标记或名称查看资料'}
         </Text>
       </View>
 

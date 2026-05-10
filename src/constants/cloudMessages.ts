@@ -30,6 +30,6 @@ export const REPORT_CODE_MESSAGES = {
 export const EVENT_CODE_MESSAGES = {
   BAD_REQUEST: '活动参数有误',
   TOGGLE_EVENT_INTEREST_FAILED: '操作失败，请稍后重试',
-  GET_EVENT_INTEREST_INFO_FAILED: '读取感兴趣信息失败',
+  GET_EVENT_INTEREST_INFO_FAILED: '读取收藏信息失败',
   CLOUD_CALL_FAILED: '网络异常，请稍后重试',
 } as const

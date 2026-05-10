@@ -24,6 +24,7 @@ submitCorrection
 getEventInterestCountsBatch
 getEventInterestInfo
 toggleEventInterest
+getMyFavoriteEvents
 getEventContactInfo
 getMe
 getProfileBootstrap
@@ -227,6 +228,7 @@ idx_safety_relations_target_isBlocked: targetOpenid asc, isBlocked asc
 ```text
 idx_event_interest_eventId_status: eventId asc, status asc
 idx_event_interest_eventId_openid_status: eventId asc, openid asc, status asc
+idx_event_interest_openid_status_updatedAt: openid asc, status asc, updatedAt desc
 ```
 
 ### event_interest_counts
@@ -298,6 +300,7 @@ idx_account_deletion_requests_openid_createdAt: openid asc, createdAt desc
 
 [ ] event_interest: eventId + status
 [ ] event_interest: eventId + openid + status
+[ ] event_interest: openid + status + updatedAt(desc)
 [ ] event_interest_counts: eventId
 
 [ ] user_reports: reporterOpenid + targetOpenid + createdAt(desc)
@@ -326,6 +329,7 @@ The client should only read/write through `appService`. Do not allow direct clie
 - Do not append comma-separated cities to `schools.city` for new data.
 - Keep `schools.name` for compatibility, but prefer `schools.canonical_name` in new reads/admin workflows.
 - Map marker label style objects are WeChat Map API marker-label config, not normal design-system UI.
+- The `event_interest` collection still stores `status: 'interested'` for compatibility, but launch UI labels this user action as “收藏”.
 
 ## Intentionally removed from launch
 

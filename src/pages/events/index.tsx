@@ -238,7 +238,7 @@ export default function EventsPage() {
               {statusInfo ? <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} /> : null}
               <AppTag text={item.is_online ? '线上' : (getEventCity(item) || '线下')} />
               {item.min_age_requirement ? <AppTag text={item.min_age_requirement} /> : null}
-              {interestedCount > 0 ? <AppTag text={`#${interestedCount} 人感兴趣`} tone='accent' /> : null}
+              {interestedCount > 0 ? <AppTag text={`#${interestedCount} 人收藏`} tone='accent' /> : null}
             </View>
             <View className='app-list-card__meta-box'>
               {summary ? <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>{summary}</Text></View> : null}

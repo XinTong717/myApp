@@ -10,7 +10,13 @@ export type CloudResponse<T = Record<string, unknown>> = T & {
 export type EventItem = {
   id: number
   title: string
+  province?: string
+  city?: string
   event_type: string
+  event_types?: string[]
+  audience_who?: string[]
+  min_age_requirement?: string
+  fee_category?: string
   description?: string
   start_time?: string
   end_time?: string
@@ -19,6 +25,7 @@ export type EventItem = {
   status?: string
   organizer?: string
   is_online?: boolean
+  contact_info?: string
   interest_count?: number
 }
 
