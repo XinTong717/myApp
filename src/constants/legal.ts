@@ -1,5 +1,5 @@
 export const LEGAL_OPERATOR_NAME = '杭州可雀科技有限责任公司'
-export const LEGAL_CONTACT_EMAIL = 'support@kequetech.com'
+export const LEGAL_CONTACT_EMAIL = '504302201@qq.com'
 
 export const CURRENT_TERMS_VERSION = '2026-05-10'
 export const CURRENT_PRIVACY_VERSION = '2026-05-10'
