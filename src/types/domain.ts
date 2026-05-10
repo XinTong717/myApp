@@ -34,6 +34,11 @@ export type EventInterestCountsBatchResult = CloudResponse<{
   counts?: Record<number, number>
 }>
 
+export type FavoriteEventsResult = CloudResponse<{
+  events?: EventItem[]
+  count?: number
+}>
+
 export type SchoolLocationItem = {
   school_id: number
   province?: string
@@ -195,7 +200,7 @@ export type GetMapUsersResult = CloudResponse<{
   province?: string
   mode?: 'province_summary' | 'province_detail'
   limit?: number
-  offset?: number
+  offset?: number | null
   nextOffset?: number | null
   hasMore?: boolean
   autoPaged?: boolean
