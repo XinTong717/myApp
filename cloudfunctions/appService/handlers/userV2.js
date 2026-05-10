@@ -12,16 +12,9 @@ const {
 const { getUserProfileByOpenid, resolveUserDocId } = require('../lib/userRepo')
 
 const REASON_WHITELIST = ['垃圾广告', '骚扰不适', '未成年人敏感信息', '其他']
-const DAILY_LIMIT = 20
-const SAME_TARGET_DAILY_LIMIT = 3
-const REJECTED_REQUEST_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
 function hasOwn(obj, key) {
   return Object.prototype.hasOwnProperty.call(obj, key)
-}
-
-function buildConnectionDocId(fromOpenid, toOpenid) {
-  return `conn_${fromOpenid}_${toOpenid}`
 }
 
 function buildSafetyDocId(ownerOpenid, targetOpenid) {
@@ -34,14 +27,6 @@ function validatePublicContactChannel(value) {
   if (text.length > 120) return '公开渠道不能超过120字'
   if (/\b(?:https?:\/\/)?(?:t\.me|telegram\.me|wa\.me)\b/i.test(text)) return '暂不支持填写境外即时通讯链接'
   return ''
-}
-
-function getCooldownRemainingDays(dateLike) {
-  const ts = new Date(dateLike || '').getTime()
-  if (!Number.isFinite(ts)) return 0
-  const remainingMs = ts + REJECTED_REQUEST_COOLDOWN_MS - Date.now()
-  if (remainingMs <= 0) return 0
-  return Math.ceil(remainingMs / (24 * 60 * 60 * 1000))
 }
 
 async function getMe(event, wxContext) {
@@ -251,104 +236,6 @@ async function getSafetyOverview(event, wxContext) {
   }
 }
 
-async function sendRequest(event, wxContext) {
-  const requestId = resolveRequestId('send-request', event)
-  const myOpenid = wxContext.OPENID
-  const targetUserId = String(event.targetUserId || '').trim()
-  if (!targetUserId) return fail(requestId, 'TARGET_REQUIRED', '缺少目标用户')
-  const me = await getUserProfileByOpenid(myOpenid)
-  if (!me) return fail(requestId, 'PROFILE_REQUIRED', '请先填写你的资料')
-  let target
-  try { target = (await db.collection('users').doc(targetUserId).get()).data } catch (err) { return fail(requestId, 'TARGET_NOT_FOUND', '找不到该用户') }
-  if (!target || !target.openid) return fail(requestId, 'TARGET_NOT_FOUND', '找不到该用户')
-  if (target.openid === myOpenid) return fail(requestId, 'SELF_REQUEST_NOT_ALLOWED', '不能给自己发联络请求哦')
-  if (target.allowIncomingRequests === false) return fail(requestId, 'TARGET_PAUSED_REQUESTS', '对方当前暂停接收联络')
-  const mySafetyRes = await db.collection('safety_relations').where({ ownerOpenid: myOpenid, targetOpenid: target.openid, isBlocked: true }).limit(1).get()
-  if (mySafetyRes.data.length > 0) return fail(requestId, 'YOU_BLOCKED_TARGET', '你已拉黑该用户，需先解除拉黑')
-  const targetSafetyRes = await db.collection('safety_relations').where({ ownerOpenid: target.openid, targetOpenid: myOpenid, isBlocked: true }).limit(1).get()
-  if (targetSafetyRes.data.length > 0) return fail(requestId, 'TARGET_BLOCKED_YOU', '当前无法向该用户发起联络')
-  const connectionId = buildConnectionDocId(myOpenid, target.openid)
-  const reverseConnectionId = buildConnectionDocId(target.openid, myOpenid)
-  let sameDirectionRecord = null
-  try { sameDirectionRecord = (await db.collection('connections').doc(connectionId).get()).data || null } catch (err) { sameDirectionRecord = null }
-  if (sameDirectionRecord?.status === 'pending') return fail(requestId, 'REQUEST_ALREADY_PENDING', '你已经发送过请求了，等待对方回应')
-  if (sameDirectionRecord?.status === 'accepted') return fail(requestId, 'ALREADY_CONNECTED', '你们已经是联络人了')
-  if (sameDirectionRecord?.status === 'rejected') {
-    const cooldownDays = getCooldownRemainingDays(sameDirectionRecord.respondedAt || sameDirectionRecord.updatedAt)
-    if (cooldownDays > 0) {
-      return fail(requestId, 'REJECTED_COOLDOWN', `对方近期已拒绝你的联络请求，请 ${cooldownDays} 天后再试`, { cooldownDays })
-    }
-  }
-  let reverseRecord = null
-  try { reverseRecord = (await db.collection('connections').doc(reverseConnectionId).get()).data || null } catch (err) { reverseRecord = null }
-  if (reverseRecord?.status === 'accepted') return fail(requestId, 'ALREADY_CONNECTED', '你们已经是联络人了')
-  if (reverseRecord?.status === 'pending') return fail(requestId, 'REVERSE_PENDING_EXISTS', '对方已经向你发起请求，请先处理对方的联络请求')
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
-  const [dailyCountRes, sameTargetCountRes] = await Promise.all([
-    db.collection('connections').where({ fromOpenid: myOpenid, createdAt: _.gte(since) }).count(),
-    db.collection('connections').where({ fromOpenid: myOpenid, toOpenid: target.openid, createdAt: _.gte(since) }).count(),
-  ])
-  if ((dailyCountRes?.total || 0) >= DAILY_LIMIT) return fail(requestId, 'DAILY_LIMIT_REACHED', '24小时内发起联络次数过多，请稍后再试')
-  if ((sameTargetCountRes?.total || 0) >= SAME_TARGET_DAILY_LIMIT) return fail(requestId, 'SAME_TARGET_LIMIT_REACHED', '24小时内你已多次尝试联系该用户，请稍后再试')
-  await db.collection('connections').doc(connectionId).set({
-    data: {
-      fromOpenid: myOpenid,
-      fromUserId: me._id,
-      fromName: me.displayName || '',
-      fromCity: me.city || '',
-      fromRoles: me.roles || [],
-      fromBio: me.bio || '',
-      toOpenid: target.openid,
-      toUserId: target._id,
-      toName: target.displayName || '',
-      toCity: target.city || '',
-      toRoles: target.roles || [],
-      status: 'pending',
-      createdAt: db.serverDate(),
-      updatedAt: db.serverDate(),
-    },
-  })
-  return ok(requestId, { connectionId, message: '联络请求已发送' })
-}
-
-async function respondRequest(event, wxContext) {
-  const requestId = resolveRequestId('respond-request', event)
-  const myOpenid = wxContext.OPENID
-  const connectionId = String(event.requestId || '').trim()
-  const action = String(event.action || '').trim()
-  if (!connectionId || !action) return fail(requestId, 'BAD_REQUEST', '参数缺失')
-  if (!['accept', 'reject'].includes(action)) return fail(requestId, 'INVALID_ACTION', '无效操作')
-  let conn
-  try { conn = (await db.collection('connections').doc(connectionId).get()).data } catch (err) { return fail(requestId, 'CONNECTION_NOT_FOUND', '找不到该请求') }
-  if (conn.toOpenid !== myOpenid) return fail(requestId, 'FORBIDDEN', '无权操作此请求')
-  if (conn.status !== 'pending') return fail(requestId, 'REQUEST_ALREADY_PROCESSED', '该请求已处理过了')
-  const nextStatus = action === 'accept' ? 'accepted' : 'rejected'
-  await db.collection('connections').doc(connectionId).update({ data: { status: nextStatus, respondedAt: db.serverDate(), updatedAt: db.serverDate() } })
-  return ok(requestId, { nextStatus, message: action === 'accept' ? '已同意联络请求' : '已忽略该请求' })
-}
-
-async function manageConnection(event, wxContext) {
-  const requestId = resolveRequestId('manage-connection', event)
-  const openid = wxContext.OPENID
-  const connectionId = String(event.connectionId || '').trim()
-  const action = String(event.action || '').trim()
-  if (!connectionId || !action) return fail(requestId, 'BAD_REQUEST', '参数缺失')
-  if (!['withdraw', 'remove_connection'].includes(action)) return fail(requestId, 'INVALID_ACTION', '无效操作')
-  let conn
-  try { conn = (await db.collection('connections').doc(connectionId).get()).data } catch (err) { return fail(requestId, 'CONNECTION_NOT_FOUND', '找不到该连接记录') }
-  if (!conn) return fail(requestId, 'CONNECTION_NOT_FOUND', '找不到该连接记录')
-  if (action === 'withdraw') {
-    if (conn.fromOpenid !== openid) return fail(requestId, 'FORBIDDEN', '只有发送方可以撤回请求')
-    if (conn.status !== 'pending') return fail(requestId, 'INVALID_STATUS', '只能撤回待处理请求')
-    await db.collection('connections').doc(connectionId).update({ data: { status: 'withdrawn', withdrawnAt: db.serverDate(), updatedAt: db.serverDate() } })
-    return ok(requestId, { message: '已撤回请求', nextStatus: 'withdrawn' })
-  }
-  if (conn.status !== 'accepted') return fail(requestId, 'INVALID_STATUS', '只能删除已建立的连接')
-  if (conn.fromOpenid !== openid && conn.toOpenid !== openid) return fail(requestId, 'FORBIDDEN', '无权删除这条连接')
-  await db.collection('connections').doc(connectionId).update({ data: { status: 'removed', removedAt: db.serverDate(), removedBy: openid, updatedAt: db.serverDate() } })
-  return ok(requestId, { message: '已删除连接', nextStatus: 'removed' })
-}
-
 async function manageSafetyRelation(event, wxContext) {
   const requestId = resolveRequestId('manage-safety', event)
   const openid = wxContext.OPENID
@@ -377,14 +264,6 @@ async function manageSafetyRelation(event, wxContext) {
       return ok(requestId, { message: action === 'unblock' ? '已解除拉黑' : '已取消静音', isBlocked: false, isMuted: false })
     }
     await db.collection('safety_relations').doc(stableDocId).set({ data: { ownerOpenid: openid, targetOpenid: target.openid, targetUserId, targetName: target.displayName || '', targetCity: target.city || '', isBlocked: nextBlocked, isMuted: nextMuted, updatedAt: db.serverDate(), createdAt: existing?.createdAt || db.serverDate() } })
-    if (action === 'block') {
-      const [forwardRes, backwardRes] = await Promise.all([
-        db.collection('connections').where({ fromOpenid: openid, toOpenid: target.openid, status: _.in(['pending', 'accepted']) }).get(),
-        db.collection('connections').where({ fromOpenid: target.openid, toOpenid: openid, status: _.in(['pending', 'accepted']) }).get(),
-      ])
-      const toRemove = [...(forwardRes.data || []), ...(backwardRes.data || [])]
-      await Promise.all(toRemove.map((conn) => db.collection('connections').doc(conn._id).update({ data: { status: 'removed', removedAt: db.serverDate(), removedBy: openid, updatedAt: db.serverDate() } }).catch(() => null)))
-    }
     return ok(requestId, { message: action === 'block' ? '已拉黑该用户' : action === 'unblock' ? '已解除拉黑' : action === 'mute' ? '已静音该用户' : '已取消静音', isBlocked: nextBlocked, isMuted: nextMuted })
   } catch (err) {
     console.error('appService manageSafetyRelation error:', err)
@@ -427,9 +306,6 @@ module.exports = {
   updatePrivacySettings,
   requestAccountDeletion,
   getSafetyOverview,
-  sendRequest,
-  respondRequest,
-  manageConnection,
   manageSafetyRelation,
   reportUser,
 }

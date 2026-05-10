@@ -7,7 +7,6 @@ import type {
   AdminAccessResult,
   CloudResponse,
   GetMeResult,
-  GetMyRequestsResult,
   SafetyOverviewResult,
   SimpleActionResult,
   UpdatePrivacySettingsResult,
@@ -33,7 +32,6 @@ type BootstrapPart<T> = {
 }
 export type ProfileBootstrapResult = CloudResponse<{
   profile?: BootstrapPart<GetMeResult>
-  pendingRequests?: BootstrapPart<GetMyRequestsResult>
   safetyOverview?: BootstrapPart<SafetyOverviewResult>
   adminAccess?: BootstrapPart<AdminAccessResult>
   legalConsent?: BootstrapPart<Record<string, unknown>>
