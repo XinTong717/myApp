@@ -18,6 +18,7 @@ const { getUserProfileByOpenid } = require('../lib/userRepo')
 
 const COUNT_COLLECTION = 'event_interest_counts'
 const DAILY_SUBMISSION_LIMIT = 5
+const ACTIVE_SUBMISSION_STATUSES = ['pending', 'merged']
 const CORRECTION_TARGETS = {
   school: {
     collection: 'school_corrections',
@@ -242,7 +243,7 @@ async function submitSchool(event, wxContext) {
   const recentCountRes = await db.collection('school_submissions').where({ openid, createdAt: _.gte(since) }).count()
   if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) return fail(requestId, 'DAILY_LIMIT_REACHED', '24小时内最多可提交5次推荐，请稍后再试')
   const normalizedKey = [cleanData.name, cleanData.province, cleanData.city].map((item) => String(item || '').trim().toLowerCase()).join('::')
-  const existing = await db.collection('school_submissions').where({ normalizedKey, status: _.in(['pending', 'approved', 'merged']) }).limit(1).get()
+  const existing = await db.collection('school_submissions').where({ normalizedKey, status: _.in(ACTIVE_SUBMISSION_STATUSES) }).limit(1).get()
   if (existing.data.length > 0) return fail(requestId, 'DUPLICATE_SUBMISSION', '这个学习社区已在审核队列或已收录，无需重复提交')
   const submitter = await getUserProfileByOpenid(openid, ['displayName', 'roles', 'city']) || {}
   try {
@@ -284,7 +285,7 @@ async function submitEvent(event, wxContext) {
   const sec = await runMsgSecCheck({ content: [cleanData.title, stringifyLabels(cleanData.eventTypes || []), stringifyLabels(cleanData.audienceWho || []), cleanData.minAgeRequirement, cleanData.location, cleanData.fee, cleanData.feeDetail, cleanData.organizer, cleanData.organizerContact, cleanData.officialUrl, cleanData.signupNote, cleanData.description].filter(Boolean).join('\n'), openid, scene: 2 })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
   const normalizedKey = [cleanData.title, cleanData.province, cleanData.city, cleanData.startTime].map((item) => String(item || '').trim().toLowerCase()).join('::')
-  const existing = await db.collection('event_submissions').where({ normalizedKey, status: _.in(['pending', 'approved', 'merged']) }).limit(1).get()
+  const existing = await db.collection('event_submissions').where({ normalizedKey, status: _.in(ACTIVE_SUBMISSION_STATUSES) }).limit(1).get()
   if (existing.data.length > 0) return fail(requestId, 'DUPLICATE_SUBMISSION', '这个活动已在审核队列或已收录，无需重复提交')
   const submitter = await getUserProfileByOpenid(openid, ['displayName', 'roles', 'city']) || {}
   try {
