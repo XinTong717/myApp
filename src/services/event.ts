@@ -17,6 +17,7 @@ const EVENT_LIST_CACHE_KEY_PREFIX = 'cloud-cache:events:list:v1:'
 const EVENT_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:events:detail:v1:'
 const EVENT_INTEREST_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:interest-info:v1:'
 const EVENT_CONTACT_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:contact-info:v1:'
+const EVENT_FAVORITES_CACHE_KEY = 'cloud-cache:events:favorites:v1'
 const EVENT_LIST_TTL_MS = 5 * 60 * 1000
 const EVENT_DETAIL_TTL_MS = 10 * 60 * 1000
 const EVENT_RUNTIME_TTL_MS = 45 * 1000
@@ -91,6 +92,10 @@ export async function clearEventListCache() {
   ])
 }
 
+export async function clearFavoriteEventsCache() {
+  await clearScopedCachedValue(EVENT_FAVORITES_CACHE_KEY)
+}
+
 export async function clearEventRuntimeCache(eventId: number) {
   await Promise.all([
     clearScopedCachedValue(getEventInterestInfoCacheKey(eventId)),
@@ -139,6 +144,17 @@ export async function getEvents(options: GetEventsOptions = {}) {
     }
   }
 
+  return result
+}
+
+export async function getMyFavoriteEvents(options: { forceRefresh?: boolean; limit?: number } = {}) {
+  const cached = options.forceRefresh ? null : await getScopedCachedValue<EventListPayload>(EVENT_FAVORITES_CACHE_KEY)
+  if (cached) return okEventList(cached)
+
+  const result = await callCloud<EventListResult>('getMyFavoriteEvents', { limit: options.limit || 20 })
+  if (result.ok) {
+    await setScopedCachedValue(EVENT_FAVORITES_CACHE_KEY, { events: result.events || [] }, EVENT_LIST_TTL_MS)
+  }
   return result
 }
 
@@ -193,6 +209,7 @@ export async function toggleEventInterest(eventId: number) {
       await Promise.all([
         clearEventRuntimeCache(eventId),
         clearEventListCache(),
+        clearFavoriteEventsCache(),
       ])
     }
     return result
