@@ -18,6 +18,20 @@ const { getUserProfileByOpenid } = require('../lib/userRepo')
 
 const COUNT_COLLECTION = 'event_interest_counts'
 const DAILY_SUBMISSION_LIMIT = 5
+const CORRECTION_TARGETS = {
+  school: {
+    collection: 'school_corrections',
+    idField: 'schoolId',
+    titleField: 'schoolName',
+    missingMessage: '缺少学习社区信息',
+  },
+  event: {
+    collection: 'event_corrections',
+    idField: 'eventId',
+    titleField: 'eventTitle',
+    missingMessage: '缺少活动信息',
+  },
+}
 
 function buildInterestDocId(eventId, openid) {
   return `event_${eventId}_${openid}`
@@ -175,15 +189,35 @@ async function getEventDetail(event) {
 async function submitCorrection(event, wxContext) {
   const requestId = resolveRequestId('submit-correction', event)
   const openid = wxContext.OPENID
-  const schoolId = Number(event.schoolId || 0)
-  const schoolName = String(event.schoolName || '').trim()
+  const targetType = String(event.targetType || '').trim()
+  const config = CORRECTION_TARGETS[targetType]
+  const targetId = Number(event.targetId || 0)
+  const targetTitle = String(event.targetTitle || '').trim()
   const content = String(event.content || '').trim()
+
   if (!content) return fail(requestId, 'CONTENT_REQUIRED', '内容不能为空')
-  if (!schoolId) return fail(requestId, 'BAD_REQUEST', '缺少学习社区信息')
+  if (!config) return fail(requestId, 'INVALID_TARGET_TYPE', '纠错对象类型不合法')
+  if (!targetId) return fail(requestId, 'BAD_REQUEST', config.missingMessage)
+
   const sec = await runMsgSecCheck({ content, openid, scene: 2, blockedMessage: '内容包含不合规信息，请修改后重试', failedMessage: '内容审核失败，请稍后重试' })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
+
   try {
-    await db.collection('school_corrections').add({ data: { openid, schoolId, schoolName, content, ...buildContentSecurityFields(sec), status: 'pending', createdAt: db.serverDate() } })
+    await db.collection(config.collection).add({
+      data: {
+        openid,
+        targetType,
+        targetId,
+        targetTitle,
+        [config.idField]: targetId,
+        [config.titleField]: targetTitle,
+        content,
+        ...buildContentSecurityFields(sec),
+        status: 'pending',
+        createdAt: db.serverDate(),
+        updatedAt: db.serverDate(),
+      },
+    })
     return ok(requestId, { message: '提交成功' })
   } catch (err) {
     console.error('appService submitCorrection error:', err)
