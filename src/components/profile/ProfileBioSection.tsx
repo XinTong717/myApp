@@ -6,6 +6,7 @@ import ProfileInputBox from './ProfileInputBox'
 import ProfileHelperText from './ProfileHelperText'
 import ProfileCounterText from './ProfileCounterText'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type Props = {
@@ -28,7 +29,7 @@ export default function ProfileBioSection({ bio, setBio }: Props) {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onInput={(e) => setBio(e.detail.value)}
-          style={{ ...typography.body, color: palette.text, width: '100%', minHeight: '60px' }}
+          style={{ ...typography.body, color: palette.text, width: '100%', minHeight: space(6) }}
         />
       </ProfileInputBox>
       <ProfileCounterText current={bio.length} max={200} marginBottom='0' />
