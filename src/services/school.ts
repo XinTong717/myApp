@@ -169,5 +169,5 @@ export async function submitSchool(data: Record<string, unknown>) {
 }
 
 export async function submitCorrection(schoolId: number, schoolName: string, content: string) {
-  return runExclusive(`submitCorrection:${schoolId}`, () => callCloud<SubmitCorrectionResult>('submitCorrection', { schoolId, schoolName, content }))
+  return runExclusive(`submitCorrection:school:${schoolId}`, () => callCloud<SubmitCorrectionResult>('submitCorrection', { targetType: 'school', targetId: schoolId, targetTitle: schoolName, content }))
 }
