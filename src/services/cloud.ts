@@ -23,6 +23,7 @@ const ROUTED_ACTIONS = new Set([
   'getEventInterestCountsBatch',
   'getEventInterestInfo',
   'toggleEventInterest',
+  'getMyFavoriteEvents',
   'getEventContactInfo',
   'getMe',
   'getProfileBootstrap',
