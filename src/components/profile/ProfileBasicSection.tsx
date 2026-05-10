@@ -6,6 +6,7 @@ import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
 import ProfileHelperText from './ProfileHelperText'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 import type { PickerColumnChangeEvent, PickerMultiChangeEvent } from '../../hooks/useProfileForm'
 
@@ -71,7 +72,7 @@ export default function ProfileBasicSection(props: Props) {
   return (
     <ProfileCard>
       <SectionTitle text='显示名' />
-      <ProfileInputBox marginBottom='16px' focused={focusedField === 'displayName'}>
+      <ProfileInputBox marginBottom={space(4)} focused={focusedField === 'displayName'}>
         <Input
           value={displayName}
           placeholder='你希望别人怎么称呼你'
@@ -93,7 +94,7 @@ export default function ProfileBasicSection(props: Props) {
 
       <SectionTitle text='所在城市' />
       <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
-        <ProfileInputBox marginBottom={cityOption === '其他' ? '8px' : '12px'}>
+        <ProfileInputBox marginBottom={cityOption === '其他' ? space(2) : space(3)}>
           <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ ...typography.body, flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text>
             <Text style={{ ...typography.caption, color: palette.subtext }}>▼</Text>
@@ -101,8 +102,8 @@ export default function ProfileBasicSection(props: Props) {
         </ProfileInputBox>
       </Picker>
       {cityOption === '其他' && (
-        <View style={{ marginBottom: '12px' }}>
-          <ProfileHelperText text='请输入真实城市名。地图会先按省级近似坐标展示，但列表中会显示你填写的城市。' marginBottom='6px' />
+        <View style={{ marginBottom: space(3) }}>
+          <ProfileHelperText text='请输入真实城市名。地图会先按省级近似坐标展示，但列表中会显示你填写的城市。' marginBottom={space(2)} />
           <ProfileInputBox focused={focusedField === 'customCity'}>
             <Input
               value={customCity}

@@ -8,6 +8,7 @@ import ProfileHelperText from './ProfileHelperText'
 import ProfileCounterText from './ProfileCounterText'
 import ProfileSectionHeading from './ProfileSectionHeading'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type Props = {
@@ -45,7 +46,7 @@ export default function ProfileParentSection(props: Props) {
       <SectionTitle text='当前关注方向（可多选）' />
       <MultiPillSelect options={childStatusOptions} selected={childDropoutStatus} onChange={setChildDropoutStatus} />
       <SectionTitle text='希望补充说明的情况' />
-      <ProfileHelperText text='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持。' marginBottom='6px' />
+      <ProfileHelperText text='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持。' marginBottom={space(2)} />
       <ProfileInputBox marginBottom='0' focused={focused}>
         <Textarea
           value={childInterests}
@@ -54,7 +55,7 @@ export default function ProfileParentSection(props: Props) {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onInput={(e) => setChildInterests(e.detail.value)}
-          style={{ ...typography.body, color: palette.text, width: '100%', minHeight: '70px' }}
+          style={{ ...typography.body, color: palette.text, width: '100%', minHeight: space(7) }}
         />
       </ProfileInputBox>
       <ProfileCounterText current={childInterests.length} max={300} />
