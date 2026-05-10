@@ -23,10 +23,10 @@ type Props = {
   currentCity: string
   customCity: string
   setCustomCity: (value: string) => void
-  contactId: string
-  setContactId: (value: string) => void
-  contactNote: string
-  setContactNote: (value: string) => void
+  publicChannel: string
+  setPublicChannel: (value: string) => void
+  publicChannelNote: string
+  setPublicChannelNote: (value: string) => void
   pickerRange: string[][]
   pickerValue: number[]
   handlePickerChange: (e: PickerMultiChangeEvent) => void
@@ -36,7 +36,7 @@ type Props = {
   roleOptions: readonly string[]
 }
 
-type FocusField = 'displayName' | 'customCity' | 'contactId' | 'contactNote' | ''
+type FocusField = 'displayName' | 'customCity' | 'publicChannel' | 'publicChannelNote' | ''
 
 export default function ProfileBasicSection(props: Props) {
   const {
@@ -53,10 +53,10 @@ export default function ProfileBasicSection(props: Props) {
     currentCity,
     customCity,
     setCustomCity,
-    contactId,
-    setContactId,
-    contactNote,
-    setContactNote,
+    publicChannel,
+    setPublicChannel,
+    publicChannelNote,
+    setPublicChannelNote,
     pickerRange,
     pickerValue,
     handlePickerChange,
@@ -118,26 +118,26 @@ export default function ProfileBasicSection(props: Props) {
 
       <SectionTitle text='公开渠道（选填）' />
       <ProfileHelperText text='可填写个人微信、公众号、小红书、个人网站或公开邮箱。仅对已登录并完成个人资料的用户可见；不建议填写手机号，也不要填写孩子或第三方联系方式。' />
-      <ProfileInputBox focused={focusedField === 'contactId'}>
+      <ProfileInputBox focused={focusedField === 'publicChannel'}>
         <Input
-          value={contactId}
+          value={publicChannel}
           placeholder='例如：微信号 / 公众号 / 小红书 / 网站 / 邮箱'
-          onFocus={() => setFocusedField('contactId')}
+          onFocus={() => setFocusedField('publicChannel')}
           onBlur={() => setFocusedField('')}
-          onInput={(e) => setContactId(e.detail.value)}
+          onInput={(e) => setPublicChannel(e.detail.value)}
           style={{ ...typography.body, color: palette.text }}
         />
       </ProfileInputBox>
 
       <SectionTitle text='添加备注说明（选填）' />
       <ProfileHelperText text='例如：添加微信时请备注“可雀”；或说明更推荐通过公众号/邮箱联系。' />
-      <ProfileInputBox focused={focusedField === 'contactNote'}>
+      <ProfileInputBox focused={focusedField === 'publicChannelNote'}>
         <Input
-          value={contactNote}
+          value={publicChannelNote}
           placeholder='例如：添加时请备注“可雀”'
-          onFocus={() => setFocusedField('contactNote')}
+          onFocus={() => setFocusedField('publicChannelNote')}
           onBlur={() => setFocusedField('')}
-          onInput={(e) => setContactNote(e.detail.value)}
+          onInput={(e) => setPublicChannelNote(e.detail.value)}
           style={{ ...typography.body, color: palette.text }}
         />
       </ProfileInputBox>
