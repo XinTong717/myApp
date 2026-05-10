@@ -2,6 +2,12 @@
 
 This document is the launch-time source of truth for CloudBase collections. The app should access these collections through `appService`; direct client read/write permissions should stay disabled.
 
+## Launch legal contact decision
+
+The launch legal contact email is intentionally kept as `504302201@qq.com` in `src/constants/legal.ts`.
+
+Do not keep re-opening the launch-blocking recommendation to switch this value to a company-domain email during the current prelaunch cycle. At this stage, consistency, deliverability, and avoiding another legal-version churn are more important than cosmetic domain alignment. Revisit this only after launch or when a verified company-domain mailbox is configured and ready for policy/version rotation.
+
 ## Collection groups
 
 ### User / privacy / safety
