@@ -6,6 +6,7 @@ const {
   listSchoolMarkers,
   getSchoolById,
   listEvents,
+  listEventsByIds,
   getEventById,
 } = require('../lib/contentRepo')
 const {
@@ -327,6 +328,30 @@ async function getEventInterestInfo(event, wxContext) {
   return ok(requestId, { count: cachedCount === null ? 0 : cachedCount, hasInterested, degraded })
 }
 
+async function listFavoriteEvents(event, wxContext) {
+  const requestId = resolveRequestId('favorite-events', event)
+  const openid = wxContext.OPENID
+  const limit = Math.min(Math.max(Number(event.limit || 20), 1), 50)
+
+  try {
+    const interestRes = await db.collection('event_interest')
+      .where({ openid, status: 'interested' })
+      .orderBy('updatedAt', 'desc')
+      .limit(limit)
+      .get()
+
+    const eventIds = (interestRes.data || [])
+      .map((item) => Number(item.eventId))
+      .filter((eventId) => Number.isFinite(eventId) && eventId > 0)
+
+    const events = await listEventsByIds(eventIds)
+    return ok(requestId, { events, count: events.length })
+  } catch (err) {
+    console.error('appService listFavoriteEvents error:', err)
+    return fail(requestId, 'LIST_FAVORITE_EVENTS_FAILED', '读取收藏活动失败，请稍后重试', { events: [] })
+  }
+}
+
 async function toggleEventInterest(event, wxContext) {
   const requestId = resolveRequestId('toggle-interest', event)
   const openid = wxContext.OPENID
@@ -342,11 +367,11 @@ async function toggleEventInterest(event, wxContext) {
       const delta = wasInterested ? -1 : 1
       await db.collection('event_interest').doc(docId).update({ data: { status: nextStatus, updatedAt: db.serverDate() } })
       await adjustInterestCountCache(eventId, delta)
-      return ok(requestId, { hasInterested: nextStatus === 'interested', delta, message: nextStatus === 'interested' ? '已标记为感兴趣' : '已取消感兴趣' })
+      return ok(requestId, { hasInterested: nextStatus === 'interested', delta, message: nextStatus === 'interested' ? '已收藏' : '已取消收藏' })
     }
     await db.collection('event_interest').doc(docId).set({ data: { eventId, openid, status: 'interested', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
     await adjustInterestCountCache(eventId, 1)
-    return ok(requestId, { hasInterested: true, delta: 1, message: '已标记为感兴趣' })
+    return ok(requestId, { hasInterested: true, delta: 1, message: '已收藏' })
   } catch (err) {
     console.error('appService toggleEventInterest error:', err)
     return fail(requestId, 'TOGGLE_EVENT_INTEREST_FAILED', '操作失败，请稍后重试')
@@ -364,5 +389,6 @@ module.exports = {
   submitEvent,
   getEventInterestCountsBatch,
   getEventInterestInfo,
+  listFavoriteEvents,
   toggleEventInterest,
 }
