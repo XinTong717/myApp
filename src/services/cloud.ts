@@ -18,7 +18,6 @@ const ROUTED_ACTIONS = new Set([
   'getEvents',
   'getEventDetail',
   'submitCorrection',
-  'submitEventCorrection',
   'submitSchool',
   'submitEvent',
   'getEventInterestCountsBatch',
