@@ -241,7 +241,11 @@ export default function ProfilePage() {
         <AppPrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
       </>}
 
-      <View style={{ marginBottom: space(5), alignItems: 'center' }}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}><Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>用户协议</Text><Text style={{ ...typography.caption, color: palette.subtext, marginLeft: space(2), marginRight: space(2) }}>·</Text><Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>隐私政策</Text></View></View>
+      <AppRow justify='center' wrap marginBottom={space(5)}>
+        <Text onClick={openUserAgreement} style={{ ...typography.caption, color: palette.accentDeep }}>用户协议</Text>
+        <Text style={{ ...typography.caption, color: palette.subtext }}>·</Text>
+        <Text onClick={openPrivacyPolicy} style={{ ...typography.caption, color: palette.accentDeep }}>隐私政策</Text>
+      </AppRow>
     </AppPage>
   )
 }

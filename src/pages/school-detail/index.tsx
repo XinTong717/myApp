@@ -13,6 +13,7 @@ import AppTag from '../../components/common/AppTag'
 import AppInfoRow from '../../components/common/AppInfoRow'
 import AppIcon from '../../components/common/AppIcon'
 import AppPrimaryButton from '../../components/common/AppPrimaryButton'
+import AppPromptBanner from '../../components/common/AppPromptBanner'
 import CorrectionCard from '../../components/common/CorrectionCard'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import type { SchoolItem, SchoolLocationItem } from '../../types/domain'
@@ -86,8 +87,8 @@ function SchoolContent(props: {
   return (
     <>
       {preview ? (
-        <View style={{ backgroundColor: palette.warningSoft, borderRadius: radius.md, padding: `${space(2)} ${space(3)}`, marginBottom: space(3), border: `1px solid ${palette.line}` }}>
-          <Text style={{ ...typography.caption, color: palette.subtext }}>完整详情暂未加载成功，当前显示列表中的基础信息。</Text>
+        <View style={{ marginBottom: space(3) }}>
+          <AppPromptBanner title='完整详情暂未加载成功' description='当前显示列表中的基础信息。' icon='school' tone='warning' />
         </View>
       ) : null}
 
