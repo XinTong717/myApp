@@ -54,7 +54,7 @@ export default function UserPopup(props: UserPopupProps) {
 
   const canSeeExpanded = !!user.hasExpandedProfile
   const hasExpandedContent = canSeeExpanded && !!(
-    user.contactId || user.contactNote || user.childAgeRange?.length || user.childDropoutStatus?.length || user.childInterests || user.eduServices
+    user.publicChannel || user.publicChannelNote || user.childAgeRange?.length || user.childDropoutStatus?.length || user.childInterests || user.eduServices
   )
 
   return (
@@ -88,8 +88,8 @@ export default function UserPopup(props: UserPopupProps) {
 
         {hasExpandedContent ? (
           <View style={{ ...panelStyle, marginBottom: space(4) }}>
-            <InfoBlock title='公开渠道' text={user.contactId} />
-            <InfoBlock title='添加备注说明' text={user.contactNote} />
+            <InfoBlock title='公开渠道' text={user.publicChannel} />
+            <InfoBlock title='添加备注说明' text={user.publicChannelNote} />
             <InfoBlock title='家庭教育关注' text={[...(user.childAgeRange || []), ...(user.childDropoutStatus || []), user.childInterests || '']} />
             <InfoBlock title='教育服务' text={user.eduServices} />
           </View>

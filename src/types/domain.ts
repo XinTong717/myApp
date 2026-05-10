@@ -120,9 +120,9 @@ export type UserProfile = {
   roles?: string[]
   province?: string
   city?: string
-  contactId?: string
-  contactNote?: string
-  allowIncomingRequests?: boolean
+  publicChannel?: string
+  publicChannelNote?: string
+  expandedProfileVisible?: boolean
   isVisibleOnMap?: boolean
   childAgeRange?: string[]
   childDropoutStatus?: string[]
@@ -174,8 +174,8 @@ export type MapUser = {
   city?: string
   bio?: string
   companionContext?: string
-  contactId?: string
-  contactNote?: string
+  publicChannel?: string
+  publicChannelNote?: string
   childAgeRange?: string[]
   childDropoutStatus?: string[]
   childInterests?: string

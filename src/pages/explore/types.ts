@@ -18,8 +18,8 @@ export type AppUser = {
   city?: string
   bio?: string
   companionContext?: string
-  contactId?: string
-  contactNote?: string
+  publicChannel?: string
+  publicChannelNote?: string
   childAgeRange?: string[]
   childDropoutStatus?: string[]
   childInterests?: string
@@ -40,8 +40,8 @@ export type MarkerItem = {
   bio?: string
   roles?: string[]
   companionContext?: string
-  contactId?: string
-  contactNote?: string
+  publicChannel?: string
+  publicChannelNote?: string
   childAgeRange?: string[]
   childDropoutStatus?: string[]
   childInterests?: string

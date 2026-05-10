@@ -114,7 +114,7 @@ export async function saveProfile(data: Record<string, unknown>) {
   return result
 }
 
-export async function updatePrivacySettings(data: { allowIncomingRequests?: boolean; isVisibleOnMap?: boolean }) {
+export async function updatePrivacySettings(data: { expandedProfileVisible?: boolean; isVisibleOnMap?: boolean }) {
   const result = await callCloud<UpdatePrivacySettingsResult>('updatePrivacySettings', data)
   if (result.ok) {
     await Promise.all([

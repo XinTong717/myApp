@@ -87,7 +87,7 @@ async function loadSafetyRelations(openid) {
 function toPublicUser(user, openid, requesterHasProfile) {
   const roles = normalizeRoles(user.roles)
   const isSelf = user.openid === openid
-  const expanded = isSelf || (requesterHasProfile && user.allowIncomingRequests !== false)
+  const expanded = isSelf || (requesterHasProfile && user.expandedProfileVisible !== false)
   const payload = {
     _id: user._id,
     displayName: user.displayName,
@@ -104,8 +104,8 @@ function toPublicUser(user, openid, requesterHasProfile) {
 
   return {
     ...payload,
-    contactId: String(user.contactId || user.wechatId || '').trim(),
-    contactNote: String(user.contactNote || '').trim(),
+    publicChannel: String(user.publicChannel || '').trim(),
+    publicChannelNote: String(user.publicChannelNote || '').trim(),
     childAgeRange: roles.includes('家长') ? normalizeStringArray(user.childAgeRange) : [],
     childDropoutStatus: roles.includes('家长') ? normalizeStringArray(user.childDropoutStatus) : [],
     childInterests: roles.includes('家长') ? String(user.childInterests || '').trim() : '',
@@ -230,7 +230,7 @@ async function getMapUsers(event, wxContext) {
         displayName: _.neq(''),
         isVisibleOnMap: _.neq(false),
       })
-      .field({ displayName: true, roles: true, province: true, city: true, bio: true, companionContext: true, openid: true, allowIncomingRequests: true, contactId: true, contactNote: true, wechatId: true, childAgeRange: true, childDropoutStatus: true, childInterests: true, eduServices: true })
+      .field({ displayName: true, roles: true, province: true, city: true, bio: true, companionContext: true, openid: true, expandedProfileVisible: true, publicChannel: true, publicChannelNote: true, childAgeRange: true, childDropoutStatus: true, childInterests: true, eduServices: true })
       .skip(offset)
       .limit(pageLimit + 1)
       .get()
