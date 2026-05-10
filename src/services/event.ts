@@ -9,6 +9,7 @@ import type {
   EventInterestInfoResult,
   EventItem,
   EventListResult,
+  SubmitCorrectionResult,
   ToggleEventInterestResult,
 } from '../types/domain'
 
@@ -222,5 +223,5 @@ export async function submitEvent(data: Record<string, unknown>) {
 }
 
 export async function submitEventCorrection(eventId: number, eventTitle: string, content: string) {
-  return runExclusive(`submitEventCorrection:${eventId}`, () => callCloud<CloudResponse>('submitEventCorrection', { eventId, eventTitle, content }))
+  return runExclusive(`submitCorrection:event:${eventId}`, () => callCloud<SubmitCorrectionResult>('submitCorrection', { targetType: 'event', targetId: eventId, targetTitle: eventTitle, content }))
 }
