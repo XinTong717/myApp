@@ -13,9 +13,9 @@ import type {
   UserProfile,
 } from '../types/domain'
 
-const PROFILE_CACHE_KEY = 'cloud-cache:profile:me:v2'
-const SAFETY_OVERVIEW_CACHE_KEY = 'cloud-cache:profile:safety-overview:v2'
-const ADMIN_ACCESS_CACHE_KEY = 'cloud-cache:profile:admin-access:v2'
+const PROFILE_CACHE_KEY = 'cloud-cache:profile:me:v1'
+const SAFETY_OVERVIEW_CACHE_KEY = 'cloud-cache:profile:safety-overview:v1'
+const ADMIN_ACCESS_CACHE_KEY = 'cloud-cache:profile:admin-access:v1'
 
 const PROFILE_TTL_MS = 5 * 60 * 1000
 const SAFETY_OVERVIEW_TTL_MS = 5 * 60 * 1000

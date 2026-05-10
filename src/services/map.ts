@@ -1,13 +1,9 @@
 import { callCloud } from './cloud'
-import { clearScopedCachedValue, clearScopedCachedValuesByPrefix, getScopedCachedValue, setScopedCachedValue } from './cache'
+import { clearScopedCachedValuesByPrefix, getScopedCachedValue, setScopedCachedValue } from './cache'
 import { CACHE_KEY_PREFIXES } from '../constants/cacheKeys'
 import type { GetMapUsersResult, MapProvinceStat, MapUser } from '../types/domain'
 
 const MAP_USERS_CACHE_KEY_PREFIX = CACHE_KEY_PREFIXES.mapUsers
-const MAP_USERS_LEGACY_CACHE_KEYS = [
-  'cloud-cache:map-users:list:v1',
-  'cloud-cache:map-users:list:v2:all:all-child-stage',
-]
 const MAP_USERS_TTL_MS = 2 * 60 * 1000
 const MAP_USERS_AUTO_PAGE_LIMIT = 300
 const MAP_USERS_AUTO_PAGE_MAX_PAGES = 5
@@ -168,8 +164,5 @@ export async function getMapUsers(options: { forceRefresh?: boolean; province?: 
 }
 
 export async function clearMapUsersCache() {
-  await Promise.all([
-    ...MAP_USERS_LEGACY_CACHE_KEYS.map((key) => clearScopedCachedValue(key)),
-    clearScopedCachedValuesByPrefix(MAP_USERS_CACHE_KEY_PREFIX),
-  ])
+  await clearScopedCachedValuesByPrefix(MAP_USERS_CACHE_KEY_PREFIX)
 }

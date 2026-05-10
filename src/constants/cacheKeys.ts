@@ -1,4 +1,4 @@
 export const CACHE_KEY_PREFIXES = {
-  mapUsers: 'cloud-cache:map-users:list:v3:',
-  profileDraft: 'profile-draft:v2',
+  mapUsers: 'cloud-cache:map-users:list:v1:',
+  profileDraft: 'profile-draft:v1',
 } as const
