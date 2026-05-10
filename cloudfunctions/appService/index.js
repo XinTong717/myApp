@@ -33,6 +33,7 @@ const CONSENT_REQUIRED_ACTIONS = new Set([
   'reportUser',
   'toggleEventInterest',
   'getEventContactInfo',
+  'getMyFavoriteEvents',
 ])
 
 async function getOpenId(event, wxContext) {
