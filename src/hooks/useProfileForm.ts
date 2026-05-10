@@ -30,8 +30,8 @@ type ProfileDraft = {
   province: string
   cityOption: string
   customCity: string
-  contactId: string
-  contactNote: string
+  publicChannel: string
+  publicChannelNote: string
   childAgeRange: string[]
   childDropoutStatus: string[]
   childInterests: string
@@ -44,7 +44,7 @@ function hasDraftContent(draft: Partial<ProfileDraft> | null) {
   if (!draft) return false
   return !!(
     draft.displayName || draft.gender || draft.ageRange || draft.province || draft.cityOption || draft.customCity ||
-    draft.contactId || draft.contactNote || draft.childInterests || draft.eduServices || draft.companionContext || draft.bio ||
+    draft.publicChannel || draft.publicChannelNote || draft.childInterests || draft.eduServices || draft.companionContext || draft.bio ||
     (Array.isArray(draft.roles) && draft.roles.length > 0) ||
     (Array.isArray(draft.childAgeRange) && draft.childAgeRange.length > 0) ||
     (Array.isArray(draft.childDropoutStatus) && draft.childDropoutStatus.length > 0)
@@ -66,9 +66,9 @@ export function useProfileForm() {
   const [province, setProvince] = useState('')
   const [cityOption, setCityOption] = useState('')
   const [customCity, setCustomCity] = useState('')
-  const [contactId, setContactId] = useState('')
-  const [contactNote, setContactNote] = useState('')
-  const [allowIncomingRequests, setAllowIncomingRequests] = useState(true)
+  const [publicChannel, setPublicChannel] = useState('')
+  const [publicChannelNote, setPublicChannelNote] = useState('')
+  const [expandedProfileVisible, setExpandedProfileVisible] = useState(true)
   const [isVisibleOnMap, setIsVisibleOnMap] = useState(true)
 
   const [childAgeRange, setChildAgeRange] = useState<string[]>([])
@@ -92,8 +92,8 @@ export function useProfileForm() {
     setProvince(draft.province || '')
     setCityOption(draft.cityOption || '')
     setCustomCity(draft.customCity || '')
-    setContactId(draft.contactId || '')
-    setContactNote(draft.contactNote || '')
+    setPublicChannel(draft.publicChannel || '')
+    setPublicChannelNote(draft.publicChannelNote || '')
     setChildAgeRange(Array.isArray(draft.childAgeRange) ? draft.childAgeRange : [])
     setChildDropoutStatus(Array.isArray(draft.childDropoutStatus) ? draft.childDropoutStatus : [])
     setChildInterests(draft.childInterests || '')
@@ -123,9 +123,9 @@ export function useProfileForm() {
       setCustomCity('')
     }
 
-    setContactId(p.contactId || '')
-    setContactNote(p.contactNote || '')
-    setAllowIncomingRequests(p.allowIncomingRequests !== false)
+    setPublicChannel(p.publicChannel || '')
+    setPublicChannelNote(p.publicChannelNote || '')
+    setExpandedProfileVisible(p.expandedProfileVisible !== false)
     setIsVisibleOnMap(p.isVisibleOnMap !== false)
     setChildAgeRange(Array.isArray(p.childAgeRange) ? p.childAgeRange : [])
     setChildDropoutStatus(Array.isArray(p.childDropoutStatus) ? p.childDropoutStatus : [])
@@ -215,8 +215,8 @@ export function useProfileForm() {
         province,
         cityOption,
         customCity,
-        contactId,
-        contactNote,
+        publicChannel,
+        publicChannelNote,
         childAgeRange,
         childDropoutStatus,
         childInterests,
@@ -232,7 +232,7 @@ export function useProfileForm() {
     }, PROFILE_DRAFT_DEBOUNCE_MS)
 
     return () => clearTimeout(timer)
-  }, [displayName, gender, ageRange, roles, province, cityOption, customCity, contactId, contactNote, childAgeRange, childDropoutStatus, childInterests, eduServices, companionContext, bio, saving])
+  }, [displayName, gender, ageRange, roles, province, cityOption, customCity, publicChannel, publicChannelNote, childAgeRange, childDropoutStatus, childInterests, eduServices, companionContext, bio, saving])
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -256,9 +256,9 @@ export function useProfileForm() {
         roles,
         province,
         city: currentCity,
-        contactId: contactId.trim(),
-        contactNote: contactNote.trim(),
-        allowIncomingRequests,
+        publicChannel: publicChannel.trim(),
+        publicChannelNote: publicChannelNote.trim(),
+        expandedProfileVisible,
         isVisibleOnMap,
         childAgeRange: isParent ? childAgeRange : [],
         childDropoutStatus: isParent ? childDropoutStatus : [],
@@ -287,22 +287,22 @@ export function useProfileForm() {
     }
   }
 
-  const handleUpdatePrivacySetting = async (field: 'allowIncomingRequests' | 'isVisibleOnMap', value: boolean) => {
+  const handleUpdatePrivacySetting = async (field: 'expandedProfileVisible' | 'isVisibleOnMap', value: boolean) => {
     try {
       setPrivacySaving(true)
-      if (field === 'allowIncomingRequests') setAllowIncomingRequests(value)
+      if (field === 'expandedProfileVisible') setExpandedProfileVisible(value)
       if (field === 'isVisibleOnMap') setIsVisibleOnMap(value)
 
       const result = await updatePrivacySettings({ [field]: value })
       if (result?.ok) {
         Taro.showToast({ title: '设置已更新', icon: 'success' })
       } else {
-        if (field === 'allowIncomingRequests') setAllowIncomingRequests(!value)
+        if (field === 'expandedProfileVisible') setExpandedProfileVisible(!value)
         if (field === 'isVisibleOnMap') setIsVisibleOnMap(!value)
         Taro.showToast({ title: result?.message || '更新失败', icon: 'none' })
       }
     } catch (err) {
-      if (field === 'allowIncomingRequests') setAllowIncomingRequests(!value)
+      if (field === 'expandedProfileVisible') setExpandedProfileVisible(!value)
       if (field === 'isVisibleOnMap') setIsVisibleOnMap(!value)
       Taro.showToast({ title: '更新失败，请稍后重试', icon: 'none' })
     } finally {
@@ -348,11 +348,11 @@ export function useProfileForm() {
     cityOption,
     customCity,
     setCustomCity,
-    contactId,
-    setContactId,
-    contactNote,
-    setContactNote,
-    allowIncomingRequests,
+    publicChannel,
+    setPublicChannel,
+    publicChannelNote,
+    setPublicChannelNote,
+    expandedProfileVisible,
     isVisibleOnMap,
     childAgeRange,
     setChildAgeRange,
