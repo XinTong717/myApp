@@ -12,7 +12,7 @@ export default function ProfileInputBox({ children, marginBottom = space(3), foc
   return (
     <View
       style={{
-        backgroundColor: focused ? palette.focusSoft : '#FFFDF9',
+        backgroundColor: focused ? palette.focusSoft : palette.cardSoft,
         borderRadius: radius.md,
         padding: `${space(2)} ${space(3)}`,
         marginBottom,
