@@ -77,6 +77,7 @@ event_interest_counts
 
 admin_users
 admin_audit_logs
+counters
 ```
 
 Legacy collections to delete if they exist and contain no keeper data:
@@ -94,7 +95,25 @@ Do this separately in dev and prod.
 1. Cloud Functions / 云函数: keep `appService`.
 2. Delete old standalone functions if still deployed: `getOpenId`, `getEvents`, `getSchools`, `getEventDetail`, `getSchoolDetail`, `submitCorrection`, `submitEvent`, `submitCommunity`, `submitEventCorrection`, `getMe`, `saveProfile`, `updatePrivacySettings`, `getMapUsers`, `getMyRequests`, `sendRequest`, `respondRequest`, `manageConnection`, `getSafetyOverview`, `manageSafetyRelation`, `reportUser`.
 3. Database / 数据库: delete old collections if present and disposable: `connections`, `community_submissions`, `corrections`.
-4. For all collections below, set permission to: 所有用户不可读写 / 仅云函数可读写.
+4. Database / 数据库: confirm `counters/events` exists with `current = max(events.id)` in any environment that already has canonical events.
+5. For all collections below, set permission to: 所有用户不可读写 / 仅云函数可读写.
+
+## Event id counter seed
+
+`publishEventDirect` allocates canonical event ids through `counters/events.current`.
+
+If an environment already has records in `events`, manually seed or confirm this document before launch:
+
+```text
+collection: counters
+doc id: events
+name: events
+current: max(existing events.id)
+```
+
+If the max existing `events.id` is `70`, set `current` to `70`, not `71`. The publish flow increments first, then uses the incremented value as the next id.
+
+No extra index is required for `counters`; the code reads and updates by document id.
 
 ## Index creation notes
 
@@ -284,6 +303,8 @@ idx_account_deletion_requests_openid_createdAt: openid asc, createdAt desc
 [ ] user_reports: reporterOpenid + targetOpenid + createdAt(desc)
 [ ] account_deletion_requests: status + createdAt(desc)
 [ ] account_deletion_requests: openid + createdAt(desc)
+
+[ ] counters/events: current = max(events.id), no index needed
 ```
 
 ## Permission recommendation
@@ -295,7 +316,7 @@ Apply to all launch collections:
 仅云函数可读写
 ```
 
-The client should only read/write through `appService`. Do not allow direct client writes to users, submissions, corrections, reports, legal consent, safety, admin, or rate-limit collections.
+The client should only read/write through `appService`. Do not allow direct client writes to users, submissions, corrections, reports, legal consent, safety, admin, rate-limit, or counters collections.
 
 ## Data hygiene notes
 
