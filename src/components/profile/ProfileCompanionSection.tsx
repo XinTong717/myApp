@@ -5,6 +5,7 @@ import ProfileInputBox from './ProfileInputBox'
 import ProfileCounterText from './ProfileCounterText'
 import ProfileSectionHeading from './ProfileSectionHeading'
 import { palette } from '../../theme/palette'
+import { space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 
 type Props = {
@@ -29,7 +30,7 @@ export default function ProfileCompanionSection({ companionContext, setCompanion
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onInput={(e) => setCompanionContext(e.detail.value)}
-          style={{ ...typography.body, color: palette.text, width: '100%', minHeight: '70px' }}
+          style={{ ...typography.body, color: palette.text, width: '100%', minHeight: space(7) }}
         />
       </ProfileInputBox>
       <ProfileCounterText current={companionContext.length} max={150} />
