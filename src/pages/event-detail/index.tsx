@@ -3,7 +3,7 @@ import { View, Text } from '@tarojs/components'
 import Taro, { getCurrentInstance, useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { registerCurrentPageShare } from '../../utils/share'
 import { EVENT_CODE_MESSAGES } from '../../constants/cloudMessages'
-import { clearEventListCache, getEventContactInfo, getEventDetail, getEventInterestInfo, submitEventCorrection, toggleEventInterest } from '../../services/event'
+import { clearEventListCache, clearFavoriteEventsCache, getEventContactInfo, getEventDetail, getEventInterestInfo, submitEventCorrection, toggleEventInterest } from '../../services/event'
 import { getMe } from '../../services/profile'
 import { getDetailPreview } from '../../services/detailPreview'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
@@ -94,12 +94,12 @@ function EventContent(props: {
           <AppTag text={EVENT_TYPE_LABELS[event.event_type] || event.event_type} tone='brand' />
           {statusInfo ? <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} /> : null}
           <AppTag text={event.is_online ? '线上' : '线下'} tone='green' />
-          {interestCount > 0 ? <AppTag text={`${interestCount} 人感兴趣`} backgroundColor={palette.surfaceWarm} textColor={palette.brand} /> : null}
+          {interestCount > 0 ? <AppTag text={`${interestCount} 人收藏`} backgroundColor={palette.surfaceWarm} textColor={palette.brand} /> : null}
         </View>
       </AppCard>
 
       <AppPrimaryButton
-        text={preview ? '完整详情加载后可标记感兴趣' : hasInterested ? '取消感兴趣' : '我感兴趣'}
+        text={preview ? '完整详情加载后可收藏' : hasInterested ? '取消收藏' : '收藏活动'}
         loadingText='处理中...'
         loading={interestLoading}
         disabled={!!preview}
@@ -243,7 +243,7 @@ export default function EventDetailPage() {
         if (typeof result.count === 'number') setInterestCount(result.count)
         else setInterestCount((count) => nextHasInterested ? count + 1 : Math.max(0, count - 1))
         lastLoadRef.current = { eventId: event.id, loadedAt: 0 }
-        await Promise.all([clearEventListCache(), loadInterestInfo(event.id, { forceRefresh: true }), loadContactInfo(event.id, { forceRefresh: true })])
+        await Promise.all([clearEventListCache(), clearFavoriteEventsCache(), loadInterestInfo(event.id, { forceRefresh: true }), loadContactInfo(event.id, { forceRefresh: true })])
         Taro.showToast({ title: result.message || '已更新', icon: 'success' })
       } else {
         const message = resolveCloudMessage(result, EVENT_CODE_MESSAGES, '操作失败')
