@@ -13,8 +13,8 @@ import type {
   ToggleEventInterestResult,
 } from '../types/domain'
 
-const EVENT_LIST_CACHE_KEY_PREFIX = 'cloud-cache:events:list:v4:'
-const EVENT_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:events:detail:v2:'
+const EVENT_LIST_CACHE_KEY_PREFIX = 'cloud-cache:events:list:v1:'
+const EVENT_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:events:detail:v1:'
 const EVENT_INTEREST_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:interest-info:v1:'
 const EVENT_CONTACT_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:contact-info:v1:'
 const EVENT_LIST_TTL_MS = 5 * 60 * 1000
