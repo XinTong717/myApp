@@ -18,7 +18,7 @@ Do not keep re-opening the launch-blocking recommendation to switch this value t
 | `safety_relations` | Block/mute relationships | `manageSafetyRelation` | `getSafetyOverview`, `getMapUsers` | Medium | Used to hide users from each other in map/directory flows. |
 | `user_reports` | User reports | `reportUser` | future admin moderation | High | Contains reporter/target openids and free-text notes. |
 | `account_deletion_requests` | Account deletion/data removal requests | `requestAccountDeletion` | future admin operations | High | Profile is immediately hidden/anonymized before full manual processing. |
-| `legal_consents` | User agreement/privacy-policy consent audit | `recordLegalConsent` | `getLegalConsentStatus`, consent gate | High | Store version fields and timestamps for auditability. |
+| `legal_consents` | Current user agreement/privacy-policy consent state | `recordLegalConsent` | `getLegalConsentStatus`, consent gate | High | One document per openid. This is current-state storage, not a full historical audit log. |
 | `rate_limits` | Per-user/action rate limit records | `rateLimit` middleware | `rateLimit` middleware | Medium | Stable document id is `openid_action`. |
 
 ### Learning communities
@@ -40,12 +40,13 @@ Do not keep re-opening the launch-blocking recommendation to switch this value t
 | `event_interest` | Per-user event interest state | `toggleEventInterest` | `getEventInterestInfo` | Medium | Stable doc id is `event_${eventId}_${openid}`. |
 | `event_interest_counts` | Materialized event interest counts | `toggleEventInterest` | `getEvents`, `getEventInterestInfo`, batch count action | Low | `_id` should be the event id string. |
 
-### Admin
+### Admin / infrastructure
 
 | Collection | Purpose | Written by | Read by | Personal data | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `admin_users` | Admin access allowlist | manual/admin setup | `checkAdminAccess`, admin actions | Medium | Use `isActive` to disable access without deleting audit context. |
 | `admin_audit_logs` | Admin action history | admin actions | admin review/debugging | Medium | Use target fields for traceability. |
+| `counters` | Monotonic id allocation for canonical collections | `publishEventDirect` / manual seed | `publishEventDirect` | Low | Required doc: `counters/events`. Set `current` to max existing `events.id` before launch; next publish increments first, so do not pre-add 1. No index required because access is by document id. |
 
 ## Removed / legacy collections
 
@@ -102,6 +103,7 @@ legal_consents
 admin_users
 admin_audit_logs
 rate_limits
+counters
 ```
 
 ## Status and deletion semantics
@@ -165,6 +167,19 @@ school_corrections
 event_corrections
 ```
 
+## Event id counter seed
+
+Before launch, confirm this document exists in both dev and prod if the environment already has canonical events:
+
+```text
+collection: counters
+doc id: events
+current: max(existing events.id)
+name: events
+```
+
+If the current max `events.id` is `70`, set `current` to `70`, not `71`. `publishEventDirect` increments first and then uses the incremented value as the next canonical event id.
+
 ## CloudBase console launch checklist
 
 ```text
@@ -172,6 +187,8 @@ event_corrections
 [ ] Prod: legacy functions removed; appService kept
 [ ] Dev: legacy collections removed if disposable
 [ ] Prod: legacy collections removed if disposable
+[ ] Dev: counters/events exists with current = max(events.id)
+[ ] Prod: counters/events exists with current = max(events.id)
 [ ] Dev: all launch collections use cloud-function-only permissions
 [ ] Prod: all launch collections use cloud-function-only permissions
 [ ] Dev: Priority A indexes created
