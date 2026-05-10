@@ -126,6 +126,16 @@ archived
 
 Avoid relying on missing `status` for new content. Missing status may still be tolerated by current compatibility code, but new data should be explicit.
 
+Submission review statuses for the launch build are intentionally narrow:
+
+```text
+pending
+merged
+rejected
+```
+
+Do not reintroduce `approved` unless the product adds a real intermediate state such as “approved but not yet published”.
+
 ## Public profile field contract
 
 The launch profile schema uses these names:
@@ -166,6 +176,12 @@ Storage collections remain separate:
 school_corrections
 event_corrections
 ```
+
+For the launch build, corrections are collected into CloudBase only. There is no dedicated correction-review admin UI yet; operators should review `school_corrections` and `event_corrections` manually in the database and update canonical content records as needed.
+
+## Retention follow-up
+
+`rate_limits` and `admin_audit_logs` are intentionally retained for launch safety and debugging. After the first production usage window, revisit whether to add TTL cleanup, scheduled archival, or manual retention rules. Do not delete audit logs blindly while moderation, publishing, or abuse-prevention workflows are still being validated.
 
 ## Event id counter seed
 
