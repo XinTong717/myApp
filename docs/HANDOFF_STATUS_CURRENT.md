@@ -1,62 +1,61 @@
 # 可雀小程序 - Current Status Handoff
 
-Last updated: 2026-05-01
+Last updated: 2026-05-11
 Product brand: **可雀**
 Repo: `XinTong717/myApp`
 Local path: `/Users/xintong/myApp`
 
-This is the current operational status handoff. It supersedes older compact handoff notes where they conflict.
+This is the current operational status handoff for launch. It supersedes older handoff notes where they conflict.
 
-## 1. Product status
+## 1. Launch positioning
 
-The WeChat mini-program is a working near-MVP for:
+Current product boundary:
+
+```text
+可雀当前不是社交私信产品，而是成年人自愿公开资料的教育探索成员目录。平台不做站内私信、不做好友申请、不做自动撮合；用户只能查看对方选择公开的渠道，并自行谨慎联系。
+```
+
+The WeChat mini-program is a near-MVP for:
 
 - map-based discovery
 - structured learning-community browsing
 - structured event browsing
-- user-submitted learning community and event intake
-- gated adult-to-adult connection
+- user-submitted learning-community and event intake
+- adult public member directory
 - profile/privacy/safety controls
-- admin-mediated event review and one-click event publishing
+- admin-mediated event review and direct event publishing
+- admin-mediated school recommendation processing
 
 It is intentionally **not**:
 
 - a public social feed
 - an open comment platform
 - a youth-first registration product
+- an in-app messaging product
+- a friend-request / connection-request product
+- an algorithmic matching or auto-matching product
 - a precise navigation map
 
-Current product model:
-
-- **探索** = distribution/discovery map
-- **学习社区** = structured resource library
-- **活动** = recurring supply + structured intake + lightweight demand signal
-- **我的** = identity, privacy, gated relationship, safety, admin entry
+Do **not** re-create removed resources such as `connections`, `sendRequest`, `respondRequest`, `getMyRequests`, `manageConnection`, or `submitCommunity` for launch.
 
 ## 2. Current working surface
 
 ### Tabs
 
 1. **探索**
-   - learning-community and same-road-user layers
+   - learning-community and adult-member layers
    - province filter
    - province-summary user aggregation
    - school/user cluster visual separation
-   - school/user same-province clusters offset to reduce overlap
-   - low-count national cluster labels hidden:
-     - school cluster label only if count >= 3
-     - user cluster label only if count >= 2
-   - cluster labels visually lightened
    - user bottom-sheet popup
    - same-area user cluster bottom sheet
-   - map data renders only after `validMarkers`
-   - false empty-state flicker reduced with delayed empty state in `MapMarkers`
-   - stale-response guard added in `ExplorePage.loadData`
-   - school and user settled state now tracked together:
-     - `schoolsLoaded`
-     - `mapUsersLoadedKey`
-   - marker construction extracted to `src/pages/explore/utils/markerBuilders.ts`
-   - Explore index is slimmer, though still has remaining logic that can be extracted later
+   - map renders only after valid markers are available
+   - onboarding modal now waits until map data is loaded and visible markers exist
+   - unauthenticated/incomplete-profile banner now gives three paths:
+     - go fill profile
+     - browse learning communities
+     - browse events
+   - `getMe({ allowStale: true })` is used for profile-status checks to reduce unnecessary cloud calls
 
 2. **学习社区**
    - list + keyword search
@@ -68,6 +67,7 @@ Current product model:
      - same dimension = OR
      - different dimensions = AND
    - server-side filtering through `getSchools`
+   - filter options now come from backend `getFilterOptions`, derived from `school_locations` and `schools`
    - detail page
    - recommend-new-community entry
    - list/detail use `school_locations`
@@ -77,6 +77,9 @@ Current product model:
 
 3. **活动**
    - event list
+   - default public list limit: 100
+   - backend max event list limit: 200
+   - active-event scan limit: 300
    - online/offline filter
    - default hides ended events
    - detail page
@@ -84,18 +87,20 @@ Current product model:
    - interest counts
    - recommend-new-event entry
    - list click writes a 5-minute detail preview cache
+   - detail cache TTL is 2 minutes during launch, so admin edits propagate quickly
    - detail page renders preview while full detail/contact/interest data loads
 
 4. **我的**
    - step-based profile form:
      1. 基本资料
      2. 身份补充
-     3. 隐私联络
+     3. 目录设置
    - save button appears only on final step
    - Step 1 validation before continuing
+   - Step 1 and Step 2 button copy says final save is on the last step
    - openid-scoped profile draft cache
    - privacy and safety controls
-   - request/connection management
+   - account deletion request entry
    - admin entry only for active admins
 
 ### Non-tab pages
@@ -104,40 +109,159 @@ Current product model:
 - `pkg/schools/submit/index`
 - `pages/event-detail/index`
 - `pkg/events/submit/index`
+- `pkg/legal/user-agreement/index`
+- `pkg/legal/privacy-policy/index`
+- `pages/admin/index`
 - `pages/admin/event-reviews/index`
-- `pages/privacy-policy/index`
+- `pages/admin/school-submissions/index`
 
-## 3. Important recent changes after previous handoff
+## 3. Current backend architecture
 
-### 3.1 Explore stability and visual cleanup
+Current mini-program backend entrypoint:
 
-Completed:
+```text
+appService
+```
 
-- low-count cluster labels hidden in national view
-- cluster label wording shortened and colors lightened
-- false empty-state flicker reduced with delayed empty state
-- `loadData` now uses request sequence guard to drop stale responses
-- province/filter snapshots are captured before async requests
-- map user and school data settled state are jointly checked before empty state
-- marker builders extracted from `src/pages/explore/index.tsx`
-- unused leftovers such as old `USER_CLUSTER_THRESHOLD` / `Coord` should be removed if local TS warnings remain
+Active public-read path:
 
-Files:
+```text
+frontend service -> src/services/cloud.ts -> appService -> handlers/lib -> CloudBase
+```
 
-- `src/pages/explore/index.tsx`
-- `src/pages/explore/components/MapMarkers.tsx`
-- `src/pages/explore/utils/markerBuilders.ts`
+Current handler groups:
 
-### 3.2 Admin event publishing is now one-click
+- public content / filter options
+- event contact
+- user profile / privacy / safety
+- map users
+- legal consent
+- admin review / publish
+- client error breadcrumbs
 
-Previous older handoff said event publishing was semi-manual. That is now outdated.
+Do not treat old standalone cloud functions as required just because they still exist in CloudBase console. Source of truth is `appService` action routing in `cloudfunctions/appService/index.js`.
+
+## 4. Active public content collections
+
+Public structured content is CloudBase-first:
+
+- `schools`
+- `school_locations`
+- `events`
+
+`school_locations` is the location source of truth.
+
+Do not write new comma-separated city data into `schools.city`. For new data:
+
+- canonical learning-community row -> `schools`
+- each operating location -> one row in `school_locations`
+- use `status: published | draft | archived`
+- use `source_submission_id` when the location came from a user recommendation
+
+See also:
+
+- `docs/SCHOOL_LOCATIONS_DATA_RULES.md`
+
+MemFire is not active in the mini-program frontend/public-read path.
+
+## 5. Active CloudBase collections for launch
+
+Required / expected prod collections:
+
+- `users`
+- `legal_consents`
+- `schools`
+- `school_locations`
+- `events`
+- `event_submissions`
+- `school_submissions`
+- `school_corrections`
+- `event_corrections`
+- `event_interest`
+- `event_interest_counts`
+- `admin_users`
+- `admin_audit_logs`
+- `safety_relations`
+- `user_reports`
+- `rate_limits`
+- `counters`
+- `client_error_logs`
+- `account_deletion_requests`
+
+Recommended permission posture:
+
+```text
+All users cannot read/write
+Cloud functions read/write only
+```
+
+## 6. Current appService action inventory
+
+Public / content:
+
+- `getOpenId`
+- `getFilterOptions`
+- `getSchools`
+- `getSchoolMarkers`
+- `getSchoolDetail`
+- `getEvents`
+- `getEventDetail`
+
+Submissions / corrections / interest:
+
+- `submitCorrection`
+- `submitSchool`
+- `submitEvent`
+- `getEventInterestCountsBatch`
+- `getEventInterestInfo`
+- `toggleEventInterest`
+- `getMyFavoriteEvents`
+- `getEventContactInfo`
+
+User/profile/legal/safety:
+
+- `getMe`
+- `getProfileBootstrap`
+- `saveProfile`
+- `updatePrivacySettings`
+- `requestAccountDeletion`
+- `getSafetyOverview`
+- `getMapUsers`
+- `manageSafetyRelation`
+- `reportUser`
+- `recordLegalConsent`
+- `getLegalConsentStatus`
+
+Admin:
+
+- `checkAdminAccess`
+- `listEventSubmissions`
+- `getEventPublishPayload`
+- `publishEventDirect`
+- `reviewEventSubmission`
+- `listSchoolSubmissions`
+- `reviewSchoolSubmission`
+
+Diagnostics:
+
+- `logClientError`
+
+Action manifest checking is enforced by:
+
+```bash
+npm run check:actions
+```
+
+## 7. Important recent launch changes
+
+### 7.1 Admin event publishing
 
 Current event publishing path:
 
 1. user submits event
 2. event goes to `event_submissions.status = pending`
 3. admin opens `pages/admin/event-reviews/index`
-4. admin checks payload/warnings
+4. admin checks payload/warnings/content security status
 5. admin clicks **一键发布到活动库**
 6. `publishEventDirect` writes into `events`
 7. submission becomes `merged`
@@ -149,34 +273,36 @@ Manual fallback remains:
 - **仅回写已发布** means the admin already manually created an `events` row and only wants to sync the submission status.
 - **重置待审核** changes the submission status back to pending, but does **not** delete an already-created event row.
 
-Important backend details:
+### 7.2 School recommendation review
 
-- `publishEventDirect` routes through `appService`, not a standalone function.
-- frontend `ROUTED_ACTIONS` includes `publishEventDirect`.
-- `adminPublish.js` guards event id allocation by checking conflicts and retrying.
-- source submission duplication is prevented by `source_submission_id` lookup.
-- event payload builder is shared between preview and publishing.
+Current launch scope: manual review/processing, not automatic write to `schools + school_locations`.
 
-Files:
+Path:
 
-- `cloudfunctions/appService/handlers/adminPublish.js`
-- `cloudfunctions/appService/lib/eventPublishPayload.js`
-- `cloudfunctions/appService/handlers/admin.js`
-- `src/pages/admin/event-reviews/index.tsx`
-- `src/services/cloud.ts`
+1. user submits learning-community recommendation
+2. row goes to `school_submissions.status = pending`
+3. admin opens `pages/admin/school-submissions/index`
+4. admin copies structured submission text
+5. admin manually creates/updates `schools` and `school_locations`
+6. admin marks submission as:
+   - `processed`
+   - `duplicate`
+   - `rejected`
+   - or resets to `pending`
 
-### 3.3 Content security / msgSecCheck
+### 7.3 Content security / msgSecCheck
 
 Current behavior:
 
-- explicit violations block writes
-- transient API failure or missing permission on scene 1/2 soft-passes into pending/manual review
-- `contentSecurityStatus = check_failed` can be stored for human review paths
+- explicit violations hard-block writes
+- transient API failure can soft-pass for review paths
+- `contentSecurityStatus = check_failed` can be stored for human review
+- profile save uses scene 1 but now `softPassOnFailure: true`; hard blocks still block, API failure does not prevent profile creation
+- profile saves write `profileContentSecurityStatus` / related fields to `users`
 
-Important resolved issue:
+Important permission:
 
-- error `-604101 function has no permission to call this API` was an OpenAPI permission/config issue, not a content violation.
-- repo now includes `cloudfunctions/appService/config.json` granting:
+`cloudfunctions/appService/config.json` grants:
 
 ```json
 {
@@ -188,91 +314,40 @@ Important resolved issue:
 
 After any change here, redeploy `appService` into each target CloudBase environment.
 
-Files:
+### 7.4 Legal consent
 
-- `cloudfunctions/appService/lib/security.js`
-- `cloudfunctions/appService/config.json`
+Legal consent versions are defined in both frontend and backend:
 
-### 3.4 Rate limiting expanded
+- `src/constants/legal.ts`
+- `cloudfunctions/appService/lib/legalConsent.js`
 
-Previous state: mostly read action limits.
+Consistency is enforced by:
 
-Current state: unified action rate limits include read, write, and admin actions.
+```bash
+npm run check:legal-version
+```
 
-Configured categories:
+This is part of:
 
-- `READ_ACTION_RATE_LIMITS`
-- `WRITE_ACTION_RATE_LIMITS`
-- `ADMIN_ACTION_RATE_LIMITS`
-- combined `ACTION_RATE_LIMITS`
+```bash
+npm run build:weapp:prod:check
+```
 
-Important write/admin limits now include:
+### 7.5 Client error breadcrumbs
 
-- `submitCorrection`
-- `submitCommunity`
-- `submitEvent`
-- `sendRequest`
-- `respondRequest`
-- `manageConnection`
-- `manageSafetyRelation`
-- `reportUser`
-- `toggleEventInterest`
-- `updatePrivacySettings`
-- `saveProfile`
-- `publishEventDirect`
-- `reviewEventSubmission`
-- `getEventPublishPayload`
-- `listEventSubmissions`
+Global `wx.onError` and `wx.onUnhandledRejection` now upload sanitized 10% sampled breadcrumbs to `client_error_logs` through `logClientError`.
 
-Files:
+Only short operational metadata is uploaded:
 
-- `cloudfunctions/appService/lib/rateLimits.config.js`
-- `cloudfunctions/appService/index.js`
-- CloudBase collection: `rate_limits`
+- source
+- short message first line
+- page
+- runtime env
+- cloud env
 
-### 3.5 Submit form duplicate-tap locks
+Do not upload user input, arbitrary payloads, or full stack traces.
 
-Added function-level sync locks with `useRef`, not only React state loading.
-
-Files:
-
-- `src/pkg/events/submit/index.tsx`
-- `src/pkg/schools/submit/index.tsx`
-
-This prevents weak-network double tap or repeated submit before React state updates.
-
-### 3.6 Detail preview cache
-
-Added a lightweight list-to-detail preview cache.
-
-Current behavior:
-
-- list click stores event/school preview for 5 minutes
-- detail page checks preview first
-- if preview exists, it renders immediately with a message
-- full detail still loads and replaces preview
-
-Files:
-
-- `src/services/detailPreview.ts`
-- `src/pages/events/index.tsx`
-- `src/pages/schools/index.tsx`
-- `src/pages/event-detail/index.tsx`
-- `src/pages/school-detail/index.tsx`
-
-### 3.7 appService boundary cleanup
-
-`appService/index.js` now groups handlers before the eventual split:
-
-- `publicActionHandlers`
-- `userActionHandlers`
-- `adminActionHandlers`
-
-This does not split cloud functions yet. It makes a future split easier.
-
-### 3.8 Build size checker
-
-Added bundle-size tooling.
+### 7.6 Bundle size checker
 
 Commands:
 
@@ -281,249 +356,97 @@ npm run check:weapp:size
 npm run build:weapp:prod:check
 ```
 
-Checks:
+Hard limits:
 
 - total `dist/` <= 20 MB
 - package-like buckets <= 2 MB
-- large files >= 500 KB
 
-Files:
+Warning budgets:
 
-- `scripts/check-weapp-size.cjs`
-- `package.json`
+- main package > 1.6 MB
+- total dist > 16 MB
 
-### 3.9 Recent CloudBase index checklist
+## 8. Current build gate
 
-Added:
-
-- `docs/CLOUDBASE_RECENT_INDEX_CHECK.md`
-
-This supplements the older index doc with recently changed queries for:
-
-- `connections`
-- `safety_relations`
-- `users`
-- `events`
-- `event_submissions`
-
-## 4. Current architecture
-
-### Public content is CloudBase-first
-
-Active collections:
-
-- `schools`
-- `school_locations`
-- `events`
-
-Active public-read path:
-
-- frontend service -> `cloud.ts` -> `appService` -> `contentRepo.js` -> CloudBase
-
-Active public content actions:
-
-- `getSchools`
-- `getSchoolDetail`
-- `getEvents`
-- `getEventDetail`
-
-MemFire is not active in the mini-program frontend/public-read path. Treat old MemFire data as historical/archive unless deliberately reintroduced.
-
-### School location model
-
-`school_locations` is the location source of truth.
-
-Do not write new comma-separated city data into `schools.city`.
-
-If approving a community recommendation:
-
-- new organization -> create `schools` + one or more `school_locations`
-- existing organization but new city -> add `school_locations` row
-- duplicate -> reject/merge without changing `schools.city`
-
-### CloudBase sensitive/app-managed collections
-
-Used collections:
-
-- `users`
-- `connections`
-- `corrections`
-- `community_submissions`
-- `event_submissions`
-- `event_interest`
-- `event_interest_counts`
-- `admin_users`
-- `admin_audit_logs`
-- `safety_relations`
-- `user_reports`
-- `rate_limits`
-- `schools`
-- `school_locations`
-- `events`
-
-Recommended permission posture:
-
-```text
-All users cannot read and write
-Cloud functions read/write only
-```
-
-## 5. Environments
-
-CloudBase envs:
-
-- dev: `cloud1-9g8njw4c79fb1322`
-- prod: `keque-prod-d5gc6ylp793fabaea`
-
-Frontend env files:
-
-- `.env.development` -> dev env id
-- `.env.production` -> prod env id
-
-Important discipline:
-
-- `.env.*` only controls frontend runtime target env
-- cloud functions must be deployed manually per env unless CI exists
-- indexes, collection permissions, admin rows, OpenAPI permissions, and collection data are console/env state
-- for any environment-sensitive task, always specify:
-  1. dev/prod/both
-  2. repo code / console state / data
-  3. mirror exactly / semantically match / intentionally different
-
-## 6. Current appService action inventory
-
-Public content:
-
-- `getSchools`
-- `getSchoolDetail`
-- `getEvents`
-- `getEventDetail`
-
-School migration/admin utility:
-
-- `migrateSchoolLocations`
-- `validateSchoolLocationsMigration`
-
-User/profile:
-
-- `getOpenId`
-- `getMe`
-- `saveProfile`
-- `updatePrivacySettings`
-
-Map/users:
-
-- `getMapUsers`
-
-Connections/safety:
-
-- `sendRequest`
-- `getMyRequests`
-- `respondRequest`
-- `manageConnection`
-- `manageSafetyRelation`
-- `getSafetyOverview`
-- `reportUser`
-
-Submissions/events:
-
-- `submitCommunity`
-- `submitEvent`
-- `submitCorrection`
-- `getEventInterestInfo`
-- `getEventInterestCountsBatch`
-- `toggleEventInterest`
-- `getEventContactInfo`
-
-Admin:
-
-- `checkAdminAccess`
-- `listEventSubmissions`
-- `getEventPublishPayload`
-- `publishEventDirect`
-- `reviewEventSubmission`
-
-## 7. Known unresolved items
-
-### P0 / must verify now
-
-1. Pull latest repo and compile:
+Run before every upload:
 
 ```bash
 git pull --rebase origin main
-npm run dev:weapp:dev
-```
-
-2. Deploy backend changes:
-
-```text
-cloudfunctions/appService
-Upload and deploy: cloud install dependencies
-```
-
-Do this in each target env that needs the new behavior.
-
-3. Verify `appService/config.json` OpenAPI permission actually took effect in CloudBase console/deployed function.
-
-4. Real-device regression test:
-
-- Explore national/province switching
-- fake empty state no longer flashes under normal network
-- school/user cluster taps
-- user popup -> send request/report/block
-- submitCommunity duplicate-tap guard
-- submitEvent duplicate-tap guard
-- event admin one-click publish
-- event list after publish
-- detail preview render and full detail replacement
-
-5. Run bundle size check:
-
-```bash
 npm run build:weapp:prod:check
 ```
 
-### P1 / next build candidates
+This runs:
 
-1. Community submission review workflow
-   - approve as new `schools` + `school_locations`
-   - merge as new `school_locations` for existing school
-   - reject / duplicate
-   - audit log
+1. `tsc --noEmit`
+2. `check:actions`
+3. `check:legal-version`
+4. prod build
+5. package size check
 
-2. Corrections review workflow
+## 9. Prod verification source of truth
+
+Use:
+
+- `docs/PROD_LAUNCH_CHECKLIST.md`
+- `docs/CLOUDBASE_RECENT_INDEX_CHECK.md`
+- `docs/HANDOFF_ENV_NOTES.md`
+
+Do not use older notes that mention `connections`, `getMyRequests`, or `submitCommunity`.
+
+## 10. Known unresolved / next build candidates
+
+### P0 / must verify now
+
+1. Deploy `cloudfunctions/appService` to prod with cloud-installed dependencies.
+2. Confirm `security.msgSecCheck` OpenAPI permission took effect in prod.
+3. Confirm prod collections and permissions match `docs/PROD_LAUNCH_CHECKLIST.md`.
+4. Confirm prod indexes match `docs/CLOUDBASE_RECENT_INDEX_CHECK.md`.
+5. Real-device regression:
+   - Explore national/province switching
+   - onboarding appears only after loaded map content
+   - school/user cluster taps
+   - user popup report/block
+   - submit school duplicate-tap guard
+   - submit event duplicate-tap guard
+   - event admin one-click publish
+   - school recommendation manual review status update
+   - event list after publish
+   - detail preview render and full detail replacement
+   - profile save when msgSecCheck permission/API is temporarily unavailable
+
+### P1 / soon after launch
+
+1. Corrections review workflow
    - currently still manual
-
-3. Cache soft-expire / stale-while-revalidate
-   - most useful for `getSchools`, `getEvents`, national `getMapUsers`
-   - do not apply blindly to requests/safety/admin
-
-4. More appService split preparation
+2. Account deletion admin UI or script
+   - launch SOP exists in `docs/ACCOUNT_DELETION_ADMIN_SOP.md`
+3. More appService split preparation
    - first candidate: migration/admin utilities
-   - later: map users if traffic grows
-
-5. Map real-device validation
+4. Map real-device validation
    - DevTools map/QQ route noise is low priority unless real device reproduces it
+5. Asset cleanup
+   - only delete unused images after local grep + prod build confirms no references
 
 ### P2 / later
 
 - Bounding-box map loading
 - user province summary materialized table
-- CloudBase counters collection for event id allocation
-- CSS variables / dark mode
 - full automated environment provisioning
+- saveProfile schema-versioned partial update path
+- userProfile.js / userV2.js naming cleanup
 
-## 8. Not now
+## 11. Not now
 
 - public comments
 - public feed
-- open public profile network
-- youth self-registration flow
+- open youth self-registration flow
 - algorithmic matching rhetoric
 - reintroducing frontend MemFire public reads
 - big-bang cloud function split before prod baseline is stable
+- renaming `userV2.js` before launch
+- partial saveProfile behavior change before launch
 
-## 9. Operational reminders
+## 12. Operational reminders
 
 - Do not edit `dist/`
 - New pages must be registered in `src/app.config.ts`
@@ -532,4 +455,4 @@ npm run build:weapp:prod:check
 - map rendering should use `validMarkers`
 - do not combine `includePoints` with manual `scale`
 - event direct publish requires `publishEventDirect` in `ROUTED_ACTIONS`
-- `migrateContent` is not found in current repo; if it still exists in CloudBase console, treat it as stale deployed residue and delete only after confirming no manual dependency
+- if old standalone cloud functions still exist in CloudBase console, treat them as stale deployed residue until confirmed otherwise
