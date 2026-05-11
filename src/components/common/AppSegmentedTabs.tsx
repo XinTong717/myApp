@@ -2,24 +2,24 @@ import { Text, View } from '@tarojs/components'
 import { palette } from '../../theme/palette'
 import { elevation, radius, space } from '../../theme/spacing'
 
-type AppSegmentedTabOption<T extends string> = {
-  key: T
+export type AppSegmentedTabOption = {
+  key: string
   label: string
 }
 
-type AppSegmentedTabsProps<TOptions extends readonly AppSegmentedTabOption<string>[]> = {
-  options: TOptions
-  value: TOptions[number]['key']
-  onChange: (value: TOptions[number]['key']) => void
+type AppSegmentedTabsProps = {
+  options: readonly AppSegmentedTabOption[]
+  value: string
+  onChange: (value: string) => void
   marginBottom?: string
 }
 
-export default function AppSegmentedTabs<const TOptions extends readonly AppSegmentedTabOption<string>[]>({
+export default function AppSegmentedTabs({
   options,
   value,
   onChange,
   marginBottom = space(4),
-}: AppSegmentedTabsProps<TOptions>) {
+}: AppSegmentedTabsProps) {
   return (
     <View
       style={{
