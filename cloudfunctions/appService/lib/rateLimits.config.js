@@ -31,6 +31,7 @@ const WRITE_ACTION_RATE_LIMITS = {
   updatePrivacySettings: { limit: 30, windowMs: DAY },
   saveProfile: { limit: 20, windowMs: DAY },
   requestAccountDeletion: { limit: 3, windowMs: DAY },
+  logClientError: { limit: 20, windowMs: MINUTE },
 }
 
 const ADMIN_ACTION_RATE_LIMITS = {
