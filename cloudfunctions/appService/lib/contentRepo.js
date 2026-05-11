@@ -2,8 +2,9 @@ const { db, _ } = require('./cloud')
 
 const SCHOOL_LIST_DEFAULT_LIMIT = 80
 const SCHOOL_LIST_MAX_LIMIT = 200
-const EVENT_LIST_LIMIT = 50
-const EVENT_LIST_SCAN_LIMIT = 200
+const EVENT_LIST_DEFAULT_LIMIT = 100
+const EVENT_LIST_MAX_LIMIT = 200
+const EVENT_LIST_SCAN_LIMIT = 300
 const SCHOOL_LOCATION_COLLECTION = 'school_locations'
 const DELETED_STATUSES = new Set(['deleted', 'removed', 'archived'])
 
@@ -309,9 +310,9 @@ const EVENT_FIELD_SELECTION = {
 
 async function listEvents(options = {}) {
   const normalizedOptions = typeof options === 'object' && options !== null ? options : { limit: options }
-  const limit = normalizeLimit(normalizedOptions.limit, EVENT_LIST_LIMIT, EVENT_LIST_LIMIT)
+  const limit = normalizeLimit(normalizedOptions.limit, EVENT_LIST_DEFAULT_LIMIT, EVENT_LIST_MAX_LIMIT)
   const includeEnded = normalizedOptions.includeEnded === true
-  const scanLimit = includeEnded ? limit : EVENT_LIST_SCAN_LIMIT
+  const scanLimit = includeEnded ? limit : Math.max(EVENT_LIST_SCAN_LIMIT, limit)
 
   const res = await db.collection('events')
     .field(EVENT_FIELD_SELECTION)
@@ -340,7 +341,8 @@ async function getEventById(eventId) {
 module.exports = {
   SCHOOL_LIST_DEFAULT_LIMIT,
   SCHOOL_LIST_MAX_LIMIT,
-  EVENT_LIST_LIMIT,
+  EVENT_LIST_DEFAULT_LIMIT,
+  EVENT_LIST_MAX_LIMIT,
   SCHOOL_LOCATION_COLLECTION,
   listSchools,
   listSchoolMarkers,
