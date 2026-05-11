@@ -124,7 +124,9 @@ export async function getMapUsers(options: { forceRefresh?: boolean; province?: 
   const childAgeRange = normalizeFilter(options.childAgeRange)
   const role = normalizeFilter(options.role)
   const offset = normalizeOffset(options.offset)
-  const shouldAutoPage = !!province && offset === 0 && options.autoPage === true
+  // Province detail mode filters users after safety/privacy checks. Auto-page by default
+  // so role/child-stage filters are applied across the first few pages, not only page 1.
+  const shouldAutoPage = !!province && offset === 0 && options.autoPage !== false
   const pageLimit = options.limit || (shouldAutoPage ? MAP_USERS_AUTO_PAGE_LIMIT : undefined)
   const cacheKey = getMapUsersCacheKey(province, childAgeRange, role, offset, pageLimit, shouldAutoPage)
 
