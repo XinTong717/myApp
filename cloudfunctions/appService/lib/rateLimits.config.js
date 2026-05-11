@@ -39,6 +39,8 @@ const ADMIN_ACTION_RATE_LIMITS = {
   reviewEventSubmission: { limit: 60, windowMs: MINUTE },
   getEventPublishPayload: { limit: 120, windowMs: MINUTE },
   listEventSubmissions: { limit: 120, windowMs: MINUTE },
+  listSchoolSubmissions: { limit: 120, windowMs: MINUTE },
+  reviewSchoolSubmission: { limit: 60, windowMs: MINUTE },
 }
 
 const ACTION_RATE_LIMITS = {
