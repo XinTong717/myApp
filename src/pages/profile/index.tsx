@@ -199,6 +199,12 @@ export default function ProfilePage() {
     setActiveStep(next.key)
   }
 
+  const handleStepChange = (value: string) => {
+    if (PROFILE_STEPS.some((item) => item.key === value)) {
+      setActiveStep(value as ProfileStep)
+    }
+  }
+
   const confirmMapDisclosureIfNeeded = async () => {
     if (!isVisibleOnMap) return true
     const confirm = await Taro.showModal({
@@ -239,7 +245,7 @@ export default function ProfilePage() {
       <AppPageHeader title='我的' description='填写资料、设置成员目录可见性，并管理安全与隐私。' />
       <ProfileAdminEntry isAdmin={isAdmin} onOpen={openAdminReviewPage} />
       <ProfileFavoriteEventsCard enabled={hasCompletedProfile} />
-      <AppSegmentedTabs options={PROFILE_STEPS} value={activeStep} onChange={setActiveStep} />
+      <AppSegmentedTabs options={PROFILE_STEPS} value={activeStep} onChange={handleStepChange} />
 
       {activeStep === 'basic' && <>
         <ProfileBasicSection displayName={displayName} setDisplayName={setDisplayName} gender={gender} setGender={setGender} ageRange={ageRange} setAgeRange={setAgeRange} roles={roles} setRoles={setRoles} province={province} cityOption={cityOption} currentCity={currentCity} customCity={customCity} setCustomCity={setCustomCity} publicChannel={publicChannel} setPublicChannel={setPublicChannel} publicChannelNote={publicChannelNote} setPublicChannelNote={setPublicChannelNote} pickerRange={pickerRange} pickerValue={pickerValue} handlePickerChange={handlePickerChange} handlePickerColumnChange={handlePickerColumnChange} genderOptions={GENDER_OPTIONS} ageRangeOptions={AGE_RANGE_OPTIONS} roleOptions={ROLE_OPTIONS} />
