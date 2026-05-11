@@ -41,6 +41,8 @@ const ROUTED_ACTIONS = new Set([
   'getEventPublishPayload',
   'publishEventDirect',
   'reviewEventSubmission',
+  'listSchoolSubmissions',
+  'reviewSchoolSubmission',
 ])
 
 function createClientRequestId(name: string) {
