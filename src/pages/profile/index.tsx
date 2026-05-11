@@ -30,7 +30,7 @@ import { palette } from '../../theme/palette'
 import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 import { checkAdminAccess, getProfileBootstrap, requestAccountDeletion } from '../../services/profile'
-import { recordLegalConsent } from '../../services/legalConsent'
+import { hasCurrentLocalLegalConsent, isCurrentLegalConsent, recordLegalConsent, setLocalLegalConsent } from '../../services/legalConsent'
 import { useSafety } from '../../hooks/useSafety'
 import { useProfileForm } from '../../hooks/useProfileForm'
 
@@ -82,7 +82,7 @@ function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; 
 export default function ProfilePage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [activeStep, setActiveStep] = useState<ProfileStep>('basic')
-  const [legalAgreed, setLegalAgreed] = useState(false)
+  const [legalAgreed, setLegalAgreed] = useState(() => hasCurrentLocalLegalConsent())
   const lastAutoRefreshAtRef = useRef(0)
 
   const form = useProfileForm()
@@ -108,6 +108,7 @@ export default function ProfilePage() {
     const profileData = result.profile?.ok ? result.profile.data : null
     const safetyData = result.safetyOverview?.ok ? result.safetyOverview.data : null
     const adminData = result.adminAccess?.ok ? result.adminAccess.data : null
+    const legalData = result.legalConsent?.ok ? result.legalConsent.data : null
 
     const fallbackTasks: Promise<unknown>[] = []
 
@@ -119,6 +120,11 @@ export default function ProfilePage() {
 
     if (adminData?.ok) setIsAdmin(!!adminData.isAdmin)
     else fallbackTasks.push(loadAdminAccess())
+
+    if (legalData?.ok && legalData.consent && isCurrentLegalConsent(legalData.consent)) {
+      setLegalAgreed(true)
+      setLocalLegalConsent(legalData.consent)
+    }
 
     await Promise.all(fallbackTasks)
   }
