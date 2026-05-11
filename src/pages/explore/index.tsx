@@ -66,14 +66,12 @@ function showExploreOnboardingOnce() {
   try {
     if (Taro.getStorageSync(EXPLORE_ONBOARDING_KEY)) return
     Taro.setStorageSync(EXPLORE_ONBOARDING_KEY, 'seen')
-    setTimeout(() => {
-      Taro.showModal({
-        title: '欢迎来到可雀',
-        content: '这里可以看学习社区、活动，也可以在成员目录里发现教育探索路上的同路人。\n\n平台不提供私信或自动撮合；你选择公开什么，别人才能看到什么。',
-        confirmText: '开始探索',
-        cancelText: '先逛逛',
-      }).catch((err) => console.warn('explore onboarding skipped:', err))
-    }, 450)
+    Taro.showModal({
+      title: '欢迎来到可雀',
+      content: '这里可以看学习社区、活动，也可以在成员目录里发现教育探索路上的同路人。\n\n平台不提供私信或自动撮合；你选择公开什么，别人才能看到什么。',
+      confirmText: '开始探索',
+      cancelText: '先逛逛',
+    }).catch((err) => console.warn('explore onboarding skipped:', err))
   } catch (err) {
     console.warn('explore onboarding storage skipped:', err)
   }
@@ -119,10 +117,6 @@ export default function ExplorePage() {
     filteredAppUsersForMap,
   } = useExploreFilters(appUsers, selectedProvince)
 
-  useEffect(() => {
-    showExploreOnboardingOnce()
-  }, [])
-
   const loadData = async (options: { forceRefreshMapUsers?: boolean; refreshSchools?: boolean } = {}) => {
     const requestSeq = loadSeqRef.current + 1
     loadSeqRef.current = requestSeq
@@ -150,7 +144,7 @@ export default function ExplorePage() {
           role: roleSnapshot !== '全部' ? roleSnapshot : undefined,
           childAgeRange: roleSnapshot === '家长' && childAgeRangeSnapshot !== '全部' ? childAgeRangeSnapshot : undefined,
         }),
-        getMe(),
+        getMe({ allowStale: true }),
       ])
 
       if (requestSeq !== loadSeqRef.current) return
@@ -224,6 +218,8 @@ export default function ExplorePage() {
   }, [selectedProvince, selectedUserRole, selectedChildAgeRange])
 
   const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
+  const goToSchools = () => { Taro.switchTab({ url: '/pages/schools/index' }) }
+  const goToEvents = () => { Taro.switchTab({ url: '/pages/events/index' }) }
 
   const allMarkers = useMemo(() => buildExploreMarkers({
     schools,
@@ -240,6 +236,11 @@ export default function ExplorePage() {
   }, [allMarkers, selectedProvince])
 
   const validMarkers = useMemo(() => filteredMarkers.filter((m) => Number.isFinite(m.latitude) && Number.isFinite(m.longitude)), [filteredMarkers])
+
+  useEffect(() => {
+    if (loading || error || validMarkers.length === 0) return
+    showExploreOnboardingOnce()
+  }, [loading, error, validMarkers.length])
 
   const availableProvinces = useMemo(() => {
     const set = new Set<string>()
@@ -549,15 +550,21 @@ export default function ExplorePage() {
   return (
     <AppPage flush style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
       {!loading && !hasProfile && (
-        <AppPromptBanner
-          title='填写资料，查看成员目录'
-          description='完成资料后可查看扩展公开资料，也可以选择出现在地图上'
-          actionText='去填写'
-          icon='user'
-          tone='brand'
-          flush
-          onClick={goToProfile}
-        />
+        <>
+          <AppPromptBanner
+            title='可以先逛，也可以加入成员目录'
+            description='先看学习社区和活动；完成资料后，可查看成员扩展公开资料，也可以选择出现在地图上。'
+            actionText='去填写'
+            icon='user'
+            tone='brand'
+            flush
+            onClick={goToProfile}
+          />
+          <View style={{ display: 'flex', flexDirection: 'row', gap: space(2), padding: `${space(2)} ${space(4)}`, backgroundColor: palette.card, borderBottom: `1px solid ${exploreTheme.border}` }}>
+            <AppChip text='先看学习社区' tone='brand' size='md' interactive onClick={goToSchools} />
+            <AppChip text='先看活动' tone='accent' size='md' interactive onClick={goToEvents} />
+          </View>
+        </>
       )}
 
       <View style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)} ${space(3)}`, borderBottom: `1px solid ${exploreTheme.border}` }}>
