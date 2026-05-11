@@ -1,36 +1,36 @@
 # Recent CloudBase Index Check
 
-Last updated: 2026-05-01
+Last updated: 2026-05-11
 
-This file supplements `docs/CLOUDBASE_INDEXES.md` for the recent runtime changes around map users, connection pagination, and admin direct event publishing.
+This file supplements `docs/CLOUDBASE_INDEXES.md` and `docs/PROD_LAUNCH_CHECKLIST.md` for the current launch runtime.
 
-## Check these before prod deploy
+Current product boundary:
 
-### `connections`
+```text
+可雀当前不是社交私信产品，而是成年人自愿公开资料的教育探索成员目录。平台不做站内私信、不做好友申请、不做自动撮合；用户只能查看对方选择公开的渠道，并自行谨慎联系。
+```
 
-Recent change: `getMyRequests` is now split and paginated by section.
+Do **not** create `connections` indexes or smoke-test `getMyRequests`; those actions are not part of the current launch scope.
+
+## Required indexes before prod deploy
+
+### `users`
 
 Required indexes:
 
 ```text
-fromOpenid ASC, status ASC, createdAt DESC
-toOpenid ASC, status ASC, createdAt DESC
-fromOpenid ASC, status ASC, respondedAt DESC
-toOpenid ASC, status ASC, respondedAt DESC
-fromOpenid ASC, toOpenid ASC, status ASC
+openid ASC
+isVisibleOnMap ASC, province ASC, city ASC, displayName ASC
+province ASC, isVisibleOnMap ASC, city ASC, displayName ASC
 ```
 
 Why:
 
-- pending received: `toOpenid + status + createdAt DESC`
-- pending sent: `fromOpenid + status + createdAt DESC`
-- accepted-from: `fromOpenid + status + respondedAt DESC`
-- accepted-to: `toOpenid + status + respondedAt DESC`
-- duplicate/existing connection checks: `fromOpenid + toOpenid + status`
+- profile lookup/enrichment by openid
+- national summary / visible users
+- province detail user loading
 
 ### `safety_relations`
-
-Recent change: map users and connection lists now filter blocked/muted users.
 
 Required indexes:
 
@@ -46,27 +46,7 @@ Why:
 - users who blocked current user: `targetOpenid + isBlocked`
 - pair lookup/update: `ownerOpenid + targetOpenid`
 
-### `users`
-
-Recent change: map users use aggregate summary and province detail pagination.
-
-Required indexes:
-
-```text
-openid ASC
-isVisibleOnMap ASC, province ASC, city ASC, displayName ASC
-province ASC, isVisibleOnMap ASC, city ASC, displayName ASC
-```
-
-Why:
-
-- enrichment by openid
-- national summary / visible users
-- province detail user loading
-
 ### `events`
-
-Recent change: admin can publish directly from `event_submissions` to `events`.
 
 Required indexes:
 
@@ -87,8 +67,6 @@ Why:
 
 ### `event_submissions`
 
-Recent change: admin review page lists submissions and direct publish updates status.
-
 Required indexes:
 
 ```text
@@ -98,25 +76,109 @@ openid ASC, createdAt DESC
 publishedEventId ASC, status ASC
 ```
 
+Why:
+
+- admin review list
+- duplicate submission prevention
+- user daily limit / audit trace
+- contact lookup by published event id
+
+### `school_submissions`
+
+Required indexes:
+
+```text
+status ASC, createdAt DESC
+normalizedKey ASC, status ASC
+openid ASC, createdAt DESC
+```
+
+Why:
+
+- admin review list
+- duplicate recommendation prevention
+- user daily limit / audit trace
+
+### `school_locations`
+
+Recommended indexes:
+
+```text
+school_id ASC
+province ASC, city ASC, status ASC
+```
+
+Why:
+
+- attach locations to schools
+- filter communities by province/city
+- generate school filter options from published locations
+
+### `event_interest`
+
+Recommended indexes:
+
+```text
+openid ASC, status ASC, updatedAt DESC
+eventId ASC, status ASC
+```
+
+Why:
+
+- user's interested events list
+- interest count validation / future backfill
+
+### `event_interest_counts`
+
+Recommended:
+
+```text
+_id document lookup/update works
+```
+
+Why:
+
+- public activity list interest counts
+
+### `legal_consents`
+
+Recommended:
+
+```text
+_id / openid document lookup works
+```
+
+Why:
+
+- legal gate for write actions
+
+### `rate_limits`
+
+Recommended:
+
+```text
+_id document lookup/update works
+```
+
+Why:
+
+- action-level rate limit state
+
+### `counters`
+
+Recommended:
+
+```text
+_id = events document lookup/update works
+```
+
+Why:
+
+- direct event publish id allocation
+
 ## Smoke tests
 
-Run these in dev first.
-
-### Connections
-
-```json
-{ "action": "getMyRequests", "section": "pending", "offset": 0, "limit": 50 }
-```
-
-```json
-{ "action": "getMyRequests", "section": "accepted", "offset": 0, "limit": 50 }
-```
-
-```json
-{ "action": "getMyRequests", "section": "sent", "offset": 0, "limit": 50 }
-```
-
-Expected: `ok: true`, with `pages.<section>`.
+Run these in dev first, then prod.
 
 ### Map users
 
@@ -126,6 +188,22 @@ Expected: `ok: true`, with `pages.<section>`.
 
 ```json
 { "action": "getMapUsers", "province": "浙江", "offset": 0, "limit": 100 }
+```
+
+Expected: `ok: true`.
+
+### Public content
+
+```json
+{ "action": "getSchoolMarkers", "limit": 200 }
+```
+
+```json
+{ "action": "getSchools", "limit": 50 }
+```
+
+```json
+{ "action": "getEvents", "includeInterestCounts": true }
 ```
 
 Expected: `ok: true`.
@@ -150,3 +228,17 @@ Expected:
 - `PUBLISH_BLOCKED` with actionable blocking reasons.
 
 Do not use placeholder text as `submissionId`.
+
+### School submission review
+
+```json
+{ "action": "listSchoolSubmissions", "status": "pending", "limit": 5 }
+```
+
+Then use a real `_id`:
+
+```json
+{ "action": "reviewSchoolSubmission", "submissionId": "REAL_SCHOOL_SUBMISSION_ID", "reviewAction": "mark_processed" }
+```
+
+Expected: `ok: true` and audit log written.
