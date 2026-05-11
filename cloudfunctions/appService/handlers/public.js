@@ -99,7 +99,7 @@ async function getCachedCounts(eventIds) {
       const cachedRes = await db.collection(COUNT_COLLECTION).where({ _id: _.in(ids) }).get()
       for (const item of cachedRes.data || []) counts[Number(item.eventId || item._id)] = Number(item.count || 0)
     } catch (err) {
-      console.warn('event favorite count cache read skipped:', err)
+      console.warn('event interest count cache read skipped:', err)
     }
   }
   for (const eventId of eventIds) if (!Object.prototype.hasOwnProperty.call(counts, eventId)) counts[eventId] = 0
@@ -117,7 +117,7 @@ async function adjustInterestCountCache(eventId, delta) {
       await db.collection(COUNT_COLLECTION).doc(docId).set({ data: { eventId, count: 0, updatedAt: db.serverDate(), createdAt: db.serverDate() } })
       await db.collection(COUNT_COLLECTION).doc(docId).update({ data: { eventId, count: _.inc(safeDelta), updatedAt: db.serverDate() } })
     } catch (initErr) {
-      console.warn('event favorite count initialize+inc degraded:', initErr)
+      console.warn('event interest count initialize+inc degraded:', initErr)
     }
   }
 }
@@ -317,7 +317,7 @@ async function submitEvent(event, wxContext) {
 }
 
 async function getEventInterestCountsBatch(event) {
-  const requestId = resolveRequestId('event-favorite-counts', event)
+  const requestId = resolveRequestId('event-interest-counts', event)
   const eventIds = Array.isArray(event.eventIds) ? event.eventIds.slice(0, 50).map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0) : []
   if (eventIds.length === 0) return ok(requestId, { counts: {} })
   try {
@@ -329,7 +329,7 @@ async function getEventInterestCountsBatch(event) {
 }
 
 async function getEventInterestInfo(event, wxContext) {
-  const requestId = resolveRequestId('event-favorite-info', event)
+  const requestId = resolveRequestId('event-interest-info', event)
   const openid = wxContext.OPENID
   const eventId = Number(event.eventId || 0)
   if (!eventId) return fail(requestId, 'BAD_REQUEST', '缺少活动 ID', { count: 0, hasInterested: false })
@@ -347,7 +347,7 @@ async function getEventInterestInfo(event, wxContext) {
 }
 
 async function toggleEventInterest(event, wxContext) {
-  const requestId = resolveRequestId('toggle-favorite', event)
+  const requestId = resolveRequestId('toggle-interest', event)
   const openid = wxContext.OPENID
   const eventId = Number(event.eventId || 0)
   if (!eventId) return fail(requestId, 'BAD_REQUEST', '缺少活动 ID')
@@ -361,11 +361,11 @@ async function toggleEventInterest(event, wxContext) {
       const delta = wasInterested ? -1 : 1
       await db.collection('event_interest').doc(docId).update({ data: { status: nextStatus, updatedAt: db.serverDate() } })
       await adjustInterestCountCache(eventId, delta)
-      return ok(requestId, { hasInterested: nextStatus === 'interested', delta, message: nextStatus === 'interested' ? '已收藏' : '已取消收藏' })
+      return ok(requestId, { hasInterested: nextStatus === 'interested', delta, message: nextStatus === 'interested' ? '已标记感兴趣' : '已取消感兴趣' })
     }
     await db.collection('event_interest').doc(docId).set({ data: { eventId, openid, status: 'interested', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
     await adjustInterestCountCache(eventId, 1)
-    return ok(requestId, { hasInterested: true, delta: 1, message: '已收藏' })
+    return ok(requestId, { hasInterested: true, delta: 1, message: '已标记感兴趣' })
   } catch (err) {
     console.error('appService toggleEventInterest error:', err)
     return fail(requestId, 'TOGGLE_EVENT_INTEREST_FAILED', '操作失败，请稍后重试')
@@ -373,7 +373,7 @@ async function toggleEventInterest(event, wxContext) {
 }
 
 async function getMyFavoriteEvents(event, wxContext) {
-  const requestId = resolveRequestId('my-favorite-events', event)
+  const requestId = resolveRequestId('my-interest-events', event)
   const openid = wxContext.OPENID
   const limit = Math.min(Math.max(Number(event?.limit || 20), 1), 50)
   try {
@@ -398,7 +398,7 @@ async function getMyFavoriteEvents(event, wxContext) {
     return ok(requestId, { events })
   } catch (err) {
     console.error('appService getMyFavoriteEvents error:', err)
-    return fail(requestId, 'GET_MY_FAVORITE_EVENTS_FAILED', '读取收藏活动失败，请稍后重试', { events: [] })
+    return fail(requestId, 'GET_MY_FAVORITE_EVENTS_FAILED', '读取感兴趣活动失败，请稍后重试', { events: [] })
   }
 }
 
