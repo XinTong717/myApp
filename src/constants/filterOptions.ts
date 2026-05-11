@@ -21,6 +21,9 @@ export const SCHOOL_FILTER_FALLBACKS = {
   allOption: ALL_FILTER,
   listLimit: 200,
   maxDynamicOptions: 16,
+  provinces: [] as string[],
+  schoolTypes: [] as string[],
+  ageRanges: [] as string[],
 }
 
 export type EventFilterOptions = typeof EVENT_FILTER_FALLBACKS
