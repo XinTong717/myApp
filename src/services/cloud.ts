@@ -43,6 +43,7 @@ const ROUTED_ACTIONS = new Set([
   'reviewEventSubmission',
   'listSchoolSubmissions',
   'reviewSchoolSubmission',
+  'logClientError',
 ])
 
 function createClientRequestId(name: string) {
