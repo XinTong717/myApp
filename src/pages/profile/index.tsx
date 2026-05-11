@@ -31,6 +31,7 @@ import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 import { checkAdminAccess, getProfileBootstrap, requestAccountDeletion } from '../../services/profile'
 import { hasCurrentLocalLegalConsent, isCurrentLegalConsent, recordLegalConsent, setLocalLegalConsent } from '../../services/legalConsent'
+import type { LegalConsentCache } from '../../constants/legal'
 import { useSafety } from '../../hooks/useSafety'
 import { useProfileForm } from '../../hooks/useProfileForm'
 
@@ -109,6 +110,7 @@ export default function ProfilePage() {
     const safetyData = result.safetyOverview?.ok ? result.safetyOverview.data : null
     const adminData = result.adminAccess?.ok ? result.adminAccess.data : null
     const legalData = result.legalConsent?.ok ? result.legalConsent.data : null
+    const legalConsent = (legalData?.consent || null) as Partial<LegalConsentCache> | null
 
     const fallbackTasks: Promise<unknown>[] = []
 
@@ -121,9 +123,9 @@ export default function ProfilePage() {
     if (adminData?.ok) setIsAdmin(!!adminData.isAdmin)
     else fallbackTasks.push(loadAdminAccess())
 
-    if (legalData?.ok && legalData.consent && isCurrentLegalConsent(legalData.consent)) {
+    if (legalData?.ok && isCurrentLegalConsent(legalConsent)) {
       setLegalAgreed(true)
-      setLocalLegalConsent(legalData.consent)
+      setLocalLegalConsent(legalConsent as LegalConsentCache)
     }
 
     await Promise.all(fallbackTasks)
