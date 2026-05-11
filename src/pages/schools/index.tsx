@@ -48,6 +48,11 @@ function uniqueValues(values: string[], max = SCHOOL_FILTER_FALLBACKS.maxDynamic
   return Array.from(new Set(values.filter(Boolean))).slice(0, max)
 }
 
+function withAllOption(allOption: string, preferred: string[], fallback: string[], max: number) {
+  const options = preferred.length > 0 ? preferred : uniqueValues(fallback, max)
+  return [allOption, ...options.filter((item) => item && item !== allOption)]
+}
+
 function getLocations(item: School): SchoolLocationItem[] {
   if (Array.isArray(item.locations) && item.locations.length > 0) return item.locations
   return splitTokens(item.city).map((city, index) => ({
@@ -142,7 +147,11 @@ export default function SchoolsPage() {
   }
 
   const loadFilterOptions = async (forceRefresh = false) => {
-    const result = await getSchools({ forceRefresh, limit: listLimit })
+    const [options, result] = await Promise.all([
+      getFilterOptions({ forceRefresh }),
+      getSchools({ forceRefresh, limit: listLimit }),
+    ])
+    setFilterSettings(options.school)
     const list = Array.isArray(result.schools) ? result.schools : []
     setFilterSourceSchools(list)
     return list
@@ -169,14 +178,15 @@ export default function SchoolsPage() {
       ])
     } else {
       await loadSchools({ forceRefresh: true, useFilters: false, syncFilterSource: true })
+      await getFilterOptions({ forceRefresh: true }).then((options) => setFilterSettings(options.school)).catch(() => null)
     }
     Taro.stopPullDownRefresh()
   })
 
   const optionSource = filterSourceSchools.length > 0 ? filterSourceSchools : schools
-  const provinceOptions = useMemo(() => [allFilter, ...uniqueValues(optionSource.flatMap((item) => getLocations(item).map((location) => location.province || '')), maxDynamicOptions)], [optionSource, allFilter, maxDynamicOptions])
-  const typeOptions = useMemo(() => [allFilter, ...uniqueValues(optionSource.flatMap((item) => splitTokens(item.school_type)), maxDynamicOptions)], [optionSource, allFilter, maxDynamicOptions])
-  const ageOptions = useMemo(() => [allFilter, ...uniqueValues(optionSource.flatMap((item) => splitTokens(item.age_range)), maxDynamicOptions)], [optionSource, allFilter, maxDynamicOptions])
+  const provinceOptions = useMemo(() => withAllOption(allFilter, filterSettings.provinces || [], optionSource.flatMap((item) => getLocations(item).map((location) => location.province || '')), maxDynamicOptions), [optionSource, allFilter, maxDynamicOptions, filterSettings.provinces])
+  const typeOptions = useMemo(() => withAllOption(allFilter, filterSettings.schoolTypes || [], optionSource.flatMap((item) => splitTokens(item.school_type)), maxDynamicOptions), [optionSource, allFilter, maxDynamicOptions, filterSettings.schoolTypes])
+  const ageOptions = useMemo(() => withAllOption(allFilter, filterSettings.ageRanges || [], optionSource.flatMap((item) => splitTokens(item.age_range)), maxDynamicOptions), [optionSource, allFilter, maxDynamicOptions, filterSettings.ageRanges])
 
   const filteredSchools = useMemo(() => {
     const q = keyword.trim().toLowerCase()
