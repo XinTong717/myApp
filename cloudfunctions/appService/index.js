@@ -9,6 +9,7 @@ const mapUserHandlers = require('./handlers/mapUsers')
 const adminHandlers = require('./handlers/admin')
 const adminPublishHandlers = require('./handlers/adminPublish')
 const legalConsentHandlers = require('./handlers/legalConsent')
+const clientErrorLogHandlers = require('./handlers/clientErrorLog')
 const { hasCurrentConsent } = require('./lib/legalConsent')
 
 const { ACTION_RATE_LIMITS } = require('./lib/rateLimits.config')
@@ -86,6 +87,7 @@ const publicActionHandlers = {
   ...publicHandlers,
   ...eventContactHandlers,
   ...mapUserHandlers,
+  ...clientErrorLogHandlers,
 }
 
 const userActionHandlers = {
