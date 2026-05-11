@@ -248,3 +248,34 @@ export type EventPublishPayloadResult = CloudResponse<{
   suggestedEventPayload?: Record<string, unknown>
   warnings?: string[]
 }>
+
+export type SchoolSubmissionItem = {
+  _id: string
+  status: string
+  name: string
+  province: string
+  city: string
+  schoolType?: string
+  schoolTypes?: string[]
+  ageRange?: string
+  ageRanges?: string[]
+  officialUrl?: string
+  publicAccountNote?: string
+  participationNote?: string
+  feeNote?: string
+  sourceNote?: string
+  recommendationNote?: string
+  submitterDisplayName?: string
+  submitterCity?: string
+  createdAt?: string | null
+  reviewedAt?: string | null
+  reviewedBy?: string
+  adminNote?: string
+  contentSecurityStatus?: string
+}
+
+export type ListSchoolSubmissionsResult = CloudResponse<{
+  submissions?: SchoolSubmissionItem[]
+}>
+
+export type ReviewSchoolSubmissionResult = CloudResponse<Record<string, never>>
