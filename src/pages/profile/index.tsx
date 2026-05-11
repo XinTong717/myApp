@@ -251,7 +251,7 @@ export default function ProfilePage() {
         <ProfileBasicSection displayName={displayName} setDisplayName={setDisplayName} gender={gender} setGender={setGender} ageRange={ageRange} setAgeRange={setAgeRange} roles={roles} setRoles={setRoles} province={province} cityOption={cityOption} currentCity={currentCity} customCity={customCity} setCustomCity={setCustomCity} publicChannel={publicChannel} setPublicChannel={setPublicChannel} publicChannelNote={publicChannelNote} setPublicChannelNote={setPublicChannelNote} pickerRange={pickerRange} pickerValue={pickerValue} handlePickerChange={handlePickerChange} handlePickerColumnChange={handlePickerColumnChange} genderOptions={GENDER_OPTIONS} ageRangeOptions={AGE_RANGE_OPTIONS} roleOptions={ROLE_OPTIONS} />
         <ProfileBioSection bio={bio} setBio={setBio} />
         <ProfileNoticeBox text='先完成显示名、身份和城市，就可以被地图正确识别。简介会公开展示，请避免填写孩子姓名、具体学校、住址等敏感细节。' />
-        <ProfileSecondaryButton text='下一步：身份补充' onClick={goNextStep} />
+        <ProfileSecondaryButton text='下一步：身份补充（最后一步保存）' onClick={goNextStep} />
       </>}
 
       {activeStep === 'identity' && <>
@@ -260,7 +260,7 @@ export default function ProfilePage() {
         {isCompanion && <ProfileCompanionSection companionContext={companionContext} setCompanionContext={setCompanionContext} />}
         {!isParent && !isEducator && !isCompanion && <ProfileNoticeBox text='你还没有选择身份。回到“基本资料”选择家长、教育者或同行者后，这里会出现对应的补充信息。' />}
         <ProfileNoticeBox text='家长与教育者补充信息不会在地图卡片直接公开；同行者填写的“和这个生态的关系”会随地图卡片公开展示。请不要写入敏感身份、未成年人姓名或具体住址。' />
-        <ProfileSecondaryButton text='下一步：目录设置' onClick={goNextStep} />
+        <ProfileSecondaryButton text='下一步：目录设置（最后一步保存）' onClick={goNextStep} />
       </>}
 
       {activeStep === 'privacy' && <>
