@@ -19,7 +19,7 @@ const EVENT_INTEREST_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:interest-info:v
 const EVENT_CONTACT_INFO_CACHE_KEY_PREFIX = 'cloud-cache:events:contact-info:v1:'
 const EVENT_FAVORITES_CACHE_KEY = 'cloud-cache:events:favorites:v1'
 const EVENT_LIST_TTL_MS = 5 * 60 * 1000
-const EVENT_DETAIL_TTL_MS = 10 * 60 * 1000
+const EVENT_DETAIL_TTL_MS = 2 * 60 * 1000
 const EVENT_RUNTIME_TTL_MS = 45 * 1000
 
 type EventListPayload = { events?: EventItem[]; degraded?: boolean }
