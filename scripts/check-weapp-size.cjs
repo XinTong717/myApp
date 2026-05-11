@@ -6,7 +6,9 @@ const path = require('path')
 const repoRoot = path.resolve(__dirname, '..')
 const distDir = path.join(repoRoot, 'dist')
 const MB = 1024 * 1024
+const TOTAL_WARN = 16 * MB
 const TOTAL_LIMIT = 20 * MB
+const MAIN_PACKAGE_WARN = 1.6 * MB
 const PACKAGE_LIMIT = 2 * MB
 const LARGE_FILE_WARN = 500 * 1024
 
@@ -16,6 +18,12 @@ function bytesText(bytes) {
   if (bytes >= MB) return `${(bytes / MB).toFixed(2)} MB`
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${bytes} B`
+}
+
+function statusText(size, warn, limit, label) {
+  if (size > limit) return `❌ over ${label}`
+  if (size > warn) return `⚠️ over warning budget`
+  return '✅'
 }
 
 function walk(dir, prefix = '') {
@@ -72,13 +80,15 @@ const largeFiles = files
 
 console.log('\nWeChat Mini Program bundle size report')
 console.log('====================================')
-console.log(`Total dist size: ${bytesText(total)} ${total > TOTAL_LIMIT ? '❌ over 20 MB' : '✅'}`)
+console.log(`Total dist size: ${bytesText(total)} ${statusText(total, TOTAL_WARN, TOTAL_LIMIT, '20 MB')}`)
+console.log(`Warning budgets: main > ${bytesText(MAIN_PACKAGE_WARN)}, total > ${bytesText(TOTAL_WARN)}`)
 console.log('\nPackages:')
 
 Array.from(byPackage.entries())
   .sort((a, b) => b[1] - a[1])
   .forEach(([name, size]) => {
-    console.log(`- ${name.padEnd(20)} ${bytesText(size).padStart(10)} ${size > PACKAGE_LIMIT ? '❌ over 2 MB' : '✅'}`)
+    const warn = name === 'main' ? MAIN_PACKAGE_WARN : PACKAGE_LIMIT
+    console.log(`- ${name.padEnd(20)} ${bytesText(size).padStart(10)} ${statusText(size, warn, PACKAGE_LIMIT, '2 MB')}`)
   })
 
 if (largeFiles.length > 0) {
@@ -92,6 +102,16 @@ const failed = total > TOTAL_LIMIT || Array.from(byPackage.values()).some((size)
 if (failed) {
   console.log('\nSize check failed. Consider moving pages/assets to subpackages or reducing duplicated dependencies.')
   process.exit(1)
+}
+
+const warnings = []
+if (total > TOTAL_WARN) warnings.push(`total dist size is above warning budget: ${bytesText(total)} > ${bytesText(TOTAL_WARN)}`)
+const mainSize = byPackage.get('main') || 0
+if (mainSize > MAIN_PACKAGE_WARN) warnings.push(`main package is above warning budget: ${bytesText(mainSize)} > ${bytesText(MAIN_PACKAGE_WARN)}`)
+
+if (warnings.length > 0) {
+  console.log('\nSize warnings:')
+  warnings.forEach((warning) => console.log(`- ${warning}`))
 }
 
 console.log('\nSize check passed. 🧳')
