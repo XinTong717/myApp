@@ -8,6 +8,8 @@ import {
   isCurrentLegalConsent,
 } from '../constants/legal'
 
+export { isCurrentLegalConsent }
+
 const APP_SERVICE_NAME = 'appService'
 
 type LegalConsentPayload = {
