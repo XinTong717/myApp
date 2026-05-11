@@ -37,6 +37,7 @@ type SubmissionItem = {
   createdAt: string | null
   publishedEventId: number | null
   adminNote: string
+  contentSecurityStatus?: string
 }
 
 type PayloadResponse = {
@@ -53,6 +54,22 @@ function formatDateText(value?: string | null) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
   return date.toLocaleString('zh-CN', { hour12: false })
+}
+
+function getSecurityChipTone(status?: string) {
+  if (!status) return 'neutral'
+  if (status === 'passed') return 'green'
+  if (status === 'blocked') return 'brand'
+  return 'accent'
+}
+
+function formatSecurityStatus(status?: string) {
+  if (!status) return '安全：unknown'
+  if (status === 'passed') return '安全：passed'
+  if (status === 'check_failed') return '安全：check_failed · 需人工看'
+  if (status === 'review') return '安全：review · 需人工看'
+  if (status === 'blocked') return '安全：blocked · 勿发布'
+  return `安全：${status}`
 }
 
 export default function AdminEventReviewsPage() {
@@ -332,6 +349,7 @@ export default function AdminEventReviewsPage() {
                 <View style={{ marginTop: space(2), display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
                   <AppChip text={item.status} tone='brand' />
                   <AppChip text={item.isOnline ? '线上' : '线下'} tone='green' />
+                  <AppChip text={formatSecurityStatus(item.contentSecurityStatus)} tone={getSecurityChipTone(item.contentSecurityStatus) as any} />
                   {item.publishedEventId ? <AppChip text={`event #${item.publishedEventId}`} tone='accent' /> : null}
                 </View>
               </AppCard>
