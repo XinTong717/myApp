@@ -153,7 +153,7 @@ export default function ProfilePage() {
 
   const openUserAgreement = () => Taro.navigateTo({ url: USER_AGREEMENT_URL })
   const openPrivacyPolicy = () => Taro.navigateTo({ url: PRIVACY_POLICY_URL })
-  const openAdminReviewPage = () => Taro.navigateTo({ url: '/pages/admin/event-reviews/index' })
+  const openAdminReviewPage = () => Taro.navigateTo({ url: '/pages/admin/index' })
 
   const handleRequestAccountDeletion = async () => {
     const firstConfirm = await Taro.showModal({
