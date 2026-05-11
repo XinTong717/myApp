@@ -2,7 +2,9 @@ import { callCloud } from './cloud'
 import type {
   EventPublishPayloadResult,
   ListEventSubmissionsResult,
+  ListSchoolSubmissionsResult,
   ReviewEventSubmissionResult,
+  ReviewSchoolSubmissionResult,
 } from '../types/domain'
 
 export async function listEventSubmissions(status: string, limit = 50) {
@@ -20,4 +22,16 @@ export async function reviewEventSubmission(data: {
   adminNote?: string
 }) {
   return callCloud<ReviewEventSubmissionResult>('reviewEventSubmission', data)
+}
+
+export async function listSchoolSubmissions(status: string, limit = 50) {
+  return callCloud<ListSchoolSubmissionsResult>('listSchoolSubmissions', { status, limit })
+}
+
+export async function reviewSchoolSubmission(data: {
+  submissionId: string
+  reviewAction: 'mark_processed' | 'reject' | 'duplicate' | 'reset_pending'
+  adminNote?: string
+}) {
+  return callCloud<ReviewSchoolSubmissionResult>('reviewSchoolSubmission', data)
 }
