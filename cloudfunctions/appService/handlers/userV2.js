@@ -99,6 +99,7 @@ async function saveProfile(event, wxContext) {
     content: [cleanData.displayName, cleanData.bio, cleanData.publicChannel, cleanData.publicChannelNote, cleanData.childInterests, cleanData.eduServices, cleanData.companionContext].filter(Boolean).join('\n'),
     openid,
     scene: 1,
+    softPassOnFailure: true,
   })
   if (!securityResult.ok) return fail(requestId, securityResult.code || 'CONTENT_SECURITY_BLOCKED', securityResult.message)
 
@@ -107,6 +108,11 @@ async function saveProfile(event, wxContext) {
     isVisibleOnMap: cleanData.isVisibleOnMap !== false,
     ...cleanData,
     openid,
+    profileContentSecurityStatus: securityResult.contentSecurityStatus || 'unknown',
+    profileContentSecuritySuggest: securityResult.contentSecuritySuggest || '',
+    profileContentSecurityLabel: securityResult.contentSecurityLabel || '',
+    profileContentSecurityErrorCode: securityResult.contentSecurityErrorCode || 0,
+    profileContentSecurityError: securityResult.contentSecurityError || '',
     deletionRequestedAt: null,
     deletionStatus: '',
   }
