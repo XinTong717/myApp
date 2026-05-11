@@ -215,7 +215,7 @@ export default function EventsPage() {
         </> : null}
       </AppCard>
 
-      <View className='app-count-line'><Text className='text-meta text-color-muted'>{loading ? '加载中...' : `当前显示 ${visibleEvents.length} / ${events.length} 个活动${statusFilter === EVENT_DEFAULT_STATUS_FILTER && hiddenEndedCount > 0 ? `，已隐藏 ${hiddenEndedCount} 个已结束活动` : ''}`}</Text></View>
+      <View className='app-count-line'><Text className='text-meta text-color-muted'>{loading ? '加载中...' : `当前显示 ${visibleEvents.length} / ${events.length} 个活动${statusFilter === EVENT_DEFAULT_STATUS_FILTER && hiddenEndedCount > 0 ? `，已隐藏 ${hiddenEndedCount} 个已结束活动` : ''}。当前优先展示近期活动，可下拉刷新或调整筛选。`}</Text></View>
 
       {loading ? <ListSkeleton count={3} rows={3} /> : null}
       {!loading && error ? <ErrorRetryCard error={error} onRetry={() => loadEvents({ forceRefresh: true, includeEnded })} /> : null}
@@ -238,7 +238,7 @@ export default function EventsPage() {
               {statusInfo ? <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} /> : null}
               <AppTag text={item.is_online ? '线上' : (getEventCity(item) || '线下')} />
               {item.min_age_requirement ? <AppTag text={item.min_age_requirement} /> : null}
-              {interestedCount > 0 ? <AppTag text={`#${interestedCount} 人收藏`} tone='accent' /> : null}
+              {interestedCount > 0 ? <AppTag text={`${interestedCount} 人感兴趣`} tone='accent' /> : null}
             </View>
             <View className='app-list-card__meta-box'>
               {summary ? <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>{summary}</Text></View> : null}
