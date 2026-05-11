@@ -27,11 +27,47 @@ function formatUnknownError(error: unknown) {
   }
 }
 
+function getCurrentPageRoute() {
+  try {
+    const pages = Taro.getCurrentPages?.() || []
+    const current = pages[pages.length - 1]
+    return current?.route || ''
+  } catch (err) {
+    return ''
+  }
+}
+
+function uploadClientErrorBreadcrumb(scene: string, error: unknown) {
+  // Only upload short operational breadcrumbs. Do not upload full stack traces,
+  // arbitrary payloads, or user-entered text.
+  if (Math.random() > 0.1) return
+  try {
+    const message = formatUnknownError(error).split('\n')[0].slice(0, 500)
+    Taro.cloud.callFunction({
+      name: 'appService',
+      data: {
+        action: 'logClientError',
+        level: 'error',
+        source: scene,
+        message,
+        page: getCurrentPageRoute(),
+        runtimeEnv: __WEAPP_RUNTIME_ENV__,
+        cloudEnv: __WEAPP_CLOUD_ENV_ID__,
+      },
+    }).catch((err) => {
+      console.warn('[client-error-log] upload skipped:', err)
+    })
+  } catch (err) {
+    console.warn('[client-error-log] upload failed:', err)
+  }
+}
+
 function logGlobalAppError(scene: string, error: unknown) {
   console.error(`[${scene}]`, formatUnknownError(error), {
     cloudEnv: __WEAPP_CLOUD_ENV_ID__,
     runtimeEnv: __WEAPP_RUNTIME_ENV__,
   })
+  uploadClientErrorBreadcrumb(scene, error)
 }
 
 function setupWeappGlobalErrorHandlers() {
