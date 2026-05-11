@@ -1,4 +1,4 @@
-const { db, _ } = require('../lib/cloud')
+const { db } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
 const { getUserProfileByOpenid } = require('../lib/userRepo')
 
@@ -10,7 +10,7 @@ async function getEventContactInfo(event, wxContext) {
 
   try {
     const matched = await db.collection('event_submissions')
-      .where({ publishedEventId: eventId, status: _.in(['merged', 'approved']) })
+      .where({ publishedEventId: eventId, status: 'merged' })
       .limit(1)
       .get()
     const submission = matched.data[0] || null
