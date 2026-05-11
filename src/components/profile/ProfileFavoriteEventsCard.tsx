@@ -30,7 +30,7 @@ export default function ProfileFavoriteEventsCard({ enabled }: Props) {
       const result = await getMyFavoriteEvents({ limit: 5 })
       if (result.ok) setEvents(Array.isArray(result.events) ? result.events : [])
     } catch (err) {
-      console.warn('load favorite events skipped:', err)
+      console.warn('load interested events skipped:', err)
     } finally {
       setLoading(false)
     }
@@ -51,15 +51,15 @@ export default function ProfileFavoriteEventsCard({ enabled }: Props) {
     <ProfileCard>
       <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(2) }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ ...typography.bodyStrong, color: palette.text }}>我的收藏活动</Text>
+          <Text style={{ ...typography.bodyStrong, color: palette.text }}>我感兴趣的活动</Text>
         </View>
         <Text onClick={loadFavorites} style={{ ...typography.caption, color: palette.accentDeep }}>{loading ? '刷新中' : '刷新'}</Text>
       </View>
 
       {loading && events.length === 0 ? (
-        <Text style={{ ...typography.meta, color: palette.subtext }}>正在读取收藏活动...</Text>
+        <Text style={{ ...typography.meta, color: palette.subtext }}>正在读取感兴趣活动...</Text>
       ) : events.length === 0 ? (
-        <Text style={{ ...typography.meta, color: palette.subtext }}>你还没有收藏活动。看到想关注的活动，可以点进详情页收藏。</Text>
+        <Text style={{ ...typography.meta, color: palette.subtext }}>你还没有标记感兴趣的活动。看到想关注的活动，可以点进详情页选择“我感兴趣”。</Text>
       ) : (
         events.map((event) => (
           <View key={event.id} onClick={() => openEvent(event)} style={{ padding: `${space(2)} 0`, borderTop: `1px solid ${palette.lineSoft}` }}>
