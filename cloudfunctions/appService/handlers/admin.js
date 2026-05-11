@@ -58,6 +58,47 @@ async function listEventSubmissions(event, wxContext) {
   }
 }
 
+async function listSchoolSubmissions(event, wxContext) {
+  const requestId = resolveRequestId('list-school-submissions', event)
+  const status = String(event.status || 'pending').trim()
+  const limit = Math.min(Math.max(Number(event.limit || 30), 1), 100)
+  try {
+    const admin = await getActiveAdmin(wxContext.OPENID)
+    if (!admin) return fail(requestId, 'FORBIDDEN', '无权限访问学习社区推荐审核列表')
+    let query = db.collection('school_submissions')
+    if (status && status !== 'all') query = query.where({ status })
+    const res = await query.orderBy('createdAt', 'desc').limit(limit).get()
+    const submissions = (res.data || []).map((item) => ({
+      _id: item._id,
+      status: item.status || 'pending',
+      name: item.name || '',
+      province: item.province || '',
+      city: item.city || '',
+      schoolType: item.schoolType || stringifyLabels(item.schoolTypes || []),
+      schoolTypes: item.schoolTypes || [],
+      ageRange: item.ageRange || stringifyLabels(item.ageRanges || []),
+      ageRanges: item.ageRanges || [],
+      officialUrl: item.officialUrl || '',
+      publicAccountNote: item.publicAccountNote || '',
+      participationNote: item.participationNote || '',
+      feeNote: item.feeNote || '',
+      sourceNote: item.sourceNote || '',
+      recommendationNote: item.recommendationNote || '',
+      submitterDisplayName: item.submitterDisplayName || '',
+      submitterCity: item.submitterCity || '',
+      createdAt: item.createdAt || null,
+      reviewedAt: item.reviewedAt || null,
+      reviewedBy: item.reviewedBy || '',
+      adminNote: item.adminNote || '',
+      contentSecurityStatus: item.contentSecurityStatus || '',
+    }))
+    return ok(requestId, { submissions, admin: { name: admin.name || '', role: admin.role || 'admin' } })
+  } catch (err) {
+    console.error('appService listSchoolSubmissions error:', err)
+    return fail(requestId, 'LIST_SCHOOL_SUBMISSIONS_FAILED', '读取学习社区推荐失败，请确认 admin_users / school_submissions 配置正常')
+  }
+}
+
 async function getEventPublishPayload(event, wxContext) {
   const requestId = resolveRequestId('get-event-publish-payload', event)
   const submissionId = String(event.submissionId || '').trim()
@@ -187,9 +228,74 @@ async function reviewEventSubmission(event, wxContext) {
   }
 }
 
+async function reviewSchoolSubmission(event, wxContext) {
+  const requestId = resolveRequestId('review-school-submission', event)
+  const submissionId = String(event.submissionId || '').trim()
+  const reviewAction = String(event.reviewAction || '').trim()
+  const adminNote = String(event.adminNote || '').trim()
+  if (!submissionId) return fail(requestId, 'SUBMISSION_ID_REQUIRED', '缺少 submissionId')
+  if (!['mark_processed', 'reject', 'duplicate', 'reset_pending'].includes(reviewAction)) return fail(requestId, 'INVALID_ACTION', '不支持的 action')
+
+  try {
+    const admin = await getActiveAdmin(wxContext.OPENID)
+    if (!admin) return fail(requestId, 'FORBIDDEN', '无权限修改学习社区推荐状态')
+    const docRes = await db.collection('school_submissions').doc(submissionId).get()
+    const submission = docRes.data
+    if (!submission) return fail(requestId, 'SUBMISSION_NOT_FOUND', '未找到该学习社区推荐记录')
+
+    const reviewerName = String(admin.name || '').trim() || 'admin'
+    const nextStatusMap = {
+      mark_processed: 'processed',
+      reject: 'rejected',
+      duplicate: 'duplicate',
+      reset_pending: 'pending',
+    }
+    const nextStatus = nextStatusMap[reviewAction]
+    const defaultNoteMap = {
+      mark_processed: '已人工处理并录入或合并',
+      reject: '未通过审核',
+      duplicate: '重复推荐',
+      reset_pending: '已重置为待审核',
+    }
+
+    await db.collection('school_submissions').doc(submissionId).update({
+      data: {
+        status: nextStatus,
+        reviewedAt: db.serverDate(),
+        reviewedBy: reviewerName,
+        adminNote: adminNote || defaultNoteMap[reviewAction],
+        updatedAt: db.serverDate(),
+      },
+    })
+
+    await writeAdminAuditLog({
+      admin,
+      openid: wxContext.OPENID,
+      action: `school_submission_${reviewAction}`,
+      targetType: 'school_submission',
+      targetId: submissionId,
+      metadata: {
+        name: submission.name || '',
+        province: submission.province || '',
+        city: submission.city || '',
+        previousStatus: submission.status || 'pending',
+        nextStatus,
+        adminNote: adminNote || defaultNoteMap[reviewAction],
+      },
+    })
+
+    return ok(requestId, { message: defaultNoteMap[reviewAction], nextStatus })
+  } catch (err) {
+    console.error('appService reviewSchoolSubmission error:', err)
+    return fail(requestId, 'REVIEW_SCHOOL_SUBMISSION_FAILED', '更新学习社区推荐状态失败，请稍后重试')
+  }
+}
+
 module.exports = {
   checkAdminAccess,
   listEventSubmissions,
+  listSchoolSubmissions,
   getEventPublishPayload,
   reviewEventSubmission,
+  reviewSchoolSubmission,
 }
