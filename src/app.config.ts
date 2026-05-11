@@ -12,7 +12,7 @@ export default defineAppConfig({
     { root: 'pkg/legal', pages: ['user-agreement/index', 'privacy-policy/index'] },
     { root: 'pages/school-detail', pages: ['index'] },
     { root: 'pages/event-detail', pages: ['index'] },
-    { root: 'pages/admin', pages: ['event-reviews/index', 'school-submissions/index'] },
+    { root: 'pages/admin', pages: ['index', 'event-reviews/index', 'school-submissions/index'] },
   ],
   preloadRule: {
     'pages/events/index': {
