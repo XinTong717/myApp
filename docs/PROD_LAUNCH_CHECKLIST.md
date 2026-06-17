@@ -1,7 +1,7 @@
 # 可雀小程序 Prod Launch Checklist
 
 Last updated: 2026-05-11
-Target env: `keque-prod-d5gc6ylp793fabaea`
+Target env: `keque-prod-v2-d8gfsxh8j16fba620`
 
 This checklist covers the production state that is **not fully represented in Git**. Do not treat a passing local build as proof that prod is ready.
 

@@ -388,7 +388,7 @@ Future cache improvement:
 CloudBase envs:
 
 - dev: `cloud1-9g8njw4c79fb1322`
-- prod: `keque-prod-d5gc6ylp793fabaea`
+- prod: `keque-prod-v2-d8gfsxh8j16fba620`
 
 Frontend env files:
 

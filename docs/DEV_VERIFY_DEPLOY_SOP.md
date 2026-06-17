@@ -18,7 +18,7 @@
 | 环境 | CloudBase env id | 用途 |
 |---|---|---|
 | dev | `cloud1-9g8njw4c79fb1322` | 本地开发、日常调试、真机预览前验证 |
-| prod | `keque-prod-d5gc6ylp793fabaea` | 生产构建、正式体验版/线上环境 |
+| prod | `keque-prod-v2-d8gfsxh8j16fba620` | 生产构建、正式体验版/线上环境 |
 
 记住两条轴线：
 
@@ -202,12 +202,12 @@ npm run build:weapp:prod
 3. grep 核验 dist
 
 ```bash
-grep -R "cloud1-9g8njw4c79fb1322\|keque-prod-d5gc6ylp793fabaea" dist | head
+grep -R "cloud1-9g8njw4c79fb1322\|keque-prod-v2-d8gfsxh8j16fba620" dist | head
 ```
 
 ### 通过标准
 
-- `dist/app.js` 应该出现 prod env id：`keque-prod-d5gc6ylp793fabaea`。
+- `dist/app.js` 应该出现 prod env id：`keque-prod-v2-d8gfsxh8j16fba620`。
 - 如果 `dist/app.js` 仍指向 dev，说明 prod build 没吃到 `.env.production`。
 
 ### 注意
@@ -225,7 +225,7 @@ grep -R "cloud1-9g8njw4c79fb1322\|keque-prod-d5gc6ylp793fabaea" dist | head
 打开 prod build 后的小程序，确认控制台：
 
 ```text
-[cloud] runtime env = keque-prod-d5gc6ylp793fabaea
+[cloud] runtime env = keque-prod-v2-d8gfsxh8j16fba620
 [cloud] runtime mode = production
 ```
 

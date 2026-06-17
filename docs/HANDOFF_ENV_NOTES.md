@@ -25,7 +25,7 @@ If these two are not checked explicitly, it is easy to think you are testing pro
 | Environment | CloudBase env id |
 |---|---|
 | dev | `cloud1-9g8njw4c79fb1322` |
-| prod | `keque-prod-d5gc6ylp793fabaea` |
+| prod | `keque-prod-v2-d8gfsxh8j16fba620` |
 
 ## 3. Commands
 
@@ -108,7 +108,7 @@ Use `docs/PROD_LAUNCH_CHECKLIST.md` as the source of truth.
 
 Minimum quick pass:
 
-1. Confirm runtime logs in `src/app.ts` show prod env id: `keque-prod-d5gc6ylp793fabaea`.
+1. Confirm runtime logs in `src/app.ts` show prod env id: `keque-prod-v2-d8gfsxh8j16fba620`.
 2. Confirm DevTools / CloudBase console current environment is prod.
 3. Confirm `appService` exists in prod and is freshly deployed.
 4. Confirm `appService/config.json` OpenAPI permission for `security.msgSecCheck` took effect in deployed prod function.
