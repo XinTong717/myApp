@@ -24,7 +24,7 @@ function buildSafetyDocId(ownerOpenid, targetOpenid) {
 function validatePublicChannel(value) {
   const text = String(value || '').trim()
   if (!text) return ''
-  if (text.length > 120) return '公开渠道不能超过120字'
+  if (text.length > 120) return '联系方式不能超过120字'
   if (/\b(?:https?:\/\/)?(?:t\.me|telegram\.me|wa\.me)\b/i.test(text)) return '暂不支持填写境外即时通讯链接'
   return ''
 }
@@ -81,7 +81,7 @@ async function saveProfile(event, wxContext) {
     validateLength('和生态的关系', cleanData.companionContext, 150) ||
     validateLength('家庭教育关注说明', cleanData.childInterests, 300) ||
     validateLength('教育服务', cleanData.eduServices, 500) ||
-    validateLength('公开渠道备注', cleanData.publicChannelNote, 120)
+    validateLength('联系方式备注', cleanData.publicChannelNote, 120)
   if (lengthError) return fail(requestId, 'INVALID_LENGTH', lengthError)
 
   const publicChannelError = validatePublicChannel(cleanData.publicChannel)
@@ -214,7 +214,7 @@ async function requestAccountDeletion(event, wxContext) {
       })
     }
 
-    return ok(requestId, { message: '注销申请已提交。你的公开资料已先匿名化并从地图隐藏，公开渠道已清空。' })
+    return ok(requestId, { message: '注销申请已提交。你的公开资料已先匿名化并从地图隐藏，联系方式已清空。' })
   } catch (err) {
     console.error('appService requestAccountDeletion error:', err)
     return fail(requestId, 'REQUEST_ACCOUNT_DELETION_FAILED', '提交注销申请失败，请稍后重试')
@@ -258,22 +258,29 @@ async function manageSafetyRelation(event, wxContext) {
   try { existing = (await db.collection('safety_relations').doc(stableDocId).get()).data || null } catch (err) { existing = null }
   const currentBlocked = !!existing?.isBlocked
   const currentMuted = !!existing?.isMuted
-  let nextBlocked = currentBlocked
-  let nextMuted = currentMuted
-  if (action === 'block') nextBlocked = true
-  if (action === 'unblock') nextBlocked = false
-  if (action === 'mute') nextMuted = true
-  if (action === 'unmute') nextMuted = false
+
+  if (action === 'block' && currentBlocked) return ok(requestId, { message: '已拉黑该用户' })
+  if (action === 'mute' && currentMuted) return ok(requestId, { message: '已静音该用户' })
+  if (action === 'unblock' && !currentBlocked) return ok(requestId, { message: '已解除拉黑' })
+  if (action === 'unmute' && !currentMuted) return ok(requestId, { message: '已取消静音' })
+
+  const updateData = {
+    ownerOpenid: openid,
+    targetOpenid: target.openid,
+    targetUserId,
+    targetName: target.displayName || target.name || '未知用户',
+    targetCity: target.city || '',
+    isBlocked: action === 'block' ? true : action === 'unblock' ? false : currentBlocked,
+    isMuted: action === 'mute' ? true : action === 'unmute' ? false : currentMuted,
+    updatedAt: db.serverDate(),
+  }
+
   try {
-    if (!nextBlocked && !nextMuted) {
-      await db.collection('safety_relations').doc(stableDocId).remove().catch(() => null)
-      return ok(requestId, { message: action === 'unblock' ? '已解除拉黑' : '已取消静音', isBlocked: false, isMuted: false })
-    }
-    await db.collection('safety_relations').doc(stableDocId).set({ data: { ownerOpenid: openid, targetOpenid: target.openid, targetUserId, targetName: target.displayName || '', targetCity: target.city || '', isBlocked: nextBlocked, isMuted: nextMuted, updatedAt: db.serverDate(), createdAt: existing?.createdAt || db.serverDate() } })
-    return ok(requestId, { message: action === 'block' ? '已拉黑该用户' : action === 'unblock' ? '已解除拉黑' : action === 'mute' ? '已静音该用户' : '已取消静音', isBlocked: nextBlocked, isMuted: nextMuted })
+    await db.collection('safety_relations').doc(stableDocId).set({ data: updateData })
+    return ok(requestId, { message: action === 'block' ? '已拉黑' : action === 'mute' ? '已静音' : action === 'unblock' ? '已解除拉黑' : '已取消静音' })
   } catch (err) {
     console.error('appService manageSafetyRelation error:', err)
-    return fail(requestId, 'MANAGE_SAFETY_FAILED', '操作失败，请稍后重试')
+    return fail(requestId, 'MANAGE_SAFETY_RELATION_FAILED', '操作失败，请稍后重试')
   }
 }
 
@@ -282,24 +289,25 @@ async function reportUser(event, wxContext) {
   const openid = wxContext.OPENID
   const targetUserId = String(event.targetUserId || '').trim()
   const reason = String(event.reason || '').trim()
-  const note = String(event.note || '').trim()
-  if (!targetUserId) return fail(requestId, 'TARGET_REQUIRED', '缺少目标用户')
-  if (reason && !REASON_WHITELIST.includes(reason)) return fail(requestId, 'INVALID_REASON', '举报原因不合法')
-  if (note.length > 1000) return fail(requestId, 'NOTE_TOO_LONG', '举报说明不能超过1000字')
+  if (!targetUserId || !reason) return fail(requestId, 'BAD_REQUEST', '请选择举报原因')
+  if (!REASON_WHITELIST.includes(reason)) return fail(requestId, 'INVALID_REASON', '举报原因不合法')
+
   let target
   try { target = (await db.collection('users').doc(targetUserId).get()).data } catch (err) { return fail(requestId, 'TARGET_NOT_FOUND', '找不到该用户') }
   if (!target || !target.openid) return fail(requestId, 'TARGET_NOT_FOUND', '找不到该用户')
-  if (target.openid === openid) return fail(requestId, 'SELF_REPORT_NOT_ALLOWED', '不能举报自己')
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
-  const duplicateRes = await db.collection('user_reports').where({ reporterOpenid: openid, targetOpenid: target.openid, createdAt: _.gte(since) }).limit(1).get()
-  if (duplicateRes.data.length > 0) return fail(requestId, 'DUPLICATE_REPORT', '24小时内你已经举报过该用户，无需重复提交')
-  if (note) {
-    const securityResult = await runMsgSecCheck({ content: note, openid, scene: 2, maxLen: 1000, blockedMessage: '举报说明包含不合规信息，请修改后重试', failedMessage: '举报说明审核失败，请稍后重试' })
-    if (!securityResult.ok) return fail(requestId, securityResult.code || 'CONTENT_SECURITY_BLOCKED', securityResult.message)
-  }
+
   try {
-    await db.collection('user_reports').add({ data: { reporterOpenid: openid, targetOpenid: target.openid, targetUserId, targetName: target.displayName || '', reason: reason || '未分类', note, status: 'pending', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
-    return ok(requestId, { message: '举报已提交，感谢反馈' })
+    await db.collection('reports').add({
+      data: {
+        reporterOpenid: openid,
+        targetUserId,
+        targetOpenid: target.openid,
+        reason,
+        status: 'pending',
+        createdAt: db.serverDate(),
+      },
+    })
+    return ok(requestId, { message: '举报已提交' })
   } catch (err) {
     console.error('appService reportUser error:', err)
     return fail(requestId, 'REPORT_USER_FAILED', '举报失败，请稍后重试')
