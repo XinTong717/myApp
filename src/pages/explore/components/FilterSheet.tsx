@@ -10,33 +10,35 @@ import { FilterChip } from './Chips'
 
 type FilterSheetProps = {
   visible: boolean
-  selectedUserRole: UserRoleFilter
-  setSelectedUserRole: (role: UserRoleFilter) => void
-  selectedChildAgeRange: string
-  setSelectedChildAgeRange: (stage: string) => void
+  selectedUserRoles: UserRoleFilter[]
+  setSelectedUserRoles: (roles: UserRoleFilter[]) => void
+  selectedChildAgeRanges: string[]
+  setSelectedChildAgeRanges: (stages: string[]) => void
   selectedProfileCompleteness: ProfileCompletenessFilter
   setSelectedProfileCompleteness: (value: ProfileCompletenessFilter) => void
   selectedUserCity: string
   setSelectedUserCity: (city: string) => void
   userCityOptions: string[]
-  onReset: () => void
   onClose: () => void
 }
 
-const ROLE_OPTIONS: UserRoleFilter[] = ['全部', '家长', '教育者', '同行者']
+const ROLE_OPTIONS: UserRoleFilter[] = ['家长', '教育者', '同行者']
+
+function toggleOption<T extends string>(current: T[], option: T) {
+  return current.includes(option) ? current.filter((item) => item !== option) : [...current, option]
+}
 
 export default function FilterSheet(props: FilterSheetProps) {
   const {
     visible,
-    selectedUserRole,
-    setSelectedUserRole,
-    selectedChildAgeRange,
-    setSelectedChildAgeRange,
+    selectedUserRoles,
+    setSelectedUserRoles,
+    selectedChildAgeRanges,
+    setSelectedChildAgeRanges,
     selectedProfileCompleteness,
     setSelectedProfileCompleteness,
     selectedUserCity,
     setSelectedUserCity,
-    onReset,
     onClose,
   } = props
 
@@ -45,6 +47,29 @@ export default function FilterSheet(props: FilterSheetProps) {
   const resetClientOnlyFilters = () => {
     if (selectedProfileCompleteness !== '全部') setSelectedProfileCompleteness('全部')
     if (selectedUserCity !== '全部') setSelectedUserCity('全部')
+  }
+
+  const clearRoleFilters = () => {
+    resetClientOnlyFilters()
+    setSelectedUserRoles([])
+    setSelectedChildAgeRanges([])
+  }
+
+  const toggleRole = (role: UserRoleFilter) => {
+    resetClientOnlyFilters()
+    const nextRoles = toggleOption(selectedUserRoles, role)
+    setSelectedUserRoles(nextRoles)
+    if (!nextRoles.includes('家长')) setSelectedChildAgeRanges([])
+  }
+
+  const clearChildAgeFilters = () => {
+    resetClientOnlyFilters()
+    setSelectedChildAgeRanges([])
+  }
+
+  const toggleChildAge = (stage: string) => {
+    resetClientOnlyFilters()
+    setSelectedChildAgeRanges(toggleOption(selectedChildAgeRanges, stage))
   }
 
   return (
@@ -65,50 +90,38 @@ export default function FilterSheet(props: FilterSheetProps) {
         <View style={{ marginBottom: space(4) }}>
           <Text style={{ ...typography.bodyStrong, color: palette.brand }}>身份</Text>
           <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: space(2) }}>
+            <FilterChip key='全部' active={selectedUserRoles.length === 0} tone='neutral' text='全部' onClick={clearRoleFilters} />
             {ROLE_OPTIONS.map((role) => (
               <FilterChip
                 key={role}
-                active={selectedUserRole === role}
-                tone={role === '教育者' ? 'educator' : role === '家长' ? 'brand' : role === '同行者' ? 'user' : 'neutral'}
+                active={selectedUserRoles.includes(role)}
+                tone={role === '教育者' ? 'educator' : role === '家长' ? 'brand' : 'user'}
                 text={role}
-                onClick={() => {
-                  resetClientOnlyFilters()
-                  setSelectedUserRole(role)
-                  if (role !== '家长') setSelectedChildAgeRange('全部')
-                }}
+                onClick={() => toggleRole(role)}
               />
             ))}
           </View>
         </View>
 
-        {selectedUserRole === '家长' && (
+        {selectedUserRoles.includes('家长') && (
           <View style={{ marginBottom: space(4) }}>
             <Text style={{ ...typography.bodyStrong, color: palette.brand }}>孩子学段</Text>
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginTop: space(2) }}>
-              {(['全部', ...CHILD_AGE_OPTIONS] as const).map((stage) => (
+              <FilterChip key='全部' active={selectedChildAgeRanges.length === 0} tone='brand' text='全部' onClick={clearChildAgeFilters} />
+              {CHILD_AGE_OPTIONS.map((stage) => (
                 <FilterChip
                   key={stage}
-                  active={selectedChildAgeRange === stage}
+                  active={selectedChildAgeRanges.includes(stage)}
                   tone='brand'
                   text={stage}
-                  onClick={() => {
-                    resetClientOnlyFilters()
-                    setSelectedChildAgeRange(stage)
-                  }}
+                  onClick={() => toggleChildAge(stage)}
                 />
               ))}
             </View>
           </View>
         )}
 
-        <View style={{ display: 'flex', flexDirection: 'row' }}>
-          <View style={{ flex: 1, marginRight: space(3) }}>
-            <AppPrimaryButton text='重置' variant='ghost' size='md' marginBottom='0' onClick={onReset} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <AppPrimaryButton text='完成' variant='primary' size='md' marginBottom='0' onClick={onClose} />
-          </View>
-        </View>
+        <AppPrimaryButton text='完成' variant='primary' size='md' marginBottom='0' onClick={onClose} />
       </View>
     </View>
   )
