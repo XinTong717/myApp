@@ -11,12 +11,31 @@ function intersects(values: string[] = [], selected: string[] = []) {
   return selected.some((item) => values.includes(item))
 }
 
+function splitEncodedFilters(value: string) {
+  return String(value || '')
+    .split(/[、,，/|｜\s]+/)
+    .map((item) => item.trim())
+    .filter((item) => item && item !== '全部')
+}
+
 export function useExploreFilters(appUsers: AppUser[], selectedProvince: string) {
   const [showUserFilterSheet, setShowUserFilterSheet] = useState(false)
   const [selectedUserRoles, setSelectedUserRoles] = useState<UserRoleFilter[]>([])
   const [selectedProfileCompleteness, setSelectedProfileCompleteness] = useState<ProfileCompletenessFilter>('全部')
   const [selectedUserCity, setSelectedUserCity] = useState('全部')
   const [selectedChildAgeRanges, setSelectedChildAgeRanges] = useState<string[]>([])
+
+  const selectedUserRole = (selectedUserRoles.length > 0 ? selectedUserRoles.join(',') : '全部') as UserRoleFilter
+  const selectedChildAgeRange = selectedChildAgeRanges.length > 0 ? selectedChildAgeRanges.join(',') : '全部'
+
+  const setSelectedUserRole = (value: UserRoleFilter | string) => {
+    const next = splitEncodedFilters(value).filter((item) => ['家长', '教育者', '同行者'].includes(item)) as UserRoleFilter[]
+    setSelectedUserRoles(Array.from(new Set(next)))
+  }
+
+  const setSelectedChildAgeRange = (value: string) => {
+    setSelectedChildAgeRanges(Array.from(new Set(splitEncodedFilters(value))))
+  }
 
   const userCityOptions = useMemo(() => {
     const citySet = new Set<string>()
@@ -60,12 +79,16 @@ export function useExploreFilters(appUsers: AppUser[], selectedProvince: string)
     setShowUserFilterSheet,
     selectedUserRoles,
     setSelectedUserRoles,
+    selectedUserRole,
+    setSelectedUserRole,
     selectedProfileCompleteness,
     setSelectedProfileCompleteness,
     selectedUserCity,
     setSelectedUserCity,
     selectedChildAgeRanges,
     setSelectedChildAgeRanges,
+    selectedChildAgeRange,
+    setSelectedChildAgeRange,
     userCityOptions,
     activeUserFilterCount,
     resetUserFilters,
