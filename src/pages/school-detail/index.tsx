@@ -45,6 +45,14 @@ function splitTokens(value?: string) {
     .filter(Boolean)
 }
 
+function formatAgeRangeTag(value?: string) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  if (/[岁年级学前幼儿园小学初中高中大学成人]/.test(text)) return text
+  if (/^\d+(?:\.\d+)?\s*(?:[-~～—–至到]\s*\d+(?:\.\d+)?|\+)?$/.test(text)) return `${text.replace(/\s+/g, '')}岁`
+  return text
+}
+
 function getLocations(school: School): SchoolLocationItem[] {
   if (Array.isArray(school.locations) && school.locations.length > 0) return school.locations
   return splitTokens(school.city).map((city, index) => ({
@@ -84,6 +92,7 @@ function SchoolContent(props: {
     onSubmitCorrection,
   } = props
   const locations = getLocations(school)
+  const ageRangeTag = formatAgeRangeTag(school.age_range)
 
   return (
     <>
@@ -106,7 +115,7 @@ function SchoolContent(props: {
         <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: school.official_url ? space(3) : '0' }}>
           <AppTag text={locations.length > 0 ? `${locations.length} 个地点` : '地点未填写'} />
           {!!school.school_type && <AppTag text={school.school_type} />}
-          {!!school.age_range && <AppTag text={school.age_range} />}
+          {!!ageRangeTag && <AppTag text={ageRangeTag} />}
         </View>
 
         {!!school.official_url && (
