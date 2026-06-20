@@ -196,7 +196,7 @@ export default function EventsPage() {
     <AppPage>
       <AppPageHeader
         title='活动'
-        description='发现教育探索相关的线上线下活动、工作坊、共学计划和用户自组织活动。点进详情了解更多，也欢迎提交你知道的公开可参与活动。'
+        description='发现教育探索相关的线上线下活动。点击活动可查看详情，欢迎提交新活动。'
         action={<AppMiniButton text='提交活动' onClick={goToSubmit} />}
       />
 
