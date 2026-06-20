@@ -10,19 +10,35 @@ import { FilterChip } from './Chips'
 
 type FilterSheetProps = {
   visible: boolean
-  selectedUserRoles: UserRoleFilter[]
-  setSelectedUserRoles: (roles: UserRoleFilter[]) => void
-  selectedChildAgeRanges: string[]
-  setSelectedChildAgeRanges: (stages: string[]) => void
+  selectedUserRole?: UserRoleFilter | string
+  setSelectedUserRole?: (role: UserRoleFilter | string) => void
+  selectedUserRoles?: UserRoleFilter[]
+  setSelectedUserRoles?: (roles: UserRoleFilter[]) => void
+  selectedChildAgeRange?: string
+  setSelectedChildAgeRange?: (stage: string) => void
+  selectedChildAgeRanges?: string[]
+  setSelectedChildAgeRanges?: (stages: string[]) => void
   selectedProfileCompleteness: ProfileCompletenessFilter
   setSelectedProfileCompleteness: (value: ProfileCompletenessFilter) => void
   selectedUserCity: string
   setSelectedUserCity: (city: string) => void
   userCityOptions: string[]
+  onReset?: () => void
   onClose: () => void
 }
 
 const ROLE_OPTIONS: UserRoleFilter[] = ['家长', '教育者', '同行者']
+
+function splitEncodedFilters(value?: string) {
+  return String(value || '')
+    .split(/[、,，/|｜\s]+/)
+    .map((item) => item.trim())
+    .filter((item) => item && item !== '全部')
+}
+
+function unique<T extends string>(values: T[]) {
+  return Array.from(new Set(values))
+}
 
 function toggleOption<T extends string>(current: T[], option: T) {
   return current.includes(option) ? current.filter((item) => item !== option) : [...current, option]
@@ -31,16 +47,27 @@ function toggleOption<T extends string>(current: T[], option: T) {
 export default function FilterSheet(props: FilterSheetProps) {
   const {
     visible,
-    selectedUserRoles,
-    setSelectedUserRoles,
-    selectedChildAgeRanges,
-    setSelectedChildAgeRanges,
     selectedProfileCompleteness,
     setSelectedProfileCompleteness,
     selectedUserCity,
     setSelectedUserCity,
     onClose,
   } = props
+
+  const selectedUserRoles = props.selectedUserRoles || unique(splitEncodedFilters(props.selectedUserRole).filter((item) => ROLE_OPTIONS.includes(item as UserRoleFilter)) as UserRoleFilter[])
+  const selectedChildAgeRanges = props.selectedChildAgeRanges || unique(splitEncodedFilters(props.selectedChildAgeRange))
+
+  const setUserRoles = (roles: UserRoleFilter[]) => {
+    const next = unique(roles)
+    props.setSelectedUserRoles?.(next)
+    props.setSelectedUserRole?.(next.length > 0 ? next.join(',') : '全部')
+  }
+
+  const setChildAgeRanges = (stages: string[]) => {
+    const next = unique(stages)
+    props.setSelectedChildAgeRanges?.(next)
+    props.setSelectedChildAgeRange?.(next.length > 0 ? next.join(',') : '全部')
+  }
 
   if (!visible) return null
 
@@ -51,25 +78,25 @@ export default function FilterSheet(props: FilterSheetProps) {
 
   const clearRoleFilters = () => {
     resetClientOnlyFilters()
-    setSelectedUserRoles([])
-    setSelectedChildAgeRanges([])
+    setUserRoles([])
+    setChildAgeRanges([])
   }
 
   const toggleRole = (role: UserRoleFilter) => {
     resetClientOnlyFilters()
     const nextRoles = toggleOption(selectedUserRoles, role)
-    setSelectedUserRoles(nextRoles)
-    if (!nextRoles.includes('家长')) setSelectedChildAgeRanges([])
+    setUserRoles(nextRoles)
+    if (!nextRoles.includes('家长')) setChildAgeRanges([])
   }
 
   const clearChildAgeFilters = () => {
     resetClientOnlyFilters()
-    setSelectedChildAgeRanges([])
+    setChildAgeRanges([])
   }
 
   const toggleChildAge = (stage: string) => {
     resetClientOnlyFilters()
-    setSelectedChildAgeRanges(toggleOption(selectedChildAgeRanges, stage))
+    setChildAgeRanges(toggleOption(selectedChildAgeRanges, stage))
   }
 
   return (
