@@ -32,10 +32,9 @@ function parseDateTime(value) {
 }
 
 function isEndedEvent(event) {
-  const endTime = parseDateTime(event?.end_time)
-  if (endTime) return endTime.getTime() < Date.now()
-  const startTime = parseDateTime(event?.start_time)
-  if (!startTime) return false
+  if (event?.is_recurring || normalizeStatus(event?.status) === 'recurring') return false
+  const signupDeadline = parseDateTime(event?.signup_deadline)
+  if (signupDeadline) return signupDeadline.getTime() < Date.now()
   return normalizeStatus(event?.status) === 'ended'
 }
 
@@ -297,6 +296,10 @@ const EVENT_FIELD_SELECTION = {
   event_types: true,
   audience_who: true,
   min_age_requirement: true,
+  max_age_requirement: true,
+  signup_deadline: true,
+  is_recurring: true,
+  recurrence_pattern: true,
   fee_category: true,
   description: true,
   start_time: true,
