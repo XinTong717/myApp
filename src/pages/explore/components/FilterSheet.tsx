@@ -11,11 +11,11 @@ import { FilterChip } from './Chips'
 type FilterSheetProps = {
   visible: boolean
   selectedUserRole?: UserRoleFilter | string
-  setSelectedUserRole?: (role: UserRoleFilter | string) => void
+  setSelectedUserRole?: (role: any) => void
   selectedUserRoles?: UserRoleFilter[]
   setSelectedUserRoles?: (roles: UserRoleFilter[]) => void
   selectedChildAgeRange?: string
-  setSelectedChildAgeRange?: (stage: string) => void
+  setSelectedChildAgeRange?: (stage: any) => void
   selectedChildAgeRanges?: string[]
   setSelectedChildAgeRanges?: (stages: string[]) => void
   selectedProfileCompleteness: ProfileCompletenessFilter
