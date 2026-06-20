@@ -57,7 +57,7 @@ export async function showProfileAccessGate(kind: ProfileAccessGateKind) {
   })
 
   if (modal.confirm) {
-    Taro.switchTab({ url: '/pages/profile/index' })
+    setTimeout(() => Taro.switchTab({ url: '/pages/profile/index' }), 180)
   }
 
   return !!modal.confirm
