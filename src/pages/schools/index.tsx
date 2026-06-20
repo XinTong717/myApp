@@ -41,12 +41,17 @@ type AgeBucket = {
 }
 
 const AGE_BUCKETS: AgeBucket[] = [
-  { label: '0-6', min: 0, max: 6, keywords: ['学龄前', '幼儿', '幼小'] },
-  { label: '7-12', min: 7, max: 12, keywords: ['小学', '儿童'] },
-  { label: '13-15', min: 13, max: 15, keywords: ['初中', '中学', '青少年'] },
-  { label: '16-18', min: 16, max: 18, keywords: ['高中', '中学', '青少年'] },
-  { label: '19-24', min: 19, max: 24, keywords: ['大学', '青年', '成人'] },
-  { label: '25+', min: 25, max: Number.POSITIVE_INFINITY, keywords: ['成人'] },
+  { label: '0-6', min: 0, max: 6, keywords: ['学龄前', '幼儿园', '幼儿', '托育', '早教', '幼小'] },
+  { label: '7-12', min: 7, max: 12, keywords: ['小学', '小学生', '儿童'] },
+  { label: '13-15', min: 13, max: 15, keywords: ['初中', '初中生', '中学', '中学生', '青少年'] },
+  { label: '16-18', min: 16, max: 18, keywords: ['高中', '高中生', '中学', '中学生', '青少年'] },
+  { label: '19-24', min: 19, max: 24, keywords: ['大学', '大学生', '高校', '本科', '青年'] },
+  { label: '25+', min: 25, max: Number.POSITIVE_INFINITY, keywords: ['成人', '家长', '教师', '教育者'] },
+]
+
+const EXCLUDED_TYPE_LABELS = [
+  '主打动手中学习的STEAM教育机构',
+  '主打科学实验的STEM教育机构',
 ]
 
 function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
@@ -62,6 +67,31 @@ function splitTokens(value?: string) {
 
 function getStableSchoolId(item: School, index: number) {
   return String(item.id || item.canonical_name || item.name || index)
+}
+
+function stripParenthetical(value: string) {
+  let text = String(value || '').trim()
+  let previous = ''
+  while (text && text !== previous) {
+    previous = text
+    text = text.replace(/（[^（）]*）/g, '').replace(/\([^()]*\)/g, '').trim()
+  }
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+function normalizeSchoolTypeLabel(value?: string) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  if (EXCLUDED_TYPE_LABELS.some((label) => raw.includes(label))) return ''
+  return stripParenthetical(raw)
+}
+
+function schoolTypeLabels(value?: string) {
+  return Array.from(new Set(splitTokens(value).map(normalizeSchoolTypeLabel).filter(Boolean)))
+}
+
+function normalizeTypeOptions(options: string[]) {
+  return Array.from(new Set(options.map(normalizeSchoolTypeLabel).filter(Boolean)))
 }
 
 function buildOptionCountMap(source: School[], getLabels: (item: School) => string[]) {
@@ -186,6 +216,17 @@ function getLocationHaystack(item: School) {
   return getLocations(item).map(formatLocation).join(' ')
 }
 
+function schoolMatchesProvince(item: School, selectedProvinces: string[]) {
+  if (selectedProvinces.length === 0) return true
+  return getLocations(item).some((location) => selectedProvinces.includes(location.province || ''))
+}
+
+function schoolMatchesType(item: School, selectedTypes: string[]) {
+  if (selectedTypes.length === 0) return true
+  const labels = schoolTypeLabels(item.school_type)
+  return selectedTypes.some((type) => labels.includes(type))
+}
+
 function toggleMultiFilter(current: string[], option: string, allOption: string) {
   if (option === allOption) return []
   if (current.includes(option)) return current.filter((item) => item !== option)
@@ -236,7 +277,6 @@ export default function SchoolsPage() {
         forceRefresh: !!options.forceRefresh,
         limit: listLimit,
         ...(useFilters && selectedProvinces.length > 0 ? { province: selectedProvinces } : {}),
-        ...(useFilters && selectedTypes.length > 0 ? { schoolType: selectedTypes } : {}),
       })
       const nextSchools = Array.isArray(result.schools) ? result.schools : []
       setSchools(nextSchools)
@@ -292,10 +332,11 @@ export default function SchoolsPage() {
 
   const optionSource = filterSourceSchools.length > 0 ? filterSourceSchools : schools
   const provinceCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => getLocations(item).map((location) => location.province || '')), [optionSource])
-  const typeCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => splitTokens(item.school_type)), [optionSource])
+  const typeCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => schoolTypeLabels(item.school_type)), [optionSource])
   const ageCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => ageBucketLabels(item.age_range)), [optionSource])
+  const normalizedTypeSettings = useMemo(() => normalizeTypeOptions(filterSettings.schoolTypes || []), [filterSettings.schoolTypes])
   const provinceOptions = useMemo(() => countedOptions(allFilter, filterSettings.provinces || [], provinceCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, filterSettings.provinces, provinceCounts])
-  const typeOptions = useMemo(() => countedOptions(allFilter, filterSettings.schoolTypes || [], typeCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, filterSettings.schoolTypes, typeCounts])
+  const typeOptions = useMemo(() => countedOptions(allFilter, normalizedTypeSettings, typeCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, normalizedTypeSettings, typeCounts])
   const ageOptions = useMemo(() => orderedAgeOptions(allFilter, ageCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, ageCounts])
 
   const filteredSchools = useMemo(() => {
@@ -304,10 +345,12 @@ export default function SchoolsPage() {
       const haystack = [item.name, item.canonical_name, item.province, item.city, getLocationHaystack(item), item.school_type, item.age_range, item.fee]
         .filter(Boolean).join(' ').toLowerCase()
       if (q && !haystack.includes(q)) return false
+      if (!schoolMatchesProvince(item, selectedProvinces)) return false
+      if (!schoolMatchesType(item, selectedTypes)) return false
       if (selectedAgeRanges.length > 0 && !selectedAgeRanges.some((ageRange) => ageRangeMatchesBucket(item.age_range, ageRange))) return false
       return true
     })
-  }, [schools, keyword, selectedAgeRanges])
+  }, [schools, keyword, selectedProvinces, selectedTypes, selectedAgeRanges])
 
   const activeFilterSummary = [
     formatSelectedSummary(selectedProvinces, '地区'),
