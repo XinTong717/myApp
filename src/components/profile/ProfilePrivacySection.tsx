@@ -38,7 +38,7 @@ export default function ProfilePrivacySection(props: Props) {
           <View style={{ flex: 1, paddingRight: space(3) }}>
             <Text style={{ ...typography.bodyStrong, color: palette.text }}>扩展公开资料可见性</Text>
             <View style={{ marginTop: space(1) }}>
-              <Text style={{ ...typography.caption, color: palette.subtext }}>关闭后，已登录并完成资料的用户也无法看到你的公开渠道、添加备注和身份补充信息。</Text>
+              <Text style={{ ...typography.caption, color: palette.subtext }}>关闭后，已登录并完成资料的用户也无法看到你的联系方式、添加备注和身份补充信息。</Text>
             </View>
           </View>
           <Switch checked={expandedProfileVisible} disabled={privacySaving} color={palette.brand} onChange={(e) => onUpdatePrivacySetting('expandedProfileVisible', !!e.detail.value)} />
@@ -60,7 +60,7 @@ export default function ProfilePrivacySection(props: Props) {
           <View style={{ flex: 1, paddingRight: space(3) }}>
             <Text style={{ ...typography.bodyStrong, color: palette.text }}>账号注销 / 数据删除</Text>
             <View style={{ marginTop: space(1) }}>
-              <Text style={{ ...typography.caption, color: palette.subtext }}>提交后会先隐藏你的地图资料、清空公开渠道，后续由管理员处理删除申请。</Text>
+              <Text style={{ ...typography.caption, color: palette.subtext }}>提交后会先隐藏你的地图资料、清空联系方式，后续由管理员处理删除申请。</Text>
             </View>
           </View>
           <Text onClick={onRequestAccountDeletion} style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>申请</Text>
