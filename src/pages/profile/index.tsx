@@ -20,7 +20,6 @@ import ProfileSecondaryButton from '../../components/profile/ProfileSecondaryBut
 import ProfileFavoriteEventsCard from '../../components/profile/ProfileFavoriteEventsCard'
 import ProfileFeedbackCard from '../../components/profile/ProfileFeedbackCard'
 import AppPage from '../../components/common/AppPage'
-import AppPageHeader from '../../components/common/AppPageHeader'
 import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import AppIcon from '../../components/common/AppIcon'
 import AppRow from '../../components/common/AppRow'
@@ -51,7 +50,7 @@ function PrivacyDisclosureNotice() {
     <AppRow align='flex-start' gap={space(3)} marginBottom={space(3)} style={{ backgroundColor: palette.card, borderRadius: radius.md, border: `1px solid ${palette.line}`, padding: space(3) }}>
       <AppIcon name='lock' size={24} bordered />
       <Text style={{ ...typography.caption, color: palette.subtext, flex: 1 }}>
-        如果你选择出现在地图上，显示名、身份、城市、简介，以及“和这个生态的关系”会作为公开资料展示。公开渠道、添加备注、家庭教育关注信息和教育服务内容仅对已登录并完成个人资料的用户可见。平台不提供私信、好友申请或双边联络请求。
+        如果你选择出现在地图上，显示名、身份、城市、简介，以及“和这个生态的关系”会作为公开资料展示。联系方式、添加备注、家庭教育关注信息和教育服务内容仅对已登录并完成个人资料的用户可见。平台不提供私信、好友申请或双边联络请求。
       </Text>
     </AppRow>
   )
@@ -158,7 +157,7 @@ export default function ProfilePage() {
   const handleRequestAccountDeletion = async () => {
     const firstConfirm = await Taro.showModal({
       title: '申请账号注销',
-      content: '提交后，你的公开资料会立即先从地图隐藏，公开渠道会被清空。管理员随后处理剩余历史记录；如需确认进度，可通过官方联系方式联系我们。',
+      content: '提交后，你的公开资料会立即先从地图隐藏，联系方式会被清空。管理员随后处理剩余历史记录；如需确认进度，可通过官方联系方式联系我们。',
       confirmText: '继续',
       cancelText: '取消',
     })
@@ -209,7 +208,7 @@ export default function ProfilePage() {
     if (!isVisibleOnMap) return true
     const confirm = await Taro.showModal({
       title: '确认加入成员目录',
-      content: '保存后，你的显示名、身份、城市、简介，以及“和这个生态的关系”会出现在同路人地图上。公开渠道和身份补充信息仅对已登录并完成资料的用户可见。确认保存吗？',
+      content: '保存后，你的显示名、身份、城市、简介，以及“和这个生态的关系”会出现在同路人地图上。联系方式和身份补充信息仅对已登录并完成资料的用户可见。确认保存吗？',
       confirmText: '保存',
       cancelText: '先不保存',
     })
@@ -242,7 +241,6 @@ export default function ProfilePage() {
 
   return (
     <AppPage style={{ paddingBottom: space(8) }}>
-      <AppPageHeader title='我的' />
       <ProfileAdminEntry isAdmin={isAdmin} onOpen={openAdminReviewPage} />
       <ProfileFavoriteEventsCard enabled={hasCompletedProfile} />
       <AppSegmentedTabs options={PROFILE_STEPS} value={activeStep} onChange={handleStepChange} />
@@ -259,7 +257,7 @@ export default function ProfilePage() {
         {isEducator && <ProfileEducatorSection eduServices={eduServices} setEduServices={setEduServices} />}
         {isCompanion && <ProfileCompanionSection companionContext={companionContext} setCompanionContext={setCompanionContext} />}
         {!isParent && !isEducator && !isCompanion && <ProfileNoticeBox text='你还没有选择身份。回到“基本资料”选择家长、教育者或同行者后，这里会出现对应的补充信息。' />}
-        <ProfileNoticeBox text='家长与教育者补充信息不会在地图卡片直接公开；同行者填写的“和这个生态的关系”会随地图卡片公开展示。请不要写入敏感身份、未成年人姓名或具体住址。' />
+        <ProfileNoticeBox text='家长与教育者补充信息不会在地图卡片直接公开；同行者填写的“和这个生态的关系”会随地图卡片公开展示。请不要写入未成年人姓名、具体住址等敏感信息。' />
         <ProfileSecondaryButton text='下一步：隐私设置（最后一步保存）' onClick={goNextStep} />
       </>}
 
