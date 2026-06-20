@@ -5,7 +5,7 @@ const {
   normalizeStringArray,
   normalizeRoles,
   normalizeProfile,
-  CHILD_AGE_WHITELIST,
+  normalizeChildAgeRange,
   CHILD_STATUS_WHITELIST,
   validateLength,
 } = require('../lib/normalize')
@@ -71,7 +71,7 @@ async function saveProfile(event, wxContext) {
   const selectedRoles = Array.isArray(cleanData.roles) ? cleanData.roles : []
   if (selectedRoles.length === 0) return fail(requestId, 'ROLE_REQUIRED', '请至少选择一个身份')
 
-  cleanData.childAgeRange = normalizeStringArray(cleanData.childAgeRange).filter((item) => CHILD_AGE_WHITELIST.includes(item))
+  cleanData.childAgeRange = normalizeChildAgeRange(cleanData.childAgeRange)
   cleanData.childDropoutStatus = normalizeStringArray(cleanData.childDropoutStatus).filter((item) => CHILD_STATUS_WHITELIST.includes(item))
 
   const lengthError =
