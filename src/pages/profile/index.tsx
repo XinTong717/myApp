@@ -204,31 +204,18 @@ export default function ProfilePage() {
     }
   }
 
-  const confirmMapDisclosureIfNeeded = async () => {
-    if (!isVisibleOnMap) return true
-    const confirm = await Taro.showModal({
-      title: '确认加入成员目录',
-      content: '保存后，你的显示名、身份、城市、简介，以及“和这个生态的关系”会出现在同路人地图上。联系方式和身份补充信息仅对已登录并完成资料的用户可见。确认保存吗？',
-      confirmText: '保存',
-      cancelText: '先不保存',
-    })
-    return !!confirm.confirm
-  }
-
   const showSavedNextStep = async () => {
     const result = await Taro.showModal({
-      title: '已保存资料',
-      content: isVisibleOnMap ? '你已加入成员目录。现在可以去地图看看附近的同路人，也可以继续完善资料。' : '资料已保存。你可以去地图浏览学习社区和活动，也可以稍后再决定是否出现在成员目录。',
-      confirmText: '去看同路人',
-      cancelText: '留在这里',
+      title: '保存成功',
+      content: '个人资料已保存。',
+      confirmText: '去探索',
+      cancelText: '继续修改',
     })
     if (result.confirm) Taro.switchTab({ url: '/pages/explore/index' })
   }
 
   const handleConfirmedSave = async () => {
     if (!legalAgreed) { Taro.showToast({ title: '请先阅读并同意用户协议和隐私政策', icon: 'none' }); return }
-    const mapDisclosureOk = await confirmMapDisclosureIfNeeded()
-    if (!mapDisclosureOk) return
     const consentResult = await recordLegalConsent()
     if (!consentResult.ok) { Taro.showToast({ title: consentResult.message || '协议确认失败，请稍后重试', icon: 'none' }); return }
     const saved = await handleSave()
