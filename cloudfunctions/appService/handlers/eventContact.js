@@ -1,6 +1,12 @@
 const { db } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
+const { normalizeRoles } = require('../lib/normalize')
+const { hasCurrentConsent } = require('../lib/legalConsent')
 const { getUserProfileByOpenid } = require('../lib/userRepo')
+
+function hasCompletedProfile(profile) {
+  return !!(profile && profile.displayName && profile.province && profile.city && normalizeRoles(profile.roles || []).length > 0)
+}
 
 async function getEventContactInfo(event, wxContext) {
   const requestId = resolveRequestId('get-event-contact', event)
@@ -30,14 +36,17 @@ async function getEventContactInfo(event, wxContext) {
       })
     }
 
-    const profile = await getUserProfileByOpenid(openid)
-    if (!(profile && profile.displayName && profile.province && profile.city)) {
+    const [profile, consentOk] = await Promise.all([
+      getUserProfileByOpenid(openid),
+      hasCurrentConsent(openid),
+    ])
+    if (!hasCompletedProfile(profile) || !consentOk) {
       return ok(requestId, {
         contactInfo: '',
         publicSignupInfo,
         needCompleteProfile: true,
         privateContactRequiresProfile: true,
-        message: '完成“我的资料”填写后，才可查看组织者私人联系方式。',
+        message: '完成个人资料后，才可查看组织者私人联系方式。',
       })
     }
 
