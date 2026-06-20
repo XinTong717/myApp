@@ -56,6 +56,7 @@ export default function UserPopup(props: UserPopupProps) {
   const hasExpandedContent = canSeeExpanded && !!(
     user.publicChannel || user.publicChannelNote || user.childAgeRange?.length || user.childDropoutStatus?.length || user.childInterests || user.eduServices
   )
+  const needsProfileAccess = !user.isSelf && !canSeeExpanded
 
   return (
     <View onClick={onClose} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: exploreTheme.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
@@ -95,22 +96,22 @@ export default function UserPopup(props: UserPopupProps) {
           </View>
         ) : null}
 
-        {!hasProfile && !user.isSelf ? (
+        {needsProfileAccess ? (
           <View style={{ backgroundColor: palette.accent2Soft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
-            <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>完成“我的资料”后，可查看成员目录中的扩展公开资料。平台不提供私信、好友申请或站内撮合。</Text>
+            <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>完成个人资料后可查看其他成员完整资料。</Text>
           </View>
         ) : null}
 
-        {hasProfile && !hasExpandedContent && !user.isSelf ? (
+        {canSeeExpanded && !hasExpandedContent && !user.isSelf ? (
           <View style={{ backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
             <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>这位用户暂未填写扩展公开资料。你仍可通过公开简介了解 TA。</Text>
           </View>
         ) : null}
 
-        {user.isSelf ? <AppPrimaryButton text='去看我的资料' variant='ghost' size='md' marginBottom='0' onClick={onPrimaryAction} /> : !hasProfile ? <AppPrimaryButton text='去填写资料' variant='primary' size='md' marginBottom='0' onClick={onPrimaryAction} /> : null}
+        {user.isSelf ? <AppPrimaryButton text='去看我的资料' variant='ghost' size='md' marginBottom='0' onClick={onPrimaryAction} /> : needsProfileAccess ? <AppPrimaryButton text='去填写资料' variant='primary' size='md' marginBottom='0' onClick={onPrimaryAction} /> : null}
 
         {!user.isSelf && (
-          <View style={{ display: 'flex', flexDirection: 'row', marginTop: user.isSelf || !hasProfile ? space(3) : 0 }}>
+          <View style={{ display: 'flex', flexDirection: 'row', marginTop: user.isSelf || needsProfileAccess || !hasProfile ? space(3) : 0 }}>
             <View style={{ flex: 1, marginRight: space(2) }}>
               <AppPrimaryButton text='举报' variant='ghost' size='md' marginBottom='0' onClick={() => onReport(String(user.originalId))} />
             </View>
