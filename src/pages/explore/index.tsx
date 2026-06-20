@@ -584,21 +584,14 @@ export default function ExplorePage() {
   return (
     <AppPage flush style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
       {!loading && !hasProfile && (
-        <>
-          <AppPromptBanner
-            title='可以先逛，也可以加入成员目录'
-            description='先看学习社区和活动；完成资料后，可查看成员扩展公开资料，也可以选择出现在地图上。'
-            actionText='去填写'
-            icon='user'
-            tone='brand'
-            flush
-            onClick={goToProfile}
-          />
-          <View style={{ display: 'flex', flexDirection: 'row', gap: space(2), padding: `${space(2)} ${space(4)}`, backgroundColor: palette.card, borderBottom: `1px solid ${exploreTheme.border}` }}>
-            <AppChip text='先看学习社区' tone='brand' size='md' interactive onClick={goToSchools} />
-            <AppChip text='先看活动' tone='accent' size='md' interactive onClick={goToEvents} />
-          </View>
-        </>
+        <AppPromptBanner
+          title='完善个人信息后可查看其他成员资料。'
+          actionText='去填写'
+          icon='user'
+          tone='brand'
+          flush
+          onClick={goToProfile}
+        />
       )}
 
       <View style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)} ${space(3)}`, borderBottom: `1px solid ${exploreTheme.border}` }}>
