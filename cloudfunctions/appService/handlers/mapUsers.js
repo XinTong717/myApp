@@ -16,6 +16,11 @@ function normalizeFilter(value) {
   return String(value || '').trim()
 }
 
+function normalizeFilterList(value) {
+  const raw = Array.isArray(value) ? value : normalizeFilter(value) ? [normalizeFilter(value)] : []
+  return Array.from(new Set(raw.map((item) => normalizeFilter(item)).filter((item) => item && item !== '全部')))
+}
+
 function normalizeOffset(value) {
   const n = Number(value || 0)
   if (!Number.isFinite(n) || n < 0) return 0
@@ -28,16 +33,23 @@ function normalizeLimit(value, fallback = MAP_USERS_PROVINCE_LIMIT) {
   return Math.min(Math.floor(n), MAP_USERS_MAX_PAGE_LIMIT)
 }
 
-function matchesRole(user, role) {
-  if (!role || role === '全部') return true
-  const roles = normalizeRoles(user.roles || [])
-  return roles.includes(role)
+function hasIntersection(values, selected) {
+  if (!selected || selected.length === 0) return true
+  return selected.some((item) => values.includes(item))
 }
 
-function matchesChildAgeRange(user, childAgeRange) {
-  if (!childAgeRange || childAgeRange === '全部') return true
+function matchesRole(user, rolesFilter) {
+  const roles = normalizeFilterList(rolesFilter)
+  if (roles.length === 0) return true
+  const rolesInProfile = normalizeRoles(user.roles || [])
+  return hasIntersection(rolesInProfile, roles)
+}
+
+function matchesChildAgeRange(user, childAgeRangesFilter) {
+  const childAgeRanges = normalizeFilterList(childAgeRangesFilter)
+  if (childAgeRanges.length === 0) return true
   const ranges = normalizeChildAgeRange(user.childAgeRange)
-  return ranges.includes(childAgeRange)
+  return hasIntersection(ranges, childAgeRanges)
 }
 
 function hasCompletedProfile(user) {
@@ -151,7 +163,7 @@ async function getAggregateProvinceSummaries() {
     .filter((item) => item.province && item.count > 0)
 }
 
-async function getScannedProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, blockedByRes }) {
+async function getScannedProvinceSummaries({ openid, roles, childAgeRanges, mySafetyRes, blockedByRes }) {
   const { hiddenOpenids, blockedByOpenids } = buildHiddenSets(openid, mySafetyRes, blockedByRes)
   const usersRes = await db.collection('users')
     .where({
@@ -167,8 +179,8 @@ async function getScannedProvinceSummaries({ openid, role, childAgeRange, mySafe
   const provinceMap = new Map()
   ;(usersRes.data || []).forEach((user) => {
     if (!isVisibleToRequester(user, openid, hiddenOpenids, blockedByOpenids)) return
-    if (!matchesRole(user, role)) return
-    if (!matchesChildAgeRange(user, childAgeRange)) return
+    if (!matchesRole(user, roles)) return
+    if (!matchesChildAgeRange(user, childAgeRanges)) return
 
     const province = normalizeProvince(user.province)
     if (!province) return
@@ -180,10 +192,10 @@ async function getScannedProvinceSummaries({ openid, role, childAgeRange, mySafe
   return Array.from(provinceMap.values()).sort((a, b) => b.count - a.count)
 }
 
-async function getProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, blockedByRes }) {
+async function getProvinceSummaries({ openid, roles, childAgeRanges, mySafetyRes, blockedByRes }) {
   const { hiddenOpenids, blockedByOpenids } = buildHiddenSets(openid, mySafetyRes, blockedByRes)
   const hasPersonalSafetyFilters = hiddenOpenids.size > 0 || blockedByOpenids.size > 0
-  const hasUserFilters = !!role || !!childAgeRange
+  const hasUserFilters = normalizeFilterList(roles).length > 0 || normalizeFilterList(childAgeRanges).length > 0
 
   if (!hasPersonalSafetyFilters && !hasUserFilters) {
     try {
@@ -193,15 +205,15 @@ async function getProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, 
     }
   }
 
-  return getScannedProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, blockedByRes })
+  return getScannedProvinceSummaries({ openid, roles, childAgeRanges, mySafetyRes, blockedByRes })
 }
 
 async function getMapUsers(event, wxContext) {
   const requestId = resolveRequestId('get-map-users', event)
   const openid = wxContext.OPENID
   const province = normalizeProvince(event.province)
-  const role = normalizeFilter(event.role)
-  const childAgeRange = normalizeFilter(event.childAgeRange)
+  const roles = normalizeFilterList(event.roles || event.role)
+  const childAgeRanges = normalizeFilterList(event.childAgeRanges || event.childAgeRange)
   const offset = normalizeOffset(event.offset)
   const pageLimit = normalizeLimit(event.limit)
 
@@ -215,7 +227,7 @@ async function getMapUsers(event, wxContext) {
     const requesterHasProfileAccess = hasCompletedProfile(requesterProfile) && requesterConsentOk
 
     if (!province) {
-      const provinceStats = await getProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, blockedByRes })
+      const provinceStats = await getProvinceSummaries({ openid, roles, childAgeRanges, mySafetyRes, blockedByRes })
       return ok(requestId, {
         users: [],
         provinceStats,
@@ -242,8 +254,8 @@ async function getMapUsers(event, wxContext) {
     const hasMore = rawUsers.length > pageLimit
     const pageUsers = rawUsers.slice(0, pageLimit)
       .filter((user) => isVisibleToRequester(user, openid, hiddenOpenids, blockedByOpenids))
-      .filter((user) => matchesRole(user, role))
-      .filter((user) => matchesChildAgeRange(user, childAgeRange))
+      .filter((user) => matchesRole(user, roles))
+      .filter((user) => matchesChildAgeRange(user, childAgeRanges))
 
     const users = pageUsers.map((user) => toPublicUser(user, openid, requesterHasProfileAccess))
 
