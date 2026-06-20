@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text } from '@tarojs/components'
+import { Slider, View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
 import { getFilterOptions } from '../../services/filterOptions'
@@ -15,6 +15,7 @@ import AppIcon from '../../components/common/AppIcon'
 import AppChip from '../../components/common/AppChip'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import { ListSkeleton } from '../../components/common/Skeleton'
+import { palette } from '../../theme/palette'
 import { space } from '../../theme/spacing'
 import { ALL_FILTER, EVENT_DEFAULT_STATUS_FILTER, EVENT_FILTER_FALLBACKS } from '../../constants/filterOptions'
 import type { EventItem } from './shared'
@@ -28,12 +29,22 @@ import {
 } from './shared'
 
 const EVENT_SHARE = { appMessage: { title: '可雀活动｜发现教育探索路上的活动', path: '/pages/events/index' }, timeline: { title: '可雀活动｜教育探索活动与自组织计划', query: '' } }
+const AGE_FILTER_MIN = 0
+const AGE_FILTER_MAX = 30
 
 type InterestMap = Record<number, number>
 type EventItemWithInterest = EventItem & { interest_count?: number }
 
-function shouldIncludeEnded(statusFilter: string) {
-  return statusFilter === ALL_FILTER || statusFilter === 'ended'
+function selectedIncludes(values: string[], option: string) {
+  return values.includes(option)
+}
+
+function toggleSelected(values: string[], option: string) {
+  return selectedIncludes(values, option) ? values.filter((item) => item !== option) : [...values, option]
+}
+
+function shouldIncludeEnded(statusFilters: string[]) {
+  return statusFilters.length === 0 || statusFilters.includes('ended')
 }
 
 function normalizeLabels(value: unknown): string[] {
@@ -55,43 +66,78 @@ function itemHasLabel(value: unknown, label: string) {
   return labels.includes(label) || text.includes(label)
 }
 
-function eventMatchesType(item: EventItemWithInterest, filter: string, valueMap: Record<string, string>) {
-  if (filter === ALL_FILTER) return true
-  if (filter === '其他') {
-    const knownValues = Object.values(valueMap)
-    return !knownValues.includes(item.event_type) || itemHasLabel(item.event_types, '其他')
-  }
-  return item.event_type === valueMap[filter] || itemHasLabel(item.event_types, filter)
+function eventMatchesAny<T extends string>(selected: T[], matcher: (filter: T) => boolean) {
+  if (selected.length === 0) return true
+  return selected.some(matcher)
 }
 
-function eventMatchesAudience(item: EventItemWithInterest, filter: string) {
-  if (filter === ALL_FILTER) return true
-  return itemHasLabel(item.audience_who, filter) || (String(item.description || '').includes('参与对象：') && String(item.description || '').includes(filter))
+function eventMatchesType(item: EventItemWithInterest, filters: string[], valueMap: Record<string, string>) {
+  return eventMatchesAny(filters, (filter) => {
+    if (filter === '其他') {
+      const knownValues = Object.values(valueMap)
+      return !knownValues.includes(item.event_type) || itemHasLabel(item.event_types, '其他')
+    }
+    if (filter === '交友聚会' && (item.event_type === 'meetup' || itemHasLabel(item.event_types, '线下聚会'))) return true
+    return item.event_type === valueMap[filter] || itemHasLabel(item.event_types, filter)
+  })
 }
 
-function eventMatchesMinAge(item: EventItemWithInterest, filter: string) {
-  if (filter === ALL_FILTER) return true
-  const value = String(item.min_age_requirement || '').trim()
-  return value === filter || String(item.description || '').includes(`最低年龄要求：${filter}`)
+function eventMatchesAudience(item: EventItemWithInterest, filters: string[]) {
+  return eventMatchesAny(filters, (filter) => itemHasLabel(item.audience_who, filter) || (String(item.description || '').includes('参与对象：') && String(item.description || '').includes(filter)))
 }
 
-function eventMatchesFee(item: EventItemWithInterest, filter: string) {
-  if (filter === ALL_FILTER) return true
-  const feeCategory = String(item.fee_category || '').trim()
-  const feeText = String(item.fee || '').trim()
-  if (filter === '付费') return feeCategory === '付费' || (!feeText.includes('免费') && !['公益捐赠', '费用待确认'].includes(feeText))
-  return feeCategory === filter || feeText.includes(filter)
+function parseAgeValue(value?: string, fallback?: number) {
+  const text = String(value || '').trim()
+  if (!text || text === '全年龄') return fallback
+  const match = text.match(/\d+(?:\.\d+)?/)
+  if (!match) return fallback
+  const n = Number(match[0])
+  return Number.isFinite(n) ? n : fallback
 }
 
-function eventMatchesLocation(item: EventItemWithInterest, filter: string) {
-  if (filter === ALL_FILTER) return true
-  if (filter === '线上') return !!item.is_online
-  if (filter === '线下其他') return !item.is_online && !getEventCity(item)
-  return !item.is_online && getEventCity(item) === filter
+function eventMatchesAgeRange(item: EventItemWithInterest, selectedMin: number, selectedMax: number) {
+  if (selectedMin <= AGE_FILTER_MIN && selectedMax >= AGE_FILTER_MAX) return true
+  const eventMin = parseAgeValue(item.min_age_requirement, AGE_FILTER_MIN) ?? AGE_FILTER_MIN
+  const eventMax = parseAgeValue(item.max_age_requirement, AGE_FILTER_MAX) ?? AGE_FILTER_MAX
+  return eventMin <= selectedMax && eventMax >= selectedMin
+}
+
+function eventMatchesFee(item: EventItemWithInterest, filters: string[]) {
+  return eventMatchesAny(filters, (filter) => {
+    const feeCategory = String(item.fee_category || '').trim()
+    const feeText = String(item.fee || '').trim()
+    if (filter === '付费') return feeCategory === '付费' || (!feeText.includes('免费') && !['公益捐赠', '公益随喜', '费用待确认'].includes(feeText))
+    if (filter === '公益随喜') return feeCategory === '公益随喜' || feeText.includes('公益随喜') || feeText.includes('公益捐赠')
+    return feeCategory === filter || feeText.includes(filter)
+  })
+}
+
+function eventMatchesLocation(item: EventItemWithInterest, filters: string[]) {
+  return eventMatchesAny(filters, (filter) => {
+    if (filter === '线上') return !!item.is_online
+    if (filter === '线下其他') return !item.is_online && !getEventCity(item)
+    return !item.is_online && getEventCity(item) === filter
+  })
+}
+
+function eventMatchesStatus(item: EventItemWithInterest, filters: string[]) {
+  return eventMatchesAny(filters, (filter) => getEventStatusKey(item) === filter)
 }
 
 function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
   return <AppChip text={props.label} tone='brand' size='md' selected={props.active} interactive onClick={props.onClick} />
+}
+
+function MultiFilterRow(props: { title: string; options: string[]; selected: string[]; onChange: (values: string[]) => void; labelFor?: (value: string) => string }) {
+  const { title, options, selected, onChange, labelFor } = props
+  return (
+    <AppFilterRow title={title}>
+      <FilterChip key={ALL_FILTER} label={ALL_FILTER} active={selected.length === 0} onClick={() => onChange([])} />
+      {options.filter((option) => option !== ALL_FILTER).map((option) => (
+        <FilterChip key={option} label={labelFor ? labelFor(option) : option} active={selected.includes(option)} onClick={() => onChange(toggleSelected(selected, option))} />
+      ))}
+    </AppFilterRow>
+  )
 }
 
 export default function EventsPage() {
@@ -99,15 +145,16 @@ export default function EventsPage() {
   const [filterOptions, setFilterOptions] = useState<AppFilterOptions['event']>(EVENT_FILTER_FALLBACKS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [locationFilter, setLocationFilter] = useState(ALL_FILTER)
-  const [typeFilter, setTypeFilter] = useState(ALL_FILTER)
-  const [audienceFilter, setAudienceFilter] = useState(ALL_FILTER)
-  const [minAgeFilter, setMinAgeFilter] = useState(ALL_FILTER)
-  const [statusFilter, setStatusFilter] = useState(EVENT_DEFAULT_STATUS_FILTER)
-  const [feeFilter, setFeeFilter] = useState(ALL_FILTER)
+  const [locationFilters, setLocationFilters] = useState<string[]>([])
+  const [typeFilters, setTypeFilters] = useState<string[]>([])
+  const [audienceFilters, setAudienceFilters] = useState<string[]>([])
+  const [minAgeFilter, setMinAgeFilter] = useState(AGE_FILTER_MIN)
+  const [maxAgeFilter, setMaxAgeFilter] = useState(AGE_FILTER_MAX)
+  const [statusFilters, setStatusFilters] = useState<string[]>([EVENT_DEFAULT_STATUS_FILTER])
+  const [feeFilters, setFeeFilters] = useState<string[]>([])
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [interestCounts, setInterestCounts] = useState<InterestMap>({})
-  const includeEnded = shouldIncludeEnded(statusFilter)
+  const includeEnded = shouldIncludeEnded(statusFilters)
   const loadedIncludeEndedRef = useRef<boolean | null>(null)
   const loadSeqRef = useRef(0)
 
@@ -171,26 +218,27 @@ export default function EventsPage() {
   const locationOptions = useMemo(() => {
     const cities = uniqueValues(events.filter((item) => !item.is_online).map(getEventCity))
     const hasOfflineWithoutCity = events.some((item) => !item.is_online && !getEventCity(item))
-    return [ALL_FILTER, '线上', ...cities, ...(hasOfflineWithoutCity ? ['线下其他'] : [])]
+    return ['线上', ...cities, ...(hasOfflineWithoutCity ? ['线下其他'] : [])]
   }, [events])
 
-  const advancedActiveCount = [typeFilter !== ALL_FILTER, audienceFilter !== ALL_FILTER, minAgeFilter !== ALL_FILTER, statusFilter !== EVENT_DEFAULT_STATUS_FILTER, feeFilter !== ALL_FILTER].filter(Boolean).length
-  const hasActiveFilters = locationFilter !== ALL_FILTER || advancedActiveCount > 0
-  const resetFilters = () => { setLocationFilter(ALL_FILTER); setTypeFilter(ALL_FILTER); setAudienceFilter(ALL_FILTER); setMinAgeFilter(ALL_FILTER); setStatusFilter(EVENT_DEFAULT_STATUS_FILTER); setFeeFilter(ALL_FILTER) }
+  const ageFilterActive = minAgeFilter > AGE_FILTER_MIN || maxAgeFilter < AGE_FILTER_MAX
+  const advancedActiveCount = typeFilters.length + audienceFilters.length + (ageFilterActive ? 1 : 0) + statusFilters.length + feeFilters.length
+  const hasActiveFilters = locationFilters.length > 0 || advancedActiveCount > 0
+  const resetFilters = () => { setLocationFilters([]); setTypeFilters([]); setAudienceFilters([]); setMinAgeFilter(AGE_FILTER_MIN); setMaxAgeFilter(AGE_FILTER_MAX); setStatusFilters([EVENT_DEFAULT_STATUS_FILTER]); setFeeFilters([]) }
 
   const visibleEvents = useMemo(() => {
     let list = events
-    list = list.filter((item) => eventMatchesLocation(item, locationFilter))
-    if (statusFilter === EVENT_DEFAULT_STATUS_FILTER) list = list.filter((item) => !isEventEnded(item))
-    else if (statusFilter !== ALL_FILTER) list = list.filter((item) => getEventStatusKey(item) === statusFilter)
-    list = list.filter((item) => eventMatchesType(item, typeFilter, filterOptions.eventTypeValueMap))
-    list = list.filter((item) => eventMatchesAudience(item, audienceFilter))
-    list = list.filter((item) => eventMatchesMinAge(item, minAgeFilter))
-    list = list.filter((item) => eventMatchesFee(item, feeFilter))
+    list = list.filter((item) => eventMatchesLocation(item, locationFilters))
+    list = list.filter((item) => eventMatchesStatus(item, statusFilters))
+    list = list.filter((item) => eventMatchesType(item, typeFilters, filterOptions.eventTypeValueMap))
+    list = list.filter((item) => eventMatchesAudience(item, audienceFilters))
+    list = list.filter((item) => eventMatchesAgeRange(item, minAgeFilter, maxAgeFilter))
+    list = list.filter((item) => eventMatchesFee(item, feeFilters))
     return list
-  }, [events, locationFilter, statusFilter, typeFilter, audienceFilter, minAgeFilter, feeFilter, filterOptions.eventTypeValueMap])
+  }, [events, locationFilters, statusFilters, typeFilters, audienceFilters, minAgeFilter, maxAgeFilter, feeFilters, filterOptions.eventTypeValueMap])
 
   const hiddenEndedCount = events.length - events.filter((item) => !isEventEnded(item)).length
+  const statusLabelFor = (option: string) => EVENT_STATUS_LABELS[option]?.text || option
 
   return (
     <AppPage>
@@ -206,17 +254,30 @@ export default function EventsPage() {
           {hasActiveFilters ? <Text onClick={resetFilters} className='text-caption text-color-link'>重置</Text> : null}
           <Text onClick={() => setShowAdvancedFilters((value) => !value)} className='text-caption text-color-link'>{showAdvancedFilters ? '收起' : `更多筛选${advancedActiveCount > 0 ? ` ${advancedActiveCount}` : ''}`}</Text>
         </View>
-        <AppFilterRow title='地点'>{locationOptions.map((option) => <FilterChip key={option} label={option} active={locationFilter === option} onClick={() => setLocationFilter(option)} />)}</AppFilterRow>
+        <MultiFilterRow title='地点' options={locationOptions} selected={locationFilters} onChange={setLocationFilters} />
         {showAdvancedFilters ? <>
-          <AppFilterRow title='活动类型'>{filterOptions.eventTypes.map((option) => <FilterChip key={option} label={option} active={typeFilter === option} onClick={() => setTypeFilter(option)} />)}</AppFilterRow>
-          <AppFilterRow title='参与对象'>{filterOptions.audience.map((option) => <FilterChip key={option} label={option} active={audienceFilter === option} onClick={() => setAudienceFilter(option)} />)}</AppFilterRow>
-          <AppFilterRow title='最低年龄'>{filterOptions.minAge.map((option) => <FilterChip key={option} label={option} active={minAgeFilter === option} onClick={() => setMinAgeFilter(option)} />)}</AppFilterRow>
-          <AppFilterRow title='状态'>{filterOptions.status.map((option) => <FilterChip key={option} label={option === ALL_FILTER || option === EVENT_DEFAULT_STATUS_FILTER ? option : (EVENT_STATUS_LABELS[option]?.text || option)} active={statusFilter === option} onClick={() => setStatusFilter(option)} />)}</AppFilterRow>
-          <AppFilterRow title='费用'>{filterOptions.fee.map((option) => <FilterChip key={option} label={option} active={feeFilter === option} onClick={() => setFeeFilter(option)} />)}</AppFilterRow>
+          <MultiFilterRow title='活动类型' options={filterOptions.eventTypes} selected={typeFilters} onChange={setTypeFilters} />
+          <MultiFilterRow title='参与对象' options={filterOptions.audience} selected={audienceFilters} onChange={setAudienceFilters} />
+          <View style={{ marginBottom: space(4) }}>
+            <Text style={{ ...typography.bodyStrong, color: palette.brand }}>年龄区间</Text>
+            <View style={{ marginTop: space(2), marginBottom: space(1) }}>
+              <Text style={{ ...typography.caption, color: palette.subtext }}>{minAgeFilter}岁 - {maxAgeFilter >= AGE_FILTER_MAX ? `${AGE_FILTER_MAX}岁+` : `${maxAgeFilter}岁`}</Text>
+            </View>
+            <View style={{ marginBottom: space(2) }}>
+              <Text style={{ ...typography.micro, color: palette.muted }}>最小年龄</Text>
+              <Slider min={AGE_FILTER_MIN} max={AGE_FILTER_MAX} step={1} value={minAgeFilter} activeColor={palette.accentDeep} blockColor={palette.accentDeep} onChange={(e) => setMinAgeFilter(Math.min(Number(e.detail.value), maxAgeFilter))} />
+            </View>
+            <View>
+              <Text style={{ ...typography.micro, color: palette.muted }}>最大年龄</Text>
+              <Slider min={AGE_FILTER_MIN} max={AGE_FILTER_MAX} step={1} value={maxAgeFilter} activeColor={palette.accentDeep} blockColor={palette.accentDeep} onChange={(e) => setMaxAgeFilter(Math.max(Number(e.detail.value), minAgeFilter))} />
+            </View>
+          </View>
+          <MultiFilterRow title='状态' options={filterOptions.status} selected={statusFilters} onChange={setStatusFilters} labelFor={statusLabelFor} />
+          <MultiFilterRow title='费用' options={filterOptions.fee} selected={feeFilters} onChange={setFeeFilters} />
         </> : null}
       </AppCard>
 
-      <View className='app-count-line'><Text className='text-meta text-color-muted'>{loading ? '加载中...' : `当前显示 ${visibleEvents.length} / ${events.length} 个活动${statusFilter === EVENT_DEFAULT_STATUS_FILTER && hiddenEndedCount > 0 ? `，已隐藏 ${hiddenEndedCount} 个已结束活动` : ''}。当前优先展示近期活动，可下拉刷新或调整筛选。`}</Text></View>
+      <View className='app-count-line'><Text className='text-meta text-color-muted'>{loading ? '加载中...' : `当前显示 ${visibleEvents.length} / ${events.length} 个活动${statusFilters.length > 0 && !statusFilters.includes('ended') && hiddenEndedCount > 0 ? `，已隐藏 ${hiddenEndedCount} 个已结束报名活动` : ''}。当前优先展示近期活动，可下拉刷新或调整筛选。`}</Text></View>
 
       {loading ? <ListSkeleton count={3} rows={3} /> : null}
       {!loading && error ? <ErrorRetryCard error={error} onRetry={() => loadEvents({ forceRefresh: true, includeEnded })} /> : null}
