@@ -1,3 +1,4 @@
+import Taro from '@tarojs/taro'
 import { Text, View } from '@tarojs/components'
 import { palette } from '../../../theme/palette'
 import { radius, space } from '../../../theme/spacing'
@@ -57,6 +58,7 @@ export default function UserPopup(props: UserPopupProps) {
     user.publicChannel || user.publicChannelNote || user.childAgeRange?.length || user.childDropoutStatus?.length || user.childInterests || user.eduServices
   )
   const needsProfileAccess = !user.isSelf && !canSeeExpanded
+  const goToProfile = () => Taro.switchTab({ url: '/pages/profile/index' })
 
   return (
     <View onClick={onClose} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: exploreTheme.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
@@ -108,7 +110,7 @@ export default function UserPopup(props: UserPopupProps) {
           </View>
         ) : null}
 
-        {user.isSelf ? <AppPrimaryButton text='去看我的资料' variant='ghost' size='md' marginBottom='0' onClick={onPrimaryAction} /> : needsProfileAccess ? <AppPrimaryButton text='去填写资料' variant='primary' size='md' marginBottom='0' onClick={onPrimaryAction} /> : null}
+        {user.isSelf ? <AppPrimaryButton text='去看我的资料' variant='ghost' size='md' marginBottom='0' onClick={onPrimaryAction} /> : needsProfileAccess ? <AppPrimaryButton text='去填写资料' variant='primary' size='md' marginBottom='0' onClick={goToProfile} /> : null}
 
         {!user.isSelf && (
           <View style={{ display: 'flex', flexDirection: 'row', marginTop: user.isSelf || needsProfileAccess || !hasProfile ? space(3) : 0 }}>
