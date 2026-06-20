@@ -88,7 +88,7 @@ export default function UserPopup(props: UserPopupProps) {
 
         {hasExpandedContent ? (
           <View style={{ ...panelStyle, marginBottom: space(4) }}>
-            <InfoBlock title='公开渠道' text={user.publicChannel} />
+            <InfoBlock title='联系方式' text={user.publicChannel} />
             <InfoBlock title='添加备注说明' text={user.publicChannelNote} />
             <InfoBlock title='家庭教育关注' text={[...(user.childAgeRange || []), ...(user.childDropoutStatus || []), user.childInterests || '']} />
             <InfoBlock title='教育服务' text={user.eduServices} />
