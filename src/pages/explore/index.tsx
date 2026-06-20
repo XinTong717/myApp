@@ -37,7 +37,6 @@ const markerUserIcon = '/assets/marker-user.png'
 const EXPLORE_REFRESH_TTL = 30 * 1000
 const EXPLORE_ONBOARDING_KEY = 'explore-onboarding:v1'
 
-
 type ExploreLoadKeyInput = {
   province: string
   role: UserRoleFilter
@@ -62,15 +61,17 @@ async function consumeExploreForceRefreshFlag() {
   }
 }
 
-function showExploreOnboardingOnce() {
+function showExploreOnboardingOnce(onCompleteProfile?: () => void) {
   try {
     if (Taro.getStorageSync(EXPLORE_ONBOARDING_KEY)) return
     Taro.setStorageSync(EXPLORE_ONBOARDING_KEY, 'seen')
     Taro.showModal({
       title: '欢迎来到可雀',
-      content: '这里可以看学习社区、活动，也可以在成员目录里发现教育探索路上的同路人。\n\n平台不提供私信或自动撮合；你选择公开什么，别人才能看到什么。',
-      confirmText: '开始探索',
+      content: '这里可以查找学习社区、活动及教育探索路上的同路人。完善个人信息后即可查看其他成员资料。',
+      confirmText: '去填写',
       cancelText: '先逛逛',
+    }).then((res) => {
+      if (res.confirm) onCompleteProfile?.()
     }).catch((err) => console.warn('explore onboarding skipped:', err))
   } catch (err) {
     console.warn('explore onboarding storage skipped:', err)
@@ -145,6 +146,10 @@ export default function ExplorePage() {
     resetUserFilters,
     filteredAppUsersForMap,
   } = useExploreFilters(appUsers, selectedProvince)
+
+  const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
+  const goToSchools = () => { Taro.switchTab({ url: '/pages/schools/index' }) }
+  const goToEvents = () => { Taro.switchTab({ url: '/pages/events/index' }) }
 
   const loadData = async (options: { forceRefreshMapUsers?: boolean; refreshSchools?: boolean } = {}) => {
     const requestSeq = loadSeqRef.current + 1
@@ -225,19 +230,19 @@ export default function ExplorePage() {
       schoolsLoaded &&
       isSameMapUsersKey &&
       now - lastAutoRefreshAtRef.current < EXPLORE_REFRESH_TTL
-   
+
     if (shouldSkip) return
-   
+
     hasLoadedOnceRef.current = true
     lastAutoRefreshAtRef.current = now
     loadData({ forceRefreshMapUsers: !!options.forceRefreshMapUsers, refreshSchools: !!options.refreshSchools })
   }
-   
+
   useDidShow(async () => {
     const shouldForceRefresh = await consumeExploreForceRefreshFlag()
     refreshData({ force: shouldForceRefresh, forceRefreshMapUsers: shouldForceRefresh, refreshSchools: shouldForceRefresh })
   })
-   
+
   useEffect(() => {
     if (isFirstRunRef.current) {
       isFirstRunRef.current = false
@@ -245,10 +250,6 @@ export default function ExplorePage() {
     }
     refreshData()
   }, [selectedProvince, selectedUserRole, selectedChildAgeRange])
-
-  const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
-  const goToSchools = () => { Taro.switchTab({ url: '/pages/schools/index' }) }
-  const goToEvents = () => { Taro.switchTab({ url: '/pages/events/index' }) }
 
   const allMarkers = useMemo(() => buildExploreMarkers({
     schools,
@@ -268,7 +269,7 @@ export default function ExplorePage() {
 
   useEffect(() => {
     if (loading || error || validMarkers.length === 0) return
-    showExploreOnboardingOnce()
+    showExploreOnboardingOnce(goToProfile)
   }, [loading, error, validMarkers.length])
 
   const provinceSchoolCounts = useMemo(() => countSchoolsByProvince(schools), [schools])
@@ -287,6 +288,7 @@ export default function ExplorePage() {
     if (m.type === 'user_cluster') return sum + (m.provinceStat?.count || m.clusterUsers?.length || 0)
     return sum
   }, 0), [filteredMarkers])
+
   const schoolCount = useMemo(() => {
     if (!selectedProvince) return uniqueSchoolsById(schools).length
 
@@ -417,7 +419,6 @@ export default function ExplorePage() {
   }, [validMarkers])
 
   const canRenderMap = mapMarkers.length > 0 && Number.isFinite(center.latitude) && Number.isFinite(center.longitude)
-
   const currentLoadKey = createExploreLoadKey({
     province: selectedProvince,
     role: selectedUserRole,
@@ -514,9 +515,7 @@ export default function ExplorePage() {
 
     if (item.type === 'school') {
       const schoolData = schools.find((school) => Number(school.id) === Number(item.originalId))
-      if (schoolData) {
-        setDetailPreview('school', item.originalId, schoolData)
-      }
+      if (schoolData) setDetailPreview('school', item.originalId, schoolData)
       Taro.navigateTo({ url: '/pages/school-detail/index?id=' + item.originalId })
       return
     }
@@ -527,7 +526,7 @@ export default function ExplorePage() {
       setSelectedProvince(item.markerProv)
       return
     }
-    
+
     if (item.type === 'user_cluster') {
       setSelectedUser(null)
       setSelectedCluster(item)
@@ -540,9 +539,7 @@ export default function ExplorePage() {
 
   const handlePrimaryAction = async () => {
     if (!selectedUser) return
-    if (selectedUser.isSelf || !hasProfile) {
-      navigateToProfileSafely()
-    }
+    if (selectedUser.isSelf || !hasProfile) navigateToProfileSafely()
   }
 
   function getMarkerIdFromMapEvent(e: any): number {
@@ -552,7 +549,6 @@ export default function ExplorePage() {
   const handleMarkerTap = useCallback((e: any) => handleTap(getMarkerIdFromMapEvent(e)), [handleTap])
   const handleCalloutTap = useCallback((e: any) => handleTap(getMarkerIdFromMapEvent(e)), [handleTap])
   const handleLabelTap = useCallback((e: any) => handleTap(getMarkerIdFromMapEvent(e)), [handleTap])
-
   const popupRoleText = selectedUser?.roles?.join(' / ') || ''
 
   const openUserFromCluster = (user: AppUser, cluster: MarkerItem) => {
