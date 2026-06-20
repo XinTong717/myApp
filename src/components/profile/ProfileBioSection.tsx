@@ -20,7 +20,7 @@ export default function ProfileBioSection({ bio, setBio }: Props) {
   return (
     <ProfileCard>
       <SectionTitle text='一句话简介（选填）' />
-      <ProfileHelperText text='其他用户在地图上点击你的标记后会看到这句话' />
+      <ProfileHelperText text='任何用户在地图上点击你的标记后可以看到这句介绍。' />
       <ProfileInputBox marginBottom='0' focused={focused}>
         <Textarea
           value={bio}
