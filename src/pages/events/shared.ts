@@ -9,6 +9,10 @@ export type EventItem = {
   event_types?: string[]
   audience_who?: string[]
   min_age_requirement?: string
+  max_age_requirement?: string
+  signup_deadline?: string
+  is_recurring?: boolean
+  recurrence_pattern?: string
   fee_category?: string
   description?: string
   start_time?: string
@@ -26,18 +30,18 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   parent_observer: '家长观察',
   community_program: '项目招募',
   workshop: '工作坊',
-  meetup: '线下聚会',
+  meetup: '交友聚会',
   discussion: '圆桌讨论',
   family: '家庭活动',
   online: '线上活动',
+  one_on_one: '一对一',
+  group: '团体',
 }
 
 export const EVENT_STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
-  recurring: { text: '每周进行', color: palette.tagText, bg: palette.tag },
+  recurring: { text: '周期性', color: palette.tagText, bg: palette.tag },
   recruiting: { text: '招募中', color: palette.brand, bg: palette.brandSoft },
-  upcoming: { text: '即将开始', color: palette.info, bg: palette.infoSoft },
-  ongoing: { text: '进行中', color: palette.tagText, bg: palette.tag },
-  ended: { text: '已结束', color: palette.muted, bg: palette.surfaceSoft },
+  ended: { text: '已结束报名', color: palette.muted, bg: palette.surfaceSoft },
 }
 
 const EVENT_TYPE_ICON_BG: Record<string, string> = {
@@ -49,6 +53,8 @@ const EVENT_TYPE_ICON_BG: Record<string, string> = {
   discussion: palette.iconBgAlt,
   family: palette.greenSoft,
   online: palette.accent2Soft,
+  one_on_one: palette.iconBgAlt,
+  group: palette.greenSoft,
 }
 
 const EVENT_TIMEZONE = 'Asia/Shanghai'
@@ -68,15 +74,15 @@ function formatDateTime(value?: string) {
   return date ? date.toLocaleString('zh-CN', { hour12: false, timeZone: EVENT_TIMEZONE }) : ''
 }
 
-export function getEventStatusKey(event: Pick<EventItem, 'status' | 'start_time' | 'end_time'>) {
-  const endTime = parseEventDate(event.end_time)
-  if (endTime && endTime.getTime() < Date.now()) {
-    return 'ended'
-  }
-  return event.status || ''
+export function getEventStatusKey(event: Pick<EventItem, 'status' | 'start_time' | 'end_time' | 'signup_deadline' | 'is_recurring'>) {
+  if (event.is_recurring || event.status === 'recurring') return 'recurring'
+  const signupDeadline = parseEventDate(event.signup_deadline)
+  if (signupDeadline && signupDeadline.getTime() < Date.now()) return 'ended'
+  if (event.status === 'ended') return 'ended'
+  return 'recruiting'
 }
 
-export function getEventStatusInfo(event: Pick<EventItem, 'status' | 'start_time' | 'end_time'>) {
+export function getEventStatusInfo(event: Pick<EventItem, 'status' | 'start_time' | 'end_time' | 'signup_deadline' | 'is_recurring'>) {
   const statusKey = getEventStatusKey(event)
   if (!statusKey) return null
 
@@ -87,11 +93,13 @@ export function getEventStatusInfo(event: Pick<EventItem, 'status' | 'start_time
   }
 }
 
-export function isEventEnded(event: Pick<EventItem, 'status' | 'start_time' | 'end_time'>) {
+export function isEventEnded(event: Pick<EventItem, 'status' | 'start_time' | 'end_time' | 'signup_deadline' | 'is_recurring'>) {
   return getEventStatusKey(event) === 'ended'
 }
 
-export function formatEventTime(event: Pick<EventItem, 'event_type' | 'start_time' | 'end_time'>) {
+export function formatEventTime(event: Pick<EventItem, 'event_type' | 'start_time' | 'end_time' | 'is_recurring' | 'recurrence_pattern'>) {
+  if (event.is_recurring && event.recurrence_pattern) return event.recurrence_pattern
+
   if (event.event_type === 'night_chat' || event.event_type === 'parent_observer') {
     return '每周六 20:30 - 21:30'
   }
