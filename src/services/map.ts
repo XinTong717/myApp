@@ -63,9 +63,16 @@ function normalizeFilter(value?: string) {
   return String(value || '').trim()
 }
 
+function splitFilterText(value?: string) {
+  return String(value || '')
+    .split(/[、,，/|｜\s]+/)
+    .map((item) => normalizeFilter(item))
+    .filter(Boolean)
+}
+
 function normalizeFilterList(value?: string | string[]) {
-  const values = Array.isArray(value) ? value : normalizeFilter(value) ? [normalizeFilter(value)] : []
-  return Array.from(new Set(values.map((item) => normalizeFilter(item)).filter((item) => item && item !== '全部'))).sort()
+  const values = Array.isArray(value) ? value.flatMap((item) => splitFilterText(item)) : splitFilterText(value)
+  return Array.from(new Set(values.filter((item) => item && item !== '全部'))).sort()
 }
 
 function normalizeOffset(value?: number) {
