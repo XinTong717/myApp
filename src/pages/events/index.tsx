@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
-import { getFilterOptions, type AppFilterOptions } from '../../services/filterOptions'
+import { getFilterOptions } from '../../services/filterOptions'
+import type { AppFilterOptions } from '../../services/filterOptions'
 import { setDetailPreview } from '../../services/detailPreview'
 import AppPage from '../../components/common/AppPage'
 import AppPageHeader from '../../components/common/AppPageHeader'
@@ -16,8 +17,8 @@ import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import { space } from '../../theme/spacing'
 import { ALL_FILTER, EVENT_DEFAULT_STATUS_FILTER, EVENT_FILTER_FALLBACKS } from '../../constants/filterOptions'
+import type { EventItem } from './shared'
 import {
-  type EventItem,
   EVENT_STATUS_LABELS,
   EVENT_TYPE_LABELS,
   getEventIconBg,
