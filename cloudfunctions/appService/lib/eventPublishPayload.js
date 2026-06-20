@@ -1,10 +1,13 @@
 const EVENT_TYPE_MAP = {
   '工作坊': 'workshop',
   '线下聚会': 'meetup',
+  '交友聚会': 'meetup',
   '线上活动': 'online',
   '家庭活动': 'family',
   '项目招募': 'community_program',
   '圆桌讨论': 'discussion',
+  '一对一': 'one_on_one',
+  '团体': 'group',
   '夜聊/讨论': 'discussion',
   '其他': 'meetup',
 }
@@ -42,14 +45,10 @@ function normalizeEventType(submission) {
 }
 
 function buildEventStatus(submission) {
-  const now = Date.now()
-  const start = parseDate(submission.startTime)
-  const end = parseDate(submission.endTime)
-  if (start && start.getTime() > now) return 'upcoming'
-  if (start && end && start.getTime() <= now && end.getTime() >= now) return 'ongoing'
-  if (end && end.getTime() < now) return 'ended'
-  if (normalizeEventType(submission) === 'community_program') return 'recruiting'
-  return 'upcoming'
+  if (submission.isRecurring) return 'recurring'
+  const signupDeadline = parseDate(submission.signupDeadline)
+  if (signupDeadline && signupDeadline.getTime() < Date.now()) return 'ended'
+  return 'recruiting'
 }
 
 function buildLocation(submission) {
@@ -73,7 +72,7 @@ function buildContactInfo(submission) {
   const signupNote = String(submission.signupNote || '').trim()
   const organizerContact = String(submission.organizerContact || '').trim()
   const lines = []
-  if (officialUrl) lines.push(`公开主页或报名链接：${officialUrl}`)
+  if (officialUrl) lines.push(`公开链接：${officialUrl}`)
   if (signupNote) lines.push(`报名方式补充说明：${signupNote}`)
   if (organizerContact) lines.push(`组织者联系方式：${organizerContact}`)
   return lines.length > 0 ? lines.join('\n') : '请等待更多公开信息'
@@ -82,14 +81,20 @@ function buildContactInfo(submission) {
 function buildDescription(submission) {
   const audienceWho = stringifyLabels(submission.audienceWhoTags || submission.audienceWho) || '未注明'
   const minAge = String(submission.minAgeRequirement || '').trim() || '未注明'
+  const maxAge = String(submission.maxAgeRequirement || '').trim()
   const eventTypes = stringifyLabels(submission.eventTypes || submission.eventType)
   const description = String(submission.description || '').trim() || '暂无详细介绍'
-  const signupNote = String(submission.signupNote || '').trim() || '请查看公开主页或活动说明'
+  const signupNote = String(submission.signupNote || '').trim() || '请查看公开链接或活动说明'
   const officialUrl = String(submission.officialUrl || '').trim() || '未提供'
+  const signupDeadline = String(submission.signupDeadline || '').trim()
+  const recurrencePattern = submission.isRecurring ? String(submission.recurrencePattern || '').trim() : ''
   return [
     eventTypes ? `活动类型：${eventTypes}` : '',
     `参与对象：${audienceWho}`,
     `最低年龄要求：${minAge}`,
+    maxAge ? `最高年龄限制：${maxAge}` : '',
+    signupDeadline ? `报名截止时间：${signupDeadline}` : '',
+    recurrencePattern ? `周期时间：${recurrencePattern}` : '',
     '',
     '活动简介：',
     description,
@@ -97,7 +102,7 @@ function buildDescription(submission) {
     '报名方式补充说明：',
     signupNote,
     '',
-    '公开主页或报名链接：',
+    '公开链接：',
     officialUrl,
   ].filter(Boolean).join('\n')
 }
@@ -106,6 +111,9 @@ function buildEventPayload(submission) {
   const eventTypes = normalizeLabelArray(submission.eventTypes || submission.eventType)
   const audienceWho = normalizeLabelArray(submission.audienceWhoTags || submission.audienceWho)
   const minAgeRequirement = String(submission.minAgeRequirement || '').trim()
+  const maxAgeRequirement = String(submission.maxAgeRequirement || '').trim()
+  const signupDeadline = String(submission.signupDeadline || '').trim()
+  const recurrencePattern = String(submission.recurrencePattern || '').trim()
   const feeCategory = String(submission.fee || '').trim() || '费用待确认'
 
   return {
@@ -116,6 +124,10 @@ function buildEventPayload(submission) {
     event_types: eventTypes,
     audience_who: audienceWho,
     min_age_requirement: minAgeRequirement,
+    max_age_requirement: maxAgeRequirement,
+    signup_deadline: signupDeadline,
+    is_recurring: !!submission.isRecurring,
+    recurrence_pattern: recurrencePattern,
     fee_category: feeCategory,
     description: buildDescription(submission),
     start_time: String(submission.startTime || '').trim(),
@@ -137,6 +149,7 @@ function buildWarnings(submission, payload) {
   const warnings = []
   const start = parseDate(submission.startTime)
   const end = parseDate(submission.endTime)
+  const signupDeadline = parseDate(submission.signupDeadline)
   const officialUrl = String(submission.officialUrl || '').trim()
   const signupNote = String(submission.signupNote || '').trim()
   const organizerContact = String(submission.organizerContact || '').trim()
@@ -144,9 +157,11 @@ function buildWarnings(submission, payload) {
   if (!officialUrl && !signupNote && !organizerContact) warnings.push('未提供公开链接、报名说明或组织者联系方式，发布前请确认活动可被用户实际联系到')
   if (!submission.location && !submission.isOnline) warnings.push('线下活动未填写具体地点，当前会用省市兜底')
   if (!submission.endTime) warnings.push('未填写结束时间，前端会按单点开始时间展示')
-  if (payload.status === 'ended') warnings.push('该活动时间已过，通常不建议发布到公开活动页')
+  if (payload.status === 'ended') warnings.push('该活动报名已截止，通常不建议作为招募中活动发布')
   if (!start) warnings.push('开始时间格式异常，发布前需人工修正')
   if (submission.endTime && !end) warnings.push('结束时间格式异常，发布前需人工修正')
+  if (submission.signupDeadline && !signupDeadline) warnings.push('报名截止时间格式异常，发布前需人工修正')
+  if (submission.isRecurring && !submission.recurrencePattern) warnings.push('周期性活动未填写周期时间')
   if (!submission.organizer) warnings.push('未填写组织者，不建议直接发布')
   if (submission.fee === '付费' && !String(submission.feeDetail || '').trim()) warnings.push('该活动标记为付费，但未填写费用说明')
   if (SECURITY_RECHECK_REQUIRED_STATUSES.has(contentSecurityStatus)) warnings.push('内容安全检查曾失败或未完成，发布前需要重新检查或使用强制发布并留痕')
@@ -157,6 +172,7 @@ function buildBlockingErrors(submission, payload, options = {}) {
   const errors = []
   const start = parseDate(payload.start_time)
   const end = parseDate(payload.end_time)
+  const signupDeadline = parseDate(payload.signup_deadline)
   const contentSecurityStatus = readContentSecurityStatus(submission)
   const allowSecurityForce = !!options.allowSecurityForce
   if (!payload.title) errors.push('缺少活动标题')
@@ -164,6 +180,7 @@ function buildBlockingErrors(submission, payload, options = {}) {
   if (!start) errors.push('开始时间格式异常')
   if (payload.end_time && !end) errors.push('结束时间格式异常')
   if (start && end && end.getTime() < start.getTime()) errors.push('结束时间早于开始时间')
+  if (payload.signup_deadline && !signupDeadline) errors.push('报名截止时间格式异常')
   if (!String(submission.officialUrl || submission.signupNote || submission.organizerContact || '').trim()) errors.push('缺少公开链接、报名说明或组织者联系方式')
   if (SECURITY_BLOCKED_STATUSES.has(contentSecurityStatus)) errors.push('内容安全检查未通过')
   if (!allowSecurityForce && SECURITY_RECHECK_REQUIRED_STATUSES.has(contentSecurityStatus)) errors.push('内容安全检查未完成，请重新检查或使用强制发布')
