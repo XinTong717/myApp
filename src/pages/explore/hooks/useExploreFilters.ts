@@ -2,12 +2,21 @@ import { useMemo, useState } from 'react'
 import type { AppUser, ProfileCompletenessFilter, UserRoleFilter } from '../types'
 import { normalizeRolesForDisplay } from '../types'
 
+function hasAnyValue<T extends string>(values: T[], target: T) {
+  return values.includes(target)
+}
+
+function intersects(values: string[] = [], selected: string[] = []) {
+  if (selected.length === 0) return true
+  return selected.some((item) => values.includes(item))
+}
+
 export function useExploreFilters(appUsers: AppUser[], selectedProvince: string) {
   const [showUserFilterSheet, setShowUserFilterSheet] = useState(false)
-  const [selectedUserRole, setSelectedUserRole] = useState<UserRoleFilter>('全部')
+  const [selectedUserRoles, setSelectedUserRoles] = useState<UserRoleFilter[]>([])
   const [selectedProfileCompleteness, setSelectedProfileCompleteness] = useState<ProfileCompletenessFilter>('全部')
   const [selectedUserCity, setSelectedUserCity] = useState('全部')
-  const [selectedChildAgeRange, setSelectedChildAgeRange] = useState('全部')
+  const [selectedChildAgeRanges, setSelectedChildAgeRanges] = useState<string[]>([])
 
   const userCityOptions = useMemo(() => {
     const citySet = new Set<string>()
@@ -18,42 +27,45 @@ export function useExploreFilters(appUsers: AppUser[], selectedProvince: string)
     return ['全部', ...Array.from(citySet).sort()]
   }, [appUsers, selectedProvince])
 
-  const activeUserFilterCount = [
-    selectedUserRole !== '全部',
-    selectedProfileCompleteness !== '全部',
-    selectedUserCity !== '全部',
-    selectedUserRole === '家长' && selectedChildAgeRange !== '全部',
-  ].filter(Boolean).length
+  const activeUserFilterCount =
+    selectedUserRoles.length +
+    (selectedProfileCompleteness !== '全部' ? 1 : 0) +
+    (selectedUserCity !== '全部' ? 1 : 0) +
+    (hasAnyValue(selectedUserRoles, '家长') ? selectedChildAgeRanges.length : 0)
 
   const resetUserFilters = () => {
-    setSelectedUserRole('全部')
+    setSelectedUserRoles([])
     setSelectedProfileCompleteness('全部')
     setSelectedUserCity('全部')
-    setSelectedChildAgeRange('全部')
+    setSelectedChildAgeRanges([])
   }
 
   const filteredAppUsersForMap = useMemo(() => {
     return appUsers.filter((user) => {
       const roles = normalizeRolesForDisplay(user.roles || [])
-      if (selectedUserRole !== '全部' && !roles.includes(selectedUserRole)) return false
+      if (selectedUserRoles.length > 0 && !intersects(roles, selectedUserRoles)) return false
       if (selectedProfileCompleteness === '有简介' && !String(user.bio || '').trim()) return false
       if (selectedProfileCompleteness === '有生态关系' && !String(user.companionContext || '').trim()) return false
       if (selectedUserCity !== '全部' && user.city !== selectedUserCity) return false
+      if (selectedChildAgeRanges.length > 0) {
+        const childAgeRange = Array.isArray(user.childAgeRange) ? user.childAgeRange : []
+        if (!roles.includes('家长') || !intersects(childAgeRange, selectedChildAgeRanges)) return false
+      }
       return true
     })
-  }, [appUsers, selectedUserRole, selectedProfileCompleteness, selectedUserCity])
+  }, [appUsers, selectedUserRoles, selectedProfileCompleteness, selectedUserCity, selectedChildAgeRanges])
 
   return {
     showUserFilterSheet,
     setShowUserFilterSheet,
-    selectedUserRole,
-    setSelectedUserRole,
+    selectedUserRoles,
+    setSelectedUserRoles,
     selectedProfileCompleteness,
     setSelectedProfileCompleteness,
     selectedUserCity,
     setSelectedUserCity,
-    selectedChildAgeRange,
-    setSelectedChildAgeRange,
+    selectedChildAgeRanges,
+    setSelectedChildAgeRanges,
     userCityOptions,
     activeUserFilterCount,
     resetUserFilters,
