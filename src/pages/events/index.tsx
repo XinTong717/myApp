@@ -47,6 +47,10 @@ function shouldIncludeEnded(statusFilters: string[]) {
   return statusFilters.length === 0 || statusFilters.includes('ended')
 }
 
+function isDefaultStatusFilter(statusFilters: string[]) {
+  return statusFilters.length === 1 && statusFilters[0] === EVENT_DEFAULT_STATUS_FILTER
+}
+
 function normalizeLabels(value: unknown): string[] {
   if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean)
   return String(value || '').split(/[、,，/|｜]+/).map((item) => item.trim()).filter(Boolean)
@@ -222,7 +226,8 @@ export default function EventsPage() {
   }, [events])
 
   const ageFilterActive = minAgeFilter > AGE_FILTER_MIN || maxAgeFilter < AGE_FILTER_MAX
-  const advancedActiveCount = typeFilters.length + audienceFilters.length + (ageFilterActive ? 1 : 0) + statusFilters.length + feeFilters.length
+  const statusActiveCount = isDefaultStatusFilter(statusFilters) ? 0 : statusFilters.length
+  const advancedActiveCount = typeFilters.length + audienceFilters.length + (ageFilterActive ? 1 : 0) + statusActiveCount + feeFilters.length
   const hasActiveFilters = locationFilters.length > 0 || advancedActiveCount > 0
   const resetFilters = () => { setLocationFilters([]); setTypeFilters([]); setAudienceFilters([]); setMinAgeFilter(AGE_FILTER_MIN); setMaxAgeFilter(AGE_FILTER_MAX); setStatusFilters([EVENT_DEFAULT_STATUS_FILTER]); setFeeFilters([]) }
 
