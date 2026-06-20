@@ -1,5 +1,8 @@
 const ROLE_WHITELIST = ['家长', '教育者', '同行者']
-const CHILD_AGE_WHITELIST = ['学龄前', '小学阶段', '中学阶段']
+const CHILD_AGE_WHITELIST = ['学龄前', '小学阶段', '初中阶段', '高中阶段', '大学及以上']
+const CHILD_AGE_LEGACY_MAP = {
+  中学阶段: ['初中阶段', '高中阶段'],
+}
 const CHILD_STATUS_WHITELIST = ['寻找学习社区', '寻找同伴连接', '寻找项目活动', '寻找家庭支持', '自主探索中']
 
 function normalizeStringArray(value) {
@@ -17,6 +20,16 @@ function normalizeRoles(roles) {
     .filter(Boolean)
     .map((role) => (role === '其他' ? '同行者' : role))
     .filter((role) => ROLE_WHITELIST.includes(role))
+}
+
+function normalizeChildAgeRange(value) {
+  const values = []
+  normalizeStringArray(value).forEach((item) => {
+    const mapped = CHILD_AGE_LEGACY_MAP[item]
+    if (mapped) values.push(...mapped)
+    else values.push(item)
+  })
+  return Array.from(new Set(values.filter((item) => CHILD_AGE_WHITELIST.includes(item))))
 }
 
 function mergeOtherOption(values, otherText) {
@@ -49,7 +62,7 @@ function normalizeProfile(profile) {
     publicChannelNote: String(profile.publicChannelNote || '').trim(),
     expandedProfileVisible: profile.expandedProfileVisible !== false,
     isVisibleOnMap: profile.isVisibleOnMap !== false,
-    childAgeRange: normalizeStringArray(profile.childAgeRange).filter((item) => CHILD_AGE_WHITELIST.includes(item)),
+    childAgeRange: normalizeChildAgeRange(profile.childAgeRange),
     childDropoutStatus: normalizeStringArray(profile.childDropoutStatus).filter((item) => CHILD_STATUS_WHITELIST.includes(item)),
     childInterests: String(profile.childInterests || '').trim(),
     eduServices: String(profile.eduServices || '').trim(),
@@ -66,6 +79,7 @@ module.exports = {
   CHILD_STATUS_WHITELIST,
   normalizeStringArray,
   normalizeRoles,
+  normalizeChildAgeRange,
   mergeOtherOption,
   stringifyLabels,
   validateLength,
