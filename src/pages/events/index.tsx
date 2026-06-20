@@ -17,6 +17,7 @@ import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import { palette } from '../../theme/palette'
 import { space } from '../../theme/spacing'
+import { typography } from '../../theme/typography'
 import { ALL_FILTER, EVENT_DEFAULT_STATUS_FILTER, EVENT_FILTER_FALLBACKS } from '../../constants/filterOptions'
 import type { EventItem } from './shared'
 import {
