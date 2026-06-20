@@ -41,7 +41,7 @@ const PRIVACY_POLICY_URL = '/pkg/legal/privacy-policy/index'
 const PROFILE_STEPS = [
   { key: 'basic', label: '基本资料' },
   { key: 'identity', label: '身份补充' },
-  { key: 'privacy', label: '目录设置' },
+  { key: 'privacy', label: '隐私设置' },
 ] as const
 
 type ProfileStep = typeof PROFILE_STEPS[number]['key']
@@ -242,7 +242,7 @@ export default function ProfilePage() {
 
   return (
     <AppPage style={{ paddingBottom: space(8) }}>
-      <AppPageHeader title='我的' description='填写资料、设置成员目录可见性，并管理安全与隐私。' />
+      <AppPageHeader title='我的' />
       <ProfileAdminEntry isAdmin={isAdmin} onOpen={openAdminReviewPage} />
       <ProfileFavoriteEventsCard enabled={hasCompletedProfile} />
       <AppSegmentedTabs options={PROFILE_STEPS} value={activeStep} onChange={handleStepChange} />
@@ -260,7 +260,7 @@ export default function ProfilePage() {
         {isCompanion && <ProfileCompanionSection companionContext={companionContext} setCompanionContext={setCompanionContext} />}
         {!isParent && !isEducator && !isCompanion && <ProfileNoticeBox text='你还没有选择身份。回到“基本资料”选择家长、教育者或同行者后，这里会出现对应的补充信息。' />}
         <ProfileNoticeBox text='家长与教育者补充信息不会在地图卡片直接公开；同行者填写的“和这个生态的关系”会随地图卡片公开展示。请不要写入敏感身份、未成年人姓名或具体住址。' />
-        <ProfileSecondaryButton text='下一步：目录设置（最后一步保存）' onClick={goNextStep} />
+        <ProfileSecondaryButton text='下一步：隐私设置（最后一步保存）' onClick={goNextStep} />
       </>}
 
       {activeStep === 'privacy' && <>
