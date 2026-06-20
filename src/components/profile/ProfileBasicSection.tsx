@@ -117,12 +117,12 @@ export default function ProfileBasicSection(props: Props) {
         </View>
       )}
 
-      <SectionTitle text='公开渠道（选填）' />
-      <ProfileHelperText text='可填写个人微信、公众号、小红书、个人网站或公开邮箱。仅对已登录并完成个人资料的用户可见；不建议填写手机号，也不要填写孩子或第三方联系方式。' />
+      <SectionTitle text='联系方式（选填）' />
+      <ProfileHelperText text='可填写个人微信、公众号、小红书、个人网站、公开邮箱等。仅对已登录并完成个人资料的用户可见；请不要填写孩子或第三方联系方式。' />
       <ProfileInputBox focused={focusedField === 'publicChannel'}>
         <Input
           value={publicChannel}
-          placeholder='例如：微信号 / 公众号 / 小红书 / 网站 / 邮箱'
+          placeholder='例如：微信号：xxx'
           onFocus={() => setFocusedField('publicChannel')}
           onBlur={() => setFocusedField('')}
           onInput={(e) => setPublicChannel(e.detail.value)}
@@ -131,7 +131,7 @@ export default function ProfileBasicSection(props: Props) {
       </ProfileInputBox>
 
       <SectionTitle text='添加备注说明（选填）' />
-      <ProfileHelperText text='例如：添加微信时请备注“可雀”；或说明更推荐通过公众号/邮箱联系。' />
+      <ProfileHelperText text='添加微信时希望对方备注的内容。' />
       <ProfileInputBox focused={focusedField === 'publicChannelNote'}>
         <Input
           value={publicChannelNote}
