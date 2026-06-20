@@ -97,6 +97,14 @@ function countedOptions(allOption: string, preferred: string[], counts: Map<stri
   return [allOption, ...options]
 }
 
+function orderedAgeOptions(allOption: string, counts: Map<string, Set<string>>, max: number) {
+  const options = AGE_BUCKETS
+    .map((item) => item.label)
+    .filter((label) => optionCount(counts, label) > 0)
+    .slice(0, max)
+  return [allOption, ...options]
+}
+
 function normalizeAgeText(value?: string) {
   return String(value || '')
     .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
@@ -288,7 +296,7 @@ export default function SchoolsPage() {
   const ageCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => ageBucketLabels(item.age_range)), [optionSource])
   const provinceOptions = useMemo(() => countedOptions(allFilter, filterSettings.provinces || [], provinceCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, filterSettings.provinces, provinceCounts])
   const typeOptions = useMemo(() => countedOptions(allFilter, filterSettings.schoolTypes || [], typeCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, filterSettings.schoolTypes, typeCounts])
-  const ageOptions = useMemo(() => countedOptions(allFilter, AGE_BUCKETS.map((item) => item.label), ageCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, ageCounts])
+  const ageOptions = useMemo(() => orderedAgeOptions(allFilter, ageCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, ageCounts])
 
   const filteredSchools = useMemo(() => {
     const q = keyword.trim().toLowerCase()
