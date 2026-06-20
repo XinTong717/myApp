@@ -63,27 +63,32 @@ function normalizeFilter(value?: string) {
   return String(value || '').trim()
 }
 
+function normalizeFilterList(value?: string | string[]) {
+  const values = Array.isArray(value) ? value : normalizeFilter(value) ? [normalizeFilter(value)] : []
+  return Array.from(new Set(values.map((item) => normalizeFilter(item)).filter((item) => item && item !== '全部'))).sort()
+}
+
 function normalizeOffset(value?: number) {
   const n = Number(value || 0)
   if (!Number.isFinite(n) || n < 0) return 0
   return Math.floor(n)
 }
 
-function getMapUsersCacheKey(province?: string, childAgeRange?: string, role?: string, offset?: number, limit?: number, autoPage?: boolean) {
-  return `${MAP_USERS_CACHE_KEY_PREFIX}${normalizeProvince(province) || 'all'}:${normalizeFilter(role) || 'all-role'}:${normalizeFilter(childAgeRange) || 'all-child-stage'}:${normalizeOffset(offset)}:${limit || 'default-limit'}:${autoPage === true ? 'auto-page' : 'single-page'}`
+function getMapUsersCacheKey(province?: string, childAgeRanges?: string[], roles?: string[], offset?: number, limit?: number, autoPage?: boolean) {
+  return `${MAP_USERS_CACHE_KEY_PREFIX}${normalizeProvince(province) || 'all'}:${normalizeFilterList(roles).join(',') || 'all-role'}:${normalizeFilterList(childAgeRanges).join(',') || 'all-child-stage'}:${normalizeOffset(offset)}:${limit || 'default-limit'}:${autoPage === true ? 'auto-page' : 'single-page'}`
 }
 
-async function fetchMapUsersPage(params: { province?: string; role?: string; childAgeRange?: string; offset?: number; limit?: number }) {
+async function fetchMapUsersPage(params: { province?: string; roles?: string[]; childAgeRanges?: string[]; offset?: number; limit?: number }) {
   return callCloud<GetMapUsersResult>('getMapUsers', {
     ...(params.province ? { province: params.province } : {}),
-    ...(params.role && params.role !== '全部' ? { role: params.role } : {}),
-    ...(params.childAgeRange ? { childAgeRange: params.childAgeRange } : {}),
+    ...(params.roles && params.roles.length > 0 ? { roles: params.roles } : {}),
+    ...(params.childAgeRanges && params.childAgeRanges.length > 0 ? { childAgeRanges: params.childAgeRanges } : {}),
     ...(params.offset ? { offset: params.offset } : {}),
     ...(params.limit ? { limit: params.limit } : {}),
   })
 }
 
-async function fetchAllProvinceUserPages(firstPage: GetMapUsersResult, params: { province: string; role?: string; childAgeRange?: string; limit: number }) {
+async function fetchAllProvinceUserPages(firstPage: GetMapUsersResult, params: { province: string; roles?: string[]; childAgeRanges?: string[]; limit: number }) {
   const users: MapUser[] = Array.isArray(firstPage.users) ? [...firstPage.users] : []
   let nextOffset = typeof firstPage.nextOffset === 'number' ? firstPage.nextOffset : null
   let hasMore = !!firstPage.hasMore && nextOffset !== null
@@ -92,8 +97,8 @@ async function fetchAllProvinceUserPages(firstPage: GetMapUsersResult, params: {
   while (hasMore && nextOffset !== null && pageCount < MAP_USERS_AUTO_PAGE_MAX_PAGES) {
     const page = await fetchMapUsersPage({
       province: params.province,
-      role: params.role,
-      childAgeRange: params.childAgeRange,
+      roles: params.roles,
+      childAgeRanges: params.childAgeRanges,
       offset: nextOffset,
       limit: params.limit,
     })
@@ -119,16 +124,16 @@ async function fetchAllProvinceUserPages(firstPage: GetMapUsersResult, params: {
   } as GetMapUsersResult
 }
 
-export async function getMapUsers(options: { forceRefresh?: boolean; province?: string; childAgeRange?: string; role?: string; offset?: number; limit?: number; autoPage?: boolean } = {}) {
+export async function getMapUsers(options: { forceRefresh?: boolean; province?: string; childAgeRange?: string; childAgeRanges?: string[]; role?: string; roles?: string[]; offset?: number; limit?: number; autoPage?: boolean } = {}) {
   const province = normalizeProvince(options.province)
-  const childAgeRange = normalizeFilter(options.childAgeRange)
-  const role = normalizeFilter(options.role)
+  const childAgeRanges = normalizeFilterList(options.childAgeRanges || options.childAgeRange)
+  const roles = normalizeFilterList(options.roles || options.role)
   const offset = normalizeOffset(options.offset)
   // Province detail mode filters users after safety/privacy checks. Auto-page by default
   // so role/child-stage filters are applied across the first few pages, not only page 1.
   const shouldAutoPage = !!province && offset === 0 && options.autoPage !== false
   const pageLimit = options.limit || (shouldAutoPage ? MAP_USERS_AUTO_PAGE_LIMIT : undefined)
-  const cacheKey = getMapUsersCacheKey(province, childAgeRange, role, offset, pageLimit, shouldAutoPage)
+  const cacheKey = getMapUsersCacheKey(province, childAgeRanges, roles, offset, pageLimit, shouldAutoPage)
 
   if (!options.forceRefresh) {
     const cached = await getScopedCachedValue<MapUsersPayload>(cacheKey)
@@ -137,15 +142,15 @@ export async function getMapUsers(options: { forceRefresh?: boolean; province?: 
 
   const firstPage = await fetchMapUsersPage({
     province: province || undefined,
-    role,
-    childAgeRange,
+    roles,
+    childAgeRanges,
     offset,
     limit: pageLimit,
   })
 
   if (firstPage.ok) {
     const result = shouldAutoPage
-      ? await fetchAllProvinceUserPages(firstPage, { province, role, childAgeRange, limit: pageLimit || MAP_USERS_AUTO_PAGE_LIMIT })
+      ? await fetchAllProvinceUserPages(firstPage, { province, roles, childAgeRanges, limit: pageLimit || MAP_USERS_AUTO_PAGE_LIMIT })
       : firstPage
 
     await setScopedCachedValue(cacheKey, toMapUsersPayload(result), MAP_USERS_TTL_MS)
