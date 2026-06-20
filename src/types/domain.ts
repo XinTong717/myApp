@@ -16,6 +16,10 @@ export type EventItem = {
   event_types?: string[]
   audience_who?: string[]
   min_age_requirement?: string
+  max_age_requirement?: string
+  signup_deadline?: string
+  is_recurring?: boolean
+  recurrence_pattern?: string
   fee_category?: string
   description?: string
   start_time?: string
@@ -160,122 +164,3 @@ export type SafetyItem = {
   isBlocked: boolean
   isMuted: boolean
 }
-
-export type SafetyOverviewResult = CloudResponse<{
-  blocked?: SafetyItem[]
-  muted?: SafetyItem[]
-}>
-
-export type ManageSafetyRelationResult = CloudResponse<{
-  isBlocked?: boolean
-  isMuted?: boolean
-}>
-
-export type ReportUserResult = CloudResponse<Record<string, never>>
-
-export type MapUser = {
-  _id: string
-  displayName?: string
-  roles?: string[]
-  province?: string
-  city?: string
-  bio?: string
-  companionContext?: string
-  publicChannel?: string
-  publicChannelNote?: string
-  childAgeRange?: string[]
-  childDropoutStatus?: string[]
-  childInterests?: string
-  eduServices?: string
-  hasExpandedProfile?: boolean
-  isSelf?: boolean
-}
-
-export type MapProvinceStat = {
-  province: string
-  count: number
-}
-
-export type GetMapUsersResult = CloudResponse<{
-  users?: MapUser[]
-  provinceStats?: MapProvinceStat[]
-  province?: string
-  mode?: 'province_summary' | 'province_detail'
-  limit?: number
-  offset?: number
-  nextOffset?: number | null
-  hasMore?: boolean
-  autoPaged?: boolean
-  loadedPages?: number
-  loadedUserCount?: number
-  lastPageRequestId?: string
-}>
-
-export type SimpleActionResult = CloudResponse<Record<string, never>>
-
-export type AdminAccessResult = CloudResponse<{
-  isAdmin?: boolean
-  admin?: { name?: string }
-}>
-
-export type EventSubmissionItem = {
-  _id: string
-  status: string
-  title: string
-  province: string
-  city: string
-  eventType: string
-  organizer: string
-  startTime: string
-  endTime: string
-  isOnline: boolean
-  fee: string
-  officialUrl: string
-  submitterDisplayName: string
-  submitterCity: string
-  createdAt: string | null
-  publishedEventId: number | null
-  adminNote: string
-}
-
-export type ListEventSubmissionsResult = CloudResponse<{
-  submissions?: EventSubmissionItem[]
-}>
-
-export type ReviewEventSubmissionResult = CloudResponse<Record<string, never>>
-
-export type EventPublishPayloadResult = CloudResponse<{
-  suggestedEventPayload?: Record<string, unknown>
-  warnings?: string[]
-}>
-
-export type SchoolSubmissionItem = {
-  _id: string
-  status: string
-  name: string
-  province: string
-  city: string
-  schoolType?: string
-  schoolTypes?: string[]
-  ageRange?: string
-  ageRanges?: string[]
-  officialUrl?: string
-  publicAccountNote?: string
-  participationNote?: string
-  feeNote?: string
-  sourceNote?: string
-  recommendationNote?: string
-  submitterDisplayName?: string
-  submitterCity?: string
-  createdAt?: string | null
-  reviewedAt?: string | null
-  reviewedBy?: string
-  adminNote?: string
-  contentSecurityStatus?: string
-}
-
-export type ListSchoolSubmissionsResult = CloudResponse<{
-  submissions?: SchoolSubmissionItem[]
-}>
-
-export type ReviewSchoolSubmissionResult = CloudResponse<Record<string, never>>
