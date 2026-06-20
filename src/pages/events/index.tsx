@@ -26,7 +26,7 @@ import {
   isEventEnded,
 } from './shared'
 
-const EVENT_SHARE = { appMessage: { title: '可雀活动｜找到教育探索里的同路活动', path: '/pages/events/index' }, timeline: { title: '可雀活动｜教育探索活动与社区计划', query: '' } }
+const EVENT_SHARE = { appMessage: { title: '可雀活动｜发现教育探索路上的活动', path: '/pages/events/index' }, timeline: { title: '可雀活动｜教育探索活动与自组织计划', query: '' } }
 
 type InterestMap = Record<number, number>
 type EventItemWithInterest = EventItem & { interest_count?: number }
@@ -195,8 +195,8 @@ export default function EventsPage() {
     <AppPage>
       <AppPageHeader
         title='活动'
-        description='可雀与自由学社的活动与社区计划。点进详情了解更多，也欢迎提交公开可参与的新活动。'
-        action={<AppMiniButton text='推荐新活动' onClick={goToSubmit} />}
+        description='发现教育探索相关的线上线下活动、工作坊、共学计划和用户自组织活动。点进详情了解更多，也欢迎提交你知道的公开可参与活动。'
+        action={<AppMiniButton text='提交活动' onClick={goToSubmit} />}
       />
 
       <AppCard padding={space(3)}>
@@ -219,7 +219,7 @@ export default function EventsPage() {
 
       {loading ? <ListSkeleton count={3} rows={3} /> : null}
       {!loading && error ? <ErrorRetryCard error={error} onRetry={() => loadEvents({ forceRefresh: true, includeEnded })} /> : null}
-      {!loading && !error && visibleEvents.length === 0 ? <EmptyCard text={events.length > 0 ? '当前筛选下没有可显示的活动。' : '暂时还没有活动。'} actionText={events.length > 0 ? '重置筛选' : '推荐新活动'} onAction={events.length > 0 ? resetFilters : goToSubmit} /> : null}
+      {!loading && !error && visibleEvents.length === 0 ? <EmptyCard text={events.length > 0 ? '当前筛选下没有可显示的活动。' : '暂时还没有活动。'} actionText={events.length > 0 ? '重置筛选' : '提交活动'} onAction={events.length > 0 ? resetFilters : goToSubmit} /> : null}
 
       {!loading && !error && visibleEvents.map((item) => {
         const typeLabel = EVENT_TYPE_LABELS[item.event_type] || item.event_type
