@@ -1,6 +1,6 @@
 const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
-const { normalizeRoles, normalizeStringArray } = require('../lib/normalize')
+const { normalizeRoles, normalizeStringArray, normalizeChildAgeRange } = require('../lib/normalize')
 
 const $ = db.command.aggregate
 const MAP_USERS_PROVINCE_LIMIT = 300
@@ -35,7 +35,7 @@ function matchesRole(user, role) {
 
 function matchesChildAgeRange(user, childAgeRange) {
   if (!childAgeRange || childAgeRange === '全部') return true
-  const ranges = Array.isArray(user.childAgeRange) ? user.childAgeRange : []
+  const ranges = normalizeChildAgeRange(user.childAgeRange)
   return ranges.includes(childAgeRange)
 }
 
@@ -106,7 +106,7 @@ function toPublicUser(user, openid, requesterHasProfile) {
     ...payload,
     publicChannel: String(user.publicChannel || '').trim(),
     publicChannelNote: String(user.publicChannelNote || '').trim(),
-    childAgeRange: roles.includes('家长') ? normalizeStringArray(user.childAgeRange) : [],
+    childAgeRange: roles.includes('家长') ? normalizeChildAgeRange(user.childAgeRange) : [],
     childDropoutStatus: roles.includes('家长') ? normalizeStringArray(user.childDropoutStatus) : [],
     childInterests: roles.includes('家长') ? String(user.childInterests || '').trim() : '',
     eduServices: roles.includes('教育者') ? String(user.eduServices || '').trim() : '',
