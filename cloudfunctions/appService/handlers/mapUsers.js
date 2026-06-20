@@ -1,6 +1,7 @@
 const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
 const { normalizeRoles, normalizeStringArray, normalizeChildAgeRange } = require('../lib/normalize')
+const { hasCurrentConsent } = require('../lib/legalConsent')
 
 const $ = db.command.aggregate
 const MAP_USERS_PROVINCE_LIMIT = 300
@@ -40,7 +41,7 @@ function matchesChildAgeRange(user, childAgeRange) {
 }
 
 function hasCompletedProfile(user) {
-  return !!(user && user.displayName && user.province && user.city)
+  return !!(user && user.displayName && user.province && user.city && normalizeRoles(user.roles || []).length > 0)
 }
 
 function buildHiddenSets(openid, mySafetyRes, blockedByRes) {
@@ -84,10 +85,10 @@ async function loadSafetyRelations(openid) {
   ])
 }
 
-function toPublicUser(user, openid, requesterHasProfile) {
+function toPublicUser(user, openid, requesterHasProfileAccess) {
   const roles = normalizeRoles(user.roles)
   const isSelf = user.openid === openid
-  const expanded = isSelf || (requesterHasProfile && user.expandedProfileVisible !== false)
+  const expanded = isSelf || (requesterHasProfileAccess && user.expandedProfileVisible !== false)
   const payload = {
     _id: user._id,
     displayName: user.displayName,
@@ -118,7 +119,7 @@ async function loadRequesterProfile(openid) {
   try {
     const res = await db.collection('users')
       .where({ openid })
-      .field({ displayName: true, province: true, city: true })
+      .field({ displayName: true, province: true, city: true, roles: true })
       .limit(1)
       .get()
     return (res.data || [])[0] || null
@@ -205,12 +206,13 @@ async function getMapUsers(event, wxContext) {
   const pageLimit = normalizeLimit(event.limit)
 
   try {
-    const [safetyResults, requesterProfile] = await Promise.all([
+    const [safetyResults, requesterProfile, requesterConsentOk] = await Promise.all([
       loadSafetyRelations(openid),
       loadRequesterProfile(openid),
+      hasCurrentConsent(openid),
     ])
     const [mySafetyRes, blockedByRes] = safetyResults
-    const requesterHasProfile = hasCompletedProfile(requesterProfile)
+    const requesterHasProfileAccess = hasCompletedProfile(requesterProfile) && requesterConsentOk
 
     if (!province) {
       const provinceStats = await getProvinceSummaries({ openid, role, childAgeRange, mySafetyRes, blockedByRes })
@@ -243,7 +245,7 @@ async function getMapUsers(event, wxContext) {
       .filter((user) => matchesRole(user, role))
       .filter((user) => matchesChildAgeRange(user, childAgeRange))
 
-    const users = pageUsers.map((user) => toPublicUser(user, openid, requesterHasProfile))
+    const users = pageUsers.map((user) => toPublicUser(user, openid, requesterHasProfileAccess))
 
     return ok(requestId, {
       users,
