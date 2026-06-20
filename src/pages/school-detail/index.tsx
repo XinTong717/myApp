@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, getCurrentInstance, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { registerCurrentPageShare } from '../../utils/share'
+import { ensureCompletedProfileAccess } from '../../utils/profileAccess'
 import { getSchoolDetail, submitCorrection } from '../../services/school'
 import { getDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
@@ -189,6 +190,15 @@ export default function SchoolDetailPage() {
       registerCurrentPageShare(buildSchoolShare(preview, id))
     } else {
       registerCurrentPageShare(buildSchoolShare(null, id))
+    }
+
+    const canView = await ensureCompletedProfileAccess('resourceDetail')
+    if (!canView) {
+      setLoading(false)
+      setError('')
+      setSchool(null)
+      setTimeout(() => Taro.switchTab({ url: '/pages/schools/index' }), 120)
+      return
     }
 
     try {
