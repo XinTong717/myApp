@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Slider, View, Text } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getEvents } from '../../services/event'
 import { getFilterOptions } from '../../services/filterOptions'
@@ -16,7 +16,7 @@ import AppChip from '../../components/common/AppChip'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
+import { radius, space } from '../../theme/spacing'
 import { typography } from '../../theme/typography'
 import { ALL_FILTER, EVENT_DEFAULT_STATUS_FILTER, EVENT_FILTER_FALLBACKS } from '../../constants/filterOptions'
 import type { EventItem } from './shared'
@@ -145,6 +145,73 @@ function MultiFilterRow(props: { title: string; options: string[]; selected: str
   )
 }
 
+function clampAge(value: number, min = AGE_FILTER_MIN, max = AGE_FILTER_MAX) {
+  return Math.max(min, Math.min(max, Math.round(value)))
+}
+
+function getTouchPageX(event: any) {
+  return Number(event?.touches?.[0]?.pageX ?? event?.changedTouches?.[0]?.pageX ?? 0)
+}
+
+function AgeRangeSlider(props: { minValue: number; maxValue: number; onChange: (minValue: number, maxValue: number) => void }) {
+  const trackIdRef = useRef(`event-age-range-${Math.random().toString(36).slice(2)}`)
+  const activeHandleRef = useRef<'min' | 'max'>('min')
+  const minPercent = ((props.minValue - AGE_FILTER_MIN) / (AGE_FILTER_MAX - AGE_FILTER_MIN)) * 100
+  const maxPercent = ((props.maxValue - AGE_FILTER_MIN) / (AGE_FILTER_MAX - AGE_FILTER_MIN)) * 100
+
+  const updateFromTouch = (event: any, mode: 'nearest' | 'active' = 'active') => {
+    const pageX = getTouchPageX(event)
+    if (!pageX) return
+    Taro.createSelectorQuery()
+      .select(`#${trackIdRef.current}`)
+      .boundingClientRect((rect: any) => {
+        const width = Number(rect?.width || 0)
+        if (!width) return
+        const ratio = Math.max(0, Math.min(1, (pageX - Number(rect.left || 0)) / width))
+        const nextValue = clampAge(AGE_FILTER_MIN + ratio * (AGE_FILTER_MAX - AGE_FILTER_MIN))
+        if (mode === 'nearest') {
+          activeHandleRef.current = Math.abs(nextValue - props.minValue) <= Math.abs(nextValue - props.maxValue) ? 'min' : 'max'
+        }
+        if (activeHandleRef.current === 'min') props.onChange(Math.min(nextValue, props.maxValue), props.maxValue)
+        else props.onChange(props.minValue, Math.max(nextValue, props.minValue))
+      })
+      .exec()
+  }
+
+  const startHandle = (handle: 'min' | 'max', event: any) => {
+    event?.stopPropagation?.()
+    activeHandleRef.current = handle
+    updateFromTouch(event)
+  }
+
+  return (
+    <View style={{ marginTop: space(2), marginBottom: space(4) }}>
+      <View style={{ marginBottom: space(2) }}>
+        <Text style={{ ...typography.caption, color: palette.subtext }}>{props.minValue}岁 - {props.maxValue >= AGE_FILTER_MAX ? `${AGE_FILTER_MAX}岁+` : `${props.maxValue}岁`}</Text>
+      </View>
+      <View
+        id={trackIdRef.current}
+        onTouchStart={(event: any) => updateFromTouch(event, 'nearest')}
+        onTouchMove={(event: any) => updateFromTouch(event)}
+        style={{ position: 'relative', height: '44px', margin: `0 ${space(3)}` }}
+      >
+        <View style={{ position: 'absolute', left: 0, right: 0, top: '20px', height: '4px', borderRadius: radius.pill, backgroundColor: palette.line }} />
+        <View style={{ position: 'absolute', left: `${minPercent}%`, width: `${Math.max(0, maxPercent - minPercent)}%`, top: '20px', height: '4px', borderRadius: radius.pill, backgroundColor: palette.accentDeep }} />
+        <View
+          onTouchStart={(event: any) => startHandle('min', event)}
+          onTouchMove={(event: any) => updateFromTouch(event)}
+          style={{ position: 'absolute', left: `${minPercent}%`, top: '10px', width: '24px', height: '24px', marginLeft: '-12px', borderRadius: radius.pill, backgroundColor: palette.accentDeep, boxShadow: '0 4px 12px rgba(112, 56, 46, 0.22)' }}
+        />
+        <View
+          onTouchStart={(event: any) => startHandle('max', event)}
+          onTouchMove={(event: any) => updateFromTouch(event)}
+          style={{ position: 'absolute', left: `${maxPercent}%`, top: '10px', width: '24px', height: '24px', marginLeft: '-12px', borderRadius: radius.pill, backgroundColor: palette.accentDeep, boxShadow: '0 4px 12px rgba(112, 56, 46, 0.22)' }}
+        />
+      </View>
+    </View>
+  )
+}
+
 export default function EventsPage() {
   const [events, setEvents] = useState<EventItemWithInterest[]>([])
   const [filterOptions, setFilterOptions] = useState<AppFilterOptions['event']>(EVENT_FILTER_FALLBACKS)
@@ -266,17 +333,7 @@ export default function EventsPage() {
           <MultiFilterRow title='参与对象' options={filterOptions.audience} selected={audienceFilters} onChange={setAudienceFilters} />
           <View style={{ marginBottom: space(4) }}>
             <Text style={{ ...typography.bodyStrong, color: palette.brand }}>年龄区间</Text>
-            <View style={{ marginTop: space(2), marginBottom: space(1) }}>
-              <Text style={{ ...typography.caption, color: palette.subtext }}>{minAgeFilter}岁 - {maxAgeFilter >= AGE_FILTER_MAX ? `${AGE_FILTER_MAX}岁+` : `${maxAgeFilter}岁`}</Text>
-            </View>
-            <View style={{ marginBottom: space(2) }}>
-              <Text style={{ ...typography.micro, color: palette.muted }}>最小年龄</Text>
-              <Slider min={AGE_FILTER_MIN} max={AGE_FILTER_MAX} step={1} value={minAgeFilter} activeColor={palette.accentDeep} blockColor={palette.accentDeep} onChange={(e) => setMinAgeFilter(Math.min(Number(e.detail.value), maxAgeFilter))} />
-            </View>
-            <View>
-              <Text style={{ ...typography.micro, color: palette.muted }}>最大年龄</Text>
-              <Slider min={AGE_FILTER_MIN} max={AGE_FILTER_MAX} step={1} value={maxAgeFilter} activeColor={palette.accentDeep} blockColor={palette.accentDeep} onChange={(e) => setMaxAgeFilter(Math.max(Number(e.detail.value), minAgeFilter))} />
-            </View>
+            <AgeRangeSlider minValue={minAgeFilter} maxValue={maxAgeFilter} onChange={(minValue, maxValue) => { setMinAgeFilter(minValue); setMaxAgeFilter(maxValue) }} />
           </View>
           <MultiFilterRow title='状态' options={filterOptions.status} selected={statusFilters} onChange={setStatusFilters} labelFor={statusLabelFor} />
           <MultiFilterRow title='费用' options={filterOptions.fee} selected={feeFilters} onChange={setFeeFilters} />
