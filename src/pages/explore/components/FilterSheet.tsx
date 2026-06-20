@@ -101,12 +101,6 @@ export default function FilterSheet(props: FilterSheetProps) {
           </View>
         )}
 
-        <View style={{ backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: `${space(3)} ${space(3)}`, marginBottom: space(5), border: `1px solid ${palette.line}` }}>
-          <Text style={{ ...typography.caption, color: palette.subtext }}>
-            资料完整度和城市筛选已暂时收起，避免全国聚合数字和前端二次过滤结果不一致。后续若需要，会改为服务端统一筛选后再恢复。
-          </Text>
-        </View>
-
         <View style={{ display: 'flex', flexDirection: 'row' }}>
           <View style={{ flex: 1, marginRight: space(3) }}>
             <AppPrimaryButton text='重置' variant='ghost' size='md' marginBottom='0' onClick={onReset} />
