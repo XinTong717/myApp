@@ -2,9 +2,9 @@ import { useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { getCurrentInstance, useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { registerCurrentPageShare } from '../../utils/share'
+import { ensureCompletedProfileAccess, hasCompletedProfileAccess } from '../../utils/profileAccess'
 import { EVENT_CODE_MESSAGES } from '../../constants/cloudMessages'
 import { clearEventListCache, clearFavoriteEventsCache, getEventContactInfo, getEventDetail, getEventInterestInfo, submitEventCorrection, toggleEventInterest } from '../../services/event'
-import { getMe } from '../../services/profile'
 import { getDetailPreview } from '../../services/detailPreview'
 import { logCloudFailure, resolveCloudMessage } from '../../utils/cloudFeedback'
 import { palette } from '../../theme/palette'
@@ -124,7 +124,7 @@ function EventContent(props: {
       ) : (
         <AppCard backgroundColor={palette.cardSoft} radius={radius.md} padding={space(3)} marginBottom={space(3)} borderColor={palette.line}>
           <Text style={{ ...typography.caption, color: palette.brand, marginBottom: space(1) }}>组织者私人联系方式</Text>
-          <Text style={{ ...typography.meta, color: palette.subtext }}>{contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成“我的资料”填写后，可查看组织者私人联系方式。')}</Text>
+          <Text style={{ ...typography.meta, color: palette.subtext }}>{contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成个人资料后，可查看组织者私人联系方式。')}</Text>
         </AppCard>
       ))}
 
@@ -195,9 +195,8 @@ export default function EventDetailPage() {
 
   const loadProfileStatus = async () => {
     try {
-      const res = await getMe()
-      const profile = res.profile
-      setHasProfile(!!(profile && profile.displayName && profile.province && profile.city))
+      const access = await hasCompletedProfileAccess()
+      setHasProfile(access.ok)
     } catch (err) {
       console.error('loadProfileStatus error:', err)
       setHasProfile(false)
@@ -270,6 +269,15 @@ export default function EventDetailPage() {
       setPreviewEvent(preview)
       registerCurrentPageShare(buildEventShare(preview, id))
     } else registerCurrentPageShare(buildEventShare(null, id))
+
+    const canView = await ensureCompletedProfileAccess('resourceDetail')
+    if (!canView) {
+      setLoading(false)
+      setError('')
+      setEvent(null)
+      setTimeout(() => Taro.switchTab({ url: '/pages/events/index' }), 120)
+      return
+    }
 
     try {
       setLoading(true)
