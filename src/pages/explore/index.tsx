@@ -77,6 +77,35 @@ function showExploreOnboardingOnce() {
   }
 }
 
+function splitProvinceTokens(value?: string) {
+  return String(value || '')
+    .split(/[、,，/|｜\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function getSchoolProvinceLabels(school: School) {
+  const fromLocations = Array.isArray(school.locations)
+    ? school.locations.map((location) => String(location.province || '').trim()).filter(Boolean)
+    : []
+  const labels = fromLocations.length > 0 ? fromLocations : splitProvinceTokens(school.province)
+  return Array.from(new Set(labels))
+}
+
+function countSchoolsByProvince(schools: School[]) {
+  const provinceSchoolIds = new Map<string, Set<string>>()
+  schools.forEach((school, index) => {
+    const schoolId = String(school.id || school.canonical_name || school.name || index)
+    getSchoolProvinceLabels(school).forEach((province) => {
+      if (!provinceSchoolIds.has(province)) provinceSchoolIds.set(province, new Set())
+      provinceSchoolIds.get(province)?.add(schoolId)
+    })
+  })
+  const counts = new Map<string, number>()
+  provinceSchoolIds.forEach((schoolIds, province) => counts.set(province, schoolIds.size))
+  return counts
+}
+
 export default function ExplorePage() {
   const [schools, setSchools] = useState<School[]>([])
   const [appUsers, setAppUsers] = useState<AppUser[]>([])
@@ -196,19 +225,19 @@ export default function ExplorePage() {
       schoolsLoaded &&
       isSameMapUsersKey &&
       now - lastAutoRefreshAtRef.current < EXPLORE_REFRESH_TTL
-  
+   
     if (shouldSkip) return
-  
+   
     hasLoadedOnceRef.current = true
     lastAutoRefreshAtRef.current = now
     loadData({ forceRefreshMapUsers: !!options.forceRefreshMapUsers, refreshSchools: !!options.refreshSchools })
   }
-  
+   
   useDidShow(async () => {
     const shouldForceRefresh = await consumeExploreForceRefreshFlag()
     refreshData({ force: shouldForceRefresh, forceRefreshMapUsers: shouldForceRefresh, refreshSchools: shouldForceRefresh })
   })
-  
+   
   useEffect(() => {
     if (isFirstRunRef.current) {
       isFirstRunRef.current = false
@@ -242,11 +271,16 @@ export default function ExplorePage() {
     showExploreOnboardingOnce()
   }, [loading, error, validMarkers.length])
 
+  const provinceSchoolCounts = useMemo(() => countSchoolsByProvince(schools), [schools])
   const availableProvinces = useMemo(() => {
     const set = new Set<string>()
     allMarkers.forEach((m) => { if (m.markerProv) set.add(m.markerProv) })
-    return Array.from(set).sort()
-  }, [allMarkers])
+    return Array.from(set).sort((a, b) => {
+      const countDiff = (provinceSchoolCounts.get(b) || 0) - (provinceSchoolCounts.get(a) || 0)
+      if (countDiff !== 0) return countDiff
+      return a.localeCompare(b, 'zh-CN')
+    })
+  }, [allMarkers, provinceSchoolCounts])
 
   const userCount = useMemo(() => filteredMarkers.reduce((sum, m) => {
     if (m.type === 'user') return sum + 1
