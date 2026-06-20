@@ -28,6 +28,10 @@ const EVENT_FIELD_SELECTION = {
   event_types: true,
   audience_who: true,
   min_age_requirement: true,
+  max_age_requirement: true,
+  signup_deadline: true,
+  is_recurring: true,
+  recurrence_pattern: true,
   fee_category: true,
   description: true,
   start_time: true,
@@ -39,28 +43,12 @@ const EVENT_FIELD_SELECTION = {
   is_online: true,
 }
 const CORRECTION_TARGETS = {
-  school: {
-    collection: 'school_corrections',
-    idField: 'schoolId',
-    titleField: 'schoolName',
-    missingMessage: '缺少学习社区信息',
-  },
-  event: {
-    collection: 'event_corrections',
-    idField: 'eventId',
-    titleField: 'eventTitle',
-    missingMessage: '缺少活动信息',
-  },
+  school: { collection: 'school_corrections', idField: 'schoolId', titleField: 'schoolName', missingMessage: '缺少学习社区信息' },
+  event: { collection: 'event_corrections', idField: 'eventId', titleField: 'eventTitle', missingMessage: '缺少活动信息' },
 }
 
-function buildInterestDocId(eventId, openid) {
-  return `event_${eventId}_${openid}`
-}
-
-function buildCountDocId(eventId) {
-  return String(eventId)
-}
-
+function buildInterestDocId(eventId, openid) { return `event_${eventId}_${openid}` }
+function buildCountDocId(eventId) { return String(eventId) }
 function buildContentSecurityFields(sec = {}) {
   return {
     contentSecurityStatus: sec.contentSecurityStatus || 'unknown',
@@ -75,7 +63,7 @@ function pickStringFields(event, allowed) {
   const cleanData = { updatedAt: db.serverDate() }
   for (const key of allowed) {
     if (event[key] === undefined) continue
-    if (key === 'isOnline') cleanData[key] = !!event[key]
+    if (key === 'isOnline' || key === 'isRecurring') cleanData[key] = !!event[key]
     else if (['eventTypes', 'audienceWho', 'schoolType', 'ageRange'].includes(key)) cleanData[key] = normalizeStringArray(event[key])
     else cleanData[key] = String(event[key] || '').trim()
   }
@@ -86,9 +74,7 @@ async function getCachedCount(eventId) {
   try {
     const cacheRes = await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).get()
     return Number(cacheRes.data?.count || 0)
-  } catch (err) {
-    return null
-  }
+  } catch (err) { return null }
 }
 
 async function getCachedCounts(eventIds) {
@@ -98,9 +84,7 @@ async function getCachedCounts(eventIds) {
     try {
       const cachedRes = await db.collection(COUNT_COLLECTION).where({ _id: _.in(ids) }).get()
       for (const item of cachedRes.data || []) counts[Number(item.eventId || item._id)] = Number(item.count || 0)
-    } catch (err) {
-      console.warn('event interest count cache read skipped:', err)
-    }
+    } catch (err) { console.warn('event interest count cache read skipped:', err) }
   }
   for (const eventId of eventIds) if (!Object.prototype.hasOwnProperty.call(counts, eventId)) counts[eventId] = 0
   return counts
@@ -116,9 +100,7 @@ async function adjustInterestCountCache(eventId, delta) {
     try {
       await db.collection(COUNT_COLLECTION).doc(docId).set({ data: { eventId, count: 0, updatedAt: db.serverDate(), createdAt: db.serverDate() } })
       await db.collection(COUNT_COLLECTION).doc(docId).update({ data: { eventId, count: _.inc(safeDelta), updatedAt: db.serverDate() } })
-    } catch (initErr) {
-      console.warn('event interest count initialize+inc degraded:', initErr)
-    }
+    } catch (initErr) { console.warn('event interest count initialize+inc degraded:', initErr) }
   }
 }
 
@@ -129,17 +111,7 @@ function attachInterestCounts(events, counts = {}) {
 async function getSchools(event) {
   const requestId = resolveRequestId('get-schools', event)
   try {
-    const schools = await listSchools({
-      limit: event?.limit,
-      province: event?.province,
-      provinces: event?.provinces,
-      city: event?.city,
-      cities: event?.cities,
-      schoolType: event?.schoolType || event?.type,
-      schoolTypes: event?.schoolTypes || event?.types,
-      ageRange: event?.ageRange,
-      ageRanges: event?.ageRanges,
-    })
+    const schools = await listSchools({ limit: event?.limit, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
     return ok(requestId, { schools })
   } catch (err) {
     console.error('appService getSchools error:', err)
@@ -150,17 +122,7 @@ async function getSchools(event) {
 async function getSchoolMarkers(event) {
   const requestId = resolveRequestId('get-school-markers', event)
   try {
-    const schools = await listSchoolMarkers({
-      limit: event?.limit,
-      province: event?.province,
-      provinces: event?.provinces,
-      city: event?.city,
-      cities: event?.cities,
-      schoolType: event?.schoolType || event?.type,
-      schoolTypes: event?.schoolTypes || event?.types,
-      ageRange: event?.ageRange,
-      ageRanges: event?.ageRanges,
-    })
+    const schools = await listSchoolMarkers({ limit: event?.limit, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
     return ok(requestId, { schools })
   } catch (err) {
     console.error('appService getSchoolMarkers error:', err)
@@ -214,30 +176,13 @@ async function submitCorrection(event, wxContext) {
   const targetId = Number(event.targetId || 0)
   const targetTitle = String(event.targetTitle || '').trim()
   const content = String(event.content || '').trim()
-
   if (!content) return fail(requestId, 'CONTENT_REQUIRED', '内容不能为空')
   if (!config) return fail(requestId, 'INVALID_TARGET_TYPE', '纠错对象类型不合法')
   if (!targetId) return fail(requestId, 'BAD_REQUEST', config.missingMessage)
-
   const sec = await runMsgSecCheck({ content, openid, scene: 2, blockedMessage: '内容包含不合规信息，请修改后重试', failedMessage: '内容审核失败，请稍后重试' })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
-
   try {
-    await db.collection(config.collection).add({
-      data: {
-        openid,
-        targetType,
-        targetId,
-        targetTitle,
-        [config.idField]: targetId,
-        [config.titleField]: targetTitle,
-        content,
-        ...buildContentSecurityFields(sec),
-        status: 'pending',
-        createdAt: db.serverDate(),
-        updatedAt: db.serverDate(),
-      },
-    })
+    await db.collection(config.collection).add({ data: { openid, targetType, targetId, targetTitle, [config.idField]: targetId, [config.titleField]: targetTitle, content, ...buildContentSecurityFields(sec), status: 'pending', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
     return ok(requestId, { message: '提交成功' })
   } catch (err) {
     console.error('appService submitCorrection error:', err)
@@ -277,7 +222,7 @@ async function submitSchool(event, wxContext) {
 async function submitEvent(event, wxContext) {
   const requestId = resolveRequestId('submit-event', event)
   const openid = wxContext.OPENID
-  const cleanData = pickStringFields(event, ['title', 'province', 'city', 'eventTypes', 'eventTypeOther', 'audienceWho', 'audienceWhoOther', 'minAgeRequirement', 'startTime', 'endTime', 'isOnline', 'location', 'fee', 'feeDetail', 'organizer', 'organizerContact', 'officialUrl', 'signupNote', 'description'])
+  const cleanData = pickStringFields(event, ['title', 'province', 'city', 'eventTypes', 'eventTypeOther', 'audienceWho', 'audienceWhoOther', 'minAgeRequirement', 'maxAgeRequirement', 'startTime', 'endTime', 'signupDeadline', 'isRecurring', 'recurrencePattern', 'isOnline', 'location', 'fee', 'feeDetail', 'organizer', 'organizerContact', 'officialUrl', 'signupNote', 'description'])
   cleanData.eventTypes = mergeOtherOption(cleanData.eventTypes || [], cleanData.eventTypeOther)
   cleanData.audienceWho = mergeOtherOption(cleanData.audienceWho || [], cleanData.audienceWhoOther)
   cleanData.eventType = (cleanData.eventTypes || []).find((item) => !String(item).startsWith('其他：')) || (cleanData.eventTypes || [])[0] || ''
@@ -287,9 +232,9 @@ async function submitEvent(event, wxContext) {
   if (!cleanData.description) return fail(requestId, 'DESCRIPTION_REQUIRED', '请填写活动简介')
   if (!cleanData.organizer) return fail(requestId, 'ORGANIZER_REQUIRED', '请填写组织者')
   if (!cleanData.fee) return fail(requestId, 'FEE_REQUIRED', '请填写费用信息')
-  if (cleanData.officialUrl && !/^https?:\/\//i.test(cleanData.officialUrl)) return fail(requestId, 'INVALID_OFFICIAL_URL', '公开主页或报名链接需以 http:// 或 https:// 开头')
+  if (cleanData.isRecurring && !cleanData.recurrencePattern) return fail(requestId, 'RECURRENCE_REQUIRED', '请选择周期时间')
   const over = (v, m) => String(v || '').length > m
-  const lengthError = over(cleanData.title, 80) && '活动标题不能超过80字' || over(cleanData.city, 30) && '城市不能超过30字' || over(cleanData.location, 120) && '地点不能超过120字' || over(cleanData.fee, 80) && '费用说明不能超过80字' || over(cleanData.feeDetail, 200) && '费用补充说明不能超过200字' || over(cleanData.organizer, 80) && '组织者不能超过80字' || over(cleanData.organizerContact, 200) && '组织者联系方式不能超过200字' || over(cleanData.signupNote, 300) && '报名方式补充说明不能超过300字' || over(cleanData.description, 2000) && '活动简介不能超过2000字'
+  const lengthError = over(cleanData.title, 80) && '活动标题不能超过80字' || over(cleanData.city, 30) && '城市不能超过30字' || over(cleanData.location, 120) && '地点不能超过120字' || over(cleanData.fee, 80) && '费用说明不能超过80字' || over(cleanData.feeDetail, 200) && '费用补充说明不能超过200字' || over(cleanData.organizer, 80) && '组织者不能超过80字' || over(cleanData.organizerContact, 200) && '组织者联系方式不能超过200字' || over(cleanData.officialUrl, 300) && '公开链接不能超过300字' || over(cleanData.signupNote, 300) && '报名方式补充说明不能超过300字' || over(cleanData.description, 2000) && '活动简介不能超过2000字'
   if (lengthError) return fail(requestId, 'INVALID_LENGTH', lengthError)
   const startDate = new Date(cleanData.startTime)
   if (Number.isNaN(startDate.getTime())) return fail(requestId, 'INVALID_START_TIME', '开始时间格式不正确')
@@ -298,17 +243,21 @@ async function submitEvent(event, wxContext) {
     if (Number.isNaN(endDate.getTime())) return fail(requestId, 'INVALID_END_TIME', '结束时间格式不正确')
     if (endDate.getTime() < startDate.getTime()) return fail(requestId, 'END_BEFORE_START', '结束时间不能早于开始时间')
   }
+  if (cleanData.signupDeadline) {
+    const deadlineDate = new Date(cleanData.signupDeadline)
+    if (Number.isNaN(deadlineDate.getTime())) return fail(requestId, 'INVALID_SIGNUP_DEADLINE', '报名截止时间格式不正确')
+  }
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const recentCountRes = await db.collection('event_submissions').where({ openid, createdAt: _.gte(since) }).count()
   if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) return fail(requestId, 'DAILY_LIMIT_REACHED', '24小时内最多可提交5次活动，请稍后再试')
-  const sec = await runMsgSecCheck({ content: [cleanData.title, stringifyLabels(cleanData.eventTypes || []), stringifyLabels(cleanData.audienceWho || []), cleanData.minAgeRequirement, cleanData.location, cleanData.fee, cleanData.feeDetail, cleanData.organizer, cleanData.organizerContact, cleanData.officialUrl, cleanData.signupNote, cleanData.description].filter(Boolean).join('\n'), openid, scene: 2 })
+  const sec = await runMsgSecCheck({ content: [cleanData.title, stringifyLabels(cleanData.eventTypes || []), stringifyLabels(cleanData.audienceWho || []), cleanData.minAgeRequirement, cleanData.maxAgeRequirement, cleanData.signupDeadline, cleanData.recurrencePattern, cleanData.location, cleanData.fee, cleanData.feeDetail, cleanData.organizer, cleanData.organizerContact, cleanData.officialUrl, cleanData.signupNote, cleanData.description].filter(Boolean).join('\n'), openid, scene: 2 })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
   const normalizedKey = [cleanData.title, cleanData.province, cleanData.city, cleanData.startTime].map((item) => String(item || '').trim().toLowerCase()).join('::')
   const existing = await db.collection('event_submissions').where({ normalizedKey, status: _.in(ACTIVE_SUBMISSION_STATUSES) }).limit(1).get()
   if (existing.data.length > 0) return fail(requestId, 'DUPLICATE_SUBMISSION', '这个活动已在审核队列或已收录，无需重复提交')
   const submitter = await getUserProfileByOpenid(openid, ['displayName', 'roles', 'city']) || {}
   try {
-    await db.collection('event_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, title: cleanData.title, province: cleanData.province, city: cleanData.city, eventType: cleanData.eventType || '', eventTypes: cleanData.eventTypes || [], audienceWho: stringifyLabels(cleanData.audienceWho || []), audienceWhoTags: cleanData.audienceWho || [], minAgeRequirement: cleanData.minAgeRequirement || '', startTime: cleanData.startTime, endTime: cleanData.endTime || '', isOnline: !!cleanData.isOnline, location: cleanData.location || '', fee: cleanData.fee || '', feeDetail: cleanData.feeDetail || '', organizer: cleanData.organizer || '', organizerContact: cleanData.organizerContact || '', officialUrl: cleanData.officialUrl || '', signupNote: cleanData.signupNote || '', description: cleanData.description || '', ...buildContentSecurityFields(sec), status: 'pending', adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
+    await db.collection('event_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, title: cleanData.title, province: cleanData.province, city: cleanData.city, eventType: cleanData.eventType || '', eventTypes: cleanData.eventTypes || [], audienceWho: stringifyLabels(cleanData.audienceWho || []), audienceWhoTags: cleanData.audienceWho || [], minAgeRequirement: cleanData.minAgeRequirement || '', maxAgeRequirement: cleanData.maxAgeRequirement || '', startTime: cleanData.startTime, endTime: cleanData.endTime || '', signupDeadline: cleanData.signupDeadline || '', isRecurring: !!cleanData.isRecurring, recurrencePattern: cleanData.isRecurring ? cleanData.recurrencePattern || '' : '', isOnline: !!cleanData.isOnline, location: cleanData.location || '', fee: cleanData.fee || '', feeDetail: cleanData.feeDetail || '', organizer: cleanData.organizer || '', organizerContact: cleanData.organizerContact || '', officialUrl: cleanData.officialUrl || '', signupNote: cleanData.signupNote || '', description: cleanData.description || '', ...buildContentSecurityFields(sec), status: 'pending', adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
     return ok(requestId, { message: '提交成功，已进入审核队列' })
   } catch (err) {
     console.error('appService submitEvent error:', err)
@@ -320,12 +269,8 @@ async function getEventInterestCountsBatch(event) {
   const requestId = resolveRequestId('event-interest-counts', event)
   const eventIds = Array.isArray(event.eventIds) ? event.eventIds.slice(0, 50).map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0) : []
   if (eventIds.length === 0) return ok(requestId, { counts: {} })
-  try {
-    return ok(requestId, { counts: await getCachedCounts(eventIds) })
-  } catch (err) {
-    console.warn('appService getEventInterestCountsBatch degraded:', err)
-    return ok(requestId, { counts: {}, degraded: true })
-  }
+  try { return ok(requestId, { counts: await getCachedCounts(eventIds) }) }
+  catch (err) { console.warn('appService getEventInterestCountsBatch degraded:', err); return ok(requestId, { counts: {}, degraded: true }) }
 }
 
 async function getEventInterestInfo(event, wxContext) {
@@ -338,10 +283,7 @@ async function getEventInterestInfo(event, wxContext) {
   try {
     const stableRes = await db.collection('event_interest').doc(buildInterestDocId(eventId, openid)).get()
     hasInterested = stableRes.data?.status === 'interested'
-  } catch (err) {
-    degraded = true
-    console.warn('getEventInterestInfo canonical read failed:', err)
-  }
+  } catch (err) { degraded = true; console.warn('getEventInterestInfo canonical read failed:', err) }
   const cachedCount = await getCachedCount(eventId)
   return ok(requestId, { count: cachedCount === null ? 0 : cachedCount, hasInterested, degraded })
 }
@@ -377,21 +319,10 @@ async function getMyFavoriteEvents(event, wxContext) {
   const openid = wxContext.OPENID
   const limit = Math.min(Math.max(Number(event?.limit || 20), 1), 50)
   try {
-    const favoriteRes = await db.collection('event_interest')
-      .where({ openid, status: 'interested' })
-      .field({ eventId: true, updatedAt: true })
-      .orderBy('updatedAt', 'desc')
-      .limit(limit)
-      .get()
-    const favoriteRows = favoriteRes.data || []
-    const eventIds = favoriteRows.map((item) => Number(item.eventId)).filter((id) => Number.isFinite(id) && id > 0)
+    const favoriteRes = await db.collection('event_interest').where({ openid, status: 'interested' }).field({ eventId: true, updatedAt: true }).orderBy('updatedAt', 'desc').limit(limit).get()
+    const eventIds = (favoriteRes.data || []).map((item) => Number(item.eventId)).filter((id) => Number.isFinite(id) && id > 0)
     if (eventIds.length === 0) return ok(requestId, { events: [] })
-
-    const eventRes = await db.collection('events')
-      .where({ id: _.in(eventIds) })
-      .field(EVENT_FIELD_SELECTION)
-      .limit(eventIds.length)
-      .get()
+    const eventRes = await db.collection('events').where({ id: _.in(eventIds) }).field(EVENT_FIELD_SELECTION).limit(eventIds.length).get()
     const eventMap = new Map((eventRes.data || []).map((item) => [Number(item.id), item]))
     const counts = await getCachedCounts(eventIds)
     const events = eventIds.map((id) => eventMap.get(id)).filter(Boolean).map((item) => ({ ...item, interest_count: counts[Number(item.id)] || 0 }))
@@ -402,17 +333,4 @@ async function getMyFavoriteEvents(event, wxContext) {
   }
 }
 
-module.exports = {
-  getSchools,
-  getSchoolMarkers,
-  getSchoolDetail,
-  getEvents,
-  getEventDetail,
-  submitCorrection,
-  submitSchool,
-  submitEvent,
-  getEventInterestCountsBatch,
-  getEventInterestInfo,
-  toggleEventInterest,
-  getMyFavoriteEvents,
-}
+module.exports = { getSchools, getSchoolMarkers, getSchoolDetail, getEvents, getEventDetail, submitCorrection, submitSchool, submitEvent, getEventInterestCountsBatch, getEventInterestInfo, toggleEventInterest, getMyFavoriteEvents }
