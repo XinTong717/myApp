@@ -33,6 +33,22 @@ const SCHOOL_SHARE = {
 
 type School = SchoolItem
 
+type AgeBucket = {
+  label: string
+  min: number
+  max: number
+  keywords?: string[]
+}
+
+const AGE_BUCKETS: AgeBucket[] = [
+  { label: '0-6', min: 0, max: 6, keywords: ['学龄前', '幼儿', '幼小'] },
+  { label: '7-12', min: 7, max: 12, keywords: ['小学', '儿童'] },
+  { label: '13-15', min: 13, max: 15, keywords: ['初中', '中学', '青少年'] },
+  { label: '16-18', min: 16, max: 18, keywords: ['高中', '中学', '青少年'] },
+  { label: '19-24', min: 19, max: 24, keywords: ['大学', '青年', '成人'] },
+  { label: '25+', min: 25, max: Number.POSITIVE_INFINITY, keywords: ['成人'] },
+]
+
 function FilterChip(props: { label: string; active: boolean; onClick: () => void }) {
   return <AppChip text={props.label} tone='brand' size='md' selected={props.active} interactive onClick={props.onClick} />
 }
@@ -44,13 +60,97 @@ function splitTokens(value?: string) {
     .filter(Boolean)
 }
 
-function uniqueValues(values: string[], max = SCHOOL_FILTER_FALLBACKS.maxDynamicOptions) {
-  return Array.from(new Set(values.filter(Boolean))).slice(0, max)
+function getStableSchoolId(item: School, index: number) {
+  return String(item.id || item.canonical_name || item.name || index)
 }
 
-function withAllOption(allOption: string, preferred: string[], fallback: string[], max: number) {
-  const options = preferred.length > 0 ? preferred : uniqueValues(fallback, max)
-  return [allOption, ...options.filter((item) => item && item !== allOption)]
+function buildOptionCountMap(source: School[], getLabels: (item: School) => string[]) {
+  const counts = new Map<string, Set<string>>()
+  source.forEach((item, index) => {
+    const schoolId = getStableSchoolId(item, index)
+    Array.from(new Set(getLabels(item).filter(Boolean))).forEach((label) => {
+      if (!counts.has(label)) counts.set(label, new Set())
+      counts.get(label)?.add(schoolId)
+    })
+  })
+  return counts
+}
+
+function optionCount(counts: Map<string, Set<string>>, option: string) {
+  return counts.get(option)?.size || 0
+}
+
+function sortOptionsByCount(options: string[], counts: Map<string, Set<string>>) {
+  return [...options].sort((a, b) => {
+    const countDiff = optionCount(counts, b) - optionCount(counts, a)
+    if (countDiff !== 0) return countDiff
+    return a.localeCompare(b, 'zh-CN')
+  })
+}
+
+function countedOptions(allOption: string, preferred: string[], counts: Map<string, Set<string>>, max: number) {
+  const sourceOptions = preferred.length > 0 ? preferred : Array.from(counts.keys())
+  const options = sortOptionsByCount(
+    Array.from(new Set(sourceOptions.filter((item) => item && item !== allOption && optionCount(counts, item) > 0))),
+    counts
+  ).slice(0, max)
+  return [allOption, ...options]
+}
+
+function normalizeAgeText(value?: string) {
+  return String(value || '')
+    .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    .replace(/[~～—–至到]/g, '-')
+    .trim()
+}
+
+function getAgeSpans(value?: string): Array<{ min: number; max: number }> {
+  const text = normalizeAgeText(value)
+  if (!text) return []
+
+  const spans: Array<{ min: number; max: number }> = []
+  const rangePattern = /(\d{1,2})\s*(?:岁)?\s*-\s*(\d{1,2})/g
+  let rangeMatch: RegExpExecArray | null
+  while ((rangeMatch = rangePattern.exec(text))) {
+    const a = Number(rangeMatch[1])
+    const b = Number(rangeMatch[2])
+    if (Number.isFinite(a) && Number.isFinite(b)) spans.push({ min: Math.min(a, b), max: Math.max(a, b) })
+  }
+
+  const plusPattern = /(\d{1,2})\s*(?:岁)?\s*(?:\+|以上|及以上)/g
+  let plusMatch: RegExpExecArray | null
+  while ((plusMatch = plusPattern.exec(text))) {
+    const min = Number(plusMatch[1])
+    if (Number.isFinite(min)) spans.push({ min, max: Number.POSITIVE_INFINITY })
+  }
+
+  const underPattern = /(\d{1,2})\s*(?:岁)?\s*(?:以下|以内|以下儿童)/g
+  let underMatch: RegExpExecArray | null
+  while ((underMatch = underPattern.exec(text))) {
+    const max = Number(underMatch[1])
+    if (Number.isFinite(max)) spans.push({ min: 0, max })
+  }
+
+  if (spans.length > 0) return spans
+
+  return AGE_BUCKETS
+    .filter((bucket) => (bucket.keywords || []).some((keyword) => text.includes(keyword)))
+    .map((bucket) => ({ min: bucket.min, max: bucket.max }))
+}
+
+function rangesOverlap(a: { min: number; max: number }, b: { min: number; max: number }) {
+  return Math.max(a.min, b.min) <= Math.min(a.max, b.max)
+}
+
+function ageRangeMatchesBucket(value: string | undefined, bucketLabel: string) {
+  const bucket = AGE_BUCKETS.find((item) => item.label === bucketLabel)
+  if (!bucket) return false
+  const spans = getAgeSpans(value)
+  return spans.some((span) => rangesOverlap(span, bucket))
+}
+
+function ageBucketLabels(value?: string) {
+  return AGE_BUCKETS.filter((bucket) => ageRangeMatchesBucket(value, bucket.label)).map((bucket) => bucket.label)
 }
 
 function getLocations(item: School): SchoolLocationItem[] {
@@ -129,7 +229,6 @@ export default function SchoolsPage() {
         limit: listLimit,
         ...(useFilters && selectedProvinces.length > 0 ? { province: selectedProvinces } : {}),
         ...(useFilters && selectedTypes.length > 0 ? { schoolType: selectedTypes } : {}),
-        ...(useFilters && selectedAgeRanges.length > 0 ? { ageRange: selectedAgeRanges } : {}),
       })
       const nextSchools = Array.isArray(result.schools) ? result.schools : []
       setSchools(nextSchools)
@@ -184,9 +283,12 @@ export default function SchoolsPage() {
   })
 
   const optionSource = filterSourceSchools.length > 0 ? filterSourceSchools : schools
-  const provinceOptions = useMemo(() => withAllOption(allFilter, filterSettings.provinces || [], optionSource.flatMap((item) => getLocations(item).map((location) => location.province || '')), maxDynamicOptions), [optionSource, allFilter, maxDynamicOptions, filterSettings.provinces])
-  const typeOptions = useMemo(() => withAllOption(allFilter, filterSettings.schoolTypes || [], optionSource.flatMap((item) => splitTokens(item.school_type)), maxDynamicOptions), [optionSource, allFilter, maxDynamicOptions, filterSettings.schoolTypes])
-  const ageOptions = useMemo(() => withAllOption(allFilter, filterSettings.ageRanges || [], optionSource.flatMap((item) => splitTokens(item.age_range)), maxDynamicOptions), [optionSource, allFilter, maxDynamicOptions, filterSettings.ageRanges])
+  const provinceCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => getLocations(item).map((location) => location.province || '')), [optionSource])
+  const typeCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => splitTokens(item.school_type)), [optionSource])
+  const ageCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => ageBucketLabels(item.age_range)), [optionSource])
+  const provinceOptions = useMemo(() => countedOptions(allFilter, filterSettings.provinces || [], provinceCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, filterSettings.provinces, provinceCounts])
+  const typeOptions = useMemo(() => countedOptions(allFilter, filterSettings.schoolTypes || [], typeCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, filterSettings.schoolTypes, typeCounts])
+  const ageOptions = useMemo(() => countedOptions(allFilter, AGE_BUCKETS.map((item) => item.label), ageCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, ageCounts])
 
   const filteredSchools = useMemo(() => {
     const q = keyword.trim().toLowerCase()
@@ -194,14 +296,15 @@ export default function SchoolsPage() {
       const haystack = [item.name, item.canonical_name, item.province, item.city, getLocationHaystack(item), item.school_type, item.age_range, item.fee]
         .filter(Boolean).join(' ').toLowerCase()
       if (q && !haystack.includes(q)) return false
+      if (selectedAgeRanges.length > 0 && !selectedAgeRanges.some((ageRange) => ageRangeMatchesBucket(item.age_range, ageRange))) return false
       return true
     })
-  }, [schools, keyword])
+  }, [schools, keyword, selectedAgeRanges])
 
   const activeFilterSummary = [
     formatSelectedSummary(selectedProvinces, '地区'),
     formatSelectedSummary(selectedTypes, '类型'),
-    formatSelectedSummary(selectedAgeRanges, '阶段'),
+    formatSelectedSummary(selectedAgeRanges, '年龄段'),
   ].filter(Boolean).join(' · ')
 
   const resetFilters = () => {
@@ -260,7 +363,7 @@ export default function SchoolsPage() {
             <FilterChip key={option} label={option} active={isMultiActive(selectedTypes, option, allFilter)} onClick={() => setSelectedTypes((current) => toggleMultiFilter(current, option, allFilter))} />
           ))}
         </AppFilterRow>
-        <AppFilterRow title='阶段'>
+        <AppFilterRow title='年龄段'>
           {ageOptions.map((option) => (
             <FilterChip key={option} label={option} active={isMultiActive(selectedAgeRanges, option, allFilter)} onClick={() => setSelectedAgeRanges((current) => toggleMultiFilter(current, option, allFilter))} />
           ))}
@@ -299,7 +402,7 @@ export default function SchoolsPage() {
 
             <View className='app-list-card__meta-box'>
               <View className='app-list-card__meta-line'>
-                <Text className='text-meta text-color-sub'>适合阶段：{item.age_range || '未填写'}</Text>
+                <Text className='text-meta text-color-sub'>适合年龄段：{item.age_range || '未填写'}</Text>
               </View>
               <View className='app-list-card__meta-line'>
                 <Text className='text-meta text-color-sub'>费用：{item.fee || '未填写'}</Text>
