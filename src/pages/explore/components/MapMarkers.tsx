@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Map as TaroMap, Text, View } from '@tarojs/components'
 import { palette } from '../../../theme/palette'
 import { radius, space } from '../../../theme/spacing'
@@ -27,6 +27,7 @@ type MapMarkersProps = {
 }
 
 const EMPTY_STATE_DELAY_MS = 360
+const DEFAULT_CENTER = { latitude: 33.0, longitude: 108.0 }
 
 const cardStyle = {
   backgroundColor: exploreTheme.card,
@@ -45,6 +46,41 @@ function CenteredText(props: { text: string; strong?: boolean; color?: string })
       </View>
     </View>
   )
+}
+
+function isFiniteCoordinate(latitude: number, longitude: number) {
+  return Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180
+}
+
+function normalizeMapMarker(marker: any, index: number) {
+  const latitude = Number(marker?.latitude)
+  const longitude = Number(marker?.longitude)
+  if (!isFiniteCoordinate(latitude, longitude)) return null
+
+  const id = Number(marker?.id)
+  return {
+    ...marker,
+    id: Number.isFinite(id) ? id : index + 1,
+    latitude,
+    longitude,
+  }
+}
+
+function buildMarkerSignature(markers: any[]) {
+  return markers
+    .map((marker) => `${marker.id}:${Number(marker.latitude).toFixed(5)},${Number(marker.longitude).toFixed(5)}`)
+    .join('|')
+}
+
+function getSafeCenter(center: { latitude: number; longitude: number }, markers: any[]) {
+  const latitude = Number(center?.latitude)
+  const longitude = Number(center?.longitude)
+  if (isFiniteCoordinate(latitude, longitude)) return { latitude, longitude }
+
+  if (markers.length === 0) return DEFAULT_CENTER
+  const lat = markers.reduce((sum, marker) => sum + Number(marker.latitude), 0) / markers.length
+  const lng = markers.reduce((sum, marker) => sum + Number(marker.longitude), 0) / markers.length
+  return isFiniteCoordinate(lat, lng) ? { latitude: lat, longitude: lng } : DEFAULT_CENTER
 }
 
 export default function MapMarkers(props: MapMarkersProps) {
@@ -70,6 +106,14 @@ export default function MapMarkers(props: MapMarkersProps) {
   } = props
 
   const [emptyStateReady, setEmptyStateReady] = useState(false)
+  const safeMapMarkers = useMemo(() => {
+    return (Array.isArray(mapMarkers) ? mapMarkers : [])
+      .map((marker, index) => normalizeMapMarker(marker, index))
+      .filter(Boolean)
+  }, [mapMarkers])
+  const safeCenter = useMemo(() => getSafeCenter(center, safeMapMarkers), [center, safeMapMarkers])
+  const markerSignature = useMemo(() => buildMarkerSignature(safeMapMarkers), [safeMapMarkers])
+  const safeCanRenderMap = canRenderMap && safeMapMarkers.length > 0 && isFiniteCoordinate(safeCenter.latitude, safeCenter.longitude)
 
   useEffect(() => {
     setEmptyStateReady(false)
@@ -79,13 +123,13 @@ export default function MapMarkers(props: MapMarkersProps) {
       !error &&
       isProvinceDataSettled &&
       !isNavigatingAway &&
-      !canRenderMap
+      !safeCanRenderMap
 
     if (!shouldArmEmptyState) return undefined
 
     const timer = setTimeout(() => setEmptyStateReady(true), EMPTY_STATE_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [loading, error, isProvinceDataSettled, isNavigatingAway, canRenderMap, selectedProvince, mapMarkers.length])
+  }, [loading, error, isProvinceDataSettled, isNavigatingAway, safeCanRenderMap, selectedProvince, markerSignature])
 
   if (error) {
     return (
@@ -115,7 +159,7 @@ export default function MapMarkers(props: MapMarkersProps) {
     return <CenteredText text='页面跳转中…' strong />
   }
 
-  if (!canRenderMap && !emptyStateReady) {
+  if (!safeCanRenderMap && !emptyStateReady) {
     const provinceLabel = selectedProvince || '全国'
     return (
       <View style={{ padding: `${space(8)} ${space(5)}`, textAlign: 'center' }}>
@@ -126,7 +170,7 @@ export default function MapMarkers(props: MapMarkersProps) {
     )
   }
 
-  if (!canRenderMap) {
+  if (!safeCanRenderMap) {
     return (
       <CenteredText
         text={selectedProvince ? `${selectedProvince}暂无数据` : '暂无点位'}
@@ -141,13 +185,13 @@ export default function MapMarkers(props: MapMarkersProps) {
 
   return (
     <TaroMap
-      key={`${selectedProvince || 'all'}-${mapMarkers.length}-${center.latitude.toFixed(3)}-${center.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${shouldShowSchoolLabels ? 'school-label' : 'school-dot'}-${hasUserClusters ? 'user-cluster' : 'user-plain'}-${hasSchoolClusters ? 'school-cluster' : 'school-plain'}`}
-      latitude={center.latitude}
-      longitude={center.longitude}
+      key={`${selectedProvince || 'all'}-${markerSignature}-${safeCenter.latitude.toFixed(3)}-${safeCenter.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${shouldShowSchoolLabels ? 'school-label' : 'school-dot'}-${hasUserClusters ? 'user-cluster' : 'user-plain'}-${hasSchoolClusters ? 'school-cluster' : 'school-plain'}`}
+      latitude={safeCenter.latitude}
+      longitude={safeCenter.longitude}
       scale={scale}
       minScale={3}
       maxScale={18}
-      markers={mapMarkers}
+      markers={safeMapMarkers}
       showScale={false}
       enableRotate={false}
       enableOverlooking={false}
