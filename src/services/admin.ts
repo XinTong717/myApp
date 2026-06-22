@@ -5,6 +5,7 @@ import type {
   ListSchoolSubmissionsResult,
   ReviewEventSubmissionResult,
   ReviewSchoolSubmissionResult,
+  SchoolPublishPayloadResult,
 } from '../types/domain'
 
 export async function listEventSubmissions(status: string, limit = 50) {
@@ -26,6 +27,10 @@ export async function reviewEventSubmission(data: {
 
 export async function listSchoolSubmissions(status: string, limit = 50) {
   return callCloud<ListSchoolSubmissionsResult>('listSchoolSubmissions', { status, limit })
+}
+
+export async function getSchoolPublishPayload(submissionId: string) {
+  return callCloud<SchoolPublishPayloadResult>('getSchoolPublishPayload', { submissionId })
 }
 
 export async function reviewSchoolSubmission(data: {
