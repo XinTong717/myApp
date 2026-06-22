@@ -9,6 +9,62 @@ const {
   stringifyLabels,
 } = require('../lib/eventPublishPayload')
 
+function normalizeString(value) {
+  return String(value || '').trim()
+}
+
+function normalizeLabelArray(value) {
+  const list = Array.isArray(value) ? value : String(value || '').split(/[、,，/|｜]+/)
+  return Array.from(new Set(list.map(normalizeString).filter(Boolean)))
+}
+
+function getSchoolTypeText(submission) {
+  return normalizeString(submission.schoolType) || stringifyLabels(submission.schoolTypes || [])
+}
+
+function getAgeRangeText(submission) {
+  return normalizeString(submission.ageRange) || stringifyLabels(submission.ageRanges || [])
+}
+
+function buildSchoolPublishPayload(submission) {
+  const name = normalizeString(submission.name)
+  const schoolPayload = {
+    name,
+    canonical_name: name,
+    school_type: getSchoolTypeText(submission),
+    age_range: getAgeRangeText(submission),
+    official_url: normalizeString(submission.officialUrl || submission.publicAccountNote),
+    xuji_note: normalizeString(submission.xujiNote),
+    residency_req: normalizeString(submission.residencyReq),
+    admission_req: normalizeString(submission.admissionReq || submission.participationNote),
+    fee: normalizeString(submission.feeNote),
+    output_direction: normalizeString(submission.outputDirection),
+    status: 'published',
+  }
+  const locationPayload = {
+    province: normalizeString(submission.province),
+    city: normalizeString(submission.city),
+    address_note: '',
+    contact_note: '',
+    status: 'published',
+    source: 'school_submission',
+  }
+  const auditOnly = {
+    sourceNote: normalizeString(submission.sourceNote),
+    recommendationNote: normalizeString(submission.recommendationNote),
+    submitterDisplayName: normalizeString(submission.submitterDisplayName),
+    submitterCity: normalizeString(submission.submitterCity),
+    contentSecurityStatus: normalizeString(submission.contentSecurityStatus || 'unknown'),
+  }
+  const warnings = []
+  if (!schoolPayload.name) warnings.push('缺少学习社区名称')
+  if (!locationPayload.province || !locationPayload.city) warnings.push('缺少地点信息')
+  if (!schoolPayload.official_url) warnings.push('缺少官方/说明链接，发布前建议补充可核验来源')
+  if (!schoolPayload.xuji_note && !schoolPayload.residency_req && !schoolPayload.admission_req) warnings.push('公开详情字段较少，发布前建议补充公开说明或参与方式')
+
+  return { schoolPayload, locationPayload, auditOnly, warnings }
+}
+
 async function checkAdminAccess(event, wxContext) {
   const requestId = resolveRequestId('check-admin-access', event)
   try {
@@ -78,10 +134,14 @@ async function listSchoolSubmissions(event, wxContext) {
       schoolTypes: item.schoolTypes || [],
       ageRange: item.ageRange || stringifyLabels(item.ageRanges || []),
       ageRanges: item.ageRanges || [],
-      officialUrl: item.officialUrl || '',
+      officialUrl: item.officialUrl || item.publicAccountNote || '',
       publicAccountNote: item.publicAccountNote || '',
+      xujiNote: item.xujiNote || '',
+      residencyReq: item.residencyReq || '',
+      admissionReq: item.admissionReq || item.participationNote || '',
       participationNote: item.participationNote || '',
       feeNote: item.feeNote || '',
+      outputDirection: item.outputDirection || '',
       sourceNote: item.sourceNote || '',
       recommendationNote: item.recommendationNote || '',
       submitterDisplayName: item.submitterDisplayName || '',
@@ -152,6 +212,42 @@ async function getEventPublishPayload(event, wxContext) {
   } catch (err) {
     console.error('appService getEventPublishPayload error:', err)
     return fail(requestId, 'GET_EVENT_PUBLISH_PAYLOAD_FAILED', '读取提交记录失败，请稍后重试')
+  }
+}
+
+async function getSchoolPublishPayload(event, wxContext) {
+  const requestId = resolveRequestId('get-school-publish-payload', event)
+  const submissionId = String(event.submissionId || '').trim()
+  if (!submissionId) return fail(requestId, 'BAD_REQUEST', '缺少 submissionId')
+  try {
+    const admin = await getActiveAdmin(wxContext.OPENID)
+    if (!admin) return fail(requestId, 'FORBIDDEN', '无权限访问管理员发布辅助工具')
+    const res = await db.collection('school_submissions').doc(submissionId).get()
+    const submission = res.data
+    if (!submission) return fail(requestId, 'SUBMISSION_NOT_FOUND', '未找到该学习社区推荐记录')
+    const payload = buildSchoolPublishPayload(submission)
+
+    await writeAdminAuditLog({
+      admin,
+      openid: wxContext.OPENID,
+      action: 'school_submission_publish_payload_viewed',
+      targetType: 'school_submission',
+      targetId: submissionId,
+      metadata: {
+        name: submission.name || '',
+        currentStatus: submission.status || 'pending',
+        warnings: payload.warnings,
+      },
+    })
+
+    return ok(requestId, {
+      admin: { name: admin.name || '', role: admin.role || 'admin' },
+      submissionId,
+      ...payload,
+    })
+  } catch (err) {
+    console.error('appService getSchoolPublishPayload error:', err)
+    return fail(requestId, 'GET_SCHOOL_PUBLISH_PAYLOAD_FAILED', '读取学习社区发布建议失败，请稍后重试')
   }
 }
 
@@ -296,6 +392,7 @@ module.exports = {
   listEventSubmissions,
   listSchoolSubmissions,
   getEventPublishPayload,
+  getSchoolPublishPayload,
   reviewEventSubmission,
   reviewSchoolSubmission,
 }
