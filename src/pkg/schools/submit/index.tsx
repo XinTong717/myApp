@@ -23,9 +23,11 @@ type FocusField =
   | 'schoolTypeOther'
   | 'ageRangeOther'
   | 'officialUrl'
-  | 'publicAccountNote'
-  | 'participationNote'
+  | 'xujiNote'
+  | 'residencyReq'
+  | 'admissionReq'
   | 'feeNote'
+  | 'outputDirection'
   | 'sourceNote'
   | 'recommendationNote'
   | ''
@@ -67,17 +69,19 @@ export default function SubmitSchoolPage() {
   const [ageRange, setAgeRange] = useState<string[]>([])
   const [ageRangeOther, setAgeRangeOther] = useState('')
   const [officialUrl, setOfficialUrl] = useState('')
-  const [publicAccountNote, setPublicAccountNote] = useState('')
-  const [participationNote, setParticipationNote] = useState('')
+  const [xujiNote, setXujiNote] = useState('')
+  const [residencyReq, setResidencyReq] = useState('')
+  const [admissionReq, setAdmissionReq] = useState('')
   const [feeNote, setFeeNote] = useState('')
+  const [outputDirection, setOutputDirection] = useState('')
   const [sourceNote, setSourceNote] = useState('')
   const [recommendationNote, setRecommendationNote] = useState('')
 
   const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
   const hasUnsavedContent = !!(
     name.trim() || province || cityOption || customCity.trim() || schoolType.length > 0 || schoolTypeOther.trim() ||
-    ageRange.length > 0 || ageRangeOther.trim() || officialUrl.trim() || publicAccountNote.trim() || participationNote.trim() ||
-    feeNote.trim() || sourceNote.trim() || recommendationNote.trim()
+    ageRange.length > 0 || ageRangeOther.trim() || officialUrl.trim() || xujiNote.trim() || residencyReq.trim() || admissionReq.trim() ||
+    feeNote.trim() || outputDirection.trim() || sourceNote.trim() || recommendationNote.trim()
   )
 
   useEffect(() => {
@@ -125,7 +129,7 @@ export default function SubmitSchoolPage() {
     if (!province || !currentCity) { Taro.showToast({ title: '请选择所在城市', icon: 'none' }); return }
     if (cityOption === '其他' && !customCity.trim()) { Taro.showToast({ title: '请输入真实城市名', icon: 'none' }); return }
     if (schoolType.includes('其他') && !schoolTypeOther.trim()) { Taro.showToast({ title: '请补充社区类型中的“其他”', icon: 'none' }); return }
-    if (ageRange.includes('其他') && !ageRangeOther.trim()) { Taro.showToast({ title: '请补充适合阶段中的“其他”', icon: 'none' }); return }
+    if (ageRange.includes('其他') && !ageRangeOther.trim()) { Taro.showToast({ title: '请补充适合年龄段中的“其他”', icon: 'none' }); return }
 
     submitLockRef.current = true
 
@@ -143,9 +147,11 @@ export default function SubmitSchoolPage() {
         ageRange,
         ageRangeOther: ageRange.includes('其他') ? ageRangeOther.trim() : '',
         officialUrl: officialUrl.trim(),
-        publicAccountNote: publicAccountNote.trim(),
-        participationNote: participationNote.trim(),
+        xujiNote: xujiNote.trim(),
+        residencyReq: residencyReq.trim(),
+        admissionReq: admissionReq.trim(),
         feeNote: feeNote.trim(),
+        outputDirection: outputDirection.trim(),
         sourceNote: sourceNote.trim(),
         recommendationNote: recommendationNote.trim(),
       })
@@ -169,7 +175,7 @@ export default function SubmitSchoolPage() {
     <AppPage>
       <AppCard>
         <Text style={{ ...typography.title, color: palette.text }}>推荐新学习社区</Text>
-        <View style={{ marginTop: space(2) }}><Text style={{ ...typography.meta, color: palette.subtext }}>提交公开可验证的信息，帮助更多家庭发现新的学习社区。请优先填写公开主页、公众号或小红书，不要填写第三方未公开的私人联系方式。</Text></View>
+        <View style={{ marginTop: space(2) }}><Text style={{ ...typography.meta, color: palette.subtext }}>请尽量按学习社区详情页会展示的内容填写。信息来源和补充说明仅供审核参考，不会直接公开展示。</Text></View>
       </AppCard>
 
       <AppCard>
@@ -188,27 +194,33 @@ export default function SubmitSchoolPage() {
         <MultiPillSelect options={SCHOOL_TYPE_OPTIONS} selected={schoolType} onChange={setSchoolType} />
         {schoolType.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充社区类型中的“其他”。</Text></View><FormInputBox focused={focusedField === 'schoolTypeOther'} marginBottom='0'><Input value={schoolTypeOther} placeholder='例如：森林学校 / 驻留计划' onFocus={() => setFocusedField('schoolTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setSchoolTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
 
-        <SectionTitle text='适合阶段（可多选）' />
+        <SectionTitle text='适合年龄段（可多选）' />
         <MultiPillSelect options={AGE_RANGE_OPTIONS} selected={ageRange} onChange={setAgeRange} />
-        {ageRange.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充适合阶段中的“其他”。</Text></View><FormInputBox focused={focusedField === 'ageRangeOther'} marginBottom='0'><Input value={ageRangeOther} placeholder='例如：大学生 / 家庭混龄共学' onFocus={() => setFocusedField('ageRangeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setAgeRangeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
+        {ageRange.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充适合年龄段中的“其他”。</Text></View><FormInputBox focused={focusedField === 'ageRangeOther'} marginBottom='0'><Input value={ageRangeOther} placeholder='例如：3.5-16岁 / 大学生 / 家庭混龄共学' onFocus={() => setFocusedField('ageRangeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setAgeRangeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
 
-        <SectionTitle text='公开主页 / 官网（选填）' />
-        <FormInputBox focused={focusedField === 'officialUrl'}><Input value={officialUrl} placeholder='https://...' onFocus={() => setFocusedField('officialUrl')} onBlur={() => setFocusedField('')} onInput={(e) => setOfficialUrl(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
+        <SectionTitle text='官方/说明链接（选填）' />
+        <FormInputBox focused={focusedField === 'officialUrl'}><Input value={officialUrl} placeholder='例如：官网链接 / 公众号名 / 小红书号' onFocus={() => setFocusedField('officialUrl')} onBlur={() => setFocusedField('')} onInput={(e) => setOfficialUrl(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
 
-        <SectionTitle text='公开账号 / 搜索关键词（选填）' />
-        <FormInputBox focused={focusedField === 'publicAccountNote'}><Input value={publicAccountNote} placeholder='例如：公众号名称 / 小红书号 / 视频号名称' onFocus={() => setFocusedField('publicAccountNote')} onBlur={() => setFocusedField('')} onInput={(e) => setPublicAccountNote(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
+        <SectionTitle text='公开说明（选填）' />
+        <FormInputBox focused={focusedField === 'xujiNote'} marginBottom={space(3)}><Textarea value={xujiNote} placeholder='例如：公开可查到的社区简介、办学理念或基本说明' maxlength={500} onFocus={() => setFocusedField('xujiNote')} onBlur={() => setFocusedField('')} onInput={(e) => setXujiNote(e.detail.value)} style={{ width: '100%', minHeight: '80px', ...typography.body, color: palette.text }} /></FormInputBox>
 
-        <SectionTitle text='参与方式说明（选填）' />
-        <FormInputBox focused={focusedField === 'participationNote'} marginBottom={space(3)}><Textarea value={participationNote} placeholder='例如：线下驻留、周末活动、线上项目制等' maxlength={300} onFocus={() => setFocusedField('participationNote')} onBlur={() => setFocusedField('')} onInput={(e) => setParticipationNote(e.detail.value)} style={{ width: '100%', minHeight: '70px', ...typography.body, color: palette.text }} /></FormInputBox>
+        <SectionTitle text='参与前了解（选填）' />
+        <FormInputBox focused={focusedField === 'residencyReq'} marginBottom={space(3)}><Textarea value={residencyReq} placeholder='例如：是否需要面谈、试读、家长参与、长期承诺等' maxlength={400} onFocus={() => setFocusedField('residencyReq')} onBlur={() => setFocusedField('')} onInput={(e) => setResidencyReq(e.detail.value)} style={{ width: '100%', minHeight: '70px', ...typography.body, color: palette.text }} /></FormInputBox>
+
+        <SectionTitle text='参与方式参考（选填）' />
+        <FormInputBox focused={focusedField === 'admissionReq'} marginBottom={space(3)}><Textarea value={admissionReq} placeholder='例如：线下驻留、周末活动、线上项目制、联系公众号报名等' maxlength={400} onFocus={() => setFocusedField('admissionReq')} onBlur={() => setFocusedField('')} onInput={(e) => setAdmissionReq(e.detail.value)} style={{ width: '100%', minHeight: '70px', ...typography.body, color: palette.text }} /></FormInputBox>
 
         <SectionTitle text='参考费用（选填）' />
         <FormInputBox focused={focusedField === 'feeNote'} marginBottom={space(3)}><Textarea value={feeNote} placeholder='例如：按月、按学期、按活动收费，或未公开' maxlength={200} onFocus={() => setFocusedField('feeNote')} onBlur={() => setFocusedField('')} onInput={(e) => setFeeNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', ...typography.body, color: palette.text }} /></FormInputBox>
 
-        <SectionTitle text='你从哪里知道它（选填）' />
-        <FormInputBox focused={focusedField === 'sourceNote'} marginBottom={space(3)}><Textarea value={sourceNote} placeholder='例如：官网、朋友推荐、公开文章、线下探访' maxlength={200} onFocus={() => setFocusedField('sourceNote')} onBlur={() => setFocusedField('')} onInput={(e) => setSourceNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', ...typography.body, color: palette.text }} /></FormInputBox>
+        <SectionTitle text='相关说明（选填）' />
+        <FormInputBox focused={focusedField === 'outputDirection'} marginBottom={space(3)}><Textarea value={outputDirection} placeholder='例如：项目成果、升学去向、适合的家庭类型、补充提醒等' maxlength={500} onFocus={() => setFocusedField('outputDirection')} onBlur={() => setFocusedField('')} onInput={(e) => setOutputDirection(e.detail.value)} style={{ width: '100%', minHeight: '80px', ...typography.body, color: palette.text }} /></FormInputBox>
 
-        <SectionTitle text='推荐理由 / 补充说明（选填）' />
-        <FormInputBox focused={focusedField === 'recommendationNote'} marginBottom={space(2)}><Textarea value={recommendationNote} placeholder='补充任何有助于审核的信息，比如公开活动、特色、适合什么样的家庭等' maxlength={500} onFocus={() => setFocusedField('recommendationNote')} onBlur={() => setFocusedField('')} onInput={(e) => setRecommendationNote(e.detail.value)} style={{ width: '100%', minHeight: '90px', ...typography.body, color: palette.text }} /></FormInputBox>
+        <SectionTitle text='仅供审核：你从哪里知道它（选填）' />
+        <FormInputBox focused={focusedField === 'sourceNote'} marginBottom={space(3)}><Textarea value={sourceNote} placeholder='例如：官网 / 公众号 / 小红书 / 朋友推荐 / 亲身参与' maxlength={300} onFocus={() => setFocusedField('sourceNote')} onBlur={() => setFocusedField('')} onInput={(e) => setSourceNote(e.detail.value)} style={{ width: '100%', minHeight: '70px', ...typography.body, color: palette.text }} /></FormInputBox>
+
+        <SectionTitle text='仅供审核：推荐理由 / 补充说明（选填）' />
+        <FormInputBox focused={focusedField === 'recommendationNote'} marginBottom={space(2)}><Textarea value={recommendationNote} placeholder='补充任何有助于审核的信息，比如你为什么推荐、哪些信息需要管理员再核实等' maxlength={500} onFocus={() => setFocusedField('recommendationNote')} onBlur={() => setFocusedField('')} onInput={(e) => setRecommendationNote(e.detail.value)} style={{ width: '100%', minHeight: '90px', ...typography.body, color: palette.text }} /></FormInputBox>
         <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.micro, color: palette.muted }}>{recommendationNote.length}/500</Text></View>
       </AppCard>
 
