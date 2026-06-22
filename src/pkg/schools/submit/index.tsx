@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text, Input, Textarea, Picker } from '@tarojs/components'
+import { View, Text, Input, Textarea, Picker, Switch } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../../../constants/location'
 import { submitSchool } from '../../../services/school'
 import SectionTitle from '../../../components/profile/SectionTitle'
 import { palette } from '../../../theme/palette'
-import { space } from '../../../theme/spacing'
+import { radius, space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
 import { MultiPillSelect } from '../../../components/common/PillSelect'
 import AppPage from '../../../components/common/AppPage'
@@ -15,12 +15,13 @@ import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
 import FormInputBox from '../../../components/common/FormInputBox'
 
 const SCHOOL_TYPE_OPTIONS = ['学习成长社区', '学校', '华德福学校', '孤独症特教', '短期营', '公益组织', '疗愈社区', '其他']
+const AGE_RANGE_MIN = 0
+const AGE_RANGE_MAX = 30
 
 type FocusField =
   | 'name'
   | 'customCity'
   | 'schoolTypeOther'
-  | 'ageRange'
   | 'officialUrl'
   | 'xujiNote'
   | 'residencyReq'
@@ -54,18 +55,91 @@ async function showSubmittedModal() {
   Taro.navigateBack()
 }
 
+function clampAge(value: number, min = AGE_RANGE_MIN, max = AGE_RANGE_MAX) {
+  return Math.max(min, Math.min(max, Math.round(value)))
+}
+
+function getTouchPageX(event: any) {
+  return Number(event?.touches?.[0]?.pageX ?? event?.changedTouches?.[0]?.pageX ?? 0)
+}
+
+function formatAgeRange(minAge: number, maxAge: number) {
+  return `${minAge}-${maxAge}${maxAge >= AGE_RANGE_MAX ? '岁+' : '岁'}`
+}
+
+function AgeRangeSlider(props: { minValue: number; maxValue: number; onChange: (minValue: number, maxValue: number) => void }) {
+  const trackIdRef = useRef(`school-submit-age-range-${Math.random().toString(36).slice(2)}`)
+  const activeHandleRef = useRef<'min' | 'max'>('min')
+  const minPercent = ((props.minValue - AGE_RANGE_MIN) / (AGE_RANGE_MAX - AGE_RANGE_MIN)) * 100
+  const maxPercent = ((props.maxValue - AGE_RANGE_MIN) / (AGE_RANGE_MAX - AGE_RANGE_MIN)) * 100
+
+  const updateFromTouch = (event: any, mode: 'nearest' | 'active' = 'active') => {
+    const pageX = getTouchPageX(event)
+    if (!pageX) return
+    Taro.createSelectorQuery()
+      .select(`#${trackIdRef.current}`)
+      .boundingClientRect((rect: any) => {
+        const width = Number(rect?.width || 0)
+        if (!width) return
+        const ratio = Math.max(0, Math.min(1, (pageX - Number(rect.left || 0)) / width))
+        const nextValue = clampAge(AGE_RANGE_MIN + ratio * (AGE_RANGE_MAX - AGE_RANGE_MIN))
+        if (mode === 'nearest') {
+          activeHandleRef.current = Math.abs(nextValue - props.minValue) <= Math.abs(nextValue - props.maxValue) ? 'min' : 'max'
+        }
+        if (activeHandleRef.current === 'min') props.onChange(Math.min(nextValue, props.maxValue), props.maxValue)
+        else props.onChange(props.minValue, Math.max(nextValue, props.minValue))
+      })
+      .exec()
+  }
+
+  const startHandle = (handle: 'min' | 'max', event: any) => {
+    event?.stopPropagation?.()
+    activeHandleRef.current = handle
+    updateFromTouch(event)
+  }
+
+  return (
+    <View style={{ marginBottom: space(4) }}>
+      <View style={{ marginBottom: space(2) }}>
+        <Text style={{ ...typography.caption, color: palette.subtext }}>{formatAgeRange(props.minValue, props.maxValue)}</Text>
+      </View>
+      <View
+        id={trackIdRef.current}
+        onTouchStart={(event: any) => updateFromTouch(event, 'nearest')}
+        onTouchMove={(event: any) => updateFromTouch(event)}
+        style={{ position: 'relative', height: '44px', margin: `0 ${space(3)}` }}
+      >
+        <View style={{ position: 'absolute', left: 0, right: 0, top: '20px', height: '4px', borderRadius: radius.pill, backgroundColor: palette.line }} />
+        <View style={{ position: 'absolute', left: `${minPercent}%`, width: `${Math.max(0, maxPercent - minPercent)}%`, top: '20px', height: '4px', borderRadius: radius.pill, backgroundColor: palette.accentDeep }} />
+        <View
+          onTouchStart={(event: any) => startHandle('min', event)}
+          onTouchMove={(event: any) => updateFromTouch(event)}
+          style={{ position: 'absolute', left: `${minPercent}%`, top: '10px', width: '24px', height: '24px', marginLeft: '-12px', borderRadius: radius.pill, backgroundColor: palette.accentDeep, boxShadow: '0 4px 12px rgba(112, 56, 46, 0.22)' }}
+        />
+        <View
+          onTouchStart={(event: any) => startHandle('max', event)}
+          onTouchMove={(event: any) => updateFromTouch(event)}
+          style={{ position: 'absolute', left: `${maxPercent}%`, top: '10px', width: '24px', height: '24px', marginLeft: '-12px', borderRadius: radius.pill, backgroundColor: palette.accentDeep, boxShadow: '0 4px 12px rgba(112, 56, 46, 0.22)' }}
+        />
+      </View>
+    </View>
+  )
+}
+
 export default function SubmitSchoolPage() {
   const [submitting, setSubmitting] = useState(false)
   const submitLockRef = useRef(false)
   const submittedRef = useRef(false)
   const [focusedField, setFocusedField] = useState<FocusField>('')
   const [name, setName] = useState('')
+  const [isOnline, setIsOnline] = useState(false)
   const [province, setProvince] = useState('')
   const [cityOption, setCityOption] = useState('')
   const [customCity, setCustomCity] = useState('')
   const [schoolType, setSchoolType] = useState<string[]>([])
   const [schoolTypeOther, setSchoolTypeOther] = useState('')
-  const [ageRange, setAgeRange] = useState('')
+  const [ageRangeMin, setAgeRangeMin] = useState(6)
+  const [ageRangeMax, setAgeRangeMax] = useState(18)
   const [officialUrl, setOfficialUrl] = useState('')
   const [xujiNote, setXujiNote] = useState('')
   const [residencyReq, setResidencyReq] = useState('')
@@ -76,9 +150,10 @@ export default function SubmitSchoolPage() {
   const [recommendationNote, setRecommendationNote] = useState('')
 
   const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
+  const ageRangeText = formatAgeRange(ageRangeMin, ageRangeMax)
   const hasUnsavedContent = !!(
-    name.trim() || province || cityOption || customCity.trim() || schoolType.length > 0 || schoolTypeOther.trim() ||
-    ageRange.trim() || officialUrl.trim() || xujiNote.trim() || residencyReq.trim() || admissionReq.trim() ||
+    name.trim() || isOnline || province || cityOption || customCity.trim() || schoolType.length > 0 || schoolTypeOther.trim() ||
+    ageRangeMin !== 6 || ageRangeMax !== 18 || officialUrl.trim() || xujiNote.trim() || residencyReq.trim() || admissionReq.trim() ||
     feeNote.trim() || outputDirection.trim() || sourceNote.trim() || recommendationNote.trim()
   )
 
@@ -120,12 +195,21 @@ export default function SubmitSchoolPage() {
     }
   }
 
+  const handleOnlineChange = (checked: boolean) => {
+    setIsOnline(checked)
+    if (checked) {
+      setProvince('')
+      setCityOption('')
+      setCustomCity('')
+    }
+  }
+
   const handleSubmit = async () => {
     if (submitLockRef.current || submitting) return
 
     if (!name.trim()) { Taro.showToast({ title: '请填写学习社区名称', icon: 'none' }); return }
-    if (!province || !currentCity) { Taro.showToast({ title: '请选择所在城市', icon: 'none' }); return }
-    if (cityOption === '其他' && !customCity.trim()) { Taro.showToast({ title: '请输入真实城市名', icon: 'none' }); return }
+    if (!isOnline && (!province || !currentCity)) { Taro.showToast({ title: '请选择所在城市', icon: 'none' }); return }
+    if (!isOnline && cityOption === '其他' && !customCity.trim()) { Taro.showToast({ title: '请输入真实城市名', icon: 'none' }); return }
     if (schoolType.includes('其他') && !schoolTypeOther.trim()) { Taro.showToast({ title: '请补充社区类型中的“其他”', icon: 'none' }); return }
 
     submitLockRef.current = true
@@ -137,11 +221,14 @@ export default function SubmitSchoolPage() {
       setSubmitting(true)
       const result = await submitSchool({
         name: name.trim(),
-        province,
-        city: currentCity,
+        isOnline,
+        province: isOnline ? '' : province,
+        city: isOnline ? '' : currentCity,
         schoolType,
         schoolTypeOther: schoolType.includes('其他') ? schoolTypeOther.trim() : '',
-        ageRange: ageRange.trim() ? [ageRange.trim()] : [],
+        ageRange: [ageRangeText],
+        ageRangeMin,
+        ageRangeMax,
         ageRangeOther: '',
         officialUrl: officialUrl.trim(),
         xujiNote: xujiNote.trim(),
@@ -179,20 +266,31 @@ export default function SubmitSchoolPage() {
         <SectionTitle text='学习社区名称' />
         <FormInputBox focused={focusedField === 'name'}><Input value={name} placeholder='例如：某某共学社区' onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField('')} onInput={(e) => setName(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
 
-        <SectionTitle text='所在城市' />
-        <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
-          <FormInputBox marginBottom={cityOption === '其他' ? space(2) : space(4)}>
-            <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ ...typography.body, flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text><Text style={{ ...typography.caption, color: palette.subtext }}>▼</Text></View>
-          </FormInputBox>
-        </Picker>
-        {cityOption === '其他' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View><FormInputBox focused={focusedField === 'customCity'} marginBottom='0'><Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onFocus={() => setFocusedField('customCity')} onBlur={() => setFocusedField('')} onInput={(e) => setCustomCity(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
+        <SectionTitle text='是否线上' />
+        <FormInputBox>
+          <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isOnline ? '是，主要在线上进行' : '否，有明确线下地点'}</Text>
+            <Switch checked={isOnline} color={palette.accentDeep} onChange={(e) => handleOnlineChange(!!e.detail.value)} />
+          </View>
+        </FormInputBox>
+
+        {!isOnline && <>
+          <SectionTitle text='所在城市' />
+          <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}>
+            <FormInputBox marginBottom={cityOption === '其他' ? space(2) : space(4)}>
+              <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ ...typography.body, flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text><Text style={{ ...typography.caption, color: palette.subtext }}>▼</Text></View>
+            </FormInputBox>
+          </Picker>
+          {cityOption === '其他' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View><FormInputBox focused={focusedField === 'customCity'} marginBottom='0'><Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onFocus={() => setFocusedField('customCity')} onBlur={() => setFocusedField('')} onInput={(e) => setCustomCity(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
+        </>}
+        {isOnline && <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.caption, color: palette.subtext }}>线上学习社区不需要填写城市，审核时会按线上社区处理，不进入地图地点聚合。</Text></View>}
 
         <SectionTitle text='社区类型（可多选）' />
         <MultiPillSelect options={SCHOOL_TYPE_OPTIONS} selected={schoolType} onChange={setSchoolType} />
         {schoolType.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充社区类型中的“其他”。</Text></View><FormInputBox focused={focusedField === 'schoolTypeOther'} marginBottom='0'><Input value={schoolTypeOther} placeholder='例如：森林学校 / 驻留计划' onFocus={() => setFocusedField('schoolTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setSchoolTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
 
-        <SectionTitle text='适合年龄段（选填）' />
-        <FormInputBox focused={focusedField === 'ageRange'}><Input value={ageRange} placeholder='例如：3.5-16岁 / 6-18岁 / 小学至高中' onFocus={() => setFocusedField('ageRange')} onBlur={() => setFocusedField('')} onInput={(e) => setAgeRange(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
+        <SectionTitle text='适合年龄段' />
+        <AgeRangeSlider minValue={ageRangeMin} maxValue={ageRangeMax} onChange={(minValue, maxValue) => { setAgeRangeMin(minValue); setAgeRangeMax(maxValue) }} />
 
         <SectionTitle text='官方/说明链接（选填）' />
         <FormInputBox focused={focusedField === 'officialUrl'}><Input value={officialUrl} placeholder='例如：官网链接 / 公众号名 / 小红书号' onFocus={() => setFocusedField('officialUrl')} onBlur={() => setFocusedField('')} onInput={(e) => setOfficialUrl(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
