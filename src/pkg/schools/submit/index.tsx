@@ -38,7 +38,7 @@ type PickerColumnChangeEvent = { detail: { column: number; value: number } }
 function setBeforeUnloadAlert(enabled: boolean, message: string) {
   const taroAny = Taro as any
   try {
-    if (enabled && taroAny.enableAlertBeforeUnload) taroAny.enableAlertBeforeUnload({ message })
+    if (enabled && taroAny.enableAlertBeforeUnload) taroAny.enableAlertBeforeUnload({ message, confirmText: '离开', cancelText: '继续填写' })
     else if (!enabled && taroAny.disableAlertBeforeUnload) taroAny.disableAlertBeforeUnload()
   } catch (err) {
     console.warn('setBeforeUnloadAlert skipped:', err)
