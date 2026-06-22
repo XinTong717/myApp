@@ -132,7 +132,7 @@ function getSchoolLocations(school: School): SchoolLocationItem[] {
   if (cities.length > 0) {
     return cities.map((city, index) => ({
       school_id: Number(school.id),
-      province: provinces[index] || provinces[0] || CITIES[city]?.prov || '',
+      province: CITIES[city]?.prov || provinces[index] || provinces[0] || '',
       city,
       status: 'legacy',
     }))
@@ -226,7 +226,7 @@ export function buildExploreMarkers(options: BuildExploreMarkersOptions): Marker
             longitude: jittered.lng,
             name: schoolName,
             type: 'school',
-            markerProv: String(location.province || '').trim() || info.prov,
+            markerProv: info.prov,
             city: cityName,
             originalId: s.id,
           })
@@ -290,7 +290,7 @@ export function buildExploreMarkers(options: BuildExploreMarkersOptions): Marker
         })
       })
     } else {
-      items.push(...schoolMarkerItems)
+      items.push(...schoolMarkerItems.filter((item) => item.markerProv === selectedProvince))
     }
   }
 
