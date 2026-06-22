@@ -5,7 +5,8 @@ import { getSchools } from '../../services/school'
 import { getFilterOptions, type AppFilterOptions } from '../../services/filterOptions'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
-import { space } from '../../theme/spacing'
+import { radius, space } from '../../theme/spacing'
+import { typography } from '../../theme/typography'
 import AppPage from '../../components/common/AppPage'
 import AppPageHeader from '../../components/common/AppPageHeader'
 import AppMiniButton from '../../components/common/AppMiniButton'
@@ -31,22 +32,25 @@ const SCHOOL_SHARE = {
   },
 }
 
+const AGE_RANGE_MIN = 0
+const AGE_RANGE_MAX = 30
+
 type School = SchoolItem
 
-type AgeBucket = {
-  label: string
+type AgeKeywordRange = {
   min: number
   max: number
-  keywords?: string[]
+  keywords: string[]
 }
 
-const AGE_BUCKETS: AgeBucket[] = [
-  { label: '0-6', min: 0, max: 6, keywords: ['学龄前', '幼儿园', '幼儿', '托育', '早教', '幼小'] },
-  { label: '7-12', min: 7, max: 12, keywords: ['小学', '小学生', '儿童'] },
-  { label: '13-15', min: 13, max: 15, keywords: ['初中', '初中生', '中学', '中学生', '青少年'] },
-  { label: '16-18', min: 16, max: 18, keywords: ['高中', '高中生', '中学', '中学生', '青少年'] },
-  { label: '19-24', min: 19, max: 24, keywords: ['大学', '大学生', '高校', '本科', '青年'] },
-  { label: '25+', min: 25, max: Number.POSITIVE_INFINITY, keywords: ['成人', '家长', '教师', '教育者'] },
+const AGE_KEYWORD_RANGES: AgeKeywordRange[] = [
+  { min: 0, max: 6, keywords: ['学龄前', '幼儿园', '幼儿', '托育', '早教', '幼小'] },
+  { min: 7, max: 12, keywords: ['小学', '小学生', '儿童'] },
+  { min: 13, max: 15, keywords: ['初中', '初中生'] },
+  { min: 16, max: 18, keywords: ['高中', '高中生'] },
+  { min: 13, max: 18, keywords: ['中学', '中学生', '青少年'] },
+  { min: 19, max: 24, keywords: ['大学', '大学生', '高校', '本科', '青年'] },
+  { min: 25, max: Number.POSITIVE_INFINITY, keywords: ['成人', '家长', '教师', '教育者'] },
 ]
 
 const EXCLUDED_TYPE_LABELS = [
@@ -127,14 +131,6 @@ function countedOptions(allOption: string, preferred: string[], counts: Map<stri
   return [allOption, ...options]
 }
 
-function orderedAgeOptions(allOption: string, counts: Map<string, Set<string>>, max: number) {
-  const options = AGE_BUCKETS
-    .map((item) => item.label)
-    .filter((label) => optionCount(counts, label) > 0)
-    .slice(0, max)
-  return [allOption, ...options]
-}
-
 function normalizeAgeText(value?: string) {
   return String(value || '')
     .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
@@ -147,7 +143,7 @@ function getAgeSpans(value?: string): Array<{ min: number; max: number }> {
   if (!text) return []
 
   const spans: Array<{ min: number; max: number }> = []
-  const rangePattern = /(\d{1,2})\s*(?:岁)?\s*-\s*(\d{1,2})/g
+  const rangePattern = /(\d{1,2}(?:\.\d+)?)\s*(?:岁)?\s*-\s*(\d{1,2}(?:\.\d+)?)/g
   let rangeMatch: RegExpExecArray | null
   while ((rangeMatch = rangePattern.exec(text))) {
     const a = Number(rangeMatch[1])
@@ -155,14 +151,14 @@ function getAgeSpans(value?: string): Array<{ min: number; max: number }> {
     if (Number.isFinite(a) && Number.isFinite(b)) spans.push({ min: Math.min(a, b), max: Math.max(a, b) })
   }
 
-  const plusPattern = /(\d{1,2})\s*(?:岁)?\s*(?:\+|以上|及以上)/g
+  const plusPattern = /(\d{1,2}(?:\.\d+)?)\s*(?:岁)?\s*(?:\+|以上|及以上)/g
   let plusMatch: RegExpExecArray | null
   while ((plusMatch = plusPattern.exec(text))) {
     const min = Number(plusMatch[1])
     if (Number.isFinite(min)) spans.push({ min, max: Number.POSITIVE_INFINITY })
   }
 
-  const underPattern = /(\d{1,2})\s*(?:岁)?\s*(?:以下|以内|以下儿童)/g
+  const underPattern = /(\d{1,2}(?:\.\d+)?)\s*(?:岁)?\s*(?:以下|以内|以下儿童)/g
   let underMatch: RegExpExecArray | null
   while ((underMatch = underPattern.exec(text))) {
     const max = Number(underMatch[1])
@@ -171,24 +167,101 @@ function getAgeSpans(value?: string): Array<{ min: number; max: number }> {
 
   if (spans.length > 0) return spans
 
-  return AGE_BUCKETS
-    .filter((bucket) => (bucket.keywords || []).some((keyword) => text.includes(keyword)))
-    .map((bucket) => ({ min: bucket.min, max: bucket.max }))
+  if (text.includes('小学') && text.includes('高中')) return [{ min: 7, max: 18 }]
+  if (text.includes('小学') && text.includes('初中')) return [{ min: 7, max: 15 }]
+  if (text.includes('初中') && text.includes('高中')) return [{ min: 13, max: 18 }]
+  if ((text.includes('幼儿园') || text.includes('学龄前')) && text.includes('小学')) return [{ min: 0, max: 12 }]
+  if ((text.includes('幼儿园') || text.includes('学龄前')) && text.includes('高中')) return [{ min: 0, max: 18 }]
+
+  return AGE_KEYWORD_RANGES
+    .filter((range) => range.keywords.some((keyword) => text.includes(keyword)))
+    .map((range) => ({ min: range.min, max: range.max }))
 }
 
 function rangesOverlap(a: { min: number; max: number }, b: { min: number; max: number }) {
   return Math.max(a.min, b.min) <= Math.min(a.max, b.max)
 }
 
-function ageRangeMatchesBucket(value: string | undefined, bucketLabel: string) {
-  const bucket = AGE_BUCKETS.find((item) => item.label === bucketLabel)
-  if (!bucket) return false
+function schoolMatchesAgeRange(value: string | undefined, minAge: number, maxAge: number) {
+  if (minAge <= AGE_RANGE_MIN && maxAge >= AGE_RANGE_MAX) return true
   const spans = getAgeSpans(value)
-  return spans.some((span) => rangesOverlap(span, bucket))
+  return spans.some((span) => rangesOverlap(span, { min: minAge, max: maxAge }))
 }
 
-function ageBucketLabels(value?: string) {
-  return AGE_BUCKETS.filter((bucket) => ageRangeMatchesBucket(value, bucket.label)).map((bucket) => bucket.label)
+function formatAgeNumber(value: number) {
+  if (!Number.isFinite(value)) return `${AGE_RANGE_MAX}+`
+  return Number.isInteger(value) ? String(value) : String(value).replace(/\.0$/, '')
+}
+
+function formatAgeRange(minAge: number, maxAge: number) {
+  return `${formatAgeNumber(minAge)}-${formatAgeNumber(maxAge)}${maxAge >= AGE_RANGE_MAX ? '岁+' : '岁'}`
+}
+
+function formatAgeRangeForDisplay(value?: string) {
+  const spans = getAgeSpans(value)
+  if (spans.length === 0) return String(value || '').trim()
+  const min = Math.min(...spans.map((span) => span.min))
+  const max = Math.max(...spans.map((span) => span.max))
+  return formatAgeRange(min, max)
+}
+
+function clampAge(value: number, min = AGE_RANGE_MIN, max = AGE_RANGE_MAX) {
+  return Math.max(min, Math.min(max, Math.round(value)))
+}
+
+function getTouchPageX(event: any) {
+  return Number(event?.touches?.[0]?.pageX ?? event?.changedTouches?.[0]?.pageX ?? 0)
+}
+
+function AgeRangeSlider(props: { minValue: number; maxValue: number; onChange: (minValue: number, maxValue: number) => void }) {
+  const trackIdRef = useRef(`school-age-range-${Math.random().toString(36).slice(2)}`)
+  const activeHandleRef = useRef<'min' | 'max'>('min')
+  const minPercent = ((props.minValue - AGE_RANGE_MIN) / (AGE_RANGE_MAX - AGE_RANGE_MIN)) * 100
+  const maxPercent = ((props.maxValue - AGE_RANGE_MIN) / (AGE_RANGE_MAX - AGE_RANGE_MIN)) * 100
+
+  const updateFromTouch = (event: any, mode: 'nearest' | 'active' = 'active') => {
+    const pageX = getTouchPageX(event)
+    if (!pageX) return
+    Taro.createSelectorQuery()
+      .select(`#${trackIdRef.current}`)
+      .boundingClientRect((rect: any) => {
+        const width = Number(rect?.width || 0)
+        if (!width) return
+        const ratio = Math.max(0, Math.min(1, (pageX - Number(rect.left || 0)) / width))
+        const nextValue = clampAge(AGE_RANGE_MIN + ratio * (AGE_RANGE_MAX - AGE_RANGE_MIN))
+        if (mode === 'nearest') {
+          activeHandleRef.current = Math.abs(nextValue - props.minValue) <= Math.abs(nextValue - props.maxValue) ? 'min' : 'max'
+        }
+        if (activeHandleRef.current === 'min') props.onChange(Math.min(nextValue, props.maxValue), props.maxValue)
+        else props.onChange(props.minValue, Math.max(nextValue, props.minValue))
+      })
+      .exec()
+  }
+
+  const startHandle = (handle: 'min' | 'max', event: any) => {
+    event?.stopPropagation?.()
+    activeHandleRef.current = handle
+    updateFromTouch(event)
+  }
+
+  return (
+    <View style={{ marginTop: space(2), marginBottom: space(4) }}>
+      <View style={{ marginBottom: space(2) }}>
+        <Text style={{ ...typography.caption, color: palette.subtext }}>{formatAgeRange(props.minValue, props.maxValue)}</Text>
+      </View>
+      <View
+        id={trackIdRef.current}
+        onTouchStart={(event: any) => updateFromTouch(event, 'nearest')}
+        onTouchMove={(event: any) => updateFromTouch(event)}
+        style={{ position: 'relative', height: '44px', margin: `0 ${space(3)}` }}
+      >
+        <View style={{ position: 'absolute', left: 0, right: 0, top: '20px', height: '4px', borderRadius: radius.pill, backgroundColor: palette.line }} />
+        <View style={{ position: 'absolute', left: `${minPercent}%`, width: `${Math.max(0, maxPercent - minPercent)}%`, top: '20px', height: '4px', borderRadius: radius.pill, backgroundColor: palette.accentDeep }} />
+        <View onTouchStart={(event: any) => startHandle('min', event)} onTouchMove={(event: any) => updateFromTouch(event)} style={{ position: 'absolute', left: `${minPercent}%`, top: '10px', width: '24px', height: '24px', marginLeft: '-12px', borderRadius: radius.pill, backgroundColor: palette.accentDeep, boxShadow: '0 4px 12px rgba(112, 56, 46, 0.22)' }} />
+        <View onTouchStart={(event: any) => startHandle('max', event)} onTouchMove={(event: any) => updateFromTouch(event)} style={{ position: 'absolute', left: `${maxPercent}%`, top: '10px', width: '24px', height: '24px', marginLeft: '-12px', borderRadius: radius.pill, backgroundColor: palette.accentDeep, boxShadow: '0 4px 12px rgba(112, 56, 46, 0.22)' }} />
+      </View>
+    </View>
+  )
 }
 
 function getLocations(item: School): SchoolLocationItem[] {
@@ -251,11 +324,13 @@ export default function SchoolsPage() {
   const [keyword, setKeyword] = useState('')
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>([])
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
-  const [selectedAgeRanges, setSelectedAgeRanges] = useState<string[]>([])
+  const [ageRangeMin, setAgeRangeMin] = useState(AGE_RANGE_MIN)
+  const [ageRangeMax, setAgeRangeMax] = useState(AGE_RANGE_MAX)
   const didInitRef = useRef(false)
   const allFilter = filterSettings.allOption || SCHOOL_FILTER_FALLBACKS.allOption
   const listLimit = Number(filterSettings.listLimit || SCHOOL_FILTER_FALLBACKS.listLimit)
   const maxDynamicOptions = Number(filterSettings.maxDynamicOptions || SCHOOL_FILTER_FALLBACKS.maxDynamicOptions)
+  const ageFilterActive = ageRangeMin > AGE_RANGE_MIN || ageRangeMax < AGE_RANGE_MAX
 
   useShareAppMessage(() => SCHOOL_SHARE.appMessage)
   useShareTimeline(() => SCHOOL_SHARE.timeline)
@@ -266,7 +341,7 @@ export default function SchoolsPage() {
     })
   }, [])
 
-  const hasActiveFilters = () => selectedProvinces.length > 0 || selectedTypes.length > 0 || selectedAgeRanges.length > 0
+  const hasActiveFilters = () => selectedProvinces.length > 0 || selectedTypes.length > 0 || ageFilterActive
 
   const loadSchools = async (options: { forceRefresh?: boolean; useFilters?: boolean; syncFilterSource?: boolean } = {}) => {
     try {
@@ -315,7 +390,7 @@ export default function SchoolsPage() {
   useEffect(() => {
     if (!didInitRef.current) return
     loadSchools({ useFilters: hasActiveFilters(), syncFilterSource: !hasActiveFilters() })
-  }, [selectedProvinces, selectedTypes, selectedAgeRanges])
+  }, [selectedProvinces, selectedTypes, ageRangeMin, ageRangeMax])
 
   usePullDownRefresh(async () => {
     if (hasActiveFilters()) {
@@ -333,36 +408,36 @@ export default function SchoolsPage() {
   const optionSource = filterSourceSchools.length > 0 ? filterSourceSchools : schools
   const provinceCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => getLocations(item).map((location) => location.province || '')), [optionSource])
   const typeCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => schoolTypeLabels(item.school_type)), [optionSource])
-  const ageCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => ageBucketLabels(item.age_range)), [optionSource])
   const normalizedTypeSettings = useMemo(() => normalizeTypeOptions(filterSettings.schoolTypes || []), [filterSettings.schoolTypes])
   const provinceOptions = useMemo(() => countedOptions(allFilter, filterSettings.provinces || [], provinceCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, filterSettings.provinces, provinceCounts])
   const typeOptions = useMemo(() => countedOptions(allFilter, normalizedTypeSettings, typeCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, normalizedTypeSettings, typeCounts])
-  const ageOptions = useMemo(() => orderedAgeOptions(allFilter, ageCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, ageCounts])
 
   const filteredSchools = useMemo(() => {
     const q = keyword.trim().toLowerCase()
     return schools.filter((item) => {
-      const haystack = [item.name, item.canonical_name, item.province, item.city, getLocationHaystack(item), item.school_type, item.age_range, item.fee]
+      const displayAgeRange = formatAgeRangeForDisplay(item.age_range)
+      const haystack = [item.name, item.canonical_name, item.province, item.city, getLocationHaystack(item), item.school_type, item.age_range, displayAgeRange, item.fee]
         .filter(Boolean).join(' ').toLowerCase()
       if (q && !haystack.includes(q)) return false
       if (!schoolMatchesProvince(item, selectedProvinces)) return false
       if (!schoolMatchesType(item, selectedTypes)) return false
-      if (selectedAgeRanges.length > 0 && !selectedAgeRanges.some((ageRange) => ageRangeMatchesBucket(item.age_range, ageRange))) return false
+      if (!schoolMatchesAgeRange(item.age_range, ageRangeMin, ageRangeMax)) return false
       return true
     })
-  }, [schools, keyword, selectedProvinces, selectedTypes, selectedAgeRanges])
+  }, [schools, keyword, selectedProvinces, selectedTypes, ageRangeMin, ageRangeMax])
 
   const activeFilterSummary = [
     formatSelectedSummary(selectedProvinces, '地区'),
     formatSelectedSummary(selectedTypes, '类型'),
-    formatSelectedSummary(selectedAgeRanges, '年龄段'),
+    ageFilterActive ? `年龄${formatAgeRange(ageRangeMin, ageRangeMax)}` : '',
   ].filter(Boolean).join(' · ')
 
   const resetFilters = () => {
     setKeyword('')
     setSelectedProvinces([])
     setSelectedTypes([])
-    setSelectedAgeRanges([])
+    setAgeRangeMin(AGE_RANGE_MIN)
+    setAgeRangeMax(AGE_RANGE_MAX)
   }
 
   const goToDetail = (item: School) => {
@@ -414,11 +489,10 @@ export default function SchoolsPage() {
             <FilterChip key={option} label={option} active={isMultiActive(selectedTypes, option, allFilter)} onClick={() => setSelectedTypes((current) => toggleMultiFilter(current, option, allFilter))} />
           ))}
         </AppFilterRow>
-        <AppFilterRow title='年龄段'>
-          {ageOptions.map((option) => (
-            <FilterChip key={option} label={option} active={isMultiActive(selectedAgeRanges, option, allFilter)} onClick={() => setSelectedAgeRanges((current) => toggleMultiFilter(current, option, allFilter))} />
-          ))}
-        </AppFilterRow>
+        <View style={{ marginBottom: space(4) }}>
+          <Text style={{ ...typography.bodyStrong, color: palette.brand }}>年龄区间</Text>
+          <AgeRangeSlider minValue={ageRangeMin} maxValue={ageRangeMax} onChange={(minValue, maxValue) => { setAgeRangeMin(minValue); setAgeRangeMax(maxValue) }} />
+        </View>
       </AppCard>
 
       <View className='app-count-line'>
@@ -433,6 +507,7 @@ export default function SchoolsPage() {
         const iconBgRotation = [palette.iconBg, palette.brandSoft, palette.accent2Soft, palette.greenSoft]
         const iconBg = iconBgRotation[index % iconBgRotation.length]
         const locationCount = getLocations(item).length
+        const displayAgeRange = formatAgeRangeForDisplay(item.age_range)
 
         return (
           <AppCard key={item.id} onClick={() => goToDetail(item)}>
@@ -453,7 +528,7 @@ export default function SchoolsPage() {
 
             <View className='app-list-card__meta-box'>
               <View className='app-list-card__meta-line'>
-                <Text className='text-meta text-color-sub'>适合年龄段：{item.age_range || '未填写'}</Text>
+                <Text className='text-meta text-color-sub'>适合年龄段：{displayAgeRange || '未填写'}</Text>
               </View>
               <View className='app-list-card__meta-line'>
                 <Text className='text-meta text-color-sub'>费用：{item.fee || '未填写'}</Text>
