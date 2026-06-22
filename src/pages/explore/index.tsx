@@ -591,21 +591,22 @@ export default function ExplorePage() {
       )}
 
       <View style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)} ${space(3)}`, borderBottom: `1px solid ${exploreTheme.border}` }}>
-        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: space(3), flexWrap: 'wrap' }}>
-          <FilterChip active={showSchools} tone='brand' text={schoolFilterText} onClick={() => { setShowSchools(!showSchools); closePopup() }} />
-          <FilterChip active={showUsers} tone='user' text={`同路人 ${showUsers ? userCount : '—'}`} onClick={() => { setShowUsers(!showUsers); closePopup() }} />
-          {showUsers && (
-            <AppChip
-              text={`筛选${activeUserFilterCount > 0 ? ` ${activeUserFilterCount}` : ''}`}
-              tone='neutral'
-              size='lg'
-              selected={activeUserFilterCount > 0}
-              interactive
-              onClick={() => setShowUserFilterSheet(true)}
-            />
-          )}
-          <View style={{ flex: 1 }} />
-        </View>
+        <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: space(8), marginBottom: space(3) }}>
+          <View style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', paddingBottom: space(1) }}>
+            <FilterChip active={showSchools} tone='brand' text={schoolFilterText} onClick={() => { setShowSchools(!showSchools); closePopup() }} />
+            <FilterChip active={showUsers} tone='user' text={`同路人 ${showUsers ? userCount : '—'}`} onClick={() => { setShowUsers(!showUsers); closePopup() }} />
+            {showUsers && (
+              <AppChip
+                text={`筛选${activeUserFilterCount > 0 ? ` ${activeUserFilterCount}` : ''}`}
+                tone='neutral'
+                size='md'
+                selected={activeUserFilterCount > 0}
+                interactive
+                onClick={() => setShowUserFilterSheet(true)}
+              />
+            )}
+          </View>
+        </ScrollView>
 
         {availableProvinces.length > 0 && (
           <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: space(8) }}>
