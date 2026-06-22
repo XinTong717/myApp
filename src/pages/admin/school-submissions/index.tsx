@@ -28,16 +28,42 @@ function formatDateText(value?: string | null) {
   return date.toLocaleString('zh-CN', { hour12: false })
 }
 
+function normalizeText(value?: string) {
+  return String(value || '').trim()
+}
+
+function getSchoolTypeText(item: SchoolSubmissionItem) {
+  return item.schoolType || (item.schoolTypes || []).join('、') || ''
+}
+
+function getAgeRangeText(item: SchoolSubmissionItem) {
+  return item.ageRange || (item.ageRanges || []).join('、') || ''
+}
+
 function formatSubmissionForClipboard(item: SchoolSubmissionItem, adminNote: string) {
+  const officialUrl = normalizeText(item.officialUrl || item.publicAccountNote)
+  const admissionReq = normalizeText(item.admissionReq || item.participationNote)
   return [
-    `名称：${item.name || ''}`,
-    `地区：${[item.province, item.city].filter(Boolean).join(' · ')}`,
-    `类型：${item.schoolType || (item.schoolTypes || []).join('、') || ''}`,
-    `阶段：${item.ageRange || (item.ageRanges || []).join('、') || ''}`,
-    `公开主页：${item.officialUrl || ''}`,
-    `公开账号/关键词：${item.publicAccountNote || ''}`,
-    `参与说明：${item.participationNote || ''}`,
-    `费用说明：${item.feeNote || ''}`,
+    '【建议发布到 schools】',
+    `name / canonical_name：${item.name || ''}`,
+    `school_type：${getSchoolTypeText(item)}`,
+    `age_range：${getAgeRangeText(item)}`,
+    `official_url：${officialUrl}`,
+    `xuji_note：${item.xujiNote || ''}`,
+    `residency_req：${item.residencyReq || ''}`,
+    `admission_req：${admissionReq}`,
+    `fee：${item.feeNote || ''}`,
+    `output_direction：${item.outputDirection || ''}`,
+    '',
+    '【建议发布到 school_locations】',
+    `province：${item.province || ''}`,
+    `city：${item.city || ''}`,
+    'address_note：',
+    'contact_note：',
+    'status：published',
+    'source：school_submission',
+    '',
+    '【仅供审核参考，不直接公开】',
     `信息来源：${item.sourceNote || ''}`,
     `推荐理由：${item.recommendationNote || ''}`,
     `提交人：${item.submitterDisplayName || '未知'}${item.submitterCity ? ` · ${item.submitterCity}` : ''}`,
@@ -196,7 +222,7 @@ export default function AdminSchoolSubmissionsPage() {
           <Text style={{ ...typography.title, color: palette.text }}>学习社区推荐审核</Text>
           <View style={{ marginTop: space(2) }}>
             <Text style={{ ...typography.meta, color: palette.subtext }}>
-              当前只做人工处理闭环：复制推荐信息，手动录入或合并到 schools / school_locations，然后把这条推荐标记为已处理、重复或拒绝。
+              推荐内容已按学习社区详情页字段整理：复制发布字段后，可更顺畅录入或合并到 schools / school_locations。
             </Text>
           </View>
           <View style={{ marginTop: space(3), backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: `${space(2)} ${space(3)}` }}>
@@ -236,11 +262,14 @@ export default function AdminSchoolSubmissionsPage() {
                 <Text style={{ ...typography.cardTitle, color: palette.text }}>{item.name || '未命名学习社区'}</Text>
                 <View style={{ marginTop: space(1) }}>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>
-                    {item.province}{item.city ? ` · ${item.city}` : ''}{item.schoolType ? ` · ${item.schoolType}` : ''}
+                    {item.province}{item.city ? ` · ${item.city}` : ''}{getSchoolTypeText(item) ? ` · ${getSchoolTypeText(item)}` : ''}
                   </Text>
                 </View>
                 <View style={{ marginTop: space(1) }}>
-                  <Text style={{ ...typography.caption, color: palette.subtext }}>阶段：{item.ageRange || (item.ageRanges || []).join('、') || '未填写'}</Text>
+                  <Text style={{ ...typography.caption, color: palette.subtext }}>年龄：{getAgeRangeText(item) || '未填写'}</Text>
+                </View>
+                <View style={{ marginTop: space(1) }}>
+                  <Text style={{ ...typography.caption, color: palette.subtext }}>详情字段：{[item.xujiNote && '公开说明', item.residencyReq && '参与前了解', (item.admissionReq || item.participationNote) && '参与方式', item.feeNote && '费用', item.outputDirection && '相关说明'].filter(Boolean).join(' / ') || '较少'}</Text>
                 </View>
                 <View style={{ marginTop: space(1) }}>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>
@@ -270,14 +299,14 @@ export default function AdminSchoolSubmissionsPage() {
             <Text style={{ ...typography.sectionTitle, color: palette.text, marginBottom: space(2) }}>处理详情</Text>
 
             <View style={{ marginBottom: space(3) }}>
-              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>推荐信息</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>发布字段与审核信息</Text>
               <View style={{ marginTop: space(2), backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), border: `1px solid ${palette.line}` }}>
                 <Text style={{ ...typography.caption, color: palette.subtext, whiteSpace: 'pre-wrap' }}>
                   {formatSubmissionForClipboard(selectedSubmission, adminNote)}
                 </Text>
               </View>
               <View style={{ marginTop: space(2) }}>
-                <AdminActionButton text='复制推荐信息' variant='secondary' onClick={handleCopy} />
+                <AdminActionButton text='复制发布字段' variant='secondary' onClick={handleCopy} />
               </View>
             </View>
 
