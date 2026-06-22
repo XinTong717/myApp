@@ -45,12 +45,59 @@ function splitTokens(value?: string) {
     .filter(Boolean)
 }
 
+function normalizeAgeText(value?: string) {
+  return String(value || '')
+    .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    .replace(/[~～—–至到]/g, '-')
+    .trim()
+}
+
+function getAgeSpans(value?: string): Array<{ min: number; max: number }> {
+  const text = normalizeAgeText(value)
+  if (!text) return []
+  const spans: Array<{ min: number; max: number }> = []
+  const rangePattern = /(\d{1,2}(?:\.\d+)?)\s*(?:岁)?\s*-\s*(\d{1,2}(?:\.\d+)?)/g
+  let rangeMatch: RegExpExecArray | null
+  while ((rangeMatch = rangePattern.exec(text))) {
+    const a = Number(rangeMatch[1])
+    const b = Number(rangeMatch[2])
+    if (Number.isFinite(a) && Number.isFinite(b)) spans.push({ min: Math.min(a, b), max: Math.max(a, b) })
+  }
+  const plusPattern = /(\d{1,2}(?:\.\d+)?)\s*(?:岁)?\s*(?:\+|以上|及以上)/g
+  let plusMatch: RegExpExecArray | null
+  while ((plusMatch = plusPattern.exec(text))) {
+    const min = Number(plusMatch[1])
+    if (Number.isFinite(min)) spans.push({ min, max: Number.POSITIVE_INFINITY })
+  }
+  if (spans.length > 0) return spans
+  if (text.includes('小学') && text.includes('高中')) return [{ min: 7, max: 18 }]
+  if (text.includes('小学') && text.includes('初中')) return [{ min: 7, max: 15 }]
+  if (text.includes('初中') && text.includes('高中')) return [{ min: 13, max: 18 }]
+  if ((text.includes('幼儿园') || text.includes('学龄前')) && text.includes('小学')) return [{ min: 0, max: 12 }]
+  if ((text.includes('幼儿园') || text.includes('学龄前')) && text.includes('高中')) return [{ min: 0, max: 18 }]
+  if (text.includes('幼儿园') || text.includes('学龄前')) return [{ min: 0, max: 6 }]
+  if (text.includes('小学')) return [{ min: 7, max: 12 }]
+  if (text.includes('初中')) return [{ min: 13, max: 15 }]
+  if (text.includes('高中')) return [{ min: 16, max: 18 }]
+  if (text.includes('中学') || text.includes('青少年')) return [{ min: 13, max: 18 }]
+  if (text.includes('大学') || text.includes('青年')) return [{ min: 19, max: 24 }]
+  if (text.includes('成人') || text.includes('家长') || text.includes('教师') || text.includes('教育者')) return [{ min: 25, max: Number.POSITIVE_INFINITY }]
+  return []
+}
+
+function formatAgeNumber(value: number) {
+  if (!Number.isFinite(value)) return '30+'
+  return Number.isInteger(value) ? String(value) : String(value).replace(/\.0$/, '')
+}
+
 function formatAgeRangeTag(value?: string) {
   const text = String(value || '').trim()
   if (!text) return ''
-  if (/[岁年级学前幼儿园小学初中高中大学成人]/.test(text)) return text
-  if (/^\d+(?:\.\d+)?\s*(?:[-~～—–至到]\s*\d+(?:\.\d+)?|\+)?$/.test(text)) return `${text.replace(/\s+/g, '')}岁`
-  return text
+  const spans = getAgeSpans(text)
+  if (spans.length === 0) return text
+  const min = Math.min(...spans.map((span) => span.min))
+  const max = Math.max(...spans.map((span) => span.max))
+  return `${formatAgeNumber(min)}-${formatAgeNumber(max)}${max >= 30 ? '岁+' : '岁'}`
 }
 
 function getLocations(school: School): SchoolLocationItem[] {
