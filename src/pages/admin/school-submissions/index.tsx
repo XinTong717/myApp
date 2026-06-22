@@ -13,9 +13,38 @@ import { radius, space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
 
 const STATUS_OPTIONS = ['pending', 'processed', 'duplicate', 'rejected'] as const
+const STATUS_LABELS: Record<string, string> = {
+  pending: '待审核',
+  processed: '已处理',
+  duplicate: '重复推荐',
+  rejected: '已拒绝',
+}
+const SECURITY_STATUS_LABELS: Record<string, string> = {
+  passed: '安全：已通过',
+  check_failed: '安全：检查失败，需人工看',
+  review: '安全：需人工复核',
+  blocked: '安全：未通过，请勿发布',
+  unknown: '安全：未知',
+}
 
 type StatusValue = typeof STATUS_OPTIONS[number]
 type ReviewAction = 'mark_processed' | 'reject' | 'duplicate' | 'reset_pending'
+
+function formatStatusLabel(status?: string) {
+  const value = String(status || '').trim()
+  return STATUS_LABELS[value] || value || '未知状态'
+}
+
+function formatSecurityStatus(status?: string) {
+  const value = String(status || 'unknown').trim()
+  return SECURITY_STATUS_LABELS[value] || `安全：${value}`
+}
+
+function getSecurityTone(status?: string) {
+  if (status === 'passed') return 'green'
+  if (status === 'blocked') return 'brand'
+  return 'accent'
+}
 
 function Pill(props: { label: string; active: boolean; onClick: () => void }) {
   return <AppChip text={props.label} tone='brand' size='md' selected={props.active} interactive onClick={props.onClick} />
@@ -67,7 +96,7 @@ function formatSubmissionForClipboard(item: SchoolSubmissionItem, adminNote: str
     `信息来源：${item.sourceNote || ''}`,
     `推荐理由：${item.recommendationNote || ''}`,
     `提交人：${item.submitterDisplayName || '未知'}${item.submitterCity ? ` · ${item.submitterCity}` : ''}`,
-    `内容安全：${item.contentSecurityStatus || 'unknown'}`,
+    `内容安全：${formatSecurityStatus(item.contentSecurityStatus)}`,
     `审核备注：${adminNote || item.adminNote || ''}`,
     `submissionId：${item._id}`,
   ].join('\n')
@@ -76,7 +105,7 @@ function formatSubmissionForClipboard(item: SchoolSubmissionItem, adminNote: str
 export default function AdminSchoolSubmissionsPage() {
   const [checking, setChecking] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [adminName, setAdminName] = useState('admin')
+  const [adminName, setAdminName] = useState('管理员')
   const [statusFilter, setStatusFilter] = useState<StatusValue>('pending')
   const [submissions, setSubmissions] = useState<SchoolSubmissionItem[]>([])
   const [selectedId, setSelectedId] = useState('')
@@ -122,7 +151,7 @@ export default function AdminSchoolSubmissionsPage() {
       const result = await checkAdminAccess()
       if (result?.ok && result?.isAdmin) {
         setIsAdmin(true)
-        setAdminName(result.admin?.name || 'admin')
+        setAdminName(result.admin?.name || '管理员')
         await loadSubmissions(statusFilter)
       } else {
         setIsAdmin(false)
@@ -234,7 +263,7 @@ export default function AdminSchoolSubmissionsPage() {
           {STATUS_OPTIONS.map((option) => (
             <Pill
               key={option}
-              label={option}
+              label={formatStatusLabel(option)}
               active={statusFilter === option}
               onClick={async () => {
                 setStatusFilter(option)
@@ -280,8 +309,8 @@ export default function AdminSchoolSubmissionsPage() {
                   <Text style={{ ...typography.caption, color: palette.subtext }}>提交时间：{formatDateText(item.createdAt)}</Text>
                 </View>
                 <View style={{ marginTop: space(2), display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
-                  <AppChip text={item.status} tone='brand' />
-                  {item.contentSecurityStatus ? <AppChip text={`安全：${item.contentSecurityStatus}`} tone={item.contentSecurityStatus === 'passed' ? 'green' : 'accent'} /> : null}
+                  <AppChip text={formatStatusLabel(item.status)} tone='brand' />
+                  {item.contentSecurityStatus ? <AppChip text={formatSecurityStatus(item.contentSecurityStatus)} tone={getSecurityTone(item.contentSecurityStatus) as any} /> : null}
                 </View>
               </AppCard>
             )
@@ -311,7 +340,7 @@ export default function AdminSchoolSubmissionsPage() {
             </View>
 
             <View style={{ marginBottom: space(3) }}>
-              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>adminNote</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>审核备注</Text>
               <View style={{ marginTop: space(2) }}>
                 <FormInputBox focused={noteFocused} marginBottom='0'>
                   <Textarea
