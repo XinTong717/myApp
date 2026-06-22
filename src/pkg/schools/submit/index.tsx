@@ -318,7 +318,7 @@ export default function SubmitSchoolPage() {
         <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.micro, color: palette.muted }}>{recommendationNote.length}/500</Text></View>
       </AppCard>
 
-      <AppPromptBanner icon='lock' title='提交后进入审核' description='你的提交不会自动公开。请只提交公开可验证的信息，不要填写第三方未公开的私人联系方式或未公开的未成年人信息。' tone='warm' />
+      <AppPromptBanner icon='lock' title='提交后进入审核' description='你的提交不会自动公开，请提交公开可验证的信息。审核通过后，相关信息会显示在学习社区页。如填写个人联系方式，请注明是否可公开。' tone='warm' />
       <AppPrimaryButton text='提交推荐' loadingText='提交中...' loading={submitting} onClick={handleSubmit} />
     </AppPage>
   )
