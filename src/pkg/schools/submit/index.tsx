@@ -14,14 +14,13 @@ import AppPromptBanner from '../../../components/common/AppPromptBanner'
 import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
 import FormInputBox from '../../../components/common/FormInputBox'
 
-const SCHOOL_TYPE_OPTIONS = ['项目制学习', '线下社区', '线上社区', '混合型', '家庭共学', '其他']
-const AGE_RANGE_OPTIONS = ['学龄前', '小学阶段', '中学阶段', '混龄', '成人为主', '其他']
+const SCHOOL_TYPE_OPTIONS = ['学习成长社区', '学校', '华德福学校', '孤独症特教', '短期营', '公益组织', '疗愈社区', '其他']
 
 type FocusField =
   | 'name'
   | 'customCity'
   | 'schoolTypeOther'
-  | 'ageRangeOther'
+  | 'ageRange'
   | 'officialUrl'
   | 'xujiNote'
   | 'residencyReq'
@@ -66,8 +65,7 @@ export default function SubmitSchoolPage() {
   const [customCity, setCustomCity] = useState('')
   const [schoolType, setSchoolType] = useState<string[]>([])
   const [schoolTypeOther, setSchoolTypeOther] = useState('')
-  const [ageRange, setAgeRange] = useState<string[]>([])
-  const [ageRangeOther, setAgeRangeOther] = useState('')
+  const [ageRange, setAgeRange] = useState('')
   const [officialUrl, setOfficialUrl] = useState('')
   const [xujiNote, setXujiNote] = useState('')
   const [residencyReq, setResidencyReq] = useState('')
@@ -80,7 +78,7 @@ export default function SubmitSchoolPage() {
   const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
   const hasUnsavedContent = !!(
     name.trim() || province || cityOption || customCity.trim() || schoolType.length > 0 || schoolTypeOther.trim() ||
-    ageRange.length > 0 || ageRangeOther.trim() || officialUrl.trim() || xujiNote.trim() || residencyReq.trim() || admissionReq.trim() ||
+    ageRange.trim() || officialUrl.trim() || xujiNote.trim() || residencyReq.trim() || admissionReq.trim() ||
     feeNote.trim() || outputDirection.trim() || sourceNote.trim() || recommendationNote.trim()
   )
 
@@ -129,7 +127,6 @@ export default function SubmitSchoolPage() {
     if (!province || !currentCity) { Taro.showToast({ title: '请选择所在城市', icon: 'none' }); return }
     if (cityOption === '其他' && !customCity.trim()) { Taro.showToast({ title: '请输入真实城市名', icon: 'none' }); return }
     if (schoolType.includes('其他') && !schoolTypeOther.trim()) { Taro.showToast({ title: '请补充社区类型中的“其他”', icon: 'none' }); return }
-    if (ageRange.includes('其他') && !ageRangeOther.trim()) { Taro.showToast({ title: '请补充适合年龄段中的“其他”', icon: 'none' }); return }
 
     submitLockRef.current = true
 
@@ -144,8 +141,8 @@ export default function SubmitSchoolPage() {
         city: currentCity,
         schoolType,
         schoolTypeOther: schoolType.includes('其他') ? schoolTypeOther.trim() : '',
-        ageRange,
-        ageRangeOther: ageRange.includes('其他') ? ageRangeOther.trim() : '',
+        ageRange: ageRange.trim() ? [ageRange.trim()] : [],
+        ageRangeOther: '',
         officialUrl: officialUrl.trim(),
         xujiNote: xujiNote.trim(),
         residencyReq: residencyReq.trim(),
@@ -194,9 +191,8 @@ export default function SubmitSchoolPage() {
         <MultiPillSelect options={SCHOOL_TYPE_OPTIONS} selected={schoolType} onChange={setSchoolType} />
         {schoolType.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充社区类型中的“其他”。</Text></View><FormInputBox focused={focusedField === 'schoolTypeOther'} marginBottom='0'><Input value={schoolTypeOther} placeholder='例如：森林学校 / 驻留计划' onFocus={() => setFocusedField('schoolTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setSchoolTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
 
-        <SectionTitle text='适合年龄段（可多选）' />
-        <MultiPillSelect options={AGE_RANGE_OPTIONS} selected={ageRange} onChange={setAgeRange} />
-        {ageRange.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充适合年龄段中的“其他”。</Text></View><FormInputBox focused={focusedField === 'ageRangeOther'} marginBottom='0'><Input value={ageRangeOther} placeholder='例如：3.5-16岁 / 大学生 / 家庭混龄共学' onFocus={() => setFocusedField('ageRangeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setAgeRangeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
+        <SectionTitle text='适合年龄段（选填）' />
+        <FormInputBox focused={focusedField === 'ageRange'}><Input value={ageRange} placeholder='例如：3.5-16岁 / 6-18岁 / 小学至高中' onFocus={() => setFocusedField('ageRange')} onBlur={() => setFocusedField('')} onInput={(e) => setAgeRange(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
 
         <SectionTitle text='官方/说明链接（选填）' />
         <FormInputBox focused={focusedField === 'officialUrl'}><Input value={officialUrl} placeholder='例如：官网链接 / 公众号名 / 小红书号' onFocus={() => setFocusedField('officialUrl')} onBlur={() => setFocusedField('')} onInput={(e) => setOfficialUrl(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
