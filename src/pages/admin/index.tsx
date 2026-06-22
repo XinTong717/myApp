@@ -93,7 +93,7 @@ export default function AdminConsolePage() {
             />
             <AdminConsoleCard
               title='学习社区推荐'
-              description='查看用户推荐的学习社区，复制信息手动录入或合并，再标记已处理、重复或拒绝。'
+              description='查看用户推荐的学习社区，按详情页字段复制发布信息，再录入或合并到 schools / school_locations。'
               tag='school_submissions'
               onClick={() => Taro.navigateTo({ url: '/pages/admin/school-submissions/index' })}
             />
