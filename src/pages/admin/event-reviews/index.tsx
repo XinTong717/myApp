@@ -15,6 +15,11 @@ import { radius, space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
 
 const STATUS_OPTIONS = ['pending', 'merged', 'rejected'] as const
+const STATUS_LABELS: Record<string, string> = {
+  pending: '待审核',
+  merged: '已发布',
+  rejected: '已拒绝',
+}
 
 type StatusValue = typeof STATUS_OPTIONS[number]
 type FocusField = 'publishedEventId' | 'adminNote' | ''
@@ -56,6 +61,11 @@ function formatDateText(value?: string | null) {
   return date.toLocaleString('zh-CN', { hour12: false })
 }
 
+function formatStatusLabel(status?: string) {
+  const value = String(status || '').trim()
+  return STATUS_LABELS[value] || value || '未知状态'
+}
+
 function getSecurityChipTone(status?: string) {
   if (!status) return 'neutral'
   if (status === 'passed') return 'green'
@@ -64,18 +74,18 @@ function getSecurityChipTone(status?: string) {
 }
 
 function formatSecurityStatus(status?: string) {
-  if (!status) return '安全：unknown'
-  if (status === 'passed') return '安全：passed'
-  if (status === 'check_failed') return '安全：check_failed · 需人工看'
-  if (status === 'review') return '安全：review · 需人工看'
-  if (status === 'blocked') return '安全：blocked · 勿发布'
+  if (!status) return '安全：未知'
+  if (status === 'passed') return '安全：已通过'
+  if (status === 'check_failed') return '安全：检查失败，需人工看'
+  if (status === 'review') return '安全：需人工复核'
+  if (status === 'blocked') return '安全：未通过，请勿发布'
   return `安全：${status}`
 }
 
 export default function AdminEventReviewsPage() {
   const [checking, setChecking] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [adminName, setAdminName] = useState('admin')
+  const [adminName, setAdminName] = useState('管理员')
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusValue>('pending')
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([])
@@ -130,7 +140,7 @@ export default function AdminEventReviewsPage() {
       const result = await checkAdminAccess()
       if (result?.ok && result?.isAdmin) {
         setIsAdmin(true)
-        setAdminName(result.admin?.name || 'admin')
+        setAdminName(result.admin?.name || '管理员')
         await loadSubmissions(statusFilter)
       } else {
         setIsAdmin(false)
@@ -202,6 +212,7 @@ export default function AdminEventReviewsPage() {
           title: '暂不能发布',
           content: result.message || '该提交缺少必要信息，请修正后再发布。',
           showCancel: false,
+          confirmText: '知道了',
         })
       } else {
         Taro.showToast({ title: result?.message || '发布失败', icon: 'none' })
@@ -217,7 +228,7 @@ export default function AdminEventReviewsPage() {
   const handleReview = async (reviewAction: 'mark_published' | 'reject' | 'reset_pending') => {
     if (!selectedSubmission || reviewLoading) return
     if (reviewAction === 'mark_published' && !publishedEventId.trim()) {
-      Taro.showToast({ title: '请先填写 publishedEventId', icon: 'none' })
+      Taro.showToast({ title: '请先填写已发布活动 ID', icon: 'none' })
       return
     }
 
@@ -248,7 +259,7 @@ export default function AdminEventReviewsPage() {
 
   const handleCopyPayload = () => {
     if (!payloadText || payloadText === '{}') {
-      Taro.showToast({ title: '暂无 payload 可复制', icon: 'none' })
+      Taro.showToast({ title: '暂无发布数据可复制', icon: 'none' })
       return
     }
     Taro.setClipboardData({ data: payloadText })
@@ -288,7 +299,7 @@ export default function AdminEventReviewsPage() {
           <Text style={{ ...typography.title, color: palette.text }}>活动审核台</Text>
           <View style={{ marginTop: space(2) }}>
             <Text style={{ ...typography.meta, color: palette.subtext }}>
-              这里是管理员专用页面。你可以查看 event_submissions，生成建议版 events payload，并一键发布到 CloudBase events 集合；也保留手动回填作为备用路径。
+              这里是管理员专用页面。你可以查看活动提交，生成建议版活动发布数据，并一键发布到 CloudBase events 集合；也保留手动回填作为备用路径。
             </Text>
           </View>
           <View style={{ marginTop: space(3), backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: `${space(2)} ${space(3)}` }}>
@@ -300,7 +311,7 @@ export default function AdminEventReviewsPage() {
           {STATUS_OPTIONS.map((option) => (
             <Pill
               key={option}
-              label={option}
+              label={formatStatusLabel(option)}
               active={statusFilter === option}
               onClick={async () => {
                 setStatusFilter(option)
@@ -347,10 +358,10 @@ export default function AdminEventReviewsPage() {
                   </Text>
                 </View>
                 <View style={{ marginTop: space(2), display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
-                  <AppChip text={item.status} tone='brand' />
+                  <AppChip text={formatStatusLabel(item.status)} tone='brand' />
                   <AppChip text={item.isOnline ? '线上' : '线下'} tone='green' />
                   <AppChip text={formatSecurityStatus(item.contentSecurityStatus)} tone={getSecurityChipTone(item.contentSecurityStatus) as any} />
-                  {item.publishedEventId ? <AppChip text={`event #${item.publishedEventId}`} tone='accent' /> : null}
+                  {item.publishedEventId ? <AppChip text={`活动 #${item.publishedEventId}`} tone='accent' /> : null}
                 </View>
               </AppCard>
             )
@@ -368,25 +379,25 @@ export default function AdminEventReviewsPage() {
             <Text style={{ ...typography.sectionTitle, color: palette.text, marginBottom: space(2) }}>审核详情</Text>
 
             <View style={{ marginBottom: space(2) }}>
-              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>submissionId</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>提交记录 ID</Text>
               <Text style={{ ...typography.meta, color: palette.text }}>{selectedSubmission._id}</Text>
             </View>
 
             <View style={{ marginBottom: space(2) }}>
-              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>发布时间建议 payload</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>发布时间建议数据</Text>
               <View style={{ marginTop: space(2), backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), border: `1px solid ${palette.line}` }}>
                 <Text style={{ ...typography.caption, color: palette.subtext, whiteSpace: 'pre-wrap' }}>
                   {detailLoading ? '生成中...' : payloadText}
                 </Text>
               </View>
               <View style={{ marginTop: space(2) }}>
-                <AdminActionButton text='复制 payload JSON' variant='secondary' onClick={handleCopyPayload} />
+                <AdminActionButton text='复制发布 JSON' variant='secondary' onClick={handleCopyPayload} />
               </View>
             </View>
 
             {(payloadResponse.warnings || []).length > 0 ? (
               <View style={{ marginBottom: space(3) }}>
-                <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>Warnings</Text>
+                <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>风险提示</Text>
                 <View style={{ marginTop: space(2), backgroundColor: palette.warningSoft, borderRadius: radius.md, padding: space(3), border: `1px solid ${palette.line}` }}>
                   {(payloadResponse.warnings || []).map((warning, idx) => (
                     <View key={`${idx}-${warning}`} style={{ marginBottom: idx === (payloadResponse.warnings || []).length - 1 ? '0' : space(2) }}>
@@ -398,7 +409,7 @@ export default function AdminEventReviewsPage() {
             ) : null}
 
             <View style={{ marginBottom: space(3) }}>
-              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>publishedEventId（手动备用路径）</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>已发布活动 ID（手动备用路径）</Text>
               <View style={{ marginTop: space(2) }}>
                 <FormInputBox focused={focusedField === 'publishedEventId'} marginBottom='0'>
                   <Input
@@ -414,7 +425,7 @@ export default function AdminEventReviewsPage() {
             </View>
 
             <View style={{ marginBottom: space(3) }}>
-              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>adminNote</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>审核备注</Text>
               <View style={{ marginTop: space(2) }}>
                 <FormInputBox focused={focusedField === 'adminNote'} marginBottom='0'>
                   <Textarea
