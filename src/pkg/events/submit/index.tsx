@@ -5,7 +5,7 @@ import { LOCATION_DATA, PROVINCES } from '../../../constants/location'
 import { submitEvent } from '../../../services/event'
 import SectionTitle from '../../../components/profile/SectionTitle'
 import { palette } from '../../../theme/palette'
-import { space } from '../../../theme/spacing'
+import { radius, space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
 import { MultiPillSelect, SinglePillSelect } from '../../../components/common/PillSelect'
 import AppPage from '../../../components/common/AppPage'
@@ -16,11 +16,11 @@ import FormInputBox from '../../../components/common/FormInputBox'
 
 const EVENT_TYPE_OPTIONS = ['工作坊', '项目招募', '圆桌讨论', '交友聚会', '一对一', '团体', '其他']
 const AUDIENCE_WHO_OPTIONS = ['家长', '教育工作者', '儿童/青少年（需家长陪同）', '儿童/青少年（独立参加）', '开放给所有人', '其他']
-const MIN_AGE_OPTIONS = ['全年龄', '6岁+', '12岁+', '18岁+']
-const MAX_AGE_OPTIONS = ['不限', '6岁以下', '12岁以下', '18岁以下', '25岁以下']
 const FEE_OPTIONS = ['免费', '付费', '公益随喜', '费用待确认']
 const RECURRENCE_OPTIONS = ['每周', '每两周', '每月', '不固定']
 const CHINA_TIMEZONE_OFFSET = '+08:00'
+const AGE_RANGE_MIN = 0
+const AGE_RANGE_MAX = 30
 
 type FocusField =
   | 'title'
@@ -44,14 +44,10 @@ function combineDateTime(date: string, time: string) {
   return `${date}T${time}:00${CHINA_TIMEZONE_OFFSET}`
 }
 
-function setBeforeUnloadAlert(enabled: boolean, message: string) {
+function setBeforeUnloadAlert(_enabled: boolean, _message: string) {
   const taroAny = Taro as any
   try {
-    if (enabled && taroAny.enableAlertBeforeUnload) {
-      taroAny.enableAlertBeforeUnload({ message, confirmText: '离开', cancelText: '继续填写' })
-    } else if (!enabled && taroAny.disableAlertBeforeUnload) {
-      taroAny.disableAlertBeforeUnload()
-    }
+    if (taroAny.disableAlertBeforeUnload) taroAny.disableAlertBeforeUnload()
   } catch (err) {
     console.warn('setBeforeUnloadAlert skipped:', err)
   }
@@ -67,12 +63,84 @@ async function showSubmittedModal() {
   Taro.navigateBack()
 }
 
+function clampAge(value: number, min = AGE_RANGE_MIN, max = AGE_RANGE_MAX) {
+  return Math.max(min, Math.min(max, Math.round(value)))
+}
+
+function getTouchPageX(event: any) {
+  return Number(event?.touches?.[0]?.pageX ?? event?.changedTouches?.[0]?.pageX ?? 0)
+}
+
+function formatAgeRange(minAge: number, maxAge: number) {
+  return `${minAge}-${maxAge}${maxAge >= AGE_RANGE_MAX ? '岁+' : '岁'}`
+}
+
+function getMinAgeRequirement(minAge: number) {
+  return minAge <= AGE_RANGE_MIN ? '全年龄' : `${minAge}岁+`
+}
+
+function getMaxAgeRequirement(maxAge: number) {
+  return maxAge >= AGE_RANGE_MAX ? '' : `${maxAge}岁以下`
+}
+
+function AgeRangeSlider(props: { minValue: number; maxValue: number; onChange: (minValue: number, maxValue: number) => void }) {
+  const trackIdRef = useRef(`event-submit-age-range-${Math.random().toString(36).slice(2)}`)
+  const activeHandleRef = useRef<'min' | 'max'>('min')
+  const minPercent = ((props.minValue - AGE_RANGE_MIN) / (AGE_RANGE_MAX - AGE_RANGE_MIN)) * 100
+  const maxPercent = ((props.maxValue - AGE_RANGE_MIN) / (AGE_RANGE_MAX - AGE_RANGE_MIN)) * 100
+
+  const updateFromTouch = (event: any, mode: 'nearest' | 'active' = 'active') => {
+    const pageX = getTouchPageX(event)
+    if (!pageX) return
+    Taro.createSelectorQuery()
+      .select(`#${trackIdRef.current}`)
+      .boundingClientRect((rect: any) => {
+        const width = Number(rect?.width || 0)
+        if (!width) return
+        const ratio = Math.max(0, Math.min(1, (pageX - Number(rect.left || 0)) / width))
+        const nextValue = clampAge(AGE_RANGE_MIN + ratio * (AGE_RANGE_MAX - AGE_RANGE_MIN))
+        if (mode === 'nearest') {
+          activeHandleRef.current = Math.abs(nextValue - props.minValue) <= Math.abs(nextValue - props.maxValue) ? 'min' : 'max'
+        }
+        if (activeHandleRef.current === 'min') props.onChange(Math.min(nextValue, props.maxValue), props.maxValue)
+        else props.onChange(props.minValue, Math.max(nextValue, props.minValue))
+      })
+      .exec()
+  }
+
+  const startHandle = (handle: 'min' | 'max', event: any) => {
+    event?.stopPropagation?.()
+    activeHandleRef.current = handle
+    updateFromTouch(event)
+  }
+
+  return (
+    <View style={{ marginBottom: space(4) }}>
+      <View style={{ marginBottom: space(2) }}>
+        <Text style={{ ...typography.caption, color: palette.subtext }}>{formatAgeRange(props.minValue, props.maxValue)}</Text>
+      </View>
+      <View
+        id={trackIdRef.current}
+        onTouchStart={(event: any) => updateFromTouch(event, 'nearest')}
+        onTouchMove={(event: any) => updateFromTouch(event)}
+        style={{ position: 'relative', height: '44px', margin: `0 ${space(3)}` }}
+      >
+        <View style={{ position: 'absolute', left: 0, right: 0, top: '20px', height: '4px', borderRadius: radius.pill, backgroundColor: palette.line }} />
+        <View style={{ position: 'absolute', left: `${minPercent}%`, width: `${Math.max(0, maxPercent - minPercent)}%`, top: '20px', height: '4px', borderRadius: radius.pill, backgroundColor: palette.accentDeep }} />
+        <View onTouchStart={(event: any) => startHandle('min', event)} onTouchMove={(event: any) => updateFromTouch(event)} style={{ position: 'absolute', left: `${minPercent}%`, top: '10px', width: '24px', height: '24px', marginLeft: '-12px', borderRadius: radius.pill, backgroundColor: palette.accentDeep, boxShadow: '0 4px 12px rgba(112, 56, 46, 0.22)' }} />
+        <View onTouchStart={(event: any) => startHandle('max', event)} onTouchMove={(event: any) => updateFromTouch(event)} style={{ position: 'absolute', left: `${maxPercent}%`, top: '10px', width: '24px', height: '24px', marginLeft: '-12px', borderRadius: radius.pill, backgroundColor: palette.accentDeep, boxShadow: '0 4px 12px rgba(112, 56, 46, 0.22)' }} />
+      </View>
+    </View>
+  )
+}
+
 export default function SubmitEventPage() {
   const [submitting, setSubmitting] = useState(false)
   const submitLockRef = useRef(false)
   const submittedRef = useRef(false)
   const [focusedField, setFocusedField] = useState<FocusField>('')
   const [title, setTitle] = useState('')
+  const [isOnline, setIsOnline] = useState(false)
   const [province, setProvince] = useState('')
   const [cityOption, setCityOption] = useState('')
   const [customCity, setCustomCity] = useState('')
@@ -80,8 +148,8 @@ export default function SubmitEventPage() {
   const [eventTypeOther, setEventTypeOther] = useState('')
   const [audienceWho, setAudienceWho] = useState<string[]>([])
   const [audienceWhoOther, setAudienceWhoOther] = useState('')
-  const [minAgeRequirement, setMinAgeRequirement] = useState('')
-  const [maxAgeRequirement, setMaxAgeRequirement] = useState('')
+  const [ageRangeMin, setAgeRangeMin] = useState(0)
+  const [ageRangeMax, setAgeRangeMax] = useState(30)
   const [startDate, setStartDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -90,7 +158,6 @@ export default function SubmitEventPage() {
   const [signupDeadlineTime, setSignupDeadlineTime] = useState('')
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrencePattern, setRecurrencePattern] = useState('')
-  const [isOnline, setIsOnline] = useState(false)
   const [location, setLocation] = useState('')
   const [fee, setFee] = useState('')
   const [feeDetail, setFeeDetail] = useState('')
@@ -102,9 +169,9 @@ export default function SubmitEventPage() {
 
   const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
   const hasUnsavedContent = !!(
-    title.trim() || province || cityOption || customCity.trim() || eventTypes.length > 0 || eventTypeOther.trim() ||
-    audienceWho.length > 0 || audienceWhoOther.trim() || minAgeRequirement || maxAgeRequirement || startDate || startTime || endDate || endTime ||
-    signupDeadlineDate || signupDeadlineTime || isRecurring || recurrencePattern || isOnline || location.trim() || fee || feeDetail.trim() || organizer.trim() || organizerContact.trim() || officialUrl.trim() ||
+    title.trim() || isOnline || province || cityOption || customCity.trim() || eventTypes.length > 0 || eventTypeOther.trim() ||
+    audienceWho.length > 0 || audienceWhoOther.trim() || ageRangeMin !== AGE_RANGE_MIN || ageRangeMax !== AGE_RANGE_MAX || startDate || startTime || endDate || endTime ||
+    signupDeadlineDate || signupDeadlineTime || isRecurring || recurrencePattern || location.trim() || fee || feeDetail.trim() || organizer.trim() || organizerContact.trim() || officialUrl.trim() ||
     signupNote.trim() || description.trim()
   )
 
@@ -145,12 +212,21 @@ export default function SubmitEventPage() {
     }
   }
 
+  const handleOnlineChange = (checked: boolean) => {
+    setIsOnline(checked)
+    if (checked) {
+      setProvince('')
+      setCityOption('')
+      setCustomCity('')
+    }
+  }
+
   const handleSubmit = async () => {
     if (submitLockRef.current || submitting) return
 
     if (!title.trim()) { Taro.showToast({ title: '请填写活动标题', icon: 'none' }); return }
-    if (!province || !currentCity) { Taro.showToast({ title: '请选择所在城市', icon: 'none' }); return }
-    if (cityOption === '其他' && !customCity.trim()) { Taro.showToast({ title: '请输入真实城市名', icon: 'none' }); return }
+    if (!isOnline && (!province || !currentCity)) { Taro.showToast({ title: '请选择所在城市', icon: 'none' }); return }
+    if (!isOnline && cityOption === '其他' && !customCity.trim()) { Taro.showToast({ title: '请输入真实城市名', icon: 'none' }); return }
     if (eventTypes.includes('其他') && !eventTypeOther.trim()) { Taro.showToast({ title: '请补充活动类型中的“其他”', icon: 'none' }); return }
     if (audienceWho.includes('其他') && !audienceWhoOther.trim()) { Taro.showToast({ title: '请补充参与对象中的“其他”', icon: 'none' }); return }
     if (!startDate || !startTime) { Taro.showToast({ title: '请完整填写开始时间', icon: 'none' }); return }
@@ -178,10 +254,10 @@ export default function SubmitEventPage() {
     try {
       setSubmitting(true)
       const result = await submitEvent({
-        title: title.trim(), province, city: currentCity, eventTypes,
+        title: title.trim(), province: isOnline ? '线上' : province, city: isOnline ? '线上' : currentCity, eventTypes,
         eventTypeOther: eventTypes.includes('其他') ? eventTypeOther.trim() : '',
         audienceWho, audienceWhoOther: audienceWho.includes('其他') ? audienceWhoOther.trim() : '',
-        minAgeRequirement, maxAgeRequirement: maxAgeRequirement === '不限' ? '' : maxAgeRequirement,
+        minAgeRequirement: getMinAgeRequirement(ageRangeMin), maxAgeRequirement: getMaxAgeRequirement(ageRangeMax),
         startTime: combineDateTime(startDate, startTime),
         endTime: endDate && endTime ? combineDateTime(endDate, endTime) : '',
         signupDeadline: signupDeadlineDate && signupDeadlineTime ? combineDateTime(signupDeadlineDate, signupDeadlineTime) : '',
@@ -216,22 +292,24 @@ export default function SubmitEventPage() {
       <AppCard>
         <SectionTitle text='活动标题' />
         <FormInputBox focused={focusedField === 'title'}><Input value={title} placeholder='例如：xx空间教育工作坊' onFocus={() => setFocusedField('title')} onBlur={() => setFocusedField('')} onInput={(e) => setTitle(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
-        <SectionTitle text='所在城市' />
-        <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}><FormInputBox marginBottom={cityOption === '其他' ? space(2) : space(4)}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ ...typography.body, flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text><Text style={{ ...typography.caption, color: palette.subtext }}>▼</Text></View></FormInputBox></Picker>
-        {cityOption === '其他' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View><FormInputBox focused={focusedField === 'customCity'} marginBottom='0'><Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onFocus={() => setFocusedField('customCity')} onBlur={() => setFocusedField('')} onInput={(e) => setCustomCity(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
+        <SectionTitle text='线上活动' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isOnline ? '是，主要在线上进行' : '否，主要线下进行'}</Text><Switch checked={isOnline} color={palette.accentDeep} onChange={(e) => handleOnlineChange(!!e.detail.value)} /></View></FormInputBox>
+        {!isOnline && <>
+          <SectionTitle text='所在城市' />
+          <Picker mode='multiSelector' range={pickerRange} value={pickerValue} onChange={handlePickerChange} onColumnChange={handlePickerColumnChange}><FormInputBox marginBottom={cityOption === '其他' ? space(2) : space(4)}><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ ...typography.body, flex: 1, color: province ? palette.text : palette.muted }}>{province && currentCity ? `${province} · ${currentCity}` : '点击选择省份和城市'}</Text><Text style={{ ...typography.caption, color: palette.subtext }}>▼</Text></View></FormInputBox></Picker>
+          {cityOption === '其他' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View><FormInputBox focused={focusedField === 'customCity'} marginBottom='0'><Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onFocus={() => setFocusedField('customCity')} onBlur={() => setFocusedField('')} onInput={(e) => setCustomCity(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
+        </>}
+        {isOnline && <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.caption, color: palette.subtext }}>线上活动不需要填写城市，审核时会按线上活动处理。</Text></View>}
         <SectionTitle text='活动类型（可多选）' /><MultiPillSelect options={EVENT_TYPE_OPTIONS} selected={eventTypes} onChange={setEventTypes} />
         {eventTypes.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充活动类型中的“其他”。</Text></View><FormInputBox focused={focusedField === 'eventTypeOther'} marginBottom='0'><Input value={eventTypeOther} placeholder='例如：展览 / 沙龙 / 读书会' onFocus={() => setFocusedField('eventTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setEventTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
         <SectionTitle text='参与对象（可多选）' /><MultiPillSelect options={AUDIENCE_WHO_OPTIONS} selected={audienceWho} onChange={setAudienceWho} />
         {audienceWho.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充参与对象中的“其他”。</Text></View><FormInputBox focused={focusedField === 'audienceWhoOther'} marginBottom='0'><Input value={audienceWhoOther} placeholder='例如：大学生 / 创作者 / 社区志愿者' onFocus={() => setFocusedField('audienceWhoOther')} onBlur={() => setFocusedField('')} onInput={(e) => setAudienceWhoOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
-        <SectionTitle text='最低年龄要求（选填）' /><SinglePillSelect options={MIN_AGE_OPTIONS} selected={minAgeRequirement} onChange={setMinAgeRequirement} />
-        <SectionTitle text='最高年龄限制（选填）' /><SinglePillSelect options={MAX_AGE_OPTIONS} selected={maxAgeRequirement} onChange={setMaxAgeRequirement} />
+        <SectionTitle text='年龄区间' /><AgeRangeSlider minValue={ageRangeMin} maxValue={ageRangeMax} onChange={(minValue, maxValue) => { setAgeRangeMin(minValue); setAgeRangeMax(maxValue) }} />
         <SectionTitle text='开始时间' /><View style={{ display: 'flex', flexDirection: 'row', marginBottom: space(3) }}><Picker mode='date' value={startDate} onChange={(e) => setStartDate(e.detail.value)}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: startDate ? palette.text : palette.muted }}>{startDate || '选择日期'}</Text></FormInputBox></Picker><Picker mode='time' value={startTime} onChange={(e) => setStartTime(e.detail.value)}><View style={{ width: '120px', marginLeft: space(2) }}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: startTime ? palette.text : palette.muted }}>{startTime || '选择时间'}</Text></FormInputBox></View></Picker></View>
         <View style={{ marginTop: '-6px', marginBottom: space(3) }}><Text style={{ ...typography.micro, color: palette.muted }}>时间按中国标准时间 UTC+8 保存。</Text></View>
         <SectionTitle text='结束时间（选填）' /><View style={{ display: 'flex', flexDirection: 'row', marginBottom: space(4) }}><Picker mode='date' value={endDate} onChange={(e) => setEndDate(e.detail.value)}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: endDate ? palette.text : palette.muted }}>{endDate || '选择日期'}</Text></FormInputBox></Picker><Picker mode='time' value={endTime} onChange={(e) => setEndTime(e.detail.value)}><View style={{ width: '120px', marginLeft: space(2) }}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: endTime ? palette.text : palette.muted }}>{endTime || '选择时间'}</Text></FormInputBox></View></Picker></View>
         <SectionTitle text='报名截止时间（选填）' /><View style={{ display: 'flex', flexDirection: 'row', marginBottom: space(4) }}><Picker mode='date' value={signupDeadlineDate} onChange={(e) => setSignupDeadlineDate(e.detail.value)}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: signupDeadlineDate ? palette.text : palette.muted }}>{signupDeadlineDate || '选择日期'}</Text></FormInputBox></Picker><Picker mode='time' value={signupDeadlineTime} onChange={(e) => setSignupDeadlineTime(e.detail.value)}><View style={{ width: '120px', marginLeft: space(2) }}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: signupDeadlineTime ? palette.text : palette.muted }}>{signupDeadlineTime || '选择时间'}</Text></FormInputBox></View></Picker></View>
         <SectionTitle text='是否周期性进行' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isRecurring ? '是，周期性进行' : '否，单次或暂未确认'}</Text><Switch checked={isRecurring} color={palette.accentDeep} onChange={(e) => { const next = !!e.detail.value; setIsRecurring(next); if (!next) setRecurrencePattern('') }} /></View></FormInputBox>
         {isRecurring && <><SectionTitle text='周期时间' /><SinglePillSelect options={RECURRENCE_OPTIONS} selected={recurrencePattern} onChange={setRecurrencePattern} /></>}
-        <SectionTitle text='线上活动' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isOnline ? '是，主要在线上进行' : '否，主要线下进行'}</Text><Switch checked={isOnline} color={palette.accentDeep} onChange={(e) => setIsOnline(!!e.detail.value)} /></View></FormInputBox>
         <SectionTitle text={isOnline ? '平台 / 线上说明（选填）' : '地点说明（选填）'} /><FormInputBox focused={focusedField === 'location'}><Input value={location} placeholder={isOnline ? '例如：腾讯会议' : '例如：杭州西湖区某空间'} onFocus={() => setFocusedField('location')} onBlur={() => setFocusedField('')} onInput={(e) => setLocation(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
         <SectionTitle text='费用' /><SinglePillSelect options={FEE_OPTIONS} selected={fee} onChange={(value) => { setFee(value); if (value !== '付费') setFeeDetail('') }} />
         {fee === '付费' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充费用说明</Text></View><FormInputBox focused={focusedField === 'feeDetail'} marginBottom='0'><Input value={feeDetail} placeholder='例如：单次 99 元 / 四次 199 元。' onFocus={() => setFocusedField('feeDetail')} onBlur={() => setFocusedField('')} onInput={(e) => setFeeDetail(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
