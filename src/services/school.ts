@@ -164,7 +164,8 @@ export async function getSchoolDetail(schoolId: number, options: { forceRefresh?
 }
 
 export async function submitSchool(data: Record<string, unknown>) {
-  const dedupeKey = [data?.name, data?.province, data?.city].map((item) => String(item || '').trim()).join(':')
+  const locationKey = data?.isOnline ? 'online' : [data?.province, data?.city].map((item) => String(item || '').trim()).join(':')
+  const dedupeKey = [data?.name, locationKey].map((item) => String(item || '').trim()).join(':')
   return runExclusive(`submitSchool:${dedupeKey}`, () => callCloud<SubmitSchoolResult>('submitSchool', data))
 }
 
