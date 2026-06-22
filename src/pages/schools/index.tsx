@@ -78,7 +78,12 @@ function stripParenthetical(value: string) {
   let previous = ''
   while (text && text !== previous) {
     previous = text
-    text = text.replace(/（[^（）]*）/g, '').replace(/\([^()]*\)/g, '').trim()
+    text = text
+      .replace(/（[^（）]*）/g, '')
+      .replace(/\([^()]*\)/g, '')
+      .replace(/（[^（）]*$/g, '')
+      .replace(/\([^()]*$/g, '')
+      .trim()
   }
   return text.replace(/\s+/g, ' ').trim()
 }
@@ -87,11 +92,18 @@ function normalizeSchoolTypeLabel(value?: string) {
   const raw = String(value || '').trim()
   if (!raw) return ''
   if (EXCLUDED_TYPE_LABELS.some((label) => raw.includes(label))) return ''
-  return stripParenthetical(raw)
+  const normalized = stripParenthetical(raw)
+  if (!normalized) return ''
+  if (normalized.includes('现迁至') || normalized.includes('迁至老挝磨丁') || normalized.includes('磨丁')) return ''
+  return normalized
 }
 
 function schoolTypeLabels(value?: string) {
   return Array.from(new Set(splitTokens(value).map(normalizeSchoolTypeLabel).filter(Boolean)))
+}
+
+function formatSchoolTypeForDisplay(value?: string) {
+  return schoolTypeLabels(value).join('、')
 }
 
 function normalizeTypeOptions(options: string[]) {
@@ -508,6 +520,7 @@ export default function SchoolsPage() {
         const iconBg = iconBgRotation[index % iconBgRotation.length]
         const locationCount = getLocations(item).length
         const displayAgeRange = formatAgeRangeForDisplay(item.age_range)
+        const displaySchoolType = formatSchoolTypeForDisplay(item.school_type)
 
         return (
           <AppCard key={item.id} onClick={() => goToDetail(item)}>
@@ -523,7 +536,7 @@ export default function SchoolsPage() {
             <View className='app-list-card__tags'>
               <AppTag text={getLocationSummary(item)} />
               {locationCount > 1 ? <AppTag text={`${locationCount} 个地点`} tone='brand' /> : null}
-              <AppTag text={item.school_type || '未填写'} />
+              <AppTag text={displaySchoolType || '未填写'} />
             </View>
 
             <View className='app-list-card__meta-box'>
