@@ -45,6 +45,32 @@ function splitTokens(value?: string) {
     .filter(Boolean)
 }
 
+function stripParenthetical(value: string) {
+  let text = String(value || '').trim()
+  let previous = ''
+  while (text && text !== previous) {
+    previous = text
+    text = text
+      .replace(/（[^（）]*）/g, '')
+      .replace(/\([^()]*\)/g, '')
+      .replace(/（[^（）]*$/g, '')
+      .replace(/\([^()]*$/g, '')
+      .trim()
+  }
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+function normalizeSchoolTypeLabel(value?: string) {
+  const normalized = stripParenthetical(String(value || '').trim())
+  if (!normalized) return ''
+  if (normalized.includes('现迁至') || normalized.includes('迁至老挝磨丁') || normalized.includes('磨丁')) return ''
+  return normalized
+}
+
+function formatSchoolTypeTag(value?: string) {
+  return Array.from(new Set(splitTokens(value).map(normalizeSchoolTypeLabel).filter(Boolean))).join('、')
+}
+
 function normalizeAgeText(value?: string) {
   return String(value || '')
     .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
@@ -140,6 +166,7 @@ function SchoolContent(props: {
   } = props
   const locations = getLocations(school)
   const ageRangeTag = formatAgeRangeTag(school.age_range)
+  const schoolTypeTag = formatSchoolTypeTag(school.school_type)
 
   return (
     <>
@@ -161,7 +188,7 @@ function SchoolContent(props: {
 
         <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: school.official_url ? space(3) : '0' }}>
           <AppTag text={locations.length > 0 ? `${locations.length} 个地点` : '地点未填写'} />
-          {!!school.school_type && <AppTag text={school.school_type} />}
+          {!!schoolTypeTag && <AppTag text={schoolTypeTag} />}
           {!!ageRangeTag && <AppTag text={ageRangeTag} />}
         </View>
 
