@@ -222,8 +222,8 @@ export default function SubmitSchoolPage() {
       const result = await submitSchool({
         name: name.trim(),
         isOnline,
-        province: isOnline ? '' : province,
-        city: isOnline ? '' : currentCity,
+        province: isOnline ? '线上' : province,
+        city: isOnline ? '线上' : currentCity,
         schoolType,
         schoolTypeOther: schoolType.includes('其他') ? schoolTypeOther.trim() : '',
         ageRange: [ageRangeText],
@@ -283,7 +283,7 @@ export default function SubmitSchoolPage() {
           </Picker>
           {cityOption === '其他' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View><FormInputBox focused={focusedField === 'customCity'} marginBottom='0'><Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onFocus={() => setFocusedField('customCity')} onBlur={() => setFocusedField('')} onInput={(e) => setCustomCity(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
         </>}
-        {isOnline && <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.caption, color: palette.subtext }}>线上学习社区不需要填写城市，审核时会按线上社区处理，不进入地图地点聚合。</Text></View>}
+        {isOnline && <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.caption, color: palette.subtext }}>线上学习社区不需要填写城市，审核时会按线上社区处理。</Text></View>}
 
         <SectionTitle text='社区类型（可多选）' />
         <MultiPillSelect options={SCHOOL_TYPE_OPTIONS} selected={schoolType} onChange={setSchoolType} />
