@@ -272,14 +272,27 @@ export default function ExplorePage() {
 
   const provinceSchoolCounts = useMemo(() => countSchoolsByProvince(schools), [schools])
   const availableProvinces = useMemo(() => {
+    const userCounts = new Map<string, number>()
+    provinceStats.forEach((stat) => {
+      const province = String(stat.province || '').trim()
+      const count = Number(stat.count || 0)
+      if (!province || count <= 0) return
+      userCounts.set(province, count)
+    })
+
     const set = new Set<string>()
-    allMarkers.forEach((m) => { if (m.markerProv) set.add(m.markerProv) })
+    provinceSchoolCounts.forEach((_count, province) => { if (province) set.add(province) })
+    userCounts.forEach((_count, province) => { if (province) set.add(province) })
+    if (selectedProvince) set.add(selectedProvince)
+
     return Array.from(set).sort((a, b) => {
-      const countDiff = (provinceSchoolCounts.get(b) || 0) - (provinceSchoolCounts.get(a) || 0)
-      if (countDiff !== 0) return countDiff
+      const schoolCountDiff = (provinceSchoolCounts.get(b) || 0) - (provinceSchoolCounts.get(a) || 0)
+      if (schoolCountDiff !== 0) return schoolCountDiff
+      const userCountDiff = (userCounts.get(b) || 0) - (userCounts.get(a) || 0)
+      if (userCountDiff !== 0) return userCountDiff
       return a.localeCompare(b, 'zh-CN')
     })
-  }, [allMarkers, provinceSchoolCounts])
+  }, [provinceSchoolCounts, provinceStats, selectedProvince])
 
   const userCount = useMemo(() => filteredMarkers.reduce((sum, m) => {
     if (m.type === 'user') return sum + 1
@@ -438,34 +451,31 @@ export default function ExplorePage() {
     return m
   }, [validMarkers])
 
+  const popupRoleText = selectedUser ? normalizeRolesForDisplay(selectedUser.roles || []).join(' / ') : ''
+
   const closePopup = () => {
     setSelectedUser(null)
     setSelectedCluster(null)
   }
 
-  const navigateToProfileSafely = useCallback(() => {
-    setIsNavigatingAway(true)
-    setMapMountReady(false)
-    setSelectedUser(null)
-    setSelectedCluster(null)
-    setTimeout(() => goToProfile(), 60)
-  }, [])
+  const handlePrimaryAction = () => {
+    closePopup()
+    goToProfile()
+  }
 
   const handleReportUser = async (targetUserId: string) => {
     if (reportLockRef.current) return
-
     try {
+      const sheet = await Taro.showActionSheet({ itemList: [...REPORT_REASON_OPTIONS] })
+      const reason = REPORT_REASON_OPTIONS[sheet.tapIndex]
+      if (!reason) return
       reportLockRef.current = true
-      const reasonRes = await Taro.showActionSheet({ itemList: [...REPORT_REASON_OPTIONS] })
-      const reason = REPORT_REASON_OPTIONS[reasonRes.tapIndex] || '其他'
       const result = await reportUser(targetUserId, reason)
       const message = resolveCloudMessage(result, REPORT_CODE_MESSAGES, '举报已提交')
-      Taro.showToast({ title: message, icon: result?.ok ? 'success' : 'none' })
-      if (result?.ok) closePopup()
-      else logCloudFailure('reportUserFromExplore', result)
+      Taro.showToast({ title: message, icon: result.ok ? 'success' : 'none' })
+      if (!result.ok) logCloudFailure('reportUserFromExplore', result)
     } catch (err: any) {
-      if (err?.errMsg?.includes('cancel')) return
-      Taro.showToast({ title: '举报失败', icon: 'none' })
+      if (!String(err?.errMsg || '').includes('cancel')) console.warn('reportUser cancelled/error:', err)
     } finally {
       reportLockRef.current = false
     }
@@ -473,56 +483,64 @@ export default function ExplorePage() {
 
   const handleBlockUser = async (targetUserId: string) => {
     if (blockLockRef.current) return
-
-    const confirm = await Taro.showModal({
-      title: '确认拉黑',
-      content: '拉黑后，你将不再看到这位用户。',
-      confirmText: '确认拉黑',
-      cancelText: '取消',
-    })
+    const confirm = await Taro.showModal({ title: '拉黑用户', content: '拉黑后，你将不再看到该用户资料。可在“我的-隐私设置”中解除。', confirmText: '拉黑', cancelText: '取消' })
     if (!confirm.confirm) return
-
     try {
       blockLockRef.current = true
       const result = await manageSafetyRelation(targetUserId, 'block')
       const message = resolveCloudMessage(result, SAFETY_CODE_MESSAGES, '已拉黑')
-      Taro.showToast({ title: message, icon: result?.ok ? 'success' : 'none' })
-      if (result?.ok) {
+      Taro.showToast({ title: message, icon: result.ok ? 'success' : 'none' })
+      if (result.ok) {
+        setSelectedUser(null)
+        setSelectedCluster(null)
         await clearMapUsersCache()
-        closePopup()
-        refreshData({ force: true, forceRefreshMapUsers: true })
+        loadData({ forceRefreshMapUsers: true })
       } else {
         logCloudFailure('blockUserFromExplore', result)
       }
     } catch (err) {
-      Taro.showToast({ title: '操作失败', icon: 'none' })
+      console.error('block user error:', err)
+      Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
     } finally {
       blockLockRef.current = false
     }
   }
 
-  const handleTap = useCallback((markerId: number) => {
-    const item = idToMarker[markerId]
+  const navigateToSchoolDetail = useCallback((item: MarkerItem) => {
+    setIsNavigatingAway(true)
+    setMapMountReady(false)
+    setDetailPreview(String(item.originalId), {
+      name: item.name,
+      city: item.city || '',
+      province: item.markerProv || '',
+    })
+
+    setTimeout(() => {
+      Taro.navigateTo({
+        url: `/pages/school-detail/index?id=${encodeURIComponent(String(item.originalId))}`,
+      })
+    }, 50)
+  }, [])
+
+  const openUserFromCluster = (user: MarkerItem) => {
+    setMapMountReady(false)
+    setSelectedCluster(null)
+    setSelectedUser(user)
+  }
+
+  const handleMarkerTap = (e: any) => {
+    const id = Number(e?.detail?.markerId)
+    const item = idToMarker[id]
     if (!item) return
 
-    if (item.type === 'school_cluster') {
-      setSelectedUser(null)
-      setSelectedCluster(null)
-      setSelectedProvince(item.markerProv)
-      return
-    }
-
     if (item.type === 'school') {
-      const schoolData = schools.find((school) => Number(school.id) === Number(item.originalId))
-      if (schoolData) setDetailPreview('school', item.originalId, schoolData)
-      Taro.navigateTo({ url: '/pages/school-detail/index?id=' + item.originalId })
+      navigateToSchoolDetail(item)
       return
     }
 
-    if (item.type === 'user_cluster' && item.provinceStat) {
-      setSelectedUser(null)
-      setSelectedCluster(null)
-      setSelectedProvince(item.markerProv)
+    if (item.type === 'school_cluster') {
+      setSelectedProvince(item.markerProv || '')
+      closePopup()
       return
     }
 
@@ -536,67 +554,23 @@ export default function ExplorePage() {
     setMapMountReady(false)
     setSelectedCluster(null)
     setSelectedUser(item)
-  }, [idToMarker, schools])
-
-  const handlePrimaryAction = async () => {
-    if (!selectedUser) return
-    if (selectedUser.isSelf || !hasProfile) navigateToProfileSafely()
   }
 
-  function getMarkerIdFromMapEvent(e: any): number {
-    return Number(e?.detail?.markerId ?? e?.markerId ?? e?.detail?.id ?? e?.target?.id)
-  }
+  const handleCalloutTap = handleMarkerTap
+  const handleLabelTap = handleMarkerTap
 
-  const handleMarkerTap = useCallback((e: any) => handleTap(getMarkerIdFromMapEvent(e)), [handleTap])
-  const handleCalloutTap = useCallback((e: any) => handleTap(getMarkerIdFromMapEvent(e)), [handleTap])
-  const handleLabelTap = useCallback((e: any) => handleTap(getMarkerIdFromMapEvent(e)), [handleTap])
-  const popupRoleText = selectedUser?.roles?.join(' / ') || ''
-
-  const openUserFromCluster = (user: AppUser, cluster: MarkerItem) => {
-    const name = user.displayName?.trim() || '同路人'
-    setMapMountReady(false)
-    setSelectedCluster(null)
-    setSelectedUser({
-      id: 0,
-      latitude: cluster.latitude,
-      longitude: cluster.longitude,
-      name,
-      type: 'user',
-      markerProv: cluster.markerProv,
-      city: user.city || cluster.city,
-      originalId: user._id,
-      bio: user.bio,
-      roles: normalizeRolesForDisplay(user.roles || []),
-      companionContext: user.companionContext || '',
-      publicChannel: user.publicChannel || '',
-      publicChannelNote: user.publicChannelNote || '',
-      childAgeRange: user.childAgeRange || [],
-      childDropoutStatus: user.childDropoutStatus || [],
-      childInterests: user.childInterests || '',
-      eduServices: user.eduServices || '',
-      hasExpandedProfile: !!user.hasExpandedProfile,
-      isSelf: !!user.isSelf,
-    })
-  }
+  const toggleSchools = () => setShowSchools((value) => !value)
+  const toggleUsers = () => setShowUsers((value) => !value)
 
   return (
-    <AppPage flush style={{ minHeight: '100vh', backgroundColor: exploreTheme.pageBg, position: 'relative' }}>
-      {!loading && !hasProfile && (
-        <AppPromptBanner
-          title='完善个人信息后可查看其他成员资料。'
-          actionText='去填写'
-          icon='user'
-          tone='brand'
-          flush
-          onClick={goToProfile}
-        />
-      )}
+    <AppPage style={{ padding: 0 }}>
+      <View style={{ backgroundColor: exploreTheme.surface, padding: `${space(3)} ${space(4)} ${space(2)}`, borderBottom: `1px solid ${exploreTheme.border}` }}>
+        {!hasProfile && <AppPromptBanner text='完善个人信息后可查看其他成员资料。' actionText='去填写' onAction={goToProfile} />}
 
-      <View style={{ backgroundColor: exploreTheme.card, padding: `${space(3)} ${space(4)} ${space(3)}`, borderBottom: `1px solid ${exploreTheme.border}` }}>
-        <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: space(8), marginBottom: space(3) }}>
+        <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: space(8), marginBottom: space(2) }}>
           <View style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', paddingBottom: space(1) }}>
-            <FilterChip active={showSchools} tone='brand' text={schoolFilterText} onClick={() => { setShowSchools(!showSchools); closePopup() }} />
-            <FilterChip active={showUsers} tone='user' text={`同路人 ${showUsers ? userCount : '—'}`} onClick={() => { setShowUsers(!showUsers); closePopup() }} />
+            <FilterChip active={showSchools} text={schoolFilterText} onClick={toggleSchools} />
+            <FilterChip active={showUsers} text={`同路人 ${userCount}`} onClick={toggleUsers} />
             {showUsers && (
               <AppChip
                 text={`筛选${activeUserFilterCount > 0 ? ` ${activeUserFilterCount}` : ''}`}
