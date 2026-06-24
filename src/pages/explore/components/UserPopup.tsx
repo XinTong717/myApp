@@ -71,6 +71,7 @@ export default function UserPopup(props: UserPopupProps) {
   if (!user) return null
 
   const canSeeExpanded = !!user.hasExpandedProfile
+  const hasPublicIntro = !!(user.companionContext || user.bio)
   const hasExpandedContent = canSeeExpanded && !!(
     user.publicChannel || user.publicChannelNote || user.childAgeRange?.length || user.childDropoutStatus?.length || user.childInterests || user.eduServices
   )
@@ -170,7 +171,7 @@ export default function UserPopup(props: UserPopupProps) {
             </View>
           </View>
         ) : <>
-          {(user.companionContext || user.bio) ? (
+          {hasPublicIntro ? (
             <View style={{ ...panelStyle, marginBottom: space(4) }}>
               <InfoBlock title='和这个生态的关系' text={user.companionContext} />
               <InfoBlock title='简介' text={user.bio} />
@@ -196,13 +197,13 @@ export default function UserPopup(props: UserPopupProps) {
             </View>
           ) : null}
 
-          {hasHiddenExpandedProfile ? (
+          {hasHiddenExpandedProfile && hasPublicIntro ? (
             <View style={{ backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
               <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>这位用户暂未开放扩展公开资料。你仍可通过公开简介了解 TA。</Text>
             </View>
           ) : null}
 
-          {canSeeExpanded && !hasExpandedContent && !user.isSelf ? (
+          {canSeeExpanded && !hasExpandedContent && !user.isSelf && hasPublicIntro ? (
             <View style={{ backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
               <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>这位用户暂未填写扩展公开资料。你仍可通过公开简介了解 TA。</Text>
             </View>
