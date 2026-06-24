@@ -25,11 +25,12 @@ type UserPopupProps = {
 
 const sheetStyle = {
   width: '100%',
+  height: '88vh',
   maxHeight: '88vh',
   backgroundColor: exploreTheme.surface,
   borderTopLeftRadius: radius.md,
   borderTopRightRadius: radius.md,
-  padding: `${space(4)} ${space(4)} ${space(6)}`,
+  padding: `${space(4)} ${space(4)} 0`,
   boxSizing: 'border-box',
   borderTop: `1px solid ${exploreTheme.border}`,
   display: 'flex',
@@ -37,9 +38,17 @@ const sheetStyle = {
 } as const
 
 const popupBodyStyle = {
-  maxHeight: '72vh',
+  height: 0,
   flex: 1,
   minHeight: 0,
+} as const
+
+const footerStyle = {
+  flexShrink: 0,
+  paddingTop: space(3),
+  paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)',
+  borderTop: `1px solid ${exploreTheme.border}`,
+  backgroundColor: exploreTheme.surface,
 } as const
 
 const panelStyle = {
@@ -171,14 +180,6 @@ export default function UserPopup(props: UserPopupProps) {
                   <Text style={{ ...typography.micro, color: exploreTheme.subtext }}>{reportNote.length}/300</Text>
                 </View>
               ) : null}
-              <View style={{ display: 'flex', flexDirection: 'row' }}>
-                <View style={{ flex: 1, marginRight: space(2) }}>
-                  <AppPrimaryButton text='取消' variant='ghost' size='md' marginBottom='0' onClick={resetReportState} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppPrimaryButton text='提交举报' variant='danger' size='md' marginBottom='0' loading={reportSubmitting} loadingText='提交中...' onClick={() => submitReport(reportReason || '其他', reportNote)} />
-                </View>
-              </View>
             </View>
           ) : <>
             {hasPublicIntro ? (
@@ -219,10 +220,23 @@ export default function UserPopup(props: UserPopupProps) {
               </View>
             ) : null}
 
-            {!user.isSelf && needsProfileAccess ? <AppPrimaryButton text='去填写资料' variant='primary' size='md' marginBottom='0' onClick={goToProfile} /> : null}
+          </>}
+        </ScrollView>
 
-            {!user.isSelf && (
-              <View style={{ display: 'flex', flexDirection: 'row', marginTop: needsProfileAccess || !hasProfile ? space(3) : 0 }}>
+        {(isReporting || !user.isSelf) ? (
+          <View style={footerStyle}>
+            {isReporting ? (
+              <View style={{ display: 'flex', flexDirection: 'row' }}>
+                <View style={{ flex: 1, marginRight: space(2) }}>
+                  <AppPrimaryButton text='取消' variant='ghost' size='md' marginBottom='0' onClick={resetReportState} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppPrimaryButton text='提交举报' variant='danger' size='md' marginBottom='0' loading={reportSubmitting} loadingText='提交中...' onClick={() => submitReport(reportReason || '其他', reportNote)} />
+                </View>
+              </View>
+            ) : <>
+              {needsProfileAccess ? <AppPrimaryButton text='去填写资料' variant='primary' size='md' marginBottom={space(3)} onClick={goToProfile} /> : null}
+              <View style={{ display: 'flex', flexDirection: 'row' }}>
                 <View style={{ flex: 1, marginRight: space(2) }}>
                   <AppPrimaryButton text='举报' variant='ghost' size='md' marginBottom='0' onClick={() => setIsReporting(true)} />
                 </View>
@@ -230,9 +244,9 @@ export default function UserPopup(props: UserPopupProps) {
                   <AppPrimaryButton text='拉黑' variant='danger' size='md' marginBottom='0' onClick={() => onBlock(String(user.originalId))} />
                 </View>
               </View>
-            )}
-          </>}
-        </ScrollView>
+            </>}
+          </View>
+        ) : null}
       </View>
     </View>
   )
