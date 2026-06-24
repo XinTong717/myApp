@@ -266,9 +266,9 @@ export default function ExplorePage() {
   const validMarkers = useMemo(() => filteredMarkers.filter((m) => Number.isFinite(m.latitude) && Number.isFinite(m.longitude)), [filteredMarkers])
 
   useEffect(() => {
-    if (loading || error || validMarkers.length === 0) return
+    if (loading || error || validMarkers.length === 0 || hasProfile) return
     showExploreOnboardingOnce(goToProfile)
-  }, [loading, error, validMarkers.length])
+  }, [loading, error, validMarkers.length, hasProfile])
 
   const provinceSchoolCounts = useMemo(() => countSchoolsByProvince(schools), [schools])
   const availableProvinces = useMemo(() => {
