@@ -148,8 +148,6 @@ export default function ExplorePage() {
   } = useExploreFilters(appUsers, selectedProvince)
 
   const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
-  const goToSchools = () => { Taro.switchTab({ url: '/pages/schools/index' }) }
-  const goToEvents = () => { Taro.switchTab({ url: '/pages/events/index' }) }
 
   const loadData = async (options: { forceRefreshMapUsers?: boolean; refreshSchools?: boolean } = {}) => {
     const requestSeq = loadSeqRef.current + 1
@@ -623,45 +621,30 @@ export default function ExplorePage() {
       <MapMarkers
         loading={loading}
         error={error}
-        isProvinceDataSettled={isProvinceDataSettled}
-        selectedProvince={selectedProvince}
         canRenderMap={canRenderMap}
         mapMountReady={mapMountReady}
-        isNavigatingAway={isNavigatingAway}
         center={center}
         scale={scale}
-        mapMarkers={mapMarkers}
-        shouldShowUserLabels={shouldShowUserLabels}
-        shouldShowSchoolLabels={shouldShowSchoolLabels}
-        hasUserClusters={hasUserClusters}
-        hasSchoolClusters={hasSchoolClusters}
-        onReload={() => loadData({ forceRefreshMapUsers: true, refreshSchools: true })}
+        markers={mapMarkers}
         onMarkerTap={handleMarkerTap}
         onCalloutTap={handleCalloutTap}
         onLabelTap={handleLabelTap}
       />
 
-      <View style={{ backgroundColor: exploreTheme.surface, padding: `${space(2)} ${space(4)}`, borderTop: `1px solid ${exploreTheme.border}` }}>
-        <Text className='text-micro text-color-muted'>
-          {hasUserClusters
-            ? '地图位置仅作分布展示，不代表精确住址 · 点击聚合点位展开同城同路人 · 点击学校聚合点进入省份视图'
-            : isDenseMap ? '地图位置仅作分布展示，不代表精确住址 · 全国视图会自动隐藏部分名称 · 点击标记查看成员资料' : '地图位置仅作分布展示，不代表精确住址 · 点击标记或名称查看资料'}
-        </Text>
-      </View>
+      {!loading && !error && selectedProvince && !isProvinceDataSettled && (
+        <View style={{ position: 'absolute', left: space(4), right: space(4), bottom: space(8), backgroundColor: palette.card, borderRadius: space(3), padding: space(3), boxShadow: '0 6px 24px rgba(0,0,0,0.08)' }}>
+          <Text style={{ color: palette.textMuted, fontSize: 13 }}>正在加载 {selectedProvince} 的同路人与地点信息…</Text>
+        </View>
+      )}
 
-      <FilterSheet
-        visible={showUserFilterSheet}
-        selectedUserRole={selectedUserRole}
-        setSelectedUserRole={setSelectedUserRole}
-        selectedChildAgeRange={selectedChildAgeRange}
-        setSelectedChildAgeRange={setSelectedChildAgeRange}
-        selectedProfileCompleteness={selectedProfileCompleteness}
-        setSelectedProfileCompleteness={setSelectedProfileCompleteness}
-        selectedUserCity={selectedUserCity}
-        setSelectedUserCity={setSelectedUserCity}
-        userCityOptions={userCityOptions}
-        onReset={resetUserFilters}
-        onClose={() => setShowUserFilterSheet(false)}
+      <UserPopup
+        user={selectedUser}
+        roleText={popupRoleText}
+        hasProfile={hasProfile}
+        onClose={closePopup}
+        onPrimaryAction={handlePrimaryAction}
+        onReport={handleReportUser}
+        onBlock={handleBlockUser}
       />
 
       <ClusterPopup
@@ -670,14 +653,19 @@ export default function ExplorePage() {
         onOpenUser={openUserFromCluster}
       />
 
-      <UserPopup
-        user={selectedUser}
-        popupRoleText={popupRoleText}
-        hasProfile={hasProfile}
-        onClose={closePopup}
-        onPrimaryAction={handlePrimaryAction}
-        onReport={handleReportUser}
-        onBlock={handleBlockUser}
+      <FilterSheet
+        visible={showUserFilterSheet}
+        selectedRole={selectedUserRole}
+        selectedProfileCompleteness={selectedProfileCompleteness}
+        selectedCity={selectedUserCity}
+        selectedChildAgeRange={selectedChildAgeRange}
+        cityOptions={userCityOptions}
+        onClose={() => setShowUserFilterSheet(false)}
+        onRoleChange={setSelectedUserRole}
+        onProfileCompletenessChange={setSelectedProfileCompleteness}
+        onCityChange={setSelectedUserCity}
+        onChildAgeRangeChange={setSelectedChildAgeRange}
+        onReset={resetUserFilters}
       />
     </AppPage>
   )
