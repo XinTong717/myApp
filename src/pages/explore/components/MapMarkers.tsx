@@ -30,6 +30,7 @@ type MapMarkersProps = {
 
 const EMPTY_STATE_DELAY_MS = 360
 const DEFAULT_CENTER = { latitude: 33.0, longitude: 108.0 }
+const MAP_VIEW_HEIGHT = 'calc(100vh - 176px)'
 
 const cardStyle = {
   backgroundColor: exploreTheme.card,
@@ -174,7 +175,7 @@ export default function MapMarkers(props: MapMarkersProps) {
   }
 
   if (isInteractionPaused) {
-    return <View style={{ width: '100%', height: 'calc(100vh - 120px)' }} />
+    return <View style={{ width: '100%', height: MAP_VIEW_HEIGHT }} />
   }
 
   if (!safeCanRenderMap && !emptyStateReady) {
@@ -218,7 +219,7 @@ export default function MapMarkers(props: MapMarkersProps) {
       onCalloutTap={onCalloutTap}
       {...({ onLabelTap } as any)}
       onError={() => {}}
-      style={{ width: '100%', height: 'calc(100vh - 120px)' }}
+      style={{ width: '100%', height: MAP_VIEW_HEIGHT }}
     />
   )
 }
