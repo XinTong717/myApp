@@ -294,6 +294,14 @@ export default function ExplorePage() {
     })
   }, [provinceSchoolCounts, provinceStats, selectedProvince])
 
+  const orderedAvailableProvinces = useMemo(() => {
+    if (!selectedProvince) return availableProvinces
+    return [
+      selectedProvince,
+      ...availableProvinces.filter((province) => province !== selectedProvince),
+    ]
+  }, [availableProvinces, selectedProvince])
+
   const userCount = useMemo(() => filteredMarkers.reduce((sum, m) => {
     if (m.type === 'user') return sum + 1
     if (m.type === 'user_cluster') return sum + (m.provinceStat?.count || m.clusterUsers?.length || 0)
@@ -623,11 +631,11 @@ export default function ExplorePage() {
           </View>
         </ScrollView>
 
-        {availableProvinces.length > 0 && (
+        {orderedAvailableProvinces.length > 0 && (
           <ScrollView scrollX enhanced showScrollbar={false} style={{ whiteSpace: 'nowrap', height: space(8) }}>
             <View style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', paddingBottom: space(1) }}>
               <ProvinceChip active={!selectedProvince} text='全国' onClick={() => { setSelectedProvince(''); closePopup() }} />
-              {availableProvinces.map((prov) => (
+              {orderedAvailableProvinces.map((prov) => (
                 <ProvinceChip key={prov} active={prov === selectedProvince} text={prov} onClick={() => { setSelectedProvince(prov === selectedProvince ? '' : prov); closePopup() }} />
               ))}
             </View>
