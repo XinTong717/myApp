@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Map as TaroMap, Text, View } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import { palette } from '../../../theme/palette'
 import { radius, space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
@@ -50,6 +51,15 @@ function CenteredText(props: { text: string; strong?: boolean; color?: string })
 
 function isFiniteCoordinate(latitude: number, longitude: number) {
   return Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180
+}
+
+function isDevtoolsRuntime() {
+  try {
+    const info = Taro.getSystemInfoSync?.()
+    return info?.brand === 'devtools'
+  } catch (err) {
+    return false
+  }
 }
 
 function normalizeMapMarker(marker: any, index: number) {
@@ -106,6 +116,7 @@ export default function MapMarkers(props: MapMarkersProps) {
   } = props
 
   const [emptyStateReady, setEmptyStateReady] = useState(false)
+  const disableMapZoom = useMemo(() => isDevtoolsRuntime(), [])
   const safeMapMarkers = useMemo(() => {
     return (Array.isArray(mapMarkers) ? mapMarkers : [])
       .map((marker, index) => normalizeMapMarker(marker, index))
@@ -185,7 +196,7 @@ export default function MapMarkers(props: MapMarkersProps) {
 
   return (
     <TaroMap
-      key={`${selectedProvince || 'all'}-${markerSignature}-${safeCenter.latitude.toFixed(3)}-${safeCenter.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${shouldShowSchoolLabels ? 'school-label' : 'school-dot'}-${hasUserClusters ? 'user-cluster' : 'user-plain'}-${hasSchoolClusters ? 'school-cluster' : 'school-plain'}`}
+      key={`${selectedProvince || 'all'}-${markerSignature}-${safeCenter.latitude.toFixed(3)}-${safeCenter.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${shouldShowSchoolLabels ? 'school-label' : 'school-dot'}-${hasUserClusters ? 'user-cluster' : 'user-plain'}-${hasSchoolClusters ? 'school-cluster' : 'school-plain'}-${disableMapZoom ? 'devtools-no-zoom' : 'zoom'}`}
       latitude={safeCenter.latitude}
       longitude={safeCenter.longitude}
       scale={scale}
@@ -193,6 +204,7 @@ export default function MapMarkers(props: MapMarkersProps) {
       maxScale={18}
       markers={safeMapMarkers}
       showScale={false}
+      enableZoom={!disableMapZoom}
       enableRotate={false}
       enableOverlooking={false}
       onMarkerTap={onMarkerTap}
