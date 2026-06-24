@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Taro from '@tarojs/taro'
-import { Text, Textarea, View } from '@tarojs/components'
+import { ScrollView, Text, Textarea, View } from '@tarojs/components'
 import { REPORT_CODE_MESSAGES } from '../../../constants/cloudMessages'
 import { REPORT_REASON_OPTIONS } from '../../../constants/safety'
 import { reportUser } from '../../../services/safety'
@@ -25,12 +25,21 @@ type UserPopupProps = {
 
 const sheetStyle = {
   width: '100%',
+  maxHeight: '88vh',
   backgroundColor: exploreTheme.surface,
   borderTopLeftRadius: radius.md,
   borderTopRightRadius: radius.md,
   padding: `${space(4)} ${space(4)} ${space(6)}`,
   boxSizing: 'border-box',
   borderTop: `1px solid ${exploreTheme.border}`,
+  display: 'flex',
+  flexDirection: 'column',
+} as const
+
+const popupBodyStyle = {
+  maxHeight: '72vh',
+  flex: 1,
+  minHeight: 0,
 } as const
 
 const panelStyle = {
@@ -62,7 +71,7 @@ function InfoBlock(props: { title: string; text?: string | string[] }) {
 }
 
 export default function UserPopup(props: UserPopupProps) {
-  const { user, popupRoleText, hasProfile, onClose, onPrimaryAction, onBlock } = props
+  const { user, popupRoleText, hasProfile, onClose, onBlock } = props
   const [isReporting, setIsReporting] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportNote, setReportNote] = useState('')
@@ -111,8 +120,8 @@ export default function UserPopup(props: UserPopupProps) {
   return (
     <View onClick={closeAll} style={{ position: 'fixed', left: '0', right: '0', top: '0', bottom: '0', backgroundColor: exploreTheme.overlay, display: 'flex', alignItems: 'flex-end', zIndex: 30 }}>
       <View onClick={(e: any) => e?.stopPropagation?.()} style={sheetStyle}>
-        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', marginBottom: space(3) }}>
-          <View style={{ flex: 1, paddingRight: space(3) }}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', marginBottom: space(3), flexShrink: 0 }}>
+          <View style={{ flex: 1, paddingRight: space(3), minWidth: 0 }}>
             <Text style={{ ...typography.title, color: exploreTheme.text }}>{isReporting ? '举报用户' : user.name}</Text>
             {!isReporting ? (
               <View style={{ marginTop: space(2), display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -123,105 +132,107 @@ export default function UserPopup(props: UserPopupProps) {
               </View>
             ) : null}
           </View>
-          <View onClick={isReporting ? resetReportState : closeAll} style={{ width: space(7), height: space(7), borderRadius: radius.pill, backgroundColor: exploreTheme.tag, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <View onClick={isReporting ? resetReportState : closeAll} style={{ width: space(7), height: space(7), borderRadius: radius.pill, backgroundColor: exploreTheme.tag, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Text style={{ ...typography.sectionTitle, color: exploreTheme.tagText }}>✕</Text>
           </View>
         </View>
 
-        {isReporting ? (
-          <View>
-            <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>请选择举报原因。选择“其他”时需要填写补充说明。</Text>
-            <View style={{ marginTop: space(3), marginBottom: space(3) }}>
-              {REPORT_REASON_OPTIONS.map((reason) => (
-                <View
-                  key={reason}
-                  onClick={() => {
-                    setReportReason(reason)
-                    if (reason !== '其他') submitReport(reason)
-                  }}
-                  style={{
-                    ...reportReasonButtonStyle,
-                    backgroundColor: reportReason === reason ? palette.surfaceWarm : palette.card,
-                    borderColor: reportReason === reason ? palette.accentDeep : exploreTheme.border,
-                  }}
-                >
-                  <Text style={{ ...typography.bodyStrong, color: exploreTheme.text }}>{reason}</Text>
+        <ScrollView scrollY style={popupBodyStyle}>
+          {isReporting ? (
+            <View>
+              <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>请选择举报原因。选择“其他”时需要填写补充说明。</Text>
+              <View style={{ marginTop: space(3), marginBottom: space(3) }}>
+                {REPORT_REASON_OPTIONS.map((reason) => (
+                  <View
+                    key={reason}
+                    onClick={() => {
+                      setReportReason(reason)
+                      if (reason !== '其他') submitReport(reason)
+                    }}
+                    style={{
+                      ...reportReasonButtonStyle,
+                      backgroundColor: reportReason === reason ? palette.surfaceWarm : palette.card,
+                      borderColor: reportReason === reason ? palette.accentDeep : exploreTheme.border,
+                    }}
+                  >
+                    <Text style={{ ...typography.bodyStrong, color: exploreTheme.text }}>{reason}</Text>
+                  </View>
+                ))}
+              </View>
+              {reportReason === '其他' ? (
+                <View style={{ marginBottom: space(3) }}>
+                  <Textarea
+                    value={reportNote}
+                    maxlength={300}
+                    placeholder='请补充说明举报原因'
+                    onInput={(e) => setReportNote(String(e.detail.value || ''))}
+                    style={{ width: '100%', minHeight: '88px', boxSizing: 'border-box', backgroundColor: palette.card, border: `1px solid ${exploreTheme.border}`, borderRadius: radius.md, padding: space(3), ...typography.body, color: exploreTheme.text }}
+                  />
+                  <Text style={{ ...typography.micro, color: exploreTheme.subtext }}>{reportNote.length}/300</Text>
                 </View>
-              ))}
+              ) : null}
+              <View style={{ display: 'flex', flexDirection: 'row' }}>
+                <View style={{ flex: 1, marginRight: space(2) }}>
+                  <AppPrimaryButton text='取消' variant='ghost' size='md' marginBottom='0' onClick={resetReportState} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppPrimaryButton text='提交举报' variant='danger' size='md' marginBottom='0' loading={reportSubmitting} loadingText='提交中...' onClick={() => submitReport(reportReason || '其他', reportNote)} />
+                </View>
+              </View>
             </View>
-            {reportReason === '其他' ? (
-              <View style={{ marginBottom: space(3) }}>
-                <Textarea
-                  value={reportNote}
-                  maxlength={300}
-                  placeholder='请补充说明举报原因'
-                  onInput={(e) => setReportNote(String(e.detail.value || ''))}
-                  style={{ width: '100%', minHeight: '88px', boxSizing: 'border-box', backgroundColor: palette.card, border: `1px solid ${exploreTheme.border}`, borderRadius: radius.md, padding: space(3), ...typography.body, color: exploreTheme.text }}
-                />
-                <Text style={{ ...typography.micro, color: exploreTheme.subtext }}>{reportNote.length}/300</Text>
+          ) : <>
+            {hasPublicIntro ? (
+              <View style={{ ...panelStyle, marginBottom: space(4) }}>
+                <InfoBlock title='和这个生态的关系' text={user.companionContext} />
+                <InfoBlock title='简介' text={user.bio} />
+              </View>
+            ) : (
+              <View style={{ ...panelStyle, marginBottom: space(4) }}>
+                <Text style={{ ...typography.body, color: exploreTheme.subtext }}>这位同路人还没有填写更多公开介绍。</Text>
+              </View>
+            )}
+
+            {hasExpandedContent ? (
+              <View style={{ ...panelStyle, marginBottom: space(4) }}>
+                <InfoBlock title='联系方式' text={user.publicChannel} />
+                <InfoBlock title='添加备注说明' text={user.publicChannelNote} />
+                <InfoBlock title='家庭教育关注' text={[...(user.childAgeRange || []), ...(user.childDropoutStatus || []), user.childInterests || '']} />
+                <InfoBlock title='教育服务' text={user.eduServices} />
               </View>
             ) : null}
-            <View style={{ display: 'flex', flexDirection: 'row' }}>
-              <View style={{ flex: 1, marginRight: space(2) }}>
-                <AppPrimaryButton text='取消' variant='ghost' size='md' marginBottom='0' onClick={resetReportState} />
+
+            {needsProfileAccess ? (
+              <View style={{ backgroundColor: palette.accent2Soft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
+                <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>完成个人资料后可查看其他成员完整资料。</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <AppPrimaryButton text='提交举报' variant='danger' size='md' marginBottom='0' loading={reportSubmitting} loadingText='提交中...' onClick={() => submitReport(reportReason || '其他', reportNote)} />
+            ) : null}
+
+            {hasHiddenExpandedProfile && hasPublicIntro ? (
+              <View style={{ backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
+                <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>这位用户暂未开放扩展公开资料。你仍可通过公开简介了解 TA。</Text>
               </View>
-            </View>
-          </View>
-        ) : <>
-          {hasPublicIntro ? (
-            <View style={{ ...panelStyle, marginBottom: space(4) }}>
-              <InfoBlock title='和这个生态的关系' text={user.companionContext} />
-              <InfoBlock title='简介' text={user.bio} />
-            </View>
-          ) : (
-            <View style={{ ...panelStyle, marginBottom: space(4) }}>
-              <Text style={{ ...typography.body, color: exploreTheme.subtext }}>这位同路人还没有填写更多公开介绍。</Text>
-            </View>
-          )}
+            ) : null}
 
-          {hasExpandedContent ? (
-            <View style={{ ...panelStyle, marginBottom: space(4) }}>
-              <InfoBlock title='联系方式' text={user.publicChannel} />
-              <InfoBlock title='添加备注说明' text={user.publicChannelNote} />
-              <InfoBlock title='家庭教育关注' text={[...(user.childAgeRange || []), ...(user.childDropoutStatus || []), user.childInterests || '']} />
-              <InfoBlock title='教育服务' text={user.eduServices} />
-            </View>
-          ) : null}
-
-          {needsProfileAccess ? (
-            <View style={{ backgroundColor: palette.accent2Soft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
-              <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>完成个人资料后可查看其他成员完整资料。</Text>
-            </View>
-          ) : null}
-
-          {hasHiddenExpandedProfile && hasPublicIntro ? (
-            <View style={{ backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
-              <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>这位用户暂未开放扩展公开资料。你仍可通过公开简介了解 TA。</Text>
-            </View>
-          ) : null}
-
-          {canSeeExpanded && !hasExpandedContent && !user.isSelf && hasPublicIntro ? (
-            <View style={{ backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
-              <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>这位用户暂未填写扩展公开资料。你仍可通过公开简介了解 TA。</Text>
-            </View>
-          ) : null}
-
-          {user.isSelf ? <AppPrimaryButton text='去看我的资料' variant='ghost' size='md' marginBottom='0' onClick={onPrimaryAction} /> : needsProfileAccess ? <AppPrimaryButton text='去填写资料' variant='primary' size='md' marginBottom='0' onClick={goToProfile} /> : null}
-
-          {!user.isSelf && (
-            <View style={{ display: 'flex', flexDirection: 'row', marginTop: user.isSelf || needsProfileAccess || !hasProfile ? space(3) : 0 }}>
-              <View style={{ flex: 1, marginRight: space(2) }}>
-                <AppPrimaryButton text='举报' variant='ghost' size='md' marginBottom='0' onClick={() => setIsReporting(true)} />
+            {canSeeExpanded && !hasExpandedContent && !user.isSelf && hasPublicIntro ? (
+              <View style={{ backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
+                <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>这位用户暂未填写扩展公开资料。你仍可通过公开简介了解 TA。</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <AppPrimaryButton text='拉黑' variant='danger' size='md' marginBottom='0' onClick={() => onBlock(String(user.originalId))} />
+            ) : null}
+
+            {!user.isSelf && needsProfileAccess ? <AppPrimaryButton text='去填写资料' variant='primary' size='md' marginBottom='0' onClick={goToProfile} /> : null}
+
+            {!user.isSelf && (
+              <View style={{ display: 'flex', flexDirection: 'row', marginTop: needsProfileAccess || !hasProfile ? space(3) : 0 }}>
+                <View style={{ flex: 1, marginRight: space(2) }}>
+                  <AppPrimaryButton text='举报' variant='ghost' size='md' marginBottom='0' onClick={() => setIsReporting(true)} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppPrimaryButton text='拉黑' variant='danger' size='md' marginBottom='0' onClick={() => onBlock(String(user.originalId))} />
+                </View>
               </View>
-            </View>
-          )}
-        </>}
+            )}
+          </>}
+        </ScrollView>
       </View>
     </View>
   )
