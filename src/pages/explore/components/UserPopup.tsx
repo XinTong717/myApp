@@ -57,7 +57,8 @@ export default function UserPopup(props: UserPopupProps) {
   const hasExpandedContent = canSeeExpanded && !!(
     user.publicChannel || user.publicChannelNote || user.childAgeRange?.length || user.childDropoutStatus?.length || user.childInterests || user.eduServices
   )
-  const needsProfileAccess = !user.isSelf && !canSeeExpanded
+  const needsProfileAccess = !user.isSelf && !hasProfile
+  const hasHiddenExpandedProfile = !user.isSelf && hasProfile && !canSeeExpanded
   const goToProfile = () => Taro.switchTab({ url: '/pages/profile/index' })
 
   return (
@@ -101,6 +102,12 @@ export default function UserPopup(props: UserPopupProps) {
         {needsProfileAccess ? (
           <View style={{ backgroundColor: palette.accent2Soft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
             <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>完成个人资料后可查看其他成员完整资料。</Text>
+          </View>
+        ) : null}
+
+        {hasHiddenExpandedProfile ? (
+          <View style={{ backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), marginBottom: space(3), border: `1px solid ${exploreTheme.border}` }}>
+            <Text style={{ ...typography.meta, color: exploreTheme.subtext }}>这位用户暂未开放扩展公开资料。你仍可通过公开简介了解 TA。</Text>
           </View>
         ) : null}
 
