@@ -155,7 +155,7 @@ export default function UserPopup(props: UserPopupProps) {
                   maxlength={300}
                   placeholder='请补充说明举报原因'
                   onInput={(e) => setReportNote(String(e.detail.value || ''))}
-                  style={{ width: '100%', minHeight: space(22), boxSizing: 'border-box', backgroundColor: palette.card, border: `1px solid ${exploreTheme.border}`, borderRadius: radius.md, padding: space(3), ...typography.body, color: exploreTheme.text }}
+                  style={{ width: '100%', minHeight: '88px', boxSizing: 'border-box', backgroundColor: palette.card, border: `1px solid ${exploreTheme.border}`, borderRadius: radius.md, padding: space(3), ...typography.body, color: exploreTheme.text }}
                 />
                 <Text style={{ ...typography.micro, color: exploreTheme.subtext }}>{reportNote.length}/300</Text>
               </View>
