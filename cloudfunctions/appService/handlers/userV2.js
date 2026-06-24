@@ -17,6 +17,10 @@ function hasOwn(obj, key) {
   return Object.prototype.hasOwnProperty.call(obj, key)
 }
 
+function getUpdatedCount(updateRes) {
+  return Number(updateRes?.stats?.updated ?? updateRes?.updated ?? updateRes?.stats?.updatedCount ?? 0)
+}
+
 function buildSafetyDocId(ownerOpenid, targetOpenid) {
   return `safety_${ownerOpenid}_${targetOpenid}`
 }
@@ -119,7 +123,16 @@ async function saveProfile(event, wxContext) {
 
   let mode = 'update'
   try {
-    await db.collection('users').doc(openid).update({ data: dataToSave })
+    const updateRes = await db.collection('users').doc(openid).update({ data: dataToSave })
+    if (getUpdatedCount(updateRes) < 1) {
+      mode = 'create'
+      await db.collection('users').doc(openid).set({
+        data: {
+          ...dataToSave,
+          createdAt: db.serverDate(),
+        },
+      })
+    }
   } catch (err) {
     mode = 'create'
     await db.collection('users').doc(openid).set({
