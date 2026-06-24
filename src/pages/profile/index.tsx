@@ -16,9 +16,9 @@ import ProfileEducatorSection from '../../components/profile/ProfileEducatorSect
 import ProfileCompanionSection from '../../components/profile/ProfileCompanionSection'
 import ProfileBioSection from '../../components/profile/ProfileBioSection'
 import ProfileNoticeBox from '../../components/profile/ProfileNoticeBox'
-import ProfileSecondaryButton from '../../components/profile/ProfileSecondaryButton'
 import ProfileFavoriteEventsCard from '../../components/profile/ProfileFavoriteEventsCard'
 import ProfileFeedbackCard from '../../components/profile/ProfileFeedbackCard'
+import ProfileCard from '../../components/profile/ProfileCard'
 import AppPage from '../../components/common/AppPage'
 import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import AppIcon from '../../components/common/AppIcon'
@@ -38,9 +38,9 @@ const PROFILE_REFRESH_TTL = 30 * 1000
 const USER_AGREEMENT_URL = '/pkg/legal/user-agreement/index'
 const PRIVACY_POLICY_URL = '/pkg/legal/privacy-policy/index'
 const PROFILE_STEPS = [
-  { key: 'basic', label: '基本资料' },
-  { key: 'identity', label: '身份补充' },
+  { key: 'profile', label: '个人资料' },
   { key: 'privacy', label: '隐私设置' },
+  { key: 'activities', label: '我的活动' },
 ] as const
 
 type ProfileStep = typeof PROFILE_STEPS[number]['key']
@@ -79,9 +79,22 @@ function LegalAgreementConsent(props: { checked: boolean; onToggle: () => void; 
   )
 }
 
+function ProfilePublishedEventsPlaceholderCard() {
+  return (
+    <ProfileCard>
+      <View style={{ marginBottom: space(2) }}>
+        <Text style={{ ...typography.bodyStrong, color: palette.text }}>我发布的活动</Text>
+      </View>
+      <Text style={{ ...typography.meta, color: palette.subtext }}>
+        这里之后会显示你提交、审核中和已发布的活动。当前版本可先通过“活动”页提交活动，审核进度由管理员处理。
+      </Text>
+    </ProfileCard>
+  )
+}
+
 export default function ProfilePage() {
   const [isAdmin, setIsAdmin] = useState(false)
-  const [activeStep, setActiveStep] = useState<ProfileStep>('basic')
+  const [activeStep, setActiveStep] = useState<ProfileStep>('profile')
   const [legalAgreed, setLegalAgreed] = useState(() => hasCurrentLocalLegalConsent())
   const lastAutoRefreshAtRef = useRef(0)
 
@@ -183,21 +196,6 @@ export default function ProfilePage() {
     }
   }
 
-  const validateBasicStep = () => {
-    if (!displayName.trim()) { Taro.showToast({ title: '请先填写显示名', icon: 'none' }); return false }
-    if (!roles.length) { Taro.showToast({ title: '请至少选择一个身份', icon: 'none' }); return false }
-    if (!province || !currentCity) { Taro.showToast({ title: '请先选择所在城市', icon: 'none' }); return false }
-    if (cityOption === '其他' && !customCity.trim()) { Taro.showToast({ title: '请输入真实城市名', icon: 'none' }); return false }
-    return true
-  }
-
-  const goNextStep = () => {
-    if (activeStep === 'basic' && !validateBasicStep()) return
-    const currentIndex = PROFILE_STEPS.findIndex((item) => item.key === activeStep)
-    const next = PROFILE_STEPS[Math.min(currentIndex + 1, PROFILE_STEPS.length - 1)]
-    setActiveStep(next.key)
-  }
-
   const handleStepChange = (value: string) => {
     if (PROFILE_STEPS.some((item) => item.key === value)) {
       setActiveStep(value as ProfileStep)
@@ -229,30 +227,29 @@ export default function ProfilePage() {
   return (
     <AppPage style={{ paddingBottom: space(8) }}>
       <ProfileAdminEntry isAdmin={isAdmin} onOpen={openAdminReviewPage} />
-      <ProfileFavoriteEventsCard enabled={hasCompletedProfile} />
       <AppSegmentedTabs options={PROFILE_STEPS} value={activeStep} onChange={handleStepChange} />
 
-      {activeStep === 'basic' && <>
+      {activeStep === 'profile' && <>
         <ProfileBasicSection displayName={displayName} setDisplayName={setDisplayName} gender={gender} setGender={setGender} ageRange={ageRange} setAgeRange={setAgeRange} roles={roles} setRoles={setRoles} province={province} cityOption={cityOption} currentCity={currentCity} customCity={customCity} setCustomCity={setCustomCity} publicChannel={publicChannel} setPublicChannel={setPublicChannel} publicChannelNote={publicChannelNote} setPublicChannelNote={setPublicChannelNote} pickerRange={pickerRange} pickerValue={pickerValue} handlePickerChange={handlePickerChange} handlePickerColumnChange={handlePickerColumnChange} genderOptions={GENDER_OPTIONS} ageRangeOptions={AGE_RANGE_OPTIONS} roleOptions={ROLE_OPTIONS} />
         <ProfileBioSection bio={bio} setBio={setBio} />
         <ProfileNoticeBox text='先完成显示名、身份和城市，就可以被地图正确识别。简介会公开展示，请避免填写孩子姓名、具体学校、住址等敏感细节。' />
-        <ProfileSecondaryButton text='下一步：身份补充（最后一步保存）' onClick={goNextStep} />
-      </>}
-
-      {activeStep === 'identity' && <>
         {isParent && <ProfileParentSection childAgeRange={childAgeRange} setChildAgeRange={setChildAgeRange} childDropoutStatus={childDropoutStatus} setChildDropoutStatus={setChildDropoutStatus} childInterests={childInterests} setChildInterests={setChildInterests} childAgeOptions={CHILD_AGE_OPTIONS} childStatusOptions={CHILD_STATUS_OPTIONS} />}
         {isEducator && <ProfileEducatorSection eduServices={eduServices} setEduServices={setEduServices} />}
         {isCompanion && <ProfileCompanionSection companionContext={companionContext} setCompanionContext={setCompanionContext} />}
-        {!isParent && !isEducator && !isCompanion && <ProfileNoticeBox text='你还没有选择身份。回到“基本资料”选择家长、教育者或同行者后，这里会出现对应的补充信息。' />}
+        {!isParent && !isEducator && !isCompanion && <ProfileNoticeBox text='选择家长、教育者或同行者后，这里会出现对应的补充信息。' />}
         <ProfileNoticeBox text='家长与教育者补充信息不会在地图卡片直接公开；同行者填写的“和这个生态的关系”会随地图卡片公开展示。请不要写入未成年人姓名、具体住址等敏感信息。' />
-        <ProfileSecondaryButton text='下一步：隐私设置（最后一步保存）' onClick={goNextStep} />
+        <LegalAgreementConsent checked={legalAgreed} onToggle={() => setLegalAgreed((value) => !value)} onOpenUserAgreement={openUserAgreement} onOpenPrivacyPolicy={openPrivacyPolicy} />
+        <AppPrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
       </>}
 
       {activeStep === 'privacy' && <>
         <ProfilePrivacySection privacySaving={privacySaving} expandedProfileVisible={expandedProfileVisible} isVisibleOnMap={isVisibleOnMap} blockedUsers={blockedUsers} mutedUsers={mutedUsers} onUpdatePrivacySetting={handleUpdatePrivacySetting} onSafetyAction={(targetUserId, action) => handleSafetyAction(targetUserId, action, () => { refreshSafety(); loadProfile() })} onRequestAccountDeletion={handleRequestAccountDeletion} />
         <PrivacyDisclosureNotice />
-        <LegalAgreementConsent checked={legalAgreed} onToggle={() => setLegalAgreed((value) => !value)} onOpenUserAgreement={openUserAgreement} onOpenPrivacyPolicy={openPrivacyPolicy} />
-        <AppPrimaryButton text='保存资料' loadingText='保存中...' loading={saving} onClick={handleConfirmedSave} />
+      </>}
+
+      {activeStep === 'activities' && <>
+        <ProfilePublishedEventsPlaceholderCard />
+        <ProfileFavoriteEventsCard enabled={hasCompletedProfile} />
       </>}
 
       <ProfileFeedbackCard />
