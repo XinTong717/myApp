@@ -7,6 +7,8 @@ export type CloudResponse<T = Record<string, unknown>> = T & {
   degraded?: boolean
 }
 
+export type SimpleActionResult = CloudResponse<Record<string, never>>
+
 export type EventItem = {
   id: number
   title: string
@@ -43,6 +45,43 @@ export type EventDetailResult = CloudResponse<{
 
 export type EventInterestCountsBatchResult = CloudResponse<{
   counts?: Record<number, number>
+}>
+
+export type MapProvinceStat = {
+  province: string
+  count: number
+}
+
+export type MapUser = {
+  _id: string
+  displayName?: string
+  roles?: string[]
+  province?: string
+  city?: string
+  bio?: string
+  companionContext?: string
+  publicChannel?: string
+  publicChannelNote?: string
+  childAgeRange?: string[]
+  childDropoutStatus?: string[]
+  childInterests?: string
+  eduServices?: string
+  hasExpandedProfile?: boolean
+  isSelf?: boolean
+}
+
+export type GetMapUsersResult = CloudResponse<{
+  users?: MapUser[]
+  provinceStats?: MapProvinceStat[]
+  province?: string
+  mode?: 'province_summary' | 'province_detail'
+  limit?: number
+  offset?: number
+  nextOffset?: number | null
+  hasMore?: boolean
+  autoPaged?: boolean
+  loadedPages?: number
+  loadedUserCount?: number
 }>
 
 export type SchoolLocationItem = {
@@ -99,9 +138,9 @@ export type SchoolDetailResult = CloudResponse<{
   school?: SchoolItem | null
 }>
 
-export type SubmitSchoolResult = CloudResponse<Record<string, never>>
+export type SubmitSchoolResult = SimpleActionResult
 
-export type SubmitCorrectionResult = CloudResponse<Record<string, never>>
+export type SubmitCorrectionResult = SimpleActionResult
 
 export type ContactInfoResult = CloudResponse<{
   contactInfo?: string
@@ -154,7 +193,12 @@ export type SaveProfileResult = CloudResponse<{
   profile?: UserProfile | null
 }>
 
-export type UpdatePrivacySettingsResult = CloudResponse<Record<string, never>>
+export type UpdatePrivacySettingsResult = SimpleActionResult
+
+export type AdminAccessResult = CloudResponse<{
+  isAdmin?: boolean
+  admin?: { name?: string; role?: string } | null
+}>
 
 export type SafetyItem = {
   _id: string
@@ -165,25 +209,34 @@ export type SafetyItem = {
   isMuted: boolean
 }
 
+export type SafetyOverviewResult = CloudResponse<{
+  blocked?: SafetyItem[]
+  muted?: SafetyItem[]
+}>
+
+export type ManageSafetyRelationResult = SimpleActionResult
+
+export type ReportUserResult = SimpleActionResult
+
 export type EventSubmissionItem = {
   _id: string
   status: string
   title: string
-  province?: string
-  city?: string
-  eventType?: string
-  organizer?: string
-  startTime?: string
-  endTime?: string
-  isOnline?: boolean
-  fee?: string
-  officialUrl?: string
+  province: string
+  city: string
+  eventType: string
+  organizer: string
+  startTime: string
+  endTime: string
+  isOnline: boolean
+  fee: string
+  officialUrl: string
   descriptionPreview?: string
-  submitterDisplayName?: string
-  submitterCity?: string
-  createdAt?: string | null
-  publishedEventId?: number | null
-  adminNote?: string
+  submitterDisplayName: string
+  submitterCity: string
+  createdAt: string | null
+  publishedEventId: number | null
+  adminNote: string
   contentSecurityStatus?: string
 }
 
