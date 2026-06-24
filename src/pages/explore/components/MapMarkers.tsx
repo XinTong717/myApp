@@ -14,6 +14,7 @@ type MapMarkersProps = {
   canRenderMap: boolean
   mapMountReady: boolean
   isNavigatingAway: boolean
+  isInteractionPaused: boolean
   center: { latitude: number; longitude: number }
   scale: number
   mapMarkers: any[]
@@ -102,6 +103,7 @@ export default function MapMarkers(props: MapMarkersProps) {
     canRenderMap,
     mapMountReady,
     isNavigatingAway,
+    isInteractionPaused,
     center,
     scale,
     mapMarkers,
@@ -134,13 +136,14 @@ export default function MapMarkers(props: MapMarkersProps) {
       !error &&
       isProvinceDataSettled &&
       !isNavigatingAway &&
+      !isInteractionPaused &&
       !safeCanRenderMap
 
     if (!shouldArmEmptyState) return undefined
 
     const timer = setTimeout(() => setEmptyStateReady(true), EMPTY_STATE_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [loading, error, isProvinceDataSettled, isNavigatingAway, safeCanRenderMap, selectedProvince, markerSignature])
+  }, [loading, error, isProvinceDataSettled, isNavigatingAway, isInteractionPaused, safeCanRenderMap, selectedProvince, markerSignature])
 
   if (error) {
     return (
@@ -168,6 +171,10 @@ export default function MapMarkers(props: MapMarkersProps) {
 
   if (isNavigatingAway) {
     return <CenteredText text='页面跳转中…' strong />
+  }
+
+  if (isInteractionPaused) {
+    return <View style={{ width: '100%', height: 'calc(100vh - 120px)' }} />
   }
 
   if (!safeCanRenderMap && !emptyStateReady) {

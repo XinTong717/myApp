@@ -423,13 +423,14 @@ export default function ExplorePage() {
     childAgeRange: selectedChildAgeRange,
   })
   const isProvinceDataSettled = schoolsLoaded && mapUsersLoadedKey === currentLoadKey
+  const isMapInteractionPaused = !!selectedUser || !!selectedCluster || showUserFilterSheet
 
   useEffect(() => {
     setMapMountReady(false)
-    if (!canRenderMap || loading || error || isNavigatingAway) return
+    if (!canRenderMap || loading || error || isNavigatingAway || isMapInteractionPaused) return
     const timer = setTimeout(() => setMapMountReady(true), 80)
     return () => clearTimeout(timer)
-  }, [canRenderMap, loading, error, isNavigatingAway, selectedProvince, mapMarkers.length, center.latitude, center.longitude])
+  }, [canRenderMap, loading, error, isNavigatingAway, isMapInteractionPaused, selectedProvince, mapMarkers.length, center.latitude, center.longitude])
 
   const idToMarker = useMemo(() => {
     const m: Record<number, MarkerItem> = {}
@@ -526,11 +527,13 @@ export default function ExplorePage() {
     }
 
     if (item.type === 'user_cluster') {
+      setMapMountReady(false)
       setSelectedUser(null)
       setSelectedCluster(item)
       return
     }
 
+    setMapMountReady(false)
     setSelectedCluster(null)
     setSelectedUser(item)
   }, [idToMarker, schools])
@@ -551,6 +554,7 @@ export default function ExplorePage() {
 
   const openUserFromCluster = (user: AppUser, cluster: MarkerItem) => {
     const name = user.displayName?.trim() || '同路人'
+    setMapMountReady(false)
     setSelectedCluster(null)
     setSelectedUser({
       id: 0,
@@ -626,6 +630,7 @@ export default function ExplorePage() {
         canRenderMap={canRenderMap}
         mapMountReady={mapMountReady}
         isNavigatingAway={isNavigatingAway}
+        isInteractionPaused={isMapInteractionPaused}
         center={center}
         scale={scale}
         mapMarkers={mapMarkers}
