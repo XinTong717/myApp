@@ -1,5 +1,6 @@
 const { db } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
+const { runMsgSecCheck } = require('../lib/security')
 const userV2 = require('./userV2')
 
 const REASON_WHITELIST = ['垃圾广告', '骚扰不适', '未成年人敏感信息', '其他']
@@ -9,9 +10,12 @@ async function reportUser(event, wxContext) {
   const openid = wxContext.OPENID
   const targetUserId = String(event.targetUserId || '').trim()
   const reason = String(event.reason || '').trim()
+  const note = String(event.note || event.detail || '').trim()
 
   if (!targetUserId || !reason) return fail(requestId, 'BAD_REQUEST', '请选择举报原因')
   if (!REASON_WHITELIST.includes(reason)) return fail(requestId, 'INVALID_REASON', '举报原因不合法')
+  if (reason === '其他' && !note) return fail(requestId, 'REPORT_NOTE_REQUIRED', '请填写举报说明')
+  if (note.length > 300) return fail(requestId, 'REPORT_NOTE_TOO_LONG', '举报说明不能超过300字')
 
   let target
   try {
@@ -22,6 +26,18 @@ async function reportUser(event, wxContext) {
 
   if (!target || !target.openid) return fail(requestId, 'TARGET_NOT_FOUND', '找不到该用户')
 
+  if (note) {
+    const securityResult = await runMsgSecCheck({
+      content: note,
+      openid,
+      scene: 2,
+      maxLen: 300,
+      blockedMessage: '举报说明包含不合规信息，请修改后重试',
+      failedMessage: '举报说明审核失败，请稍后重试',
+    })
+    if (!securityResult.ok) return fail(requestId, securityResult.code || 'CONTENT_SECURITY_BLOCKED', securityResult.message)
+  }
+
   try {
     await db.collection('user_reports').add({
       data: {
@@ -31,6 +47,7 @@ async function reportUser(event, wxContext) {
         targetName: target.displayName || target.name || '未知用户',
         targetCity: target.city || '',
         reason,
+        note,
         status: 'pending',
         createdAt: db.serverDate(),
         updatedAt: db.serverDate(),
