@@ -259,9 +259,9 @@ async function manageSafetyRelation(event, wxContext) {
   const requestId = resolveRequestId('manage-safety', event)
   const openid = wxContext.OPENID
   const targetUserId = String(event.targetUserId || '').trim()
-  const action = String(event.action || '').trim()
-  if (!targetUserId || !action) return fail(requestId, 'BAD_REQUEST', '参数缺失')
-  if (!['block', 'unblock', 'mute', 'unmute'].includes(action)) return fail(requestId, 'INVALID_ACTION', '无效操作')
+  const relationAction = String(event.relationAction || '').trim()
+  if (!targetUserId || !relationAction) return fail(requestId, 'BAD_REQUEST', '参数缺失')
+  if (!['block', 'unblock', 'mute', 'unmute'].includes(relationAction)) return fail(requestId, 'INVALID_ACTION', '无效操作')
   let target
   try { target = (await db.collection('users').doc(targetUserId).get()).data } catch (err) { return fail(requestId, 'TARGET_NOT_FOUND', '找不到该用户') }
   if (!target || !target.openid) return fail(requestId, 'TARGET_NOT_FOUND', '找不到该用户')
@@ -272,10 +272,10 @@ async function manageSafetyRelation(event, wxContext) {
   const currentBlocked = !!existing?.isBlocked
   const currentMuted = !!existing?.isMuted
 
-  if (action === 'block' && currentBlocked) return ok(requestId, { message: '已拉黑该用户' })
-  if (action === 'mute' && currentMuted) return ok(requestId, { message: '已静音该用户' })
-  if (action === 'unblock' && !currentBlocked) return ok(requestId, { message: '已解除拉黑' })
-  if (action === 'unmute' && !currentMuted) return ok(requestId, { message: '已取消静音' })
+  if (relationAction === 'block' && currentBlocked) return ok(requestId, { message: '已拉黑该用户' })
+  if (relationAction === 'mute' && currentMuted) return ok(requestId, { message: '已静音该用户' })
+  if (relationAction === 'unblock' && !currentBlocked) return ok(requestId, { message: '已解除拉黑' })
+  if (relationAction === 'unmute' && !currentMuted) return ok(requestId, { message: '已取消静音' })
 
   const updateData = {
     ownerOpenid: openid,
@@ -283,14 +283,14 @@ async function manageSafetyRelation(event, wxContext) {
     targetUserId,
     targetName: target.displayName || target.name || '未知用户',
     targetCity: target.city || '',
-    isBlocked: action === 'block' ? true : action === 'unblock' ? false : currentBlocked,
-    isMuted: action === 'mute' ? true : action === 'unmute' ? false : currentMuted,
+    isBlocked: relationAction === 'block' ? true : relationAction === 'unblock' ? false : currentBlocked,
+    isMuted: relationAction === 'mute' ? true : relationAction === 'unmute' ? false : currentMuted,
     updatedAt: db.serverDate(),
   }
 
   try {
     await db.collection('safety_relations').doc(stableDocId).set({ data: updateData })
-    return ok(requestId, { message: action === 'block' ? '已拉黑' : action === 'mute' ? '已静音' : action === 'unblock' ? '已解除拉黑' : '已取消静音' })
+    return ok(requestId, { message: relationAction === 'block' ? '已拉黑' : relationAction === 'mute' ? '已静音' : relationAction === 'unblock' ? '已解除拉黑' : '已取消静音' })
   } catch (err) {
     console.error('appService manageSafetyRelation error:', err)
     return fail(requestId, 'MANAGE_SAFETY_RELATION_FAILED', '操作失败，请稍后重试')
