@@ -54,8 +54,8 @@ function createClientRequestId(name: string) {
 function handleLegalConsentRequired() {
   const now = Date.now()
   if (now - lastConsentRedirectAt < 1500) return
-
   lastConsentRedirectAt = now
+
   Taro.showToast({ title: '请先在“我的”页阅读并同意协议', icon: 'none' })
   setTimeout(() => {
     Taro.switchTab({ url: PROFILE_TAB_URL }).catch((err) => {
@@ -80,17 +80,32 @@ export async function callCloud<T = Record<string, unknown>>(name: string, data:
   const payload = { action: name, ...data, clientRequestId }
 
   try {
-    const result = await Taro.cloud.callFunction({ name: APP_SERVICE_NAME, data: payload })
-    const res = (result.result || {}) as CloudResponse<T>
-    if (res.code === LEGAL_CONSENT_REQUIRED_CODE) handleLegalConsentRequired()
-    return res
-  } catch (err: any) {
+    const res = await Taro.cloud.callFunction({ name: APP_SERVICE_NAME, data: payload })
+    const result = ((res.result || {}) as CloudResponse<T>) || ({ ok: false } as CloudResponse<T>)
+
+    if (!result.requestId) {
+      result.requestId = clientRequestId
+    }
+
+    if (typeof result.ok !== 'boolean') {
+      console.warn(`callCloud ${name} missing explicit ok flag`, result)
+      result.ok = false
+      result.code = result.code || 'INVALID_CLOUD_RESPONSE'
+      result.message = result.message || '服务返回格式异常，请稍后重试'
+    }
+
+    if (!result.ok && result.code === LEGAL_CONSENT_REQUIRED_CODE) {
+      handleLegalConsentRequired()
+    }
+
+    return result
+  } catch (err: unknown) {
     console.error(`callCloud ${name} error:`, err)
     return {
       ok: false,
       code: 'CLOUD_CALL_FAILED',
       requestId: clientRequestId,
-      message: err?.message || '服务暂时不可用，请稍后再试',
+      message: '网络异常，请稍后重试',
     } as CloudResponse<T>
   }
 }
