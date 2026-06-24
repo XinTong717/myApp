@@ -148,8 +148,6 @@ export default function ExplorePage() {
   } = useExploreFilters(appUsers, selectedProvince)
 
   const goToProfile = () => { Taro.switchTab({ url: '/pages/profile/index' }) }
-  const goToSchools = () => { Taro.switchTab({ url: '/pages/schools/index' }) }
-  const goToEvents = () => { Taro.switchTab({ url: '/pages/events/index' }) }
 
   const loadData = async (options: { forceRefreshMapUsers?: boolean; refreshSchools?: boolean } = {}) => {
     const requestSeq = loadSeqRef.current + 1

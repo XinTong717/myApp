@@ -42,6 +42,7 @@ const ROUTED_ACTIONS = new Set([
   'publishEventDirect',
   'reviewEventSubmission',
   'listSchoolSubmissions',
+  'getSchoolPublishPayload',
   'reviewSchoolSubmission',
   'logClientError',
 ])

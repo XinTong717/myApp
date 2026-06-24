@@ -41,6 +41,7 @@ const ADMIN_ACTION_RATE_LIMITS = {
   getEventPublishPayload: { limit: 120, windowMs: MINUTE },
   listEventSubmissions: { limit: 120, windowMs: MINUTE },
   listSchoolSubmissions: { limit: 120, windowMs: MINUTE },
+  getSchoolPublishPayload: { limit: 120, windowMs: MINUTE },
   reviewSchoolSubmission: { limit: 60, windowMs: MINUTE },
 }
 

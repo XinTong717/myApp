@@ -64,14 +64,57 @@ function extractObjectBody(source, objectName) {
   return findBalancedBlock(source, start, '{', '}')
 }
 
-function extractObjectKeysFromBody(body) {
-  const keys = []
-  const keyRe = /^\s*([A-Za-z_$][\w$]*)\s*[:,]/gm
-  let match
-  while ((match = keyRe.exec(body)) !== null) {
-    keys.push(match[1])
+function splitTopLevelEntries(body) {
+  const entries = []
+  let current = ''
+  let depth = 0
+  let quote = ''
+  let escaped = false
+
+  for (const ch of body) {
+    if (quote) {
+      current += ch
+      if (escaped) {
+        escaped = false
+      } else if (ch === '\\') {
+        escaped = true
+      } else if (ch === quote) {
+        quote = ''
+      }
+      continue
+    }
+
+    if (ch === '\'' || ch === '"' || ch === '`') {
+      quote = ch
+      current += ch
+      continue
+    }
+
+    if (ch === '{' || ch === '[' || ch === '(') depth += 1
+    if (ch === '}' || ch === ']' || ch === ')') depth -= 1
+
+    if (ch === ',' && depth === 0) {
+      entries.push(current.trim())
+      current = ''
+      continue
+    }
+
+    current += ch
   }
-  return keys
+
+  if (current.trim()) entries.push(current.trim())
+  return entries
+}
+
+function extractObjectKeysFromBody(body) {
+  return splitTopLevelEntries(body)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry && !entry.startsWith('...'))
+    .map((entry) => {
+      const match = entry.match(/^([A-Za-z_$][\w$]*)(?:\s*:|\s*$)/)
+      return match ? match[1] : ''
+    })
+    .filter(Boolean)
 }
 
 function extractObjectKeys(source, objectName) {
