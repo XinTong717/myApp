@@ -68,6 +68,8 @@ function normalizeProfile(profile) {
     eduServices: String(profile.eduServices || '').trim(),
     companionContext: String(profile.companionContext || '').trim(),
     bio: String(profile.bio || '').trim(),
+    deletionStatus: String(profile.deletionStatus || '').trim(),
+    deletionRequestedAt: profile.deletionRequestedAt || null,
     createdAt: profile.createdAt || null,
     updatedAt: profile.updatedAt || null,
   }
