@@ -3,7 +3,7 @@
   "cloudfunctionRoot": "cloudfunctions/",
   "cloudenvironment": "keque-prod-v2-d8gfsxh8j16fba620",
   "projectname": "myApp",
-  "description": "教育探索的青少年与家长的线上社区",
+  "description": "学习社区与教育探索活动信息查询工具",
   "appid": "wx141f4437f2d90a76",
   "setting": {
     "urlCheck": true,
