@@ -58,9 +58,9 @@ export default function ProfilePrivacySection(props: Props) {
       <ProfileInputBox>
         <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1, paddingRight: space(3) }}>
-            <Text style={{ ...typography.bodyStrong, color: palette.text }}>账号注销 / 数据删除</Text>
+            <Text style={{ ...typography.bodyStrong, color: palette.text }}>用户注销</Text>
             <View style={{ marginTop: space(1) }}>
-              <Text style={{ ...typography.caption, color: palette.subtext }}>提交后会先隐藏你的地图资料、清空联系方式，后续由管理员处理删除申请。</Text>
+              <Text style={{ ...typography.caption, color: palette.subtext }}>提交后，你的资料会从地图和列表中清空。</Text>
             </View>
           </View>
           <Text onClick={onRequestAccountDeletion} style={{ ...typography.caption, color: palette.brand, fontWeight: 'bold' }}>申请</Text>
