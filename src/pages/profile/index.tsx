@@ -100,7 +100,7 @@ export default function ProfilePage() {
 
   const form = useProfileForm()
   const {
-    loading, saving, privacySaving, displayName, setDisplayName, gender, setGender, ageRange, setAgeRange, roles, setRoles, province, cityOption, customCity, setCustomCity, publicChannel, setPublicChannel, publicChannelNote, setPublicChannelNote, expandedProfileVisible, isVisibleOnMap, childAgeRange, setChildAgeRange, childDropoutStatus, setChildDropoutStatus, childInterests, setChildInterests, eduServices, setEduServices, companionContext, setCompanionContext, bio, setBio, isParent, isEducator, isCompanion, currentCity, pickerRange, pickerValue, loadProfile, applyRemoteProfile, handleSave, handleUpdatePrivacySetting, handlePickerChange, handlePickerColumnChange,
+    loading, saving, privacySaving, displayName, setDisplayName, gender, setGender, ageRange, setAgeRange, roles, setRoles, province, cityOption, customCity, setCustomCity, publicChannel, setPublicChannel, publicChannelNote, setPublicChannelNote, expandedProfileVisible, isVisibleOnMap, childAgeRange, setChildAgeRange, childDropoutStatus, setChildDropoutStatus, childInterests, setChildInterests, eduServices, setEduServices, companionContext, setCompanionContext, bio, setBio, isParent, isEducator, isCompanion, currentCity, pickerRange, pickerValue, loadProfile, applyRemoteProfile, resetProfileForm, handleSave, handleUpdatePrivacySetting, handlePickerChange, handlePickerColumnChange,
   } = form
   const hasCompletedProfile = !!(displayName.trim() && province && currentCity)
 
@@ -169,17 +169,17 @@ export default function ProfilePage() {
 
   const handleRequestAccountDeletion = async () => {
     const firstConfirm = await Taro.showModal({
-      title: '申请账号注销',
-      content: '提交后，你的公开资料会立即先从地图隐藏，联系方式会被清空。管理员随后处理剩余历史记录；如需确认进度，可通过官方联系方式联系我们。',
+      title: '用户注销',
+      content: '提交后，你的资料会从地图和列表中清空。',
       confirmText: '继续',
       cancelText: '取消',
     })
     if (!firstConfirm.confirm) return
 
     const secondConfirm = await Taro.showModal({
-      title: '再次确认',
-      content: '这是账号注销 / 数据删除申请。提交后不会立即物理删除全部历史记录，但公开资料会先匿名化并隐藏。确认提交吗？',
-      confirmText: '确认提交',
+      title: '确认注销',
+      content: '用户注销后，如再次登录，需重新填写个人资料。是否确认注销？',
+      confirmText: '确认注销',
       cancelText: '取消',
     })
     if (!secondConfirm.confirm) return
@@ -189,7 +189,11 @@ export default function ProfilePage() {
       const result = await requestAccountDeletion()
       Taro.hideLoading()
       Taro.showToast({ title: result.message || (result.ok ? '已提交申请' : '提交失败'), icon: result.ok ? 'success' : 'none' })
-      if (result.ok) refreshProfilePage(true)
+      if (result.ok) {
+        resetProfileForm({ clearDraft: true })
+        setActiveStep('profile')
+        refreshProfilePage(true)
+      }
     } catch (err) {
       Taro.hideLoading()
       Taro.showToast({ title: '提交失败，请稍后重试', icon: 'none' })
