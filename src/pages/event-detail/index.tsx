@@ -123,8 +123,8 @@ function EventContent(props: {
         <AppInfoRow label='组织者联系方式' value={contactInfo} copyable />
       ) : (
         <AppCard backgroundColor={palette.cardSoft} radius={radius.md} padding={space(3)} marginBottom={space(3)} borderColor={palette.line}>
-          <Text style={{ ...typography.caption, color: palette.brand, marginBottom: space(1) }}>组织者私人联系方式</Text>
-          <Text style={{ ...typography.meta, color: palette.subtext }}>{contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成个人资料后，可查看组织者私人联系方式。')}</Text>
+          <Text style={{ ...typography.caption, color: palette.brand, marginBottom: space(1) }}>组织者联系方式</Text>
+          <Text style={{ ...typography.meta, color: palette.subtext }}>{contactMessage || (hasProfile ? '该活动暂无额外联系方式。' : '完成个人资料后，可查看组织者联系方式。')}</Text>
         </AppCard>
       ))}
 
