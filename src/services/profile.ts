@@ -16,6 +16,7 @@ import type {
 const PROFILE_CACHE_KEY = 'cloud-cache:profile:me:v1'
 const SAFETY_OVERVIEW_CACHE_KEY = 'cloud-cache:profile:safety-overview:v1'
 const ADMIN_ACCESS_CACHE_KEY = 'cloud-cache:profile:admin-access:v1'
+const EXPLORE_ONBOARDING_KEY = 'explore-onboarding:v1'
 
 const PROFILE_TTL_MS = 5 * 60 * 1000
 const SAFETY_OVERVIEW_TTL_MS = 5 * 60 * 1000
@@ -54,6 +55,14 @@ async function flagExploreRefresh() {
     Taro.setStorageSync(STORAGE_FLAGS.exploreForceRefresh, String(Date.now()))
   } catch (err) {
     console.warn('flagExploreRefresh skipped:', err)
+  }
+}
+
+function resetExploreOnboardingFlag() {
+  try {
+    Taro.removeStorageSync(EXPLORE_ONBOARDING_KEY)
+  } catch (err) {
+    console.warn('resetExploreOnboardingFlag skipped:', err)
   }
 }
 
@@ -130,6 +139,7 @@ export async function updatePrivacySettings(data: { expandedProfileVisible?: boo
 export async function requestAccountDeletion(note = '') {
   const result = await callCloud<SimpleActionResult>('requestAccountDeletion', { note })
   if (result.ok) {
+    resetExploreOnboardingFlag()
     await Promise.all([
       clearProfileCache(),
       clearMapUsersCache(),
