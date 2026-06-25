@@ -14,7 +14,7 @@ import AppPromptBanner from '../../../components/common/AppPromptBanner'
 import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
 import FormInputBox from '../../../components/common/FormInputBox'
 
-const SCHOOL_TYPE_OPTIONS = ['学习成长社区', '学校', '华德福学校', '孤独症特教', '短期营', '公益组织', '疗愈社区', '其他']
+const SCHOOL_TYPE_OPTIONS = ['学习成长社区', '学校', '华德福学校', '孤独症特教', '营地/短期项目主体', '公益组织', '疗愈社区', '其他']
 const AGE_RANGE_MIN = 0
 const AGE_RANGE_MAX = 30
 
@@ -206,14 +206,14 @@ export default function SubmitSchoolPage() {
   const handleSubmit = async () => {
     if (submitLockRef.current || submitting) return
 
-    if (!name.trim()) { Taro.showToast({ title: '请填写学习社区名称', icon: 'none' }); return }
+    if (!name.trim()) { Taro.showToast({ title: '请填写社区 / 项目主体名称', icon: 'none' }); return }
     if (!isOnline && (!province || !currentCity)) { Taro.showToast({ title: '请选择所在城市', icon: 'none' }); return }
     if (!isOnline && cityOption === '其他' && !customCity.trim()) { Taro.showToast({ title: '请输入真实城市名', icon: 'none' }); return }
     if (schoolType.includes('其他') && !schoolTypeOther.trim()) { Taro.showToast({ title: '请补充社区类型中的“其他”', icon: 'none' }); return }
 
     submitLockRef.current = true
 
-    const confirm = await Taro.showModal({ title: '提交推荐', content: '提交后将进入人工审核队列，审核通过后才会出现在学习社区列表中。', confirmText: '确认提交', cancelText: '再看看' })
+    const confirm = await Taro.showModal({ title: '提交推荐', content: '提交后将进入人工审核队列，审核通过后才会出现在学习社区列表中。学习社区页适合提交长期存在的主体；某一期有明确日期的营期、工作坊或招募请提交到活动页。', confirmText: '确认提交', cancelText: '再看看' })
     if (!confirm.confirm) { submitLockRef.current = false; return }
 
     try {
@@ -257,13 +257,13 @@ export default function SubmitSchoolPage() {
   return (
     <AppPage>
       <AppCard>
-        <Text style={{ ...typography.title, color: palette.text }}>推荐新学习社区</Text>
-        <View style={{ marginTop: space(2) }}><Text style={{ ...typography.meta, color: palette.subtext }}>请尽量按学习社区详情页会展示的内容填写。信息来源和补充说明仅供审核参考，不会直接公开展示。</Text></View>
+        <Text style={{ ...typography.title, color: palette.text }}>推荐学习社区 / 项目主体</Text>
+        <View style={{ marginTop: space(2) }}><Text style={{ ...typography.meta, color: palette.subtext }}>这里收录长期存在、可反复了解或联系的学习社区、学校、营地、公益组织或项目主体。如果你要发布某一期有明确日期的营期、工作坊、招募或聚会，请提交到“活动”。信息来源和补充说明仅供审核参考，不会直接公开展示。</Text></View>
       </AppCard>
 
       <AppCard>
-        <SectionTitle text='学习社区名称' />
-        <FormInputBox focused={focusedField === 'name'}><Input value={name} placeholder='例如：某某共学社区' onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField('')} onInput={(e) => setName(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
+        <SectionTitle text='社区 / 项目主体名称' />
+        <FormInputBox focused={focusedField === 'name'}><Input value={name} placeholder='例如：某某共学社区 / 某某自然教育营地' onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField('')} onInput={(e) => setName(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
 
         <SectionTitle text='是否线上' />
         <FormInputBox>
@@ -282,7 +282,7 @@ export default function SubmitSchoolPage() {
           </Picker>
           {cityOption === '其他' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>请输入真实城市名。地图会先按省级近似坐标展示，但列表里会显示你填写的城市。</Text></View><FormInputBox focused={focusedField === 'customCity'} marginBottom='0'><Input value={customCity} placeholder='例如：义乌 / 凯里 / 唐山' onFocus={() => setFocusedField('customCity')} onBlur={() => setFocusedField('')} onInput={(e) => setCustomCity(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
         </>}
-        {isOnline && <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.caption, color: palette.subtext }}>线上学习社区不需要填写城市，审核时会按线上社区处理。</Text></View>}
+        {isOnline && <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.caption, color: palette.subtext }}>线上学习社区或线上项目主体不需要填写城市，审核时会按线上社区处理。</Text></View>}
 
         <SectionTitle text='社区类型（可多选）' />
         <MultiPillSelect options={SCHOOL_TYPE_OPTIONS} selected={schoolType} onChange={setSchoolType} />
@@ -317,7 +317,7 @@ export default function SubmitSchoolPage() {
         <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.micro, color: palette.muted }}>{recommendationNote.length}/500</Text></View>
       </AppCard>
 
-      <AppPromptBanner icon='lock' title='提交后进入审核' description='你的提交不会自动公开，请提交公开可验证的信息。审核通过后，相关信息会显示在学习社区页。如填写个人联系方式，请注明是否可公开。' tone='warm' />
+      <AppPromptBanner icon='lock' title='提交后进入审核' description='你的提交不会自动公开，请提交公开可验证的信息。这里适合长期存在的学习社区、学校、营地或项目主体；如果是某一期有明确日期的活动，管理员审核时也会帮你归类。如填写个人联系方式，请注明是否可公开。' tone='warm' />
       <AppPrimaryButton text='提交推荐' loadingText='提交中...' loading={submitting} onClick={handleSubmit} />
     </AppPage>
   )

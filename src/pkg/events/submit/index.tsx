@@ -14,7 +14,7 @@ import AppPromptBanner from '../../../components/common/AppPromptBanner'
 import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
 import FormInputBox from '../../../components/common/FormInputBox'
 
-const EVENT_TYPE_OPTIONS = ['工作坊', '项目招募', '圆桌讨论', '交友聚会', '一对一', '团体', '其他']
+const EVENT_TYPE_OPTIONS = ['工作坊', '营期/短期营', '项目招募', '圆桌讨论', '交友聚会', '一对一', '团体', '其他']
 const AUDIENCE_WHO_OPTIONS = ['家长', '教育工作者', '儿童/青少年（需家长陪同）', '儿童/青少年（独立参加）', '开放给所有人', '其他']
 const FEE_OPTIONS = ['免费', '付费', '公益随喜', '费用待确认']
 const RECURRENCE_OPTIONS = ['每周', '每月', '每季度', '其他']
@@ -246,7 +246,7 @@ export default function SubmitEventPage() {
 
     const confirm = await Taro.showModal({
       title: '提交活动',
-      content: '提交后会进入人工审核队列，审核通过后才会出现在活动列表中。你可以发布自己组织的活动，也可以推荐公开活动。时间会按中国标准时间（UTC+8）保存。',
+      content: '提交后会进入人工审核队列，审核通过后才会出现在活动列表中。活动页适合提交有明确时间、报名窗口或具体期次的活动、营期或招募；长期存在的学习社区、学校或营地主体请提交到学习社区。',
       confirmText: '确认提交',
       cancelText: '再看看',
     })
@@ -289,13 +289,13 @@ export default function SubmitEventPage() {
   return (
     <AppPage>
       <AppCard>
-        <Text style={{ ...typography.title, color: palette.text }}>发布或推荐活动</Text>
-        <View style={{ marginTop: space(2) }}><Text style={{ ...typography.meta, color: palette.subtext }}>你可以提交自己组织的活动，也可以推荐你认为值得被看见的公开活动。请优先填写公开链接和公开报名方式。</Text></View>
+        <Text style={{ ...typography.title, color: palette.text }}>发布或推荐活动 / 营期</Text>
+        <View style={{ marginTop: space(2) }}><Text style={{ ...typography.meta, color: palette.subtext }}>这里收录有明确时间、报名窗口或具体期次的活动、短期营、工作坊、招募、圆桌、聚会等。如果你想推荐的是一个长期存在的学习社区、学校或营地主体，请提交到“学习社区”。</Text></View>
       </AppCard>
 
       <AppCard>
         <SectionTitle text='活动标题' />
-        <FormInputBox focused={focusedField === 'title'}><Input value={title} placeholder='例如：xx空间教育工作坊' onFocus={() => setFocusedField('title')} onBlur={() => setFocusedField('')} onInput={(e) => setTitle(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
+        <FormInputBox focused={focusedField === 'title'}><Input value={title} placeholder='例如：xx空间教育工作坊 / 2026 暑期自然营第一期' onFocus={() => setFocusedField('title')} onBlur={() => setFocusedField('')} onInput={(e) => setTitle(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
         <SectionTitle text='线上活动' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isOnline ? '是，主要在线上进行' : '否，主要线下进行'}</Text><Switch checked={isOnline} color={palette.accentDeep} onChange={(e) => handleOnlineChange(!!e.detail.value)} /></View></FormInputBox>
         {!isOnline && <>
           <SectionTitle text='所在城市' />
@@ -323,7 +323,7 @@ export default function SubmitEventPage() {
         <SectionTitle text='报名方式补充说明（选填）' /><FormInputBox focused={focusedField === 'signupNote'} marginBottom={space(3)}><Textarea value={signupNote} placeholder='例如：先添加小助手填写问卷；或报名开放时间说明' maxlength={200} onFocus={() => setFocusedField('signupNote')} onBlur={() => setFocusedField('')} onInput={(e) => setSignupNote(e.detail.value)} style={{ width: '100%', minHeight: '60px', ...typography.body, color: palette.text }} /></FormInputBox>
         <SectionTitle text='活动简介' /><FormInputBox focused={focusedField === 'description'} marginBottom={space(2)}><Textarea value={description} placeholder='介绍活动内容、适合谁、预计会发生什么。' maxlength={600} onFocus={() => setFocusedField('description')} onBlur={() => setFocusedField('')} onInput={(e) => setDescription(e.detail.value)} style={{ width: '100%', minHeight: '120px', ...typography.body, color: palette.text }} /></FormInputBox><View style={{ marginBottom: space(4) }}><Text style={{ ...typography.micro, color: palette.muted }}>{description.length}/600</Text></View>
       </AppCard>
-      <AppPromptBanner icon='lock' title='提交后进入审核' description='提交内容不会自动公开。组织者联系方式仅对填写过资料的可雀用户可见。请不要提交未公开的未成年人信息。' tone='warm' />
+      <AppPromptBanner icon='lock' title='提交后进入审核' description='提交内容不会自动公开。这里适合具体发生窗口明确的活动、营期、工作坊或招募；如果是长期存在的主体，管理员审核时也会帮你归类。组织者联系方式仅对填写过资料的可雀用户可见。' tone='warm' />
       <AppPrimaryButton text='提交活动' loadingText='提交中...' loading={submitting} onClick={handleSubmit} />
     </AppPage>
   )
