@@ -210,6 +210,8 @@ async function requestAccountDeletion(event, wxContext) {
           gender: '',
           ageRange: '',
           roles: [],
+          province: '',
+          city: '',
           publicChannel: '',
           publicChannelNote: '',
           bio: '',
@@ -227,7 +229,7 @@ async function requestAccountDeletion(event, wxContext) {
       })
     }
 
-    return ok(requestId, { message: '注销申请已提交。你的公开资料已先匿名化并从地图隐藏，联系方式已清空。' })
+    return ok(requestId, { message: '用户注销申请已提交。你的资料会从地图和列表中清空。' })
   } catch (err) {
     console.error('appService requestAccountDeletion error:', err)
     return fail(requestId, 'REQUEST_ACCOUNT_DELETION_FAILED', '提交注销申请失败，请稍后重试')
