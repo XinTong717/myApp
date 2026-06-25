@@ -8,6 +8,38 @@ function hasCompletedProfile(profile) {
   return !!(profile && profile.displayName && profile.province && profile.city && normalizeRoles(profile.roles || []).length > 0)
 }
 
+function normalizeString(value) {
+  return String(value || '').trim()
+}
+
+function buildPublicSignupInfo(source = {}) {
+  return {
+    officialUrl: normalizeString(source.officialUrl || source.official_url),
+    signupNote: normalizeString(source.signupNote || source.signup_note),
+  }
+}
+
+function getOrganizerContact(source = {}) {
+  return normalizeString(source.organizerContact || source.organizer_contact || source.contactInfo || source.contact_info)
+}
+
+async function getMergedSubmission(eventId) {
+  const matched = await db.collection('event_submissions')
+    .where({ publishedEventId: eventId, status: 'merged' })
+    .limit(1)
+    .get()
+  return matched.data[0] || null
+}
+
+async function getEventRecord(eventId) {
+  const matched = await db.collection('events')
+    .where({ id: eventId })
+    .field({ officialUrl: true, official_url: true, signupNote: true, signup_note: true, organizerContact: true, organizer_contact: true, contactInfo: true, contact_info: true })
+    .limit(1)
+    .get()
+  return matched.data[0] || null
+}
+
 async function getEventContactInfo(event, wxContext) {
   const requestId = resolveRequestId('get-event-contact', event)
   const openid = wxContext.OPENID
@@ -15,18 +47,18 @@ async function getEventContactInfo(event, wxContext) {
   if (!eventId) return fail(requestId, 'BAD_REQUEST', '缺少活动 ID')
 
   try {
-    const matched = await db.collection('event_submissions')
-      .where({ publishedEventId: eventId, status: 'merged' })
-      .limit(1)
-      .get()
-    const submission = matched.data[0] || null
-    if (!submission) return ok(requestId, { contactInfo: '', message: '该活动暂无额外联系方式' })
+    const [submission, eventRecord] = await Promise.all([
+      getMergedSubmission(eventId),
+      getEventRecord(eventId),
+    ])
+    const source = submission || eventRecord
+    if (!source) return ok(requestId, { contactInfo: '', message: '该活动暂无额外联系方式' })
 
     const publicSignupInfo = {
-      officialUrl: String(submission.officialUrl || '').trim(),
-      signupNote: String(submission.signupNote || '').trim(),
+      ...buildPublicSignupInfo(eventRecord || {}),
+      ...buildPublicSignupInfo(submission || {}),
     }
-    const organizerContact = String(submission.organizerContact || '').trim()
+    const organizerContact = getOrganizerContact(submission || {}) || getOrganizerContact(eventRecord || {})
 
     if (!organizerContact) {
       return ok(requestId, {
