@@ -55,6 +55,10 @@ function hasDraftContent(draft: Partial<ProfileDraft> | null) {
   )
 }
 
+function isDeletedProfile(profile: UserProfile | null | undefined) {
+  return !!profile && (profile.deletionStatus === 'pending' || profile.displayName === '已注销用户')
+}
+
 export function useProfileForm() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -133,7 +137,7 @@ export function useProfileForm() {
 
   const applyProfile = (p: UserProfile | null) => {
     if (!p) return
-    if (p.deletionStatus === 'pending') {
+    if (isDeletedProfile(p)) {
       resetProfileForm({ clearDraft: true })
       return
     }
@@ -182,7 +186,7 @@ export function useProfileForm() {
   }, [province, cityOption])
 
   const loadDraftIfEmpty = async (remoteProfile: UserProfile | null | undefined) => {
-    if (remoteProfile?.deletionStatus === 'pending') return
+    if (isDeletedProfile(remoteProfile)) return
     if (remoteProfile?.displayName || remoteProfile?.province) return
     try {
       const draft = await getScopedCachedValue<Partial<ProfileDraft>>(PROFILE_DRAFT_KEY)
