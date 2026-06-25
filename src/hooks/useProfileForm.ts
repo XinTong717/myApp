@@ -10,6 +10,10 @@ const PROFILE_DRAFT_KEY = CACHE_KEY_PREFIXES.profileDraft
 const PROFILE_DRAFT_DEBOUNCE_MS = 1500
 const PROFILE_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
+type ResetProfileFormOptions = {
+  clearDraft?: boolean
+}
+
 export type PickerMultiChangeEvent = {
   detail: { value: number[] }
 }
@@ -84,6 +88,31 @@ export function useProfileForm() {
   const isCompanion = roles.includes('同行者')
   const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
 
+  const resetProfileForm = (options: ResetProfileFormOptions = {}) => {
+    applyingRemoteRef.current = true
+    setDisplayName('')
+    setGender('')
+    setAgeRange('')
+    setRoles([])
+    setProvince('')
+    setCityOption('')
+    setCustomCity('')
+    setPublicChannel('')
+    setPublicChannelNote('')
+    setExpandedProfileVisible(true)
+    setIsVisibleOnMap(true)
+    setChildAgeRange([])
+    setChildDropoutStatus([])
+    setChildInterests('')
+    setEduServices('')
+    setCompanionContext('')
+    setBio('')
+    if (options.clearDraft !== false) {
+      clearScopedCachedValue(PROFILE_DRAFT_KEY).catch(() => null)
+    }
+    setTimeout(() => { applyingRemoteRef.current = false }, 0)
+  }
+
   const applyDraft = (draft: Partial<ProfileDraft>) => {
     setDisplayName(draft.displayName || '')
     setGender(draft.gender || '')
@@ -104,6 +133,10 @@ export function useProfileForm() {
 
   const applyProfile = (p: UserProfile | null) => {
     if (!p) return
+    if (p.deletionStatus === 'pending') {
+      resetProfileForm({ clearDraft: true })
+      return
+    }
     applyingRemoteRef.current = true
     setDisplayName(p.displayName || '')
     setGender(p.gender || '')
@@ -149,6 +182,7 @@ export function useProfileForm() {
   }, [province, cityOption])
 
   const loadDraftIfEmpty = async (remoteProfile: UserProfile | null | undefined) => {
+    if (remoteProfile?.deletionStatus === 'pending') return
     if (remoteProfile?.displayName || remoteProfile?.province) return
     try {
       const draft = await getScopedCachedValue<Partial<ProfileDraft>>(PROFILE_DRAFT_KEY)
@@ -374,6 +408,7 @@ export function useProfileForm() {
     pickerValue,
     loadProfile,
     applyRemoteProfile,
+    resetProfileForm,
     handleSave,
     handleUpdatePrivacySetting,
     handlePickerChange,
