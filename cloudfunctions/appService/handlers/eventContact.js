@@ -46,7 +46,7 @@ async function getEventContactInfo(event, wxContext) {
         publicSignupInfo,
         needCompleteProfile: true,
         privateContactRequiresProfile: true,
-        message: '完成个人资料后，才可查看组织者私人联系方式。',
+        message: '完成个人资料后，才可查看组织者联系方式。',
       })
     }
 
