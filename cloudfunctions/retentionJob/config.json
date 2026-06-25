@@ -1,9 +1,0 @@
-{
-  "triggers": [
-    {
-      "name": "retentionDaily",
-      "type": "timer",
-      "config": "0 0 3 * * * *"
-    }
-  ]
-}
