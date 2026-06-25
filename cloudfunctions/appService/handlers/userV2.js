@@ -37,7 +37,11 @@ async function getMe(event, wxContext) {
   const requestId = resolveRequestId('get-me', event)
   try {
     const profile = await getUserProfileByOpenid(wxContext.OPENID)
-    return ok(requestId, { profile: normalizeProfile(profile) })
+    const normalizedProfile = normalizeProfile(profile)
+    if (normalizedProfile?.deletionStatus === 'pending') {
+      return ok(requestId, { profile: null, deletionStatus: 'pending' })
+    }
+    return ok(requestId, { profile: normalizedProfile })
   } catch (err) {
     console.error('appService getMe error:', err)
     return fail(requestId, 'GET_ME_FAILED', '读取个人资料失败，请稍后重试', { profile: null })
