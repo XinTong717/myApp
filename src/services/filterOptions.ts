@@ -15,6 +15,10 @@ export type AppFilterOptions = {
   school: SchoolFilterOptions
 }
 
+function mergeOptionList(preferred?: string[], fallback: string[] = []) {
+  return Array.from(new Set([...(preferred || []), ...fallback].filter(Boolean)))
+}
+
 function mergeFilterOptions(payload?: FilterOptionsPayload | null): AppFilterOptions {
   return {
     event: {
@@ -28,6 +32,9 @@ function mergeFilterOptions(payload?: FilterOptionsPayload | null): AppFilterOpt
     school: {
       ...SCHOOL_FILTER_FALLBACKS,
       ...(payload?.school || {}),
+      provinces: mergeOptionList(payload?.school?.provinces, SCHOOL_FILTER_FALLBACKS.provinces),
+      schoolTypes: mergeOptionList(payload?.school?.schoolTypes, SCHOOL_FILTER_FALLBACKS.schoolTypes),
+      ageRanges: mergeOptionList(payload?.school?.ageRanges, SCHOOL_FILTER_FALLBACKS.ageRanges),
     },
   }
 }
