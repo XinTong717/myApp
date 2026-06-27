@@ -31,6 +31,8 @@ type MapMarkersProps = {
 const EMPTY_STATE_DELAY_MS = 360
 const DEFAULT_CENTER = { latitude: 33.0, longitude: 108.0 }
 const MAP_VIEW_HEIGHT = 'calc(100vh - 176px)'
+const MIN_MAP_SCALE = 4
+const MAX_OVERVIEW_SCALE = 10
 
 const cardStyle = {
   backgroundColor: exploreTheme.card,
@@ -95,6 +97,12 @@ function getSafeCenter(center: { latitude: number; longitude: number }, markers:
   return isFiniteCoordinate(lat, lng) ? { latitude: lat, longitude: lng } : DEFAULT_CENTER
 }
 
+function clampMapScale(scale: number) {
+  const nextScale = Number(scale)
+  if (!Number.isFinite(nextScale)) return MIN_MAP_SCALE
+  return Math.max(MIN_MAP_SCALE, Math.min(MAX_OVERVIEW_SCALE, nextScale))
+}
+
 export default function MapMarkers(props: MapMarkersProps) {
   const {
     loading,
@@ -127,6 +135,7 @@ export default function MapMarkers(props: MapMarkersProps) {
   }, [mapMarkers])
   const safeCenter = useMemo(() => getSafeCenter(center, safeMapMarkers), [center, safeMapMarkers])
   const markerSignature = useMemo(() => buildMarkerSignature(safeMapMarkers), [safeMapMarkers])
+  const safeScale = useMemo(() => clampMapScale(scale), [scale])
   const safeCanRenderMap = canRenderMap && safeMapMarkers.length > 0 && isFiniteCoordinate(safeCenter.latitude, safeCenter.longitude)
 
   useEffect(() => {
@@ -204,12 +213,12 @@ export default function MapMarkers(props: MapMarkersProps) {
 
   return (
     <TaroMap
-      key={`${selectedProvince || 'all'}-${markerSignature}-${safeCenter.latitude.toFixed(3)}-${safeCenter.longitude.toFixed(3)}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${shouldShowSchoolLabels ? 'school-label' : 'school-dot'}-${hasUserClusters ? 'user-cluster' : 'user-plain'}-${hasSchoolClusters ? 'school-cluster' : 'school-plain'}-${disableMapZoom ? 'devtools-no-zoom' : 'zoom'}`}
+      key={`${selectedProvince || 'all'}-${markerSignature}-${safeCenter.latitude.toFixed(3)}-${safeCenter.longitude.toFixed(3)}-${safeScale}-${shouldShowUserLabels ? 'user-label' : 'user-dot'}-${shouldShowSchoolLabels ? 'school-label' : 'school-dot'}-${hasUserClusters ? 'user-cluster' : 'user-plain'}-${hasSchoolClusters ? 'school-cluster' : 'school-plain'}-${disableMapZoom ? 'devtools-no-zoom' : 'zoom'}`}
       latitude={safeCenter.latitude}
       longitude={safeCenter.longitude}
-      scale={scale}
-      minScale={3}
-      maxScale={18}
+      scale={safeScale}
+      minScale={MIN_MAP_SCALE}
+      maxScale={MAX_OVERVIEW_SCALE}
       markers={safeMapMarkers}
       showScale={false}
       enableZoom={!disableMapZoom}
