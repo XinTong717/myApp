@@ -17,7 +17,7 @@ export default function AppSearchBox({ value, placeholder, helperText, onInput }
           type='text'
           value={value}
           placeholder={placeholder}
-          placeholderStyle={`color:${palette.muted};font-size:${typography.body.fontSize};line-height:${typography.body.lineHeight}`}
+          placeholderStyle={`color:${palette.muted};font-size:14px;line-height:${typography.body.lineHeight}`}
           onInput={(e) => onInput(e.detail.value)}
           style={{ ...typography.body, color: palette.text }}
         />
