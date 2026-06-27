@@ -19,7 +19,7 @@ export const EVENT_FILTER_FALLBACKS = {
 export const SCHOOL_FILTER_FALLBACKS = {
   allOption: ALL_FILTER,
   listLimit: 200,
-  maxDynamicOptions: 16,
+  maxDynamicOptions: 80,
   provinces: [] as string[],
   schoolTypes: [] as string[],
   ageRanges: [] as string[],
