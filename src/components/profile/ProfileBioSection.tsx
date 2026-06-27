@@ -24,7 +24,7 @@ export default function ProfileBioSection({ bio, setBio }: Props) {
       <ProfileInputBox marginBottom='0' focused={focused}>
         <Textarea
           value={bio}
-          placeholder='简单介绍一下自己...'
+          placeholder='简单介绍一下自己...可补充个人小红书、公众号、视频号、抖音等。'
           maxlength={200}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

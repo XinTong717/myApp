@@ -20,12 +20,12 @@ export default function ProfileCompanionSection({ companionContext, setCompanion
     <ProfileCard>
       <ProfileSectionHeading
         title='你和这个生态的关系'
-        description='比如：研究者、gap year、内容创作者、社区组织者、观察者等。这个说明会帮助别人理解你为什么在这里。'
+        description='这个说明会帮助别人理解你为什么在这里。'
       />
       <ProfileInputBox marginBottom='0' focused={focused}>
         <Textarea
           value={companionContext}
-          placeholder='例如：gap year 中，长期关注多元教育与社区学习'
+          placeholder='例如：高中休学过、gap year 中、长期关注多元教育与社区学习、观察研究者'
           maxlength={150}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

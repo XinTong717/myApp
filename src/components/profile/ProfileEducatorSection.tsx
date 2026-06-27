@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Textarea } from '@tarojs/components'
 import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
-import ProfileHelperText from './ProfileHelperText'
 import ProfileCounterText from './ProfileCounterText'
 import ProfileSectionHeading from './ProfileSectionHeading'
 import { palette } from '../../theme/palette'
@@ -23,7 +22,6 @@ export default function ProfileEducatorSection({ eduServices, setEduServices }: 
         title='你提供的教育服务'
         description='帮助家庭了解你能提供什么样的支持'
       />
-      <ProfileHelperText text='比如：一对一升学规划咨询、项目制学习支持、家长沟通陪跑等。' marginBottom={space(2)} />
       <ProfileInputBox marginBottom='0' focused={focused}>
         <Textarea
           value={eduServices}

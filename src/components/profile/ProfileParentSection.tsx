@@ -4,7 +4,6 @@ import SectionTitle from './SectionTitle'
 import { MultiPillSelect } from '../common/PillSelect'
 import ProfileCard from './ProfileCard'
 import ProfileInputBox from './ProfileInputBox'
-import ProfileHelperText from './ProfileHelperText'
 import ProfileCounterText from './ProfileCounterText'
 import ProfileSectionHeading from './ProfileSectionHeading'
 import { palette } from '../../theme/palette'
@@ -46,7 +45,6 @@ export default function ProfileParentSection(props: Props) {
       <SectionTitle text='当前关注方向（可多选）' />
       <MultiPillSelect options={childStatusOptions} selected={childDropoutStatus} onChange={setChildDropoutStatus} />
       <SectionTitle text='希望补充说明的情况' />
-      <ProfileHelperText text='比如：希望找线下同伴、项目制活动，或更适合当前阶段的学习支持。' marginBottom={space(2)} />
       <ProfileInputBox marginBottom='0' focused={focused}>
         <Textarea
           value={childInterests}
