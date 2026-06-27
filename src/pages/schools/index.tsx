@@ -3,7 +3,6 @@ import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
 import { getFilterOptions } from '../../services/filterOptions'
-import type { AppFilterOptions } from '../../services/filterOptions'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
 import { radius, space } from '../../theme/spacing'
@@ -331,7 +330,7 @@ function formatSelectedSummary(values: string[], label: string) {
 export default function SchoolsPage() {
   const [schools, setSchools] = useState<School[]>([])
   const [filterSourceSchools, setFilterSourceSchools] = useState<School[]>([])
-  const [filterSettings, setFilterSettings] = useState<AppFilterOptions['school']>(SCHOOL_FILTER_FALLBACKS)
+  const [filterSettings, setFilterSettings] = useState<typeof SCHOOL_FILTER_FALLBACKS>(SCHOOL_FILTER_FALLBACKS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [keyword, setKeyword] = useState('')
