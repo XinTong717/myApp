@@ -2,7 +2,7 @@ import { callCloud } from './cloud'
 import { getScopedCachedValue, setScopedCachedValue } from './cache'
 import { EVENT_FILTER_FALLBACKS, SCHOOL_FILTER_FALLBACKS, type EventFilterOptions, type SchoolFilterOptions } from '../constants/filterOptions'
 
-const FILTER_OPTIONS_CACHE_KEY = 'cloud-cache:filter-options:v2'
+const FILTER_OPTIONS_CACHE_KEY = 'cloud-cache:filter-options:v4'
 const FILTER_OPTIONS_TTL_MS = 24 * 60 * 60 * 1000
 
 type FilterOptionsPayload = {
