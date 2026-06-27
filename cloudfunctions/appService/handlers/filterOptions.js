@@ -19,7 +19,7 @@ const EVENT_FILTER_OPTIONS = {
 const SCHOOL_FILTER_OPTIONS = {
   allOption: '全部',
   listLimit: 200,
-  maxDynamicOptions: 24,
+  maxDynamicOptions: 80,
   provinces: [],
   schoolTypes: [],
   ageRanges: [],
@@ -47,8 +47,8 @@ function splitLabels(value) {
     .filter(Boolean)
 }
 
-function uniqueSorted(values, max = SCHOOL_FILTER_OPTIONS.maxDynamicOptions) {
-  return Array.from(new Set((values || []).map(normalizeString).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-CN')).slice(0, max)
+function uniqueSorted(values) {
+  return Array.from(new Set((values || []).map(normalizeString).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-CN'))
 }
 
 async function buildSchoolFilterOptions() {
@@ -56,7 +56,7 @@ async function buildSchoolFilterOptions() {
     const [locationsRes, schoolsRes] = await Promise.all([
       db.collection('school_locations')
         .field({ province: true, city: true, status: true })
-        .limit(600)
+        .limit(1000)
         .get(),
       db.collection('schools')
         .field({ school_type: true, age_range: true, status: true })
