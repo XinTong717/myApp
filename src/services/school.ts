@@ -5,6 +5,7 @@ import type {
   SchoolDetailResult,
   SchoolItem,
   SchoolListResult,
+  SchoolLocationItem,
   SchoolMarkerItem,
   SchoolMarkerListResult,
   SubmitCorrectionResult,
@@ -23,8 +24,61 @@ type SchoolListPayload = { schools?: SchoolItem[] }
 type SchoolMarkerListPayload = { schools?: SchoolMarkerItem[] }
 type SchoolDetailPayload = { school?: SchoolItem | null }
 
+function splitLocationTokens(value?: string) {
+  return String(value || '')
+    .split(/[、,，/|｜\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function normalizeSchoolLocations(item: SchoolItem): SchoolItem {
+  const existingLocations = Array.isArray(item.locations)
+    ? item.locations
+      .filter((location) => location && location.status !== 'deleted')
+      .map((location) => ({
+        ...location,
+        province: String(location.province || '').trim(),
+        city: String(location.city || '').trim(),
+      }))
+      .filter((location) => location.province || location.city)
+    : []
+
+  if (existingLocations.length > 0) {
+    return { ...item, locations: existingLocations }
+  }
+
+  const provinces = splitLocationTokens(item.province)
+  const cities = splitLocationTokens(item.city)
+
+  if (cities.length > 0) {
+    return {
+      ...item,
+      locations: cities.map((city, index) => ({
+        school_id: Number(item.id),
+        province: provinces[index] || provinces[0] || '',
+        city,
+        status: 'legacy',
+      } as SchoolLocationItem)),
+    }
+  }
+
+  if (provinces.length > 0) {
+    return {
+      ...item,
+      locations: provinces.map((province) => ({
+        school_id: Number(item.id),
+        province,
+        city: '',
+        status: 'legacy',
+      } as SchoolLocationItem)),
+    }
+  }
+
+  return item
+}
+
 function okSchoolList(payload: SchoolListPayload): SchoolListResult {
-  return { ok: true, schools: Array.isArray(payload.schools) ? payload.schools : [] }
+  return { ok: true, schools: Array.isArray(payload.schools) ? payload.schools.map(normalizeSchoolLocations) : [] }
 }
 
 function okSchoolMarkers(payload: SchoolMarkerListPayload): SchoolMarkerListResult {
@@ -32,7 +86,7 @@ function okSchoolMarkers(payload: SchoolMarkerListPayload): SchoolMarkerListResu
 }
 
 function okSchoolDetail(payload: SchoolDetailPayload): SchoolDetailResult {
-  return { ok: true, school: payload.school || null }
+  return { ok: true, school: payload.school ? normalizeSchoolLocations(payload.school) : null }
 }
 
 function normalizeFilterList(value?: SchoolFilterValue) {
@@ -97,8 +151,9 @@ export async function getSchools(options: { forceRefresh?: boolean; province?: S
 
   const result = await callCloud<SchoolListResult>('getSchools', params)
   if (result.ok) {
-    await setScopedCachedValue(cacheKey, { schools: result.schools || [] }, SCHOOL_LIST_TTL_MS)
-    return result
+    const normalized = okSchoolList({ schools: result.schools || [] })
+    await setScopedCachedValue(cacheKey, { schools: normalized.schools || [] }, SCHOOL_LIST_TTL_MS)
+    return { ...result, schools: normalized.schools }
   }
 
   const staleCached = await getScopedCachedValue<SchoolListPayload>(cacheKey)
@@ -146,8 +201,9 @@ export async function getSchoolDetail(schoolId: number, options: { forceRefresh?
 
   const result = await callCloud<SchoolDetailResult>('getSchoolDetail', { schoolId })
   if (result.ok) {
-    await setScopedCachedValue(cacheKey, { school: result.school || null }, SCHOOL_DETAIL_TTL_MS)
-    return result
+    const normalized = okSchoolDetail({ school: result.school || null })
+    await setScopedCachedValue(cacheKey, { school: normalized.school || null }, SCHOOL_DETAIL_TTL_MS)
+    return { ...result, school: normalized.school }
   }
 
   const staleCached = await getScopedCachedValue<SchoolDetailPayload>(cacheKey)
