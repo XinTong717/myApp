@@ -117,12 +117,12 @@ export default function ProfileBasicSection(props: Props) {
         </View>
       )}
 
-      <SectionTitle text='联系方式（选填）' />
-      <ProfileHelperText text='可填写个人微信、公众号、小红书、个人网站、公开邮箱等。仅对已登录并完成个人资料的用户可见；请不要填写孩子或第三方联系方式。' />
+      <SectionTitle text='微信号' />
+      <ProfileHelperText text='仅对已登录并完成个人资料的用户可见；请不要填写孩子或第三方联系方式。' />
       <ProfileInputBox focused={focusedField === 'publicChannel'}>
         <Input
           value={publicChannel}
-          placeholder='例如：微信号：xxx'
+          placeholder='微信号'
           onFocus={() => setFocusedField('publicChannel')}
           onBlur={() => setFocusedField('')}
           onInput={(e) => setPublicChannel(e.detail.value)}
