@@ -77,6 +77,40 @@ function normalizeSchoolLocations(item: SchoolItem): SchoolItem {
   return item
 }
 
+function markerLocationsToSchoolLocations(marker: SchoolMarkerItem): SchoolLocationItem[] {
+  return Array.isArray(marker.locations)
+    ? marker.locations
+      .filter((location) => location && location.status !== 'deleted')
+      .map((location) => ({
+        school_id: Number(location.school_id || marker.id),
+        province: String(location.province || '').trim(),
+        city: String(location.city || '').trim(),
+        status: location.status,
+      }))
+      .filter((location) => location.province || location.city)
+    : []
+}
+
+function mergeMarkerLocations(schools: SchoolItem[], markerSchools: SchoolMarkerItem[]) {
+  const markerById = new Map(markerSchools.map((marker) => [Number(marker.id), marker]))
+
+  return schools.map((school) => {
+    const marker = markerById.get(Number(school.id))
+    if (!marker) return school
+
+    const markerLocations = markerLocationsToSchoolLocations(marker)
+    if (markerLocations.length === 0) return school
+
+    return {
+      ...school,
+      province: school.province || marker.province,
+      city: school.city || marker.city,
+      locations: markerLocations,
+      location_count: school.location_count || marker.location_count || markerLocations.length,
+    }
+  })
+}
+
 function okSchoolList(payload: SchoolListPayload): SchoolListResult {
   return { ok: true, schools: Array.isArray(payload.schools) ? payload.schools.map(normalizeSchoolLocations) : [] }
 }
@@ -151,7 +185,14 @@ export async function getSchools(options: { forceRefresh?: boolean; province?: S
 
   const result = await callCloud<SchoolListResult>('getSchools', params)
   if (result.ok) {
-    const normalized = okSchoolList({ schools: result.schools || [] })
+    const markerResult = await getSchoolMarkers({ ...options, limit: options.limit || 200 }).catch((err) => {
+      console.warn('merge school marker locations skipped:', err)
+      return null
+    })
+    const schoolsWithMarkerLocations = markerResult?.ok
+      ? mergeMarkerLocations(result.schools || [], markerResult.schools || [])
+      : (result.schools || [])
+    const normalized = okSchoolList({ schools: schoolsWithMarkerLocations })
     await setScopedCachedValue(cacheKey, { schools: normalized.schools || [] }, SCHOOL_LIST_TTL_MS)
     return { ...result, schools: normalized.schools }
   }
