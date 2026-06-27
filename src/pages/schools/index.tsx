@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
-import { getFilterOptions, type AppFilterOptions } from '../../services/filterOptions'
+import { getFilterOptions } from '../../services/filterOptions'
+import type { AppFilterOptions } from '../../services/filterOptions'
 import { setDetailPreview } from '../../services/detailPreview'
 import { palette } from '../../theme/palette'
 import { radius, space } from '../../theme/spacing'
@@ -472,7 +473,7 @@ export default function SchoolsPage() {
       <AppCard>
         <AppSearchBox
           value={keyword}
-          placeholder='搜索已收录社区，找不到可提交推荐'
+          placeholder='搜索社区，找不到可推荐'
           helperText='找不到时可先调整筛选，或推荐新的学习社区。'
           onInput={setKeyword}
         />
