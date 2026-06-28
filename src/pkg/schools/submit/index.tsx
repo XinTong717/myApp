@@ -2,19 +2,19 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Input, Textarea, Picker, Switch } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { LOCATION_DATA, PROVINCES } from '../../../constants/location'
+import { SCHOOL_TYPE_OPTIONS, BOARDING_TYPE_OPTIONS } from '../../../constants/filterOptions'
 import { submitSchool } from '../../../services/school'
 import SectionTitle from '../../../components/profile/SectionTitle'
 import { palette } from '../../../theme/palette'
 import { radius, space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
-import { MultiPillSelect } from '../../../components/common/PillSelect'
+import { MultiPillSelect, SinglePillSelect } from '../../../components/common/PillSelect'
 import AppPage from '../../../components/common/AppPage'
 import AppCard from '../../../components/common/AppCard'
 import AppPromptBanner from '../../../components/common/AppPromptBanner'
 import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
 import FormInputBox from '../../../components/common/FormInputBox'
 
-const SCHOOL_TYPE_OPTIONS = ['学习成长社区', '学校', '华德福学校', '孤独症特教', '营地/短期项目主体', '公益组织', '疗愈社区', '其他']
 const AGE_RANGE_MIN = 0
 const AGE_RANGE_MAX = 30
 
@@ -137,6 +137,7 @@ export default function SubmitSchoolPage() {
   const [customCity, setCustomCity] = useState('')
   const [schoolType, setSchoolType] = useState<string[]>([])
   const [schoolTypeOther, setSchoolTypeOther] = useState('')
+  const [boardingType, setBoardingType] = useState('待确认')
   const [ageRangeMin, setAgeRangeMin] = useState(6)
   const [ageRangeMax, setAgeRangeMax] = useState(18)
   const [officialUrl, setOfficialUrl] = useState('')
@@ -151,7 +152,7 @@ export default function SubmitSchoolPage() {
   const currentCity = cityOption === '其他' ? customCity.trim() : cityOption
   const ageRangeText = formatAgeRange(ageRangeMin, ageRangeMax)
   const hasUnsavedContent = !!(
-    name.trim() || isOnline || province || cityOption || customCity.trim() || schoolType.length > 0 || schoolTypeOther.trim() ||
+    name.trim() || isOnline || province || cityOption || customCity.trim() || schoolType.length > 0 || schoolTypeOther.trim() || boardingType !== '待确认' ||
     ageRangeMin !== 6 || ageRangeMax !== 18 || officialUrl.trim() || xujiNote.trim() || residencyReq.trim() || admissionReq.trim() ||
     feeNote.trim() || outputDirection.trim() || sourceNote.trim() || recommendationNote.trim()
   )
@@ -225,6 +226,7 @@ export default function SubmitSchoolPage() {
         city: isOnline ? '线上' : currentCity,
         schoolType,
         schoolTypeOther: schoolType.includes('其他') ? schoolTypeOther.trim() : '',
+        boardingType,
         ageRange: [ageRangeText],
         ageRangeMin,
         ageRangeMax,
@@ -288,14 +290,17 @@ export default function SubmitSchoolPage() {
         <MultiPillSelect options={SCHOOL_TYPE_OPTIONS} selected={schoolType} onChange={setSchoolType} />
         {schoolType.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充社区类型中的“其他”。</Text></View><FormInputBox focused={focusedField === 'schoolTypeOther'} marginBottom='0'><Input value={schoolTypeOther} placeholder='例如：森林学校 / 驻留计划' onFocus={() => setFocusedField('schoolTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setSchoolTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
 
+        <SectionTitle text='寄宿情况' />
+        <SinglePillSelect options={BOARDING_TYPE_OPTIONS} selected={boardingType} onChange={setBoardingType} allowClear={false} />
+
         <SectionTitle text='适合年龄段' />
         <AgeRangeSlider minValue={ageRangeMin} maxValue={ageRangeMax} onChange={(minValue, maxValue) => { setAgeRangeMin(minValue); setAgeRangeMax(maxValue) }} />
 
         <SectionTitle text='官方/说明链接（选填）' />
         <FormInputBox focused={focusedField === 'officialUrl'}><Input value={officialUrl} placeholder='例如：官网链接 / 公众号名 / 小红书号' onFocus={() => setFocusedField('officialUrl')} onBlur={() => setFocusedField('')} onInput={(e) => setOfficialUrl(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
 
-        <SectionTitle text='公开说明（选填）' />
-        <FormInputBox focused={focusedField === 'xujiNote'} marginBottom={space(3)}><Textarea value={xujiNote} placeholder='例如：公开可查到的社区简介、办学理念或基本说明' maxlength={500} onFocus={() => setFocusedField('xujiNote')} onBlur={() => setFocusedField('')} onInput={(e) => setXujiNote(e.detail.value)} style={{ width: '100%', minHeight: '80px', ...typography.body, color: palette.text }} /></FormInputBox>
+        <SectionTitle text='学籍/资质与公开说明（选填）' />
+        <FormInputBox focused={focusedField === 'xujiNote'} marginBottom={space(3)}><Textarea value={xujiNote} placeholder='例如：公开可查到的学籍/资质说明、社区简介、办学理念或基本说明' maxlength={500} onFocus={() => setFocusedField('xujiNote')} onBlur={() => setFocusedField('')} onInput={(e) => setXujiNote(e.detail.value)} style={{ width: '100%', minHeight: '80px', ...typography.body, color: palette.text }} /></FormInputBox>
 
         <SectionTitle text='参与前了解（选填）' />
         <FormInputBox focused={focusedField === 'residencyReq'} marginBottom={space(3)}><Textarea value={residencyReq} placeholder='例如：是否需要面谈、试读、家长参与、长期承诺等' maxlength={400} onFocus={() => setFocusedField('residencyReq')} onBlur={() => setFocusedField('')} onInput={(e) => setResidencyReq(e.detail.value)} style={{ width: '100%', minHeight: '70px', ...typography.body, color: palette.text }} /></FormInputBox>
