@@ -243,4 +243,71 @@ export type EventSubmissionItem = {
   submitterCity: string
   createdAt: string | null
   publishedEventId: number | null
+  adminNote: string
+  contentSecurityStatus?: string
 }
+
+export type SchoolSubmissionItem = {
+  _id: string
+  status: string
+  name: string
+  province?: string
+  city?: string
+  schoolType?: string
+  schoolTypes?: string[]
+  ageRange?: string
+  ageRanges?: string[]
+  officialUrl?: string
+  publicAccountNote?: string
+  xujiNote?: string
+  residencyReq?: string
+  admissionReq?: string
+  participationNote?: string
+  feeNote?: string
+  outputDirection?: string
+  sourceNote?: string
+  recommendationNote?: string
+  submitterDisplayName?: string
+  submitterCity?: string
+  createdAt?: string | null
+  reviewedAt?: string | null
+  reviewedBy?: string
+  adminNote?: string
+  contentSecurityStatus?: string
+}
+
+export type ListEventSubmissionsResult = CloudResponse<{
+  submissions?: EventSubmissionItem[]
+  admin?: { name?: string; role?: string }
+}>
+
+export type ListSchoolSubmissionsResult = CloudResponse<{
+  submissions?: SchoolSubmissionItem[]
+  admin?: { name?: string; role?: string }
+}>
+
+export type ReviewEventSubmissionResult = CloudResponse<{
+  nextStatus?: string
+  publishedEventId?: number
+}>
+
+export type ReviewSchoolSubmissionResult = CloudResponse<{
+  nextStatus?: string
+}>
+
+export type EventPublishPayloadResult = CloudResponse<{
+  submission?: Record<string, unknown>
+  suggestedEventPayload?: Record<string, unknown>
+  suggestedReviewUpdate?: Record<string, unknown>
+  warnings?: string[]
+  admin?: { name?: string; role?: string }
+}>
+
+export type SchoolPublishPayloadResult = CloudResponse<{
+  submissionId?: string
+  schoolPayload?: Record<string, unknown>
+  locationPayload?: Record<string, unknown>
+  auditOnly?: Record<string, unknown>
+  warnings?: string[]
+  admin?: { name?: string; role?: string }
+}>
