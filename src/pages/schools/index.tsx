@@ -317,6 +317,12 @@ function schoolMatchesType(item: School, selectedTypes: string[]) {
   return selectedTypes.some((type) => labels.includes(type))
 }
 
+function schoolMatchesBoardingType(item: School, selectedBoardingTypes: string[]) {
+  if (selectedBoardingTypes.length === 0) return true
+  const labels = splitTokens(item.boarding_type)
+  return selectedBoardingTypes.some((type) => labels.includes(type))
+}
+
 function toggleMultiFilter(current: string[], option: string, allOption: string) {
   if (option === allOption) return []
   if (current.includes(option)) return current.filter((item) => item !== option)
@@ -341,6 +347,7 @@ export default function SchoolsPage() {
   const [keyword, setKeyword] = useState('')
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>([])
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+  const [selectedBoardingTypes, setSelectedBoardingTypes] = useState<string[]>([])
   const [ageRangeMin, setAgeRangeMin] = useState(AGE_RANGE_MIN)
   const [ageRangeMax, setAgeRangeMax] = useState(AGE_RANGE_MAX)
   const didInitRef = useRef(false)
@@ -358,7 +365,7 @@ export default function SchoolsPage() {
     })
   }, [])
 
-  const hasActiveFilters = () => selectedProvinces.length > 0 || selectedTypes.length > 0 || ageFilterActive
+  const hasActiveFilters = () => selectedProvinces.length > 0 || selectedTypes.length > 0 || selectedBoardingTypes.length > 0 || ageFilterActive
 
   const loadSchools = async (options: { forceRefresh?: boolean; useFilters?: boolean; syncFilterSource?: boolean } = {}) => {
     try {
@@ -369,6 +376,7 @@ export default function SchoolsPage() {
         forceRefresh: !!options.forceRefresh,
         limit: listLimit,
         ...(useFilters && selectedProvinces.length > 0 ? { province: selectedProvinces } : {}),
+        ...(useFilters && selectedBoardingTypes.length > 0 ? { boardingType: selectedBoardingTypes } : {}),
       })
       const nextSchools = Array.isArray(result.schools) ? result.schools : []
       setSchools(nextSchools)
@@ -407,7 +415,7 @@ export default function SchoolsPage() {
   useEffect(() => {
     if (!didInitRef.current) return
     loadSchools({ useFilters: hasActiveFilters(), syncFilterSource: !hasActiveFilters() })
-  }, [selectedProvinces, selectedTypes, ageRangeMin, ageRangeMax])
+  }, [selectedProvinces, selectedTypes, selectedBoardingTypes, ageRangeMin, ageRangeMax])
 
   usePullDownRefresh(async () => {
     if (hasActiveFilters()) {
@@ -425,9 +433,11 @@ export default function SchoolsPage() {
   const optionSource = filterSourceSchools.length > 0 ? filterSourceSchools : schools
   const provinceCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => getLocations(item).map((location) => location.province || '')), [optionSource])
   const typeCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => schoolTypeLabels(item.school_type)), [optionSource])
+  const boardingTypeCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => splitTokens(item.boarding_type)), [optionSource])
   const normalizedTypeSettings = useMemo(() => normalizeTypeOptions(filterSettings.schoolTypes || []), [filterSettings.schoolTypes])
   const provinceOptions = useMemo(() => countedOptions(allFilter, filterSettings.provinces || [], provinceCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, filterSettings.provinces, provinceCounts])
   const typeOptions = useMemo(() => countedOptions(allFilter, normalizedTypeSettings, typeCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, normalizedTypeSettings, typeCounts])
+  const boardingTypeOptions = useMemo(() => countedOptions(allFilter, filterSettings.boardingTypes || [], boardingTypeCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, filterSettings.boardingTypes, boardingTypeCounts])
 
   const filteredSchools = useMemo(() => {
     const q = keyword.trim().toLowerCase()
@@ -441,6 +451,7 @@ export default function SchoolsPage() {
         item.city,
         getLocationHaystack(item),
         item.school_type,
+        item.boarding_type,
         item.age_range,
         displayAgeRange,
         item.fee,
@@ -449,14 +460,16 @@ export default function SchoolsPage() {
       if (q && !haystack.includes(q)) return false
       if (!schoolMatchesProvince(item, selectedProvinces)) return false
       if (!schoolMatchesType(item, selectedTypes)) return false
+      if (!schoolMatchesBoardingType(item, selectedBoardingTypes)) return false
       if (!schoolMatchesAgeRange(item.age_range, ageRangeMin, ageRangeMax)) return false
       return true
     })
-  }, [schools, keyword, selectedProvinces, selectedTypes, ageRangeMin, ageRangeMax])
+  }, [schools, keyword, selectedProvinces, selectedTypes, selectedBoardingTypes, ageRangeMin, ageRangeMax])
 
   const activeFilterSummary = [
     formatSelectedSummary(selectedProvinces, '地区'),
     formatSelectedSummary(selectedTypes, '类型'),
+    formatSelectedSummary(selectedBoardingTypes, '寄宿'),
     ageFilterActive ? `年龄${formatAgeRange(ageRangeMin, ageRangeMax)}` : '',
   ].filter(Boolean).join(' · ')
 
@@ -464,6 +477,7 @@ export default function SchoolsPage() {
     setKeyword('')
     setSelectedProvinces([])
     setSelectedTypes([])
+    setSelectedBoardingTypes([])
     setAgeRangeMin(AGE_RANGE_MIN)
     setAgeRangeMax(AGE_RANGE_MAX)
   }
@@ -517,6 +531,11 @@ export default function SchoolsPage() {
             <FilterChip key={option} label={option} active={isMultiActive(selectedTypes, option, allFilter)} onClick={() => setSelectedTypes((current) => toggleMultiFilter(current, option, allFilter))} />
           ))}
         </AppFilterRow>
+        <AppFilterRow title='寄宿'>
+          {boardingTypeOptions.map((option) => (
+            <FilterChip key={option} label={option} active={isMultiActive(selectedBoardingTypes, option, allFilter)} onClick={() => setSelectedBoardingTypes((current) => toggleMultiFilter(current, option, allFilter))} />
+          ))}
+        </AppFilterRow>
         <View style={{ marginBottom: space(4) }}>
           <Text style={{ ...typography.bodyStrong, color: palette.brand }}>年龄区间</Text>
           <AgeRangeSlider minValue={ageRangeMin} maxValue={ageRangeMax} onChange={(minValue, maxValue) => { setAgeRangeMin(minValue); setAgeRangeMax(maxValue) }} />
@@ -553,6 +572,7 @@ export default function SchoolsPage() {
               <AppTag text={getLocationSummary(item)} />
               {locationCount > 1 ? <AppTag text={`${locationCount} 个地点`} tone='brand' /> : null}
               <AppTag text={displaySchoolType || '未填写'} />
+              {!!item.boarding_type && <AppTag text={item.boarding_type} tone='brand' />}
             </View>
 
             <View className='app-list-card__meta-box'>
