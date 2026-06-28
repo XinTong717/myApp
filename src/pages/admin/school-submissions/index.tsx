@@ -76,6 +76,7 @@ function formatSubmissionForClipboard(item: SchoolSubmissionItem, adminNote: str
     '【建议发布到 schools】',
     `name / canonical_name：${item.name || ''}`,
     `school_type：${getSchoolTypeText(item)}`,
+    `boarding_type：${item.boardingType || '待确认'}`,
     `age_range：${getAgeRangeText(item)}`,
     `official_url：${officialUrl}`,
     `xuji_note：${item.xujiNote || ''}`,
@@ -291,14 +292,14 @@ export default function AdminSchoolSubmissionsPage() {
                 <Text style={{ ...typography.cardTitle, color: palette.text }}>{item.name || '未命名学习社区'}</Text>
                 <View style={{ marginTop: space(1) }}>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>
-                    {item.province}{item.city ? ` · ${item.city}` : ''}{getSchoolTypeText(item) ? ` · ${getSchoolTypeText(item)}` : ''}
+                    {item.province}{item.city ? ` · ${item.city}` : ''}{getSchoolTypeText(item) ? ` · ${getSchoolTypeText(item)}` : ''}{item.boardingType ? ` · ${item.boardingType}` : ''}
                   </Text>
                 </View>
                 <View style={{ marginTop: space(1) }}>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>年龄：{getAgeRangeText(item) || '未填写'}</Text>
                 </View>
                 <View style={{ marginTop: space(1) }}>
-                  <Text style={{ ...typography.caption, color: palette.subtext }}>详情字段：{[item.xujiNote && '公开说明', item.residencyReq && '参与前了解', (item.admissionReq || item.participationNote) && '参与方式', item.feeNote && '费用', item.outputDirection && '相关说明'].filter(Boolean).join(' / ') || '较少'}</Text>
+                  <Text style={{ ...typography.caption, color: palette.subtext }}>详情字段：{[item.xujiNote && '学籍/资质与公开说明', item.residencyReq && '参与前了解', (item.admissionReq || item.participationNote) && '参与方式', item.feeNote && '费用', item.outputDirection && '相关说明'].filter(Boolean).join(' / ') || '较少'}</Text>
                 </View>
                 <View style={{ marginTop: space(1) }}>
                   <Text style={{ ...typography.caption, color: palette.subtext }}>
