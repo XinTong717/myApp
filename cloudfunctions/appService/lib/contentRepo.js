@@ -1,7 +1,8 @@
 const { db, _ } = require('./cloud')
 
-const SCHOOL_LIST_DEFAULT_LIMIT = 80
-const SCHOOL_LIST_MAX_LIMIT = 200
+const SCHOOL_LIST_DEFAULT_LIMIT = 100
+const SCHOOL_LIST_MAX_LIMIT = 100
+const SCHOOL_LOCATION_QUERY_LIMIT = 1000
 const EVENT_LIST_DEFAULT_LIMIT = 100
 const EVENT_LIST_MAX_LIMIT = 200
 const EVENT_LIST_SCAN_LIMIT = 300
@@ -10,6 +11,10 @@ const DELETED_STATUSES = new Set(['deleted', 'removed', 'archived'])
 
 function normalizeLimit(value, fallback, max) {
   return Math.min(Math.max(Number(value || fallback), 1), max)
+}
+
+function normalizeOffset(value) {
+  return Math.max(Number(value || 0), 0)
 }
 
 function normalizeString(value) {
@@ -120,8 +125,8 @@ async function listSchoolLocationsByIds(schoolIds) {
   try {
     const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
       .where({ school_id: _.in(ids) })
-      .field({ school_id: true, province: true, city: true, address_note: true, contact_note: true, status: true, source: true })
-      .limit(SCHOOL_LIST_MAX_LIMIT * 3)
+      .field({ school_id: true, province: true, city: true, address_note: true, contact_note: true, status: true, source: true, latitude: true, longitude: true, geocode_status: true, coordinate_level: true })
+      .limit(SCHOOL_LIST_MAX_LIMIT * 5)
       .get()
 
     return (res.data || []).filter((item) => isReadableStatus(item.status))
@@ -145,10 +150,10 @@ async function listSchoolIdsByLocation(options = {}) {
     const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
       .where(where)
       .field({ school_id: true, status: true })
-      .limit(SCHOOL_LIST_MAX_LIMIT * 3)
+      .limit(SCHOOL_LOCATION_QUERY_LIMIT)
       .get()
 
-    return uniqueNumbers((res.data || []).filter((item) => isReadableStatus(item.status)).map((item) => item.school_id)).slice(0, SCHOOL_LIST_MAX_LIMIT)
+    return uniqueNumbers((res.data || []).filter((item) => isReadableStatus(item.status)).map((item) => item.school_id)).slice(0, SCHOOL_LOCATION_QUERY_LIMIT)
   } catch (err) {
     console.warn('school_locations filter failed:', err && err.message ? err.message : err)
     return []
@@ -170,6 +175,10 @@ function attachSchoolLocations(schools, locations) {
         contact_note: normalizeString(location.contact_note),
         status: normalizeString(location.status || 'published'),
         source: normalizeString(location.source),
+        latitude: Number(location.latitude),
+        longitude: Number(location.longitude),
+        geocode_status: normalizeString(location.geocode_status),
+        coordinate_level: normalizeString(location.coordinate_level),
       })
     })
   }
@@ -205,6 +214,10 @@ function toSchoolMarker(school) {
       province: normalizeString(location.province),
       city: normalizeString(location.city),
       status: normalizeString(location.status || 'published'),
+      latitude: Number(location.latitude),
+      longitude: Number(location.longitude),
+      geocode_status: normalizeString(location.geocode_status),
+      coordinate_level: normalizeString(location.coordinate_level),
     })) : [],
     location_count: Number(school.location_count || 0),
   }
@@ -238,41 +251,59 @@ function filterSchoolsByFacets(schools, options = {}) {
   })
 }
 
-async function querySchoolsWithLocations(options = {}) {
+async function querySchoolsWithLocationsPage(options = {}) {
   const normalizedOptions = typeof options === 'object' && options !== null ? options : { limit: options }
   const limit = normalizeLimit(normalizedOptions.limit, SCHOOL_LIST_DEFAULT_LIMIT, SCHOOL_LIST_MAX_LIMIT)
+  const offset = normalizeOffset(normalizedOptions.offset)
   const locationSchoolIds = await listSchoolIdsByLocation(normalizedOptions)
   const hasLocationFilter = hasLocationFilters(normalizedOptions)
 
-  if (hasLocationFilter && (!Array.isArray(locationSchoolIds) || locationSchoolIds.length === 0)) return []
+  if (hasLocationFilter && (!Array.isArray(locationSchoolIds) || locationSchoolIds.length === 0)) {
+    return { schools: [], limit, offset, nextOffset: null, hasMore: false }
+  }
 
   const queryOptions = Array.isArray(locationSchoolIds) && locationSchoolIds.length > 0
     ? { ...normalizedOptions, schoolIds: locationSchoolIds }
     : normalizedOptions
 
-  const hasMultiFacetFilter = normalizeFilterList(queryOptions.schoolType || queryOptions.type, queryOptions.schoolTypes || queryOptions.types).length > 1 || normalizeFilterList(queryOptions.boardingType, queryOptions.boardingTypes).length > 1 || normalizeFilterList(queryOptions.ageRange, queryOptions.ageRanges).length > 1
-  const queryLimit = Array.isArray(locationSchoolIds) && locationSchoolIds.length > 0 ? Math.min(Math.max(locationSchoolIds.length, 1), SCHOOL_LIST_MAX_LIMIT) : hasMultiFacetFilter ? SCHOOL_LIST_MAX_LIMIT : limit
-
   const res = await db.collection('schools')
     .where(buildSchoolWhere(queryOptions))
     .field({ id: true, name: true, canonical_name: true, aliases: true, description: true, age_range: true, school_type: true, boarding_type: true, fee: true, has_xuji: true, official_url: true, status: true })
     .orderBy('id', 'asc')
-    .limit(queryLimit)
+    .skip(offset)
+    .limit(limit)
     .get()
 
   const rawSchools = (res.data || []).filter((school) => isReadableStatus(school.status))
   const locations = await listSchoolLocationsByIds(rawSchools.map((school) => school.id))
   const schoolsWithLocations = attachSchoolLocations(rawSchools, locations)
+  const schools = filterSchoolsByFacets(filterSchoolsByLocation(schoolsWithLocations, normalizedOptions), normalizedOptions)
+  const hasMore = rawSchools.length >= limit
 
-  return filterSchoolsByFacets(filterSchoolsByLocation(schoolsWithLocations, normalizedOptions), normalizedOptions).slice(0, limit)
+  return {
+    schools,
+    limit,
+    offset,
+    nextOffset: hasMore ? offset + limit : null,
+    hasMore,
+  }
+}
+
+async function listSchoolsPage(options = {}) {
+  return querySchoolsWithLocationsPage(options)
 }
 
 async function listSchools(options = {}) {
-  return querySchoolsWithLocations(options)
+  return (await listSchoolsPage(options)).schools
+}
+
+async function listSchoolMarkersPage(options = {}) {
+  const page = await querySchoolsWithLocationsPage(options)
+  return { ...page, schools: page.schools.map(toSchoolMarker) }
 }
 
 async function listSchoolMarkers(options = {}) {
-  return (await querySchoolsWithLocations(options)).map(toSchoolMarker)
+  return (await listSchoolMarkersPage(options)).schools
 }
 
 async function getSchoolById(schoolId) {
@@ -352,7 +383,9 @@ module.exports = {
   EVENT_LIST_MAX_LIMIT,
   SCHOOL_LOCATION_COLLECTION,
   listSchools,
+  listSchoolsPage,
   listSchoolMarkers,
+  listSchoolMarkersPage,
   getSchoolById,
   listEvents,
   getEventById,
