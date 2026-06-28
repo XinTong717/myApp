@@ -92,9 +92,13 @@ export type SchoolLocationItem = {
   contact_note?: string
   status?: string
   source?: string
+  latitude?: number
+  longitude?: number
+  geocode_status?: string
+  coordinate_level?: string
 }
 
-export type SchoolMarkerLocationItem = Pick<SchoolLocationItem, 'school_id' | 'province' | 'city' | 'status'>
+export type SchoolMarkerLocationItem = Pick<SchoolLocationItem, 'school_id' | 'province' | 'city' | 'status' | 'latitude' | 'longitude' | 'geocode_status' | 'coordinate_level'>
 
 export type SchoolItem = {
   id: number
@@ -130,10 +134,22 @@ export type SchoolMarkerItem = {
 
 export type SchoolListResult = CloudResponse<{
   schools?: SchoolItem[]
+  limit?: number
+  offset?: number
+  nextOffset?: number | null
+  hasMore?: boolean
+  autoPaged?: boolean
+  loadedPages?: number
 }>
 
 export type SchoolMarkerListResult = CloudResponse<{
   schools?: SchoolMarkerItem[]
+  limit?: number
+  offset?: number
+  nextOffset?: number | null
+  hasMore?: boolean
+  autoPaged?: boolean
+  loadedPages?: number
 }>
 
 export type SchoolDetailResult = CloudResponse<{
