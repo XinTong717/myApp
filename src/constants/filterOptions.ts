@@ -16,6 +16,11 @@ export const EVENT_FILTER_FALLBACKS = {
   } as Record<string, string>,
 }
 
+export type SchoolProvinceStat = {
+  province: string
+  count: number
+}
+
 const SCHOOL_PROVINCE_FALLBACKS = [
   '北京', '天津', '河北', '山西', '内蒙古', '辽宁', '吉林', '黑龙江',
   '上海', '江苏', '浙江', '安徽', '福建', '江西', '山东', '河南',
@@ -26,9 +31,10 @@ const SCHOOL_PROVINCE_FALLBACKS = [
 
 export const SCHOOL_FILTER_FALLBACKS = {
   allOption: ALL_FILTER,
-  listLimit: 200,
+  listLimit: 100,
   maxDynamicOptions: 80,
   provinces: SCHOOL_PROVINCE_FALLBACKS,
+  provinceStats: [] as SchoolProvinceStat[],
   schoolTypes: [] as string[],
   ageRanges: [] as string[],
 }
