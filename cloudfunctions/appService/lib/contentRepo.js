@@ -251,7 +251,7 @@ async function querySchoolsWithLocations(options = {}) {
 
   const res = await db.collection('schools')
     .where(buildSchoolWhere(queryOptions))
-    .field({ id: true, name: true, canonical_name: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, official_url: true, status: true })
+    .field({ id: true, name: true, canonical_name: true, aliases: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, official_url: true, status: true })
     .orderBy('id', 'asc')
     .limit(queryLimit)
     .get()
@@ -276,7 +276,7 @@ async function getSchoolById(schoolId) {
 
   const res = await db.collection('schools')
     .where({ id: Number(schoolId) })
-    .field({ id: true, name: true, canonical_name: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, xuji_note: true, residency_req: true, admission_req: true, output_direction: true, official_url: true, status: true })
+    .field({ id: true, name: true, canonical_name: true, aliases: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, xuji_note: true, residency_req: true, admission_req: true, output_direction: true, official_url: true, status: true })
     .limit(1)
     .get()
 
