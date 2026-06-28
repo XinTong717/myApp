@@ -250,7 +250,7 @@ async function submitEvent(event, wxContext) {
   }
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const recentCountRes = await db.collection('event_submissions').where({ openid, createdAt: _.gte(since) }).count()
-  if ((recentCountRes?.total || 0) >= DAILY_LIMIT_REACHED) return fail(requestId, 'DAILY_LIMIT_REACHED', '24小时内最多可提交5次活动，请稍后再试')
+  if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) return fail(requestId, 'DAILY_LIMIT_REACHED', '24小时内最多可提交5次活动，请稍后再试')
   const sec = await runMsgSecCheck({ content: [cleanData.title, stringifyLabels(cleanData.eventTypes || []), stringifyLabels(cleanData.audienceWho || []), cleanData.minAgeRequirement, cleanData.maxAgeRequirement, cleanData.signupDeadline, cleanData.recurrencePattern, cleanData.location, cleanData.fee, cleanData.feeDetail, cleanData.organizer, cleanData.organizerContact, cleanData.officialUrl, cleanData.signupNote, cleanData.description].filter(Boolean).join('\n'), openid, scene: 2 })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
   const normalizedKey = [cleanData.title, cleanData.province, cleanData.city, cleanData.startTime].map((item) => String(item || '').trim().toLowerCase()).join('::')
