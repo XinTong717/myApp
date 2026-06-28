@@ -7,6 +7,8 @@ const USER_CLUSTER_THRESHOLD = 5
 
 type Coord = { lat: number; lng: number }
 
+type LocationCoord = Coord & { prov: string; city: string; source: 'location' | 'city' }
+
 function parseCities(f?: string): string[] {
   if (!f) return []
   return f.split(',').map((s) => s.trim()).filter((s) => s && !s.startsWith('(') && !s.startsWith('（'))
@@ -17,7 +19,7 @@ function firstProvince(f?: string): string {
   return f.split(',')[0].trim()
     .replace(/(省|市|壮族自治区|回族自治区|维吾尔自治区|自治区|特别行政区)$/, '')
     .replace(/\(.*\)/, '')
-    .replace(/\(.*\)/, '')
+    .replace(/（.*）/, '')
     .trim()
 }
 
@@ -146,6 +148,42 @@ function getSchoolLocations(school: School): SchoolLocationItem[] {
   }))
 }
 
+function getLocationCoord(location: SchoolLocationItem): LocationCoord | null {
+  const lat = Number(location.latitude)
+  const lng = Number(location.longitude)
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return {
+      lat,
+      lng,
+      prov: String(location.province || '').trim(),
+      city: String(location.city || '').trim(),
+      source: 'location',
+    }
+  }
+
+  const cityName = String(location.city || '').trim()
+  const cityCoord = cityName ? CITIES[cityName] : null
+  if (cityCoord && isValidCoord(cityCoord)) {
+    return {
+      lat: cityCoord.lat,
+      lng: cityCoord.lng,
+      prov: cityCoord.prov || String(location.province || '').trim(),
+      city: cityName,
+      source: 'city',
+    }
+  }
+
+  return null
+}
+
+function locationCoordKey(location: SchoolLocationItem) {
+  const coord = getLocationCoord(location)
+  if (!coord) return ''
+  return coord.source === 'location'
+    ? `${coord.lat.toFixed(4)},${coord.lng.toFixed(4)}`
+    : coord.city
+}
+
 type BuildExploreMarkersOptions = {
   schools: School[]
   appUsers: AppUser[]
@@ -188,46 +226,44 @@ export function buildExploreMarkers(options: BuildExploreMarkersOptions): Marker
 
   const items: MarkerItem[] = []
   let nextId = 1
-  const cityCount: Record<string, number> = {}
-  const cityIndex: Record<string, number> = {}
+  const locationCount: Record<string, number> = {}
+  const locationIndex: Record<string, number> = {}
 
   if (showSchools) {
     const schoolMarkerItems: MarkerItem[] = []
 
     schools.forEach((s) => {
       getSchoolLocations(s).forEach((location) => {
-        const cityName = String(location.city || '').trim()
-        if (!cityName || !CITIES[cityName]) return
-        cityCount[cityName] = (cityCount[cityName] || 0) + 1
+        const key = locationCoordKey(location)
+        if (!key) return
+        locationCount[key] = (locationCount[key] || 0) + 1
       })
     })
 
     schools.forEach((s) => {
       const locations = getSchoolLocations(s)
       const schoolName = getSchoolDisplayName(s)
-      const cityLocations = locations.filter((location) => {
-        const cityName = String(location.city || '').trim()
-        return !!cityName && isValidCoord(CITIES[cityName])
-      })
+      const mappedLocations = locations
+        .map((location) => ({ location, coord: getLocationCoord(location), key: locationCoordKey(location) }))
+        .filter((item): item is { location: SchoolLocationItem; coord: LocationCoord; key: string } => !!item.coord && !!item.key)
 
-      if (cityLocations.length > 0) {
-        cityLocations.forEach((location) => {
-          const cityName = String(location.city || '').trim()
-          const info = CITIES[cityName]
-          if (!isValidCoord(info)) return
-          const idx = cityIndex[cityName] || 0
-          cityIndex[cityName] = idx + 1
-          const jittered = jitter(info.lat, info.lng, idx, cityCount[cityName] || 1, `${schoolName}-${cityName}`)
-          if (!isValidCoord(jittered)) return
+      if (mappedLocations.length > 0) {
+        mappedLocations.forEach(({ location, coord, key }) => {
+          const idx = locationIndex[key] || 0
+          locationIndex[key] = idx + 1
+          const point = coord.source === 'location'
+            ? { lat: coord.lat, lng: coord.lng }
+            : jitter(coord.lat, coord.lng, idx, locationCount[key] || 1, `${schoolName}-${coord.city || key}`)
+          if (!isValidCoord(point)) return
 
           schoolMarkerItems.push({
             id: nextId++,
-            latitude: jittered.lat,
-            longitude: jittered.lng,
+            latitude: point.lat,
+            longitude: point.lng,
             name: schoolName,
             type: 'school',
-            markerProv: info.prov,
-            city: cityName,
+            markerProv: coord.prov || String(location.province || '').trim(),
+            city: coord.city || String(location.city || '').trim(),
             originalId: s.id,
           })
         })
@@ -259,147 +295,76 @@ export function buildExploreMarkers(options: BuildExploreMarkersOptions): Marker
         schoolsByProvince[item.markerProv].push(item)
       })
 
-      Object.keys(schoolsByProvince).forEach((province) => {
-        const group = schoolsByProvince[province]
-        const fallback = PROV_FALLBACK[province]
-        const lat = isValidCoord(fallback)
-          ? fallback.lat
-          : group.reduce((sum, item) => sum + item.latitude, 0) / group.length
-        const lng = isValidCoord(fallback)
-          ? fallback.lng
-          : group.reduce((sum, item) => sum + item.longitude, 0) / group.length
+      Object.entries(schoolsByProvince).forEach(([province, provinceSchools]) => {
+        const coord = PROV_FALLBACK[province]
+        if (!coord || !isValidCoord(coord)) {
+          items.push(...provinceSchools)
+          return
+        }
 
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
-
-        items.push({
-          id: nextId++,
-          latitude: lat,
-          longitude: lng,
-          name: province,
-          type: 'school_cluster',
-          markerProv: province,
-          city: '',
-          originalId: `school-cluster-${province}`,
-          clusterSchools: uniqueSchoolsById(group.map((item) => ({
-            id: item.originalId,
-            name: item.name,
-            province,
-            city: item.city,
-          }))),
-          schoolPointCount: group.length,
-        })
+        if (provinceSchools.length > 2) {
+          items.push({
+            id: nextId++,
+            latitude: coord.lat,
+            longitude: coord.lng,
+            name: `${province} ${provinceSchools.length}`,
+            type: 'school_cluster',
+            markerProv: province,
+            city: '',
+            originalId: `school_cluster_${province}`,
+            clusterSchools: uniqueSchoolsById(provinceSchools.map((item) => schools.find((school) => String(school.id) === String(item.originalId))).filter(Boolean) as School[]),
+            schoolPointCount: provinceSchools.length,
+            provinceStat: provinceStats.find((stat) => stat.province === province),
+          })
+        } else {
+          items.push(...provinceSchools)
+        }
       })
     } else {
       items.push(...schoolMarkerItems.filter((item) => item.markerProv === selectedProvince))
     }
   }
 
-  if (showUsers && !selectedProvince) {
-    provinceStats.forEach((stat) => {
-      const province = String(stat.province || '').trim()
-      const coord = PROV_FALLBACK[province]
-      if (!province || !isValidCoord(coord) || !stat.count) return
-
-      const userClusterCoord = offsetUserClusterCoord(province, coord)
-
-      items.push({
-        id: nextId++,
-        latitude: userClusterCoord.lat,
-        longitude: userClusterCoord.lng,
-        name: province,
-        type: 'user_cluster',
-        markerProv: province,
-        city: '',
-        originalId: `province-summary-${province}`,
-        clusterUsers: [],
-        provinceStat: stat,
-      })
-    })
-  }
-
-  if (showUsers && selectedProvince) {
-    const usersByCity: Record<string, AppUser[]> = {}
+  if (showUsers) {
     const usersByProvince: Record<string, AppUser[]> = {}
 
-    appUsers.forEach((u) => {
-      if (!u.province) return
-      const cityInfo = u.city ? CITIES[u.city] : null
-      if (u.city && isValidCoord(cityInfo)) {
-        if (!usersByCity[u.city]) usersByCity[u.city] = []
-        usersByCity[u.city].push(u)
-        return
-      }
-
-      const fallbackCoord = PROV_FALLBACK[u.province]
-      if (!isValidCoord(fallbackCoord)) return
-      if (!usersByProvince[u.province]) usersByProvince[u.province] = []
-      usersByProvince[u.province].push(u)
+    appUsers.forEach((user) => {
+      const province = user.province || ''
+      if (!province) return
+      if (!usersByProvince[province]) usersByProvince[province] = []
+      usersByProvince[province].push(user)
     })
 
-    Object.keys(usersByCity).forEach((cityName) => {
-      const usersInCity = usersByCity[cityName]
-      const info = CITIES[cityName]
-      if (!isValidCoord(info)) return
-
-      if (usersInCity.length >= USER_CLUSTER_THRESHOLD) {
-        items.push({
-          id: nextId++,
-          latitude: info.lat,
-          longitude: info.lng,
-          name: cityName,
-          type: 'user_cluster',
-          markerProv: info.prov,
-          city: cityName,
-          originalId: `cluster-${cityName}`,
-          clusterUsers: usersInCity,
-        })
-        return
-      }
-
-      usersInCity.forEach((u, idx) => {
-        const name = u.displayName?.trim() || '同路人'
-        const jittered = jitter(info.lat, info.lng, idx, usersInCity.length, name + u._id)
-        if (!isValidCoord(jittered)) return
-        items.push(buildUserMarker(u, {
-          id: nextId++,
-          latitude: jittered.lat,
-          longitude: jittered.lng,
-          markerProv: info.prov,
-          city: u.city,
-        }))
-      })
-    })
-
-    Object.keys(usersByProvince).forEach((province) => {
-      const usersInProvince = usersByProvince[province]
+    Object.entries(usersByProvince).forEach(([province, users]) => {
       const coord = PROV_FALLBACK[province]
-      if (!isValidCoord(coord)) return
+      if (!coord || !isValidCoord(coord)) return
 
-      if (usersInProvince.length >= USER_CLUSTER_THRESHOLD) {
+      if (!selectedProvince && users.length >= USER_CLUSTER_THRESHOLD) {
+        const clusterCoord = offsetUserClusterCoord(province, coord)
         items.push({
           id: nextId++,
-          latitude: coord.lat,
-          longitude: coord.lng,
-          name: province,
+          latitude: clusterCoord.lat,
+          longitude: clusterCoord.lng,
+          name: `${province} ${users.length}`,
           type: 'user_cluster',
           markerProv: province,
           city: '',
-          originalId: `cluster-province-${province}`,
-          clusterUsers: usersInProvince,
+          originalId: `user_cluster_${province}`,
+          clusterUsers: users,
+          provinceStat: provinceStats.find((stat) => stat.province === province),
         })
         return
       }
 
-      usersInProvince.forEach((u, idx) => {
-        const name = u.displayName?.trim() || '同路人'
-        const jittered = jitter(coord.lat, coord.lng, idx, usersInProvince.length, name + u._id)
-        if (!isValidCoord(jittered)) return
-        items.push(buildUserMarker(u, {
+      users.forEach((user, index) => {
+        const point = jitter(coord.lat, coord.lng, index, users.length, user.displayName || String(index))
+        if (!isValidCoord(point)) return
+        items.push(buildUserMarker(user, {
           id: nextId++,
-          latitude: jittered.lat,
-          longitude: jittered.lng,
+          latitude: point.lat,
+          longitude: point.lng,
           markerProv: province,
-          city: u.city,
+          city: user.city || '',
         }))
       })
     })
