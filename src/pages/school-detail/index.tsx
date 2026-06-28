@@ -189,6 +189,7 @@ function SchoolContent(props: {
         <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: school.official_url ? space(3) : '0' }}>
           <AppTag text={locations.length > 0 ? `${locations.length} 个地点` : '地点未填写'} />
           {!!schoolTypeTag && <AppTag text={schoolTypeTag} />}
+          {!!school.boarding_type && <AppTag text={school.boarding_type} tone='brand' />}
           {!!ageRangeTag && <AppTag text={ageRangeTag} />}
         </View>
 
@@ -224,7 +225,8 @@ function SchoolContent(props: {
         )}
       </AppCard>
 
-      <AppInfoRow variant='prominent' label='公开说明' value={school.xuji_note} />
+      <AppInfoRow variant='prominent' label='学籍/资质与公开说明' value={school.xuji_note} />
+      <AppInfoRow variant='prominent' label='寄宿情况' value={school.boarding_type} />
       <AppInfoRow variant='prominent' label='参与前了解' value={school.residency_req} />
       <AppInfoRow variant='prominent' label='参与方式参考' value={school.admission_req} />
       <AppInfoRow variant='prominent' label='参考费用' value={school.fee} />
