@@ -100,6 +100,7 @@ export type SchoolItem = {
   id: number
   name: string
   canonical_name?: string
+  aliases?: string[] | string
   description?: string
   province?: string
   city?: string
