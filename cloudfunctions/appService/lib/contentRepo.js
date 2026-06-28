@@ -101,11 +101,13 @@ function hasLocationFilters(options = {}) {
 function buildSchoolWhere(options = {}) {
   const where = {}
   const schoolTypes = normalizeFilterList(options.schoolType || options.type, options.schoolTypes || options.types)
+  const boardingTypes = normalizeFilterList(options.boardingType, options.boardingTypes)
   const ageRanges = normalizeFilterList(options.ageRange, options.ageRanges)
   const schoolIds = uniqueNumbers(options.schoolIds || [])
 
   if (schoolIds.length > 0) where.id = _.in(schoolIds)
   if (schoolTypes.length === 1) where.school_type = containsRegExp(schoolTypes[0])
+  if (boardingTypes.length === 1) where.boarding_type = containsRegExp(boardingTypes[0])
   if (ageRanges.length === 1) where.age_range = containsRegExp(ageRanges[0])
 
   return where
@@ -224,11 +226,13 @@ function filterSchoolsByLocation(schools, options = {}) {
 
 function filterSchoolsByFacets(schools, options = {}) {
   const schoolTypes = normalizeFilterList(options.schoolType || options.type, options.schoolTypes || options.types)
+  const boardingTypes = normalizeFilterList(options.boardingType, options.boardingTypes)
   const ageRanges = normalizeFilterList(options.ageRange, options.ageRanges)
-  if (schoolTypes.length === 0 && ageRanges.length === 0) return schools
+  if (schoolTypes.length === 0 && boardingTypes.length === 0 && ageRanges.length === 0) return schools
 
   return schools.filter((school) => {
     if (!matchesAnyText(school.school_type, schoolTypes)) return false
+    if (!matchesAnyText(school.boarding_type, boardingTypes)) return false
     if (!matchesAnyText(school.age_range, ageRanges)) return false
     return true
   })
@@ -246,12 +250,12 @@ async function querySchoolsWithLocations(options = {}) {
     ? { ...normalizedOptions, schoolIds: locationSchoolIds }
     : normalizedOptions
 
-  const hasMultiFacetFilter = normalizeFilterList(queryOptions.schoolType || queryOptions.type, queryOptions.schoolTypes || queryOptions.types).length > 1 || normalizeFilterList(queryOptions.ageRange, queryOptions.ageRanges).length > 1
+  const hasMultiFacetFilter = normalizeFilterList(queryOptions.schoolType || queryOptions.type, queryOptions.schoolTypes || queryOptions.types).length > 1 || normalizeFilterList(queryOptions.boardingType, queryOptions.boardingTypes).length > 1 || normalizeFilterList(queryOptions.ageRange, queryOptions.ageRanges).length > 1
   const queryLimit = Array.isArray(locationSchoolIds) && locationSchoolIds.length > 0 ? Math.min(Math.max(locationSchoolIds.length, 1), SCHOOL_LIST_MAX_LIMIT) : hasMultiFacetFilter ? SCHOOL_LIST_MAX_LIMIT : limit
 
   const res = await db.collection('schools')
     .where(buildSchoolWhere(queryOptions))
-    .field({ id: true, name: true, canonical_name: true, aliases: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, official_url: true, status: true })
+    .field({ id: true, name: true, canonical_name: true, aliases: true, description: true, age_range: true, school_type: true, boarding_type: true, fee: true, has_xuji: true, official_url: true, status: true })
     .orderBy('id', 'asc')
     .limit(queryLimit)
     .get()
@@ -276,7 +280,7 @@ async function getSchoolById(schoolId) {
 
   const res = await db.collection('schools')
     .where({ id: Number(schoolId) })
-    .field({ id: true, name: true, canonical_name: true, aliases: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, xuji_note: true, residency_req: true, admission_req: true, output_direction: true, official_url: true, status: true })
+    .field({ id: true, name: true, canonical_name: true, aliases: true, description: true, age_range: true, school_type: true, boarding_type: true, fee: true, has_xuji: true, xuji_note: true, residency_req: true, admission_req: true, output_direction: true, official_url: true, status: true })
     .limit(1)
     .get()
 
