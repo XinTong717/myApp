@@ -11,12 +11,14 @@ import type {
   SubmitSchoolResult,
 } from '../types/domain'
 
-const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v3:'
-const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v3:'
-const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v3:'
+const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v4:'
+const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v4:'
+const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v4:'
 const SCHOOL_LIST_TTL_MS = 30 * 60 * 1000
 const SCHOOL_MARKERS_TTL_MS = 30 * 60 * 1000
 const SCHOOL_DETAIL_TTL_MS = 15 * 60 * 1000
+const SCHOOL_PAGE_SIZE = 100
+const SCHOOL_AUTO_PAGE_MAX = 20
 
 type SchoolFilterValue = string | string[] | undefined
 type SchoolListPayload = { schools?: SchoolItem[] }
@@ -25,6 +27,7 @@ type SchoolDetailPayload = { school?: SchoolItem | null }
 type SchoolQueryOptions = { forceRefresh?: boolean; province?: SchoolFilterValue; schoolType?: SchoolFilterValue; boardingType?: SchoolFilterValue; ageRange?: SchoolFilterValue; limit?: number }
 
 type SchoolCacheShape = { province?: SchoolFilterValue; schoolType?: SchoolFilterValue; boardingType?: SchoolFilterValue; ageRange?: SchoolFilterValue; limit?: number }
+type SchoolPageParams = Record<string, unknown> & { limit: number; offset?: number }
 
 function okSchoolList(payload: SchoolListPayload): SchoolListResult {
   return { ok: true, schools: Array.isArray(payload.schools) ? payload.schools : [] }
@@ -48,6 +51,10 @@ function normalizeFilterList(value?: SchoolFilterValue) {
   )).sort()
 }
 
+function normalizePageSize(value?: number) {
+  return Math.min(Math.max(Number(value || SCHOOL_PAGE_SIZE), 1), SCHOOL_PAGE_SIZE)
+}
+
 function getSchoolListCacheKey(options: SchoolCacheShape = {}) {
   return [
     SCHOOL_LIST_CACHE_KEY_PREFIX,
@@ -55,7 +62,8 @@ function getSchoolListCacheKey(options: SchoolCacheShape = {}) {
     normalizeFilterList(options.schoolType).join('|') || 'all-type',
     normalizeFilterList(options.boardingType).join('|') || 'all-boarding',
     normalizeFilterList(options.ageRange).join('|') || 'all-age',
-    Number(options.limit || 80),
+    'auto',
+    normalizePageSize(options.limit),
   ].join(':')
 }
 
@@ -66,7 +74,8 @@ function getSchoolMarkersCacheKey(options: SchoolCacheShape = {}) {
     normalizeFilterList(options.schoolType).join('|') || 'all-type',
     normalizeFilterList(options.boardingType).join('|') || 'all-boarding',
     normalizeFilterList(options.ageRange).join('|') || 'all-age',
-    Number(options.limit || 200),
+    'auto',
+    normalizePageSize(options.limit),
   ].join(':')
 }
 
@@ -79,7 +88,7 @@ function buildSchoolListParams(options: SchoolCacheShape = {}) {
   const schoolTypes = normalizeFilterList(options.schoolType)
   const boardingTypes = normalizeFilterList(options.boardingType)
   const ageRanges = normalizeFilterList(options.ageRange)
-  const limit = Number(options.limit || 80)
+  const limit = normalizePageSize(options.limit)
   return {
     limit,
     params: {
@@ -92,8 +101,52 @@ function buildSchoolListParams(options: SchoolCacheShape = {}) {
       ...(boardingTypes.length > 1 ? { boardingTypes } : {}),
       ...(ageRanges.length === 1 ? { ageRange: ageRanges[0] } : {}),
       ...(ageRanges.length > 1 ? { ageRanges } : {}),
-    },
+    } as SchoolPageParams,
     cacheShape: { province: provinces, schoolType: schoolTypes, boardingType: boardingTypes, ageRange: ageRanges, limit },
+  }
+}
+
+function dedupeById<T extends { id?: number | string }>(items: T[]) {
+  const map = new Map<string, T>()
+  items.forEach((item, index) => {
+    const key = String(item.id || index)
+    if (!map.has(key)) map.set(key, item)
+  })
+  return Array.from(map.values())
+}
+
+async function fetchAllSchoolPages<T extends SchoolItem | SchoolMarkerItem>(cloudFnName: 'getSchools' | 'getSchoolMarkers', params: SchoolPageParams) {
+  const items: T[] = []
+  let offset = 0
+  let loadedPages = 0
+  let lastResult: SchoolListResult | SchoolMarkerListResult | null = null
+
+  while (loadedPages < SCHOOL_AUTO_PAGE_MAX) {
+    const result = await callCloud<SchoolListResult | SchoolMarkerListResult>(cloudFnName, { ...params, offset })
+    lastResult = result
+    if (!result.ok) return { result, items: dedupeById(items) }
+
+    const pageItems = Array.isArray(result.schools) ? result.schools as T[] : []
+    items.push(...pageItems)
+    loadedPages += 1
+
+    if (!result.hasMore || result.nextOffset === null || result.nextOffset === undefined) break
+    const nextOffset = Number(result.nextOffset)
+    if (!Number.isFinite(nextOffset) || nextOffset <= offset) break
+    offset = nextOffset
+  }
+
+  return {
+    result: {
+      ...(lastResult || { ok: true }),
+      ok: true,
+      schools: dedupeById(items),
+      hasMore: false,
+      nextOffset: null,
+      autoPaged: true,
+      loadedPages,
+    } as SchoolListResult | SchoolMarkerListResult,
+    items: dedupeById(items),
   }
 }
 
@@ -103,10 +156,10 @@ export async function getSchools(options: SchoolQueryOptions = {}) {
   const cached = options.forceRefresh ? null : await getScopedCachedValue<SchoolListPayload>(cacheKey)
   if (cached) return okSchoolList(cached)
 
-  const result = await callCloud<SchoolListResult>('getSchools', params)
+  const { result, items } = await fetchAllSchoolPages<SchoolItem>('getSchools', params)
   if (result.ok) {
-    await setScopedCachedValue(cacheKey, { schools: result.schools || [] }, SCHOOL_LIST_TTL_MS)
-    return result
+    await setScopedCachedValue(cacheKey, { schools: items }, SCHOOL_LIST_TTL_MS)
+    return { ...result, schools: items } as SchoolListResult
   }
 
   const staleCached = await getScopedCachedValue<SchoolListPayload>(cacheKey)
@@ -119,19 +172,19 @@ export async function getSchools(options: SchoolQueryOptions = {}) {
     }
   }
 
-  return result
+  return result as SchoolListResult
 }
 
 export async function getSchoolMarkers(options: SchoolQueryOptions = {}) {
-  const { params, cacheShape } = buildSchoolListParams({ ...options, limit: options.limit || 200 })
+  const { params, cacheShape } = buildSchoolListParams({ ...options, limit: options.limit || SCHOOL_PAGE_SIZE })
   const cacheKey = getSchoolMarkersCacheKey(cacheShape)
   const cached = options.forceRefresh ? null : await getScopedCachedValue<SchoolMarkerListPayload>(cacheKey)
   if (cached) return okSchoolMarkers(cached)
 
-  const result = await callCloud<SchoolMarkerListResult>('getSchoolMarkers', params)
+  const { result, items } = await fetchAllSchoolPages<SchoolMarkerItem>('getSchoolMarkers', params)
   if (result.ok) {
-    await setScopedCachedValue(cacheKey, { schools: result.schools || [] }, SCHOOL_MARKERS_TTL_MS)
-    return result
+    await setScopedCachedValue(cacheKey, { schools: items }, SCHOOL_MARKERS_TTL_MS)
+    return { ...result, schools: items } as SchoolMarkerListResult
   }
 
   const staleCached = await getScopedCachedValue<SchoolMarkerListPayload>(cacheKey)
@@ -144,7 +197,7 @@ export async function getSchoolMarkers(options: SchoolQueryOptions = {}) {
     }
   }
 
-  return result
+  return result as SchoolMarkerListResult
 }
 
 export async function getSchoolDetail(schoolId: number, options: { forceRefresh?: boolean } = {}) {
