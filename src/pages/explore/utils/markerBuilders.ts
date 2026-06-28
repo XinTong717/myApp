@@ -304,23 +304,19 @@ export function buildExploreMarkers(options: BuildExploreMarkersOptions): Marker
           return
         }
 
-        if (provinceSchools.length > 2) {
-          items.push({
-            id: nextId++,
-            latitude: coord.lat,
-            longitude: coord.lng,
-            name: province,
-            type: 'school_cluster',
-            markerProv: province,
-            city: '',
-            originalId: `school_cluster_${province}`,
-            clusterSchools: uniqueSchoolsById(provinceSchools.map((item) => schools.find((school) => String(school.id) === String(item.originalId))).filter(Boolean) as School[]),
-            schoolPointCount: provinceSchools.length,
-            provinceStat: provinceStats.find((stat) => stat.province === province),
-          })
-        } else {
-          items.push(...provinceSchools)
-        }
+        items.push({
+          id: nextId++,
+          latitude: coord.lat,
+          longitude: coord.lng,
+          name: province,
+          type: 'school_cluster',
+          markerProv: province,
+          city: '',
+          originalId: `school_cluster_${province}`,
+          clusterSchools: uniqueSchoolsById(provinceSchools.map((item) => schools.find((school) => String(school.id) === String(item.originalId))).filter(Boolean) as School[]),
+          schoolPointCount: provinceSchools.length,
+          provinceStat: provinceStats.find((stat) => stat.province === province),
+        })
       })
     } else {
       items.push(...schoolMarkerItems.filter((item) => item.markerProv === selectedProvince))
