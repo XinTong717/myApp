@@ -2,7 +2,7 @@ const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
 const { runMsgSecCheck } = require('../lib/security')
 const {
-  listSchools,
+  listSchoolPage,
   listSchoolMarkers,
   getSchoolById,
   listEvents,
@@ -111,18 +111,18 @@ function attachInterestCounts(events, counts = {}) {
 async function getSchools(event) {
   const requestId = resolveRequestId('get-schools', event)
   try {
-    const schools = await listSchools({ limit: event?.limit, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
-    return ok(requestId, { schools })
+    const page = await listSchoolPage({ limit: event?.limit, offset: event?.offset, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
+    return ok(requestId, page)
   } catch (err) {
     console.error('appService getSchools error:', err)
-    return fail(requestId, 'GET_SCHOOLS_FAILED', '读取学习社区失败，请稍后重试', { schools: [] })
+    return fail(requestId, 'GET_SCHOOLS_FAILED', '读取学习社区失败，请稍后重试', { schools: [], total: 0, offset: 0, nextOffset: null, hasMore: false })
   }
 }
 
 async function getSchoolMarkers(event) {
   const requestId = resolveRequestId('get-school-markers', event)
   try {
-    const schools = await listSchoolMarkers({ limit: event?.limit, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
+    const schools = await listSchoolMarkers({ limit: event?.limit, offset: event?.offset, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
     return ok(requestId, { schools })
   } catch (err) {
     console.error('appService getSchoolMarkers error:', err)
@@ -250,7 +250,7 @@ async function submitEvent(event, wxContext) {
   }
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const recentCountRes = await db.collection('event_submissions').where({ openid, createdAt: _.gte(since) }).count()
-  if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) return fail(requestId, 'DAILY_LIMIT_REACHED', '24小时内最多可提交5次活动，请稍后再试')
+  if ((recentCountRes?.total || 0) >= DAILY_LIMIT_REACHED) return fail(requestId, 'DAILY_LIMIT_REACHED', '24小时内最多可提交5次活动，请稍后再试')
   const sec = await runMsgSecCheck({ content: [cleanData.title, stringifyLabels(cleanData.eventTypes || []), stringifyLabels(cleanData.audienceWho || []), cleanData.minAgeRequirement, cleanData.maxAgeRequirement, cleanData.signupDeadline, cleanData.recurrencePattern, cleanData.location, cleanData.fee, cleanData.feeDetail, cleanData.organizer, cleanData.organizerContact, cleanData.officialUrl, cleanData.signupNote, cleanData.description].filter(Boolean).join('\n'), openid, scene: 2 })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
   const normalizedKey = [cleanData.title, cleanData.province, cleanData.city, cleanData.startTime].map((item) => String(item || '').trim().toLowerCase()).join('::')
