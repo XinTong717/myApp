@@ -108,6 +108,7 @@ export type SchoolItem = {
   location_count?: number
   age_range?: string
   school_type?: string
+  boarding_type?: string
   has_xuji?: boolean
   xuji_note?: string
   residency_req?: string
@@ -251,6 +252,7 @@ export type SchoolSubmissionItem = {
   city?: string
   schoolType?: string
   schoolTypes?: string[]
+  boardingType?: string
   ageRange?: string
   ageRanges?: string[]
   officialUrl?: string
