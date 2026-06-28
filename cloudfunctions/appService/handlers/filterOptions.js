@@ -16,12 +16,16 @@ const EVENT_FILTER_OPTIONS = {
   },
 }
 
+const SCHOOL_TYPE_OPTIONS = ['学习成长社区', '民办学校', '公办学校', '华德福学校', '神经多样性', '营地/短期项目主体', '公益组织', '疗愈社区', '职业发展', '其他']
+const BOARDING_TYPE_OPTIONS = ['可寄宿', '不可寄宿', '待确认']
+
 const SCHOOL_FILTER_OPTIONS = {
   allOption: '全部',
   listLimit: 200,
   maxDynamicOptions: 80,
   provinces: [],
-  schoolTypes: [],
+  schoolTypes: SCHOOL_TYPE_OPTIONS,
+  boardingTypes: BOARDING_TYPE_OPTIONS,
   ageRanges: [],
 }
 
@@ -51,6 +55,13 @@ function uniqueSorted(values) {
   return Array.from(new Set((values || []).map(normalizeString).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-CN'))
 }
 
+function sortedKnownFirst(values, preferred) {
+  const valueSet = new Set(values || [])
+  const known = preferred.filter((item) => valueSet.has(item) || preferred.includes(item))
+  const extra = uniqueSorted(Array.from(valueSet).filter((item) => !preferred.includes(item)))
+  return [...known, ...extra]
+}
+
 async function buildSchoolFilterOptions() {
   try {
     const [locationsRes, schoolsRes] = await Promise.all([
@@ -59,18 +70,21 @@ async function buildSchoolFilterOptions() {
         .limit(1000)
         .get(),
       db.collection('schools')
-        .field({ school_type: true, age_range: true, status: true })
+        .field({ school_type: true, boarding_type: true, age_range: true, status: true })
         .limit(SCHOOL_FILTER_OPTIONS.listLimit)
         .get(),
     ])
 
     const readableLocations = (locationsRes.data || []).filter((item) => isReadableStatus(item.status))
     const readableSchools = (schoolsRes.data || []).filter((item) => isReadableStatus(item.status))
+    const schoolTypes = uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.school_type)))
+    const boardingTypes = uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.boarding_type)))
 
     return {
       ...SCHOOL_FILTER_OPTIONS,
       provinces: uniqueSorted(readableLocations.map((item) => item.province)),
-      schoolTypes: uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.school_type))),
+      schoolTypes: sortedKnownFirst(schoolTypes, SCHOOL_TYPE_OPTIONS),
+      boardingTypes: sortedKnownFirst(boardingTypes, BOARDING_TYPE_OPTIONS),
       ageRanges: uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.age_range))),
     }
   } catch (err) {
