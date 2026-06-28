@@ -2,8 +2,8 @@ const { db, _ } = require('../lib/cloud')
 const { ok, fail, resolveRequestId } = require('../lib/response')
 const { runMsgSecCheck } = require('../lib/security')
 const {
-  listSchools,
-  listSchoolMarkers,
+  listSchoolsPage,
+  listSchoolMarkersPage,
   getSchoolById,
   listEvents,
   getEventById,
@@ -70,6 +70,23 @@ function pickStringFields(event, allowed) {
   return cleanData
 }
 
+function buildSchoolQueryOptions(event = {}) {
+  return {
+    limit: event?.limit,
+    offset: event?.offset,
+    province: event?.province,
+    provinces: event?.provinces,
+    city: event?.city,
+    cities: event?.cities,
+    schoolType: event?.schoolType || event?.type,
+    schoolTypes: event?.schoolTypes || event?.types,
+    boardingType: event?.boardingType,
+    boardingTypes: event?.boardingTypes,
+    ageRange: event?.ageRange,
+    ageRanges: event?.ageRanges,
+  }
+}
+
 async function getCachedCount(eventId) {
   try {
     const cacheRes = await db.collection(COUNT_COLLECTION).doc(buildCountDocId(eventId)).get()
@@ -111,8 +128,7 @@ function attachInterestCounts(events, counts = {}) {
 async function getSchools(event) {
   const requestId = resolveRequestId('get-schools', event)
   try {
-    const schools = await listSchools({ limit: event?.limit, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, boardingType: event?.boardingType, boardingTypes: event?.boardingTypes, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
-    return ok(requestId, { schools })
+    return ok(requestId, await listSchoolsPage(buildSchoolQueryOptions(event)))
   } catch (err) {
     console.error('appService getSchools error:', err)
     return fail(requestId, 'GET_SCHOOLS_FAILED', '读取学习社区失败，请稍后重试', { schools: [] })
@@ -122,8 +138,7 @@ async function getSchools(event) {
 async function getSchoolMarkers(event) {
   const requestId = resolveRequestId('get-school-markers', event)
   try {
-    const schools = await listSchoolMarkers({ limit: event?.limit, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, boardingType: event?.boardingType, boardingTypes: event?.boardingTypes, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
-    return ok(requestId, { schools })
+    return ok(requestId, await listSchoolMarkersPage(buildSchoolQueryOptions(event)))
   } catch (err) {
     console.error('appService getSchoolMarkers error:', err)
     return fail(requestId, 'GET_SCHOOL_MARKERS_FAILED', '读取学习社区标记失败，请稍后重试', { schools: [] })
