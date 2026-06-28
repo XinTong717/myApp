@@ -111,7 +111,7 @@ function attachInterestCounts(events, counts = {}) {
 async function getSchools(event) {
   const requestId = resolveRequestId('get-schools', event)
   try {
-    const schools = await listSchools({ limit: event?.limit, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
+    const schools = await listSchools({ limit: event?.limit, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, boardingType: event?.boardingType, boardingTypes: event?.boardingTypes, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
     return ok(requestId, { schools })
   } catch (err) {
     console.error('appService getSchools error:', err)
@@ -122,7 +122,7 @@ async function getSchools(event) {
 async function getSchoolMarkers(event) {
   const requestId = resolveRequestId('get-school-markers', event)
   try {
-    const schools = await listSchoolMarkers({ limit: event?.limit, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
+    const schools = await listSchoolMarkers({ limit: event?.limit, province: event?.province, provinces: event?.provinces, city: event?.city, cities: event?.cities, schoolType: event?.schoolType || event?.type, schoolTypes: event?.schoolTypes || event?.types, boardingType: event?.boardingType, boardingTypes: event?.boardingTypes, ageRange: event?.ageRange, ageRanges: event?.ageRanges })
     return ok(requestId, { schools })
   } catch (err) {
     console.error('appService getSchoolMarkers error:', err)
@@ -193,16 +193,17 @@ async function submitCorrection(event, wxContext) {
 async function submitSchool(event, wxContext) {
   const requestId = resolveRequestId('submit-school', event)
   const openid = wxContext.OPENID
-  const cleanData = pickStringFields(event, ['name', 'province', 'city', 'schoolType', 'schoolTypeOther', 'ageRange', 'ageRangeOther', 'officialUrl', 'publicAccountNote', 'xujiNote', 'residencyReq', 'admissionReq', 'participationNote', 'feeNote', 'outputDirection', 'sourceNote', 'recommendationNote'])
+  const cleanData = pickStringFields(event, ['name', 'province', 'city', 'schoolType', 'schoolTypeOther', 'boardingType', 'ageRange', 'ageRangeOther', 'officialUrl', 'publicAccountNote', 'xujiNote', 'residencyReq', 'admissionReq', 'participationNote', 'feeNote', 'outputDirection', 'sourceNote', 'recommendationNote'])
   cleanData.schoolType = mergeOtherOption(cleanData.schoolType || [], cleanData.schoolTypeOther)
   cleanData.ageRange = mergeOtherOption(cleanData.ageRange || [], cleanData.ageRangeOther)
   cleanData.officialUrl = cleanData.officialUrl || cleanData.publicAccountNote || ''
   cleanData.admissionReq = cleanData.admissionReq || cleanData.participationNote || ''
+  cleanData.boardingType = cleanData.boardingType || '待确认'
   if (!cleanData.name) return fail(requestId, 'NAME_REQUIRED', '请填写学习社区名称')
   if (!cleanData.province || !cleanData.city) return fail(requestId, 'CITY_REQUIRED', '请选择所在城市')
-  const lengthError = validateLength('学习社区名称', cleanData.name, 100) || validateLength('城市', cleanData.city, 30) || validateLength('官方/说明链接', cleanData.officialUrl, 300) || validateLength('公开说明', cleanData.xujiNote, 500) || validateLength('参与前了解', cleanData.residencyReq, 400) || validateLength('参与方式参考', cleanData.admissionReq, 400) || validateLength('费用说明', cleanData.feeNote, 200) || validateLength('相关说明', cleanData.outputDirection, 500) || validateLength('信息来源', cleanData.sourceNote, 300) || validateLength('推荐理由', cleanData.recommendationNote, 1000)
+  const lengthError = validateLength('学习社区名称', cleanData.name, 100) || validateLength('城市', cleanData.city, 30) || validateLength('寄宿情况', cleanData.boardingType, 20) || validateLength('官方/说明链接', cleanData.officialUrl, 300) || validateLength('学籍/资质与公开说明', cleanData.xujiNote, 500) || validateLength('参与前了解', cleanData.residencyReq, 400) || validateLength('参与方式参考', cleanData.admissionReq, 400) || validateLength('费用说明', cleanData.feeNote, 200) || validateLength('相关说明', cleanData.outputDirection, 500) || validateLength('信息来源', cleanData.sourceNote, 300) || validateLength('推荐理由', cleanData.recommendationNote, 1000)
   if (lengthError) return fail(requestId, 'INVALID_LENGTH', lengthError)
-  const sec = await runMsgSecCheck({ content: [cleanData.name, stringifyLabels(cleanData.schoolType || []), stringifyLabels(cleanData.ageRange || []), cleanData.officialUrl, cleanData.xujiNote, cleanData.residencyReq, cleanData.admissionReq, cleanData.feeNote, cleanData.outputDirection, cleanData.sourceNote, cleanData.recommendationNote].filter(Boolean).join('\n'), openid, scene: 2 })
+  const sec = await runMsgSecCheck({ content: [cleanData.name, stringifyLabels(cleanData.schoolType || []), cleanData.boardingType, stringifyLabels(cleanData.ageRange || []), cleanData.officialUrl, cleanData.xujiNote, cleanData.residencyReq, cleanData.admissionReq, cleanData.feeNote, cleanData.outputDirection, cleanData.sourceNote, cleanData.recommendationNote].filter(Boolean).join('\n'), openid, scene: 2 })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const recentCountRes = await db.collection('school_submissions').where({ openid, createdAt: _.gte(since) }).count()
@@ -212,7 +213,7 @@ async function submitSchool(event, wxContext) {
   if (existing.data.length > 0) return fail(requestId, 'DUPLICATE_SUBMISSION', '这个学习社区已在审核队列或已收录，无需重复提交')
   const submitter = await getUserProfileByOpenid(openid, ['displayName', 'roles', 'city']) || {}
   try {
-    await db.collection('school_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, name: cleanData.name, province: cleanData.province, city: cleanData.city, schoolType: stringifyLabels(cleanData.schoolType || []), schoolTypes: cleanData.schoolType || [], ageRange: stringifyLabels(cleanData.ageRange || []), ageRanges: cleanData.ageRange || [], officialUrl: cleanData.officialUrl || '', publicAccountNote: cleanData.publicAccountNote || '', xujiNote: cleanData.xujiNote || '', residencyReq: cleanData.residencyReq || '', admissionReq: cleanData.admissionReq || '', participationNote: cleanData.admissionReq || '', feeNote: cleanData.feeNote || '', outputDirection: cleanData.outputDirection || '', sourceNote: cleanData.sourceNote || '', recommendationNote: cleanData.recommendationNote || '', ...buildContentSecurityFields(sec), status: 'pending', adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
+    await db.collection('school_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, name: cleanData.name, province: cleanData.province, city: cleanData.city, schoolType: stringifyLabels(cleanData.schoolType || []), schoolTypes: cleanData.schoolType || [], boardingType: cleanData.boardingType || '待确认', ageRange: stringifyLabels(cleanData.ageRange || []), ageRanges: cleanData.ageRange || [], officialUrl: cleanData.officialUrl || '', publicAccountNote: cleanData.publicAccountNote || '', xujiNote: cleanData.xujiNote || '', residencyReq: cleanData.residencyReq || '', admissionReq: cleanData.admissionReq || '', participationNote: cleanData.admissionReq || '', feeNote: cleanData.feeNote || '', outputDirection: cleanData.outputDirection || '', sourceNote: cleanData.sourceNote || '', recommendationNote: cleanData.recommendationNote || '', ...buildContentSecurityFields(sec), status: 'pending', adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
     return ok(requestId, { message: '提交成功，感谢推荐' })
   } catch (err) {
     console.error('appService submitSchool error:', err)
