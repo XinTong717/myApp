@@ -69,6 +69,11 @@ function splitTokens(value?: string) {
     .filter(Boolean)
 }
 
+function flattenSearchText(value?: string[] | string | null) {
+  if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean).join(' ')
+  return String(value || '').trim()
+}
+
 function getStableSchoolId(item: School, index: number) {
   return String(item.id || item.canonical_name || item.name || index)
 }
@@ -428,8 +433,19 @@ export default function SchoolsPage() {
     const q = keyword.trim().toLowerCase()
     return schools.filter((item) => {
       const displayAgeRange = formatAgeRangeForDisplay(item.age_range)
-      const haystack = [item.name, item.canonical_name, item.province, item.city, getLocationHaystack(item), item.school_type, item.age_range, displayAgeRange, item.fee]
-        .filter(Boolean).join(' ').toLowerCase()
+      const haystack = [
+        item.name,
+        item.canonical_name,
+        flattenSearchText(item.aliases),
+        item.province,
+        item.city,
+        getLocationHaystack(item),
+        item.school_type,
+        item.age_range,
+        displayAgeRange,
+        item.fee,
+        item.official_url,
+      ].filter(Boolean).join(' ').toLowerCase()
       if (q && !haystack.includes(q)) return false
       if (!schoolMatchesProvince(item, selectedProvinces)) return false
       if (!schoolMatchesType(item, selectedTypes)) return false
