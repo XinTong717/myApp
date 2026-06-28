@@ -18,13 +18,15 @@ const EVENT_FILTER_OPTIONS = {
 
 const SCHOOL_FILTER_OPTIONS = {
   allOption: '全部',
-  listLimit: 200,
+  listLimit: 100,
   maxDynamicOptions: 80,
   provinces: [],
+  provinceStats: [],
   schoolTypes: [],
   ageRanges: [],
 }
 
+const SCHOOL_FILTER_SCAN_LIMIT = 1000
 const DELETED_STATUSES = new Set(['deleted', 'removed', 'archived'])
 
 function normalizeString(value) {
@@ -51,25 +53,42 @@ function uniqueSorted(values) {
   return Array.from(new Set((values || []).map(normalizeString).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-CN'))
 }
 
+function buildProvinceStats(locations) {
+  const provinceMap = new Map()
+  ;(locations || []).forEach((item, index) => {
+    const province = normalizeString(item.province)
+    if (!province) return
+    if (!provinceMap.has(province)) provinceMap.set(province, new Set())
+    const schoolId = normalizeString(item.school_id || item.schoolId || item.id || '')
+    provinceMap.get(province).add(schoolId || `location-${index}`)
+  })
+
+  return Array.from(provinceMap.entries())
+    .map(([province, schoolIds]) => ({ province, count: schoolIds.size }))
+    .sort((a, b) => b.count - a.count || a.province.localeCompare(b.province, 'zh-CN'))
+}
+
 async function buildSchoolFilterOptions() {
   try {
     const [locationsRes, schoolsRes] = await Promise.all([
       db.collection('school_locations')
-        .field({ province: true, city: true, status: true })
-        .limit(1000)
+        .field({ school_id: true, province: true, city: true, status: true })
+        .limit(SCHOOL_FILTER_SCAN_LIMIT)
         .get(),
       db.collection('schools')
         .field({ school_type: true, age_range: true, status: true })
-        .limit(SCHOOL_FILTER_OPTIONS.listLimit)
+        .limit(SCHOOL_FILTER_SCAN_LIMIT)
         .get(),
     ])
 
     const readableLocations = (locationsRes.data || []).filter((item) => isReadableStatus(item.status))
     const readableSchools = (schoolsRes.data || []).filter((item) => isReadableStatus(item.status))
+    const provinceStats = buildProvinceStats(readableLocations)
 
     return {
       ...SCHOOL_FILTER_OPTIONS,
-      provinces: uniqueSorted(readableLocations.map((item) => item.province)),
+      provinces: provinceStats.length > 0 ? provinceStats.map((item) => item.province) : uniqueSorted(readableLocations.map((item) => item.province)),
+      provinceStats,
       schoolTypes: uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.school_type))),
       ageRanges: uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.age_range))),
     }
