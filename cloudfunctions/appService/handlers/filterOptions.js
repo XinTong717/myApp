@@ -53,14 +53,14 @@ function uniqueSorted(values) {
   return Array.from(new Set((values || []).map(normalizeString).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-CN'))
 }
 
-function buildProvinceStats(locations) {
+function buildProvinceStats(items) {
   const provinceMap = new Map()
-  ;(locations || []).forEach((item, index) => {
-    const province = normalizeString(item.province)
-    if (!province) return
-    if (!provinceMap.has(province)) provinceMap.set(province, new Set())
+  ;(items || []).forEach((item, index) => {
     const schoolId = normalizeString(item.school_id || item.schoolId || item.id || '')
-    provinceMap.get(province).add(schoolId || `location-${index}`)
+    splitLabels(item.province).forEach((province) => {
+      if (!provinceMap.has(province)) provinceMap.set(province, new Set())
+      provinceMap.get(province).add(schoolId || `location-${index}`)
+    })
   })
 
   return Array.from(provinceMap.entries())
@@ -76,18 +76,21 @@ async function buildSchoolFilterOptions() {
         .limit(SCHOOL_FILTER_SCAN_LIMIT)
         .get(),
       db.collection('schools')
-        .field({ school_type: true, age_range: true, status: true })
+        .field({ id: true, province: true, city: true, school_type: true, age_range: true, status: true })
         .limit(SCHOOL_FILTER_SCAN_LIMIT)
         .get(),
     ])
 
     const readableLocations = (locationsRes.data || []).filter((item) => isReadableStatus(item.status))
     const readableSchools = (schoolsRes.data || []).filter((item) => isReadableStatus(item.status))
-    const provinceStats = buildProvinceStats(readableLocations)
+    const legacySchoolLocations = readableSchools
+      .filter((item) => normalizeString(item.province))
+      .map((item) => ({ id: item.id, province: item.province, city: item.city, status: item.status }))
+    const provinceStats = buildProvinceStats([...readableLocations, ...legacySchoolLocations])
 
     return {
       ...SCHOOL_FILTER_OPTIONS,
-      provinces: provinceStats.length > 0 ? provinceStats.map((item) => item.province) : uniqueSorted(readableLocations.map((item) => item.province)),
+      provinces: provinceStats.length > 0 ? provinceStats.map((item) => item.province) : uniqueSorted([...readableLocations, ...legacySchoolLocations].map((item) => item.province)),
       provinceStats,
       schoolTypes: uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.school_type))),
       ageRanges: uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.age_range))),
