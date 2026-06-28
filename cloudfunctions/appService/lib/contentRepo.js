@@ -118,6 +118,15 @@ function buildSchoolWhere(options = {}) {
   return where
 }
 
+function normalizeLocationCoord(location) {
+  const hasLat = location.latitude !== undefined && location.latitude !== null && location.latitude !== ''
+  const hasLng = location.longitude !== undefined && location.longitude !== null && location.longitude !== ''
+  const lat = hasLat ? Number(location.latitude) : NaN
+  const lng = hasLng ? Number(location.longitude) : NaN
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return {}
+  return { latitude: lat, longitude: lng }
+}
+
 async function listSchoolLocationsByIds(schoolIds) {
   const ids = uniqueNumbers(schoolIds)
   if (ids.length === 0) return []
@@ -175,8 +184,7 @@ function attachSchoolLocations(schools, locations) {
         contact_note: normalizeString(location.contact_note),
         status: normalizeString(location.status || 'published'),
         source: normalizeString(location.source),
-        latitude: Number(location.latitude),
-        longitude: Number(location.longitude),
+        ...normalizeLocationCoord(location),
         geocode_status: normalizeString(location.geocode_status),
         coordinate_level: normalizeString(location.coordinate_level),
       })
@@ -214,8 +222,7 @@ function toSchoolMarker(school) {
       province: normalizeString(location.province),
       city: normalizeString(location.city),
       status: normalizeString(location.status || 'published'),
-      latitude: Number(location.latitude),
-      longitude: Number(location.longitude),
+      ...normalizeLocationCoord(location),
       geocode_status: normalizeString(location.geocode_status),
       coordinate_level: normalizeString(location.coordinate_level),
     })) : [],
