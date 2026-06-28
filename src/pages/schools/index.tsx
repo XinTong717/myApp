@@ -16,6 +16,7 @@ import AppCard from '../../components/common/AppCard'
 import AppTag from '../../components/common/AppTag'
 import AppIcon from '../../components/common/AppIcon'
 import AppChip from '../../components/common/AppChip'
+import AppPrimaryButton from '../../components/common/AppPrimaryButton'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import { ListSkeleton } from '../../components/common/Skeleton'
 import { SCHOOL_FILTER_FALLBACKS } from '../../constants/filterOptions'
@@ -36,6 +37,7 @@ const AGE_RANGE_MIN = 0
 const AGE_RANGE_MAX = 30
 
 type School = SchoolItem
+type OptionCountMap = Map<string, Set<string> | number>
 
 type AgeKeywordRange = {
   min: number
@@ -110,23 +112,37 @@ function normalizeTypeOptions(options: string[]) {
   return Array.from(new Set(options.map(normalizeSchoolTypeLabel).filter(Boolean)))
 }
 
-function buildOptionCountMap(source: School[], getLabels: (item: School) => string[]) {
-  const counts = new Map<string, Set<string>>()
+function buildOptionCountMap(source: School[], getLabels: (item: School) => string[]): OptionCountMap {
+  const counts: OptionCountMap = new Map()
   source.forEach((item, index) => {
     const schoolId = getStableSchoolId(item, index)
     Array.from(new Set(getLabels(item).filter(Boolean))).forEach((label) => {
       if (!counts.has(label)) counts.set(label, new Set())
-      counts.get(label)?.add(schoolId)
+      const value = counts.get(label)
+      if (value instanceof Set) value.add(schoolId)
     })
   })
   return counts
 }
 
-function optionCount(counts: Map<string, Set<string>>, option: string) {
-  return counts.get(option)?.size || 0
+function buildProvinceStatCountMap(stats: typeof SCHOOL_FILTER_FALLBACKS.provinceStats): OptionCountMap {
+  const counts: OptionCountMap = new Map()
+  ;(Array.isArray(stats) ? stats : []).forEach((item) => {
+    const province = String(item?.province || '').trim()
+    const count = Number(item?.count || 0)
+    if (!province || !Number.isFinite(count) || count <= 0) return
+    counts.set(province, count)
+  })
+  return counts
 }
 
-function sortOptionsByCount(options: string[], counts: Map<string, Set<string>>) {
+function optionCount(counts: OptionCountMap, option: string) {
+  const value = counts.get(option)
+  if (typeof value === 'number') return value
+  return value?.size || 0
+}
+
+function sortOptionsByCount(options: string[], counts: OptionCountMap) {
   return [...options].sort((a, b) => {
     const countDiff = optionCount(counts, b) - optionCount(counts, a)
     if (countDiff !== 0) return countDiff
@@ -134,10 +150,11 @@ function sortOptionsByCount(options: string[], counts: Map<string, Set<string>>)
   })
 }
 
-function countedOptions(allOption: string, preferred: string[], counts: Map<string, Set<string>>, max: number) {
-  const sourceOptions = preferred.length > 0 ? preferred : Array.from(counts.keys())
+function countedOptions(allOption: string, preferred: string[], counts: OptionCountMap, max: number, includePreferredWithoutCount = false) {
+  const countOptions = Array.from(counts.keys())
+  const sourceOptions = preferred.length > 0 ? [...preferred, ...countOptions] : countOptions
   const options = sortOptionsByCount(
-    Array.from(new Set(sourceOptions.filter((item) => item && item !== allOption && optionCount(counts, item) > 0))),
+    Array.from(new Set(sourceOptions.filter((item) => item && item !== allOption && (optionCount(counts, item) > 0 || (includePreferredWithoutCount && preferred.includes(item)))))),
     counts
   ).slice(0, max)
   return [allOption, ...options]
@@ -312,6 +329,18 @@ function schoolMatchesType(item: School, selectedTypes: string[]) {
   return selectedTypes.some((type) => labels.includes(type))
 }
 
+function mergeSchoolList(current: School[], incoming: School[]) {
+  const seen = new Set(current.map((item) => Number(item.id)))
+  const next = [...current]
+  incoming.forEach((item) => {
+    const id = Number(item.id)
+    if (seen.has(id)) return
+    seen.add(id)
+    next.push(item)
+  })
+  return next
+}
+
 function toggleMultiFilter(current: string[], option: string, allOption: string) {
   if (option === allOption) return []
   if (current.includes(option)) return current.filter((item) => item !== option)
@@ -332,12 +361,16 @@ export default function SchoolsPage() {
   const [filterSourceSchools, setFilterSourceSchools] = useState<School[]>([])
   const [filterSettings, setFilterSettings] = useState<typeof SCHOOL_FILTER_FALLBACKS>(SCHOOL_FILTER_FALLBACKS)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
   const [keyword, setKeyword] = useState('')
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>([])
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [ageRangeMin, setAgeRangeMin] = useState(AGE_RANGE_MIN)
   const [ageRangeMax, setAgeRangeMax] = useState(AGE_RANGE_MAX)
+  const [totalCount, setTotalCount] = useState<number | null>(null)
+  const [nextOffset, setNextOffset] = useState<number | null>(null)
+  const [hasMore, setHasMore] = useState(false)
   const didInitRef = useRef(false)
   const allFilter = filterSettings.allOption || SCHOOL_FILTER_FALLBACKS.allOption
   const listLimit = Number(filterSettings.listLimit || SCHOOL_FILTER_FALLBACKS.listLimit)
@@ -355,19 +388,27 @@ export default function SchoolsPage() {
 
   const hasActiveFilters = () => selectedProvinces.length > 0 || selectedTypes.length > 0 || ageFilterActive
 
-  const loadSchools = async (options: { forceRefresh?: boolean; useFilters?: boolean; syncFilterSource?: boolean } = {}) => {
+  const loadSchools = async (options: { forceRefresh?: boolean; useFilters?: boolean; syncFilterSource?: boolean; append?: boolean } = {}) => {
+    const append = !!options.append
+    const offset = append ? Number(nextOffset || schools.length || 0) : 0
     try {
-      setLoading(true)
+      if (append) setLoadingMore(true)
+      else setLoading(true)
       setError('')
       const useFilters = options.useFilters !== false
       const result = await getSchools({
         forceRefresh: !!options.forceRefresh,
         limit: listLimit,
+        offset,
         ...(useFilters && selectedProvinces.length > 0 ? { province: selectedProvinces } : {}),
+        ...(useFilters && selectedTypes.length > 0 ? { schoolType: selectedTypes } : {}),
       })
       const nextSchools = Array.isArray(result.schools) ? result.schools : []
-      setSchools(nextSchools)
-      if (options.syncFilterSource) setFilterSourceSchools(nextSchools)
+      setSchools((current) => append ? mergeSchoolList(current, nextSchools) : nextSchools)
+      if (options.syncFilterSource && !append) setFilterSourceSchools(nextSchools)
+      setTotalCount(Number.isFinite(Number(result.total)) ? Number(result.total) : null)
+      setNextOffset(typeof result.nextOffset === 'number' ? result.nextOffset : null)
+      setHasMore(!!result.hasMore)
       if (!result?.ok && nextSchools.length === 0) setError(result?.message || '读取学习社区数据失败')
       return nextSchools
     } catch (err: any) {
@@ -376,19 +417,15 @@ export default function SchoolsPage() {
       Taro.showToast({ title: '学习社区数据读取失败', icon: 'none' })
       return []
     } finally {
-      setLoading(false)
+      if (append) setLoadingMore(false)
+      else setLoading(false)
     }
   }
 
   const loadFilterOptions = async (forceRefresh = false) => {
-    const [options, result] = await Promise.all([
-      getFilterOptions({ forceRefresh }),
-      getSchools({ forceRefresh, limit: listLimit }),
-    ])
+    const options = await getFilterOptions({ forceRefresh })
     setFilterSettings(options.school)
-    const list = Array.isArray(result.schools) ? result.schools : []
-    setFilterSourceSchools(list)
-    return list
+    return options.school
   }
 
   useDidShow(() => {
@@ -411,18 +448,22 @@ export default function SchoolsPage() {
         loadSchools({ forceRefresh: true, useFilters: true }),
       ])
     } else {
-      await loadSchools({ forceRefresh: true, useFilters: false, syncFilterSource: true })
-      await getFilterOptions({ forceRefresh: true }).then((options) => setFilterSettings(options.school)).catch(() => null)
+      await Promise.all([
+        loadSchools({ forceRefresh: true, useFilters: false, syncFilterSource: true }),
+        loadFilterOptions(true),
+      ])
     }
     Taro.stopPullDownRefresh()
   })
 
   const optionSource = filterSourceSchools.length > 0 ? filterSourceSchools : schools
-  const provinceCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => getLocations(item).map((location) => location.province || '')), [optionSource])
+  const provinceStatCounts = useMemo(() => buildProvinceStatCountMap(filterSettings.provinceStats || []), [filterSettings.provinceStats])
+  const fallbackProvinceCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => getLocations(item).map((location) => location.province || '')), [optionSource])
+  const provinceCounts = provinceStatCounts.size > 0 ? provinceStatCounts : fallbackProvinceCounts
   const typeCounts = useMemo(() => buildOptionCountMap(optionSource, (item) => schoolTypeLabels(item.school_type)), [optionSource])
   const normalizedTypeSettings = useMemo(() => normalizeTypeOptions(filterSettings.schoolTypes || []), [filterSettings.schoolTypes])
   const provinceOptions = useMemo(() => countedOptions(allFilter, filterSettings.provinces || [], provinceCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, filterSettings.provinces, provinceCounts])
-  const typeOptions = useMemo(() => countedOptions(allFilter, normalizedTypeSettings, typeCounts, maxDynamicOptions), [allFilter, maxDynamicOptions, normalizedTypeSettings, typeCounts])
+  const typeOptions = useMemo(() => countedOptions(allFilter, normalizedTypeSettings, typeCounts, maxDynamicOptions, true), [allFilter, maxDynamicOptions, normalizedTypeSettings, typeCounts])
 
   const filteredSchools = useMemo(() => {
     const q = keyword.trim().toLowerCase()
@@ -444,12 +485,23 @@ export default function SchoolsPage() {
     ageFilterActive ? `年龄${formatAgeRange(ageRangeMin, ageRangeMax)}` : '',
   ].filter(Boolean).join(' · ')
 
+  const loadedCountText = totalCount !== null
+    ? `已加载 ${schools.length} / ${totalCount} 个学习社区`
+    : `已加载 ${schools.length} 个学习社区`
+
   const resetFilters = () => {
     setKeyword('')
     setSelectedProvinces([])
     setSelectedTypes([])
     setAgeRangeMin(AGE_RANGE_MIN)
     setAgeRangeMax(AGE_RANGE_MAX)
+  }
+
+  const loadMoreSchools = () => {
+    if (!hasMore || loading || loadingMore) return
+    loadSchools({ useFilters: hasActiveFilters(), append: true }).catch((err) => {
+      console.error('load more schools error:', err)
+    })
   }
 
   const goToDetail = (item: School) => {
@@ -508,7 +560,7 @@ export default function SchoolsPage() {
       </AppCard>
 
       <View className='app-count-line'>
-        <Text className='text-meta text-color-muted'>{loading ? '加载中...' : `共 ${filteredSchools.length} / ${schools.length} 个学习社区`}</Text>
+        <Text className='text-meta text-color-muted'>{loading ? '加载中...' : `${loadedCountText}${keyword.trim() || ageFilterActive ? `，当前显示 ${filteredSchools.length} 个` : ''}`}</Text>
       </View>
 
       {loading ? <ListSkeleton count={3} rows={3} /> : null}
@@ -550,6 +602,12 @@ export default function SchoolsPage() {
           </AppCard>
         )
       })}
+
+      {!loading && hasMore ? (
+        <View style={{ padding: `0 ${space(5)} ${space(4)}` }}>
+          <AppPrimaryButton text='加载更多学习社区' loadingText='加载中...' loading={loadingMore} variant='secondary' size='md' onClick={loadMoreSchools} />
+        </View>
+      ) : null}
     </AppPage>
   )
 }
