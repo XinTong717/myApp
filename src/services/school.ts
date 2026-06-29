@@ -1,3 +1,4 @@
+import { getCurrentInstance } from '@tarojs/taro'
 import { callCloud } from './cloud'
 import { getScopedCachedValue, setScopedCachedValue } from './cache'
 import { runExclusive } from './internal/runExclusive'
@@ -11,9 +12,9 @@ import type {
   SubmitSchoolResult,
 } from '../types/domain'
 
-const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v4:'
-const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v4:'
-const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v4:'
+const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v5:'
+const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v5:'
+const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v5:'
 const SCHOOL_LIST_TTL_MS = 30 * 60 * 1000
 const SCHOOL_MARKERS_TTL_MS = 30 * 60 * 1000
 const SCHOOL_DETAIL_TTL_MS = 15 * 60 * 1000
@@ -41,10 +42,10 @@ function okSchoolDetail(payload: SchoolDetailPayload): SchoolDetailResult {
   return { ok: true, school: payload.school || null }
 }
 
-function normalizeFilterList(value?: SchoolFilterValue) {
-  const list = Array.isArray(value) ? value : [value]
+function normalizeFilterList(...values: Array<SchoolFilterValue>) {
   return Array.from(new Set(
-    list
+    values
+      .flatMap((value) => Array.isArray(value) ? value : [value])
       .flatMap((item) => String(item || '').split(/[、,，/|｜]+/))
       .map((item) => item.trim())
       .filter((item) => item && item !== '全部')
@@ -53,6 +54,26 @@ function normalizeFilterList(value?: SchoolFilterValue) {
 
 function normalizePageSize(value?: number) {
   return Math.min(Math.max(Number(value || SCHOOL_PAGE_SIZE), 1), SCHOOL_PAGE_SIZE)
+}
+
+function decodeRouteValue(value: unknown) {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (raw === undefined || raw === null) return ''
+  try {
+    return decodeURIComponent(String(raw || '')).trim()
+  } catch (_err) {
+    return String(raw || '').trim()
+  }
+}
+
+function getRouteProvinceFilter() {
+  try {
+    const params = getCurrentInstance()?.router?.params || {}
+    const value = decodeRouteValue((params as Record<string, unknown>).province)
+    return value && value !== '全部' ? value : ''
+  } catch (_err) {
+    return ''
+  }
 }
 
 function getSchoolListCacheKey(options: SchoolCacheShape = {}) {
@@ -84,7 +105,8 @@ function getSchoolDetailCacheKey(schoolId: number) {
 }
 
 function buildSchoolListParams(options: SchoolCacheShape = {}) {
-  const provinces = normalizeFilterList(options.province)
+  const routeProvince = options.province || options.provinces ? '' : getRouteProvinceFilter()
+  const provinces = normalizeFilterList(options.province || routeProvince, options.provinces)
   const schoolTypes = normalizeFilterList(options.schoolType)
   const boardingTypes = normalizeFilterList(options.boardingType)
   const ageRanges = normalizeFilterList(options.ageRange)
