@@ -25,9 +25,20 @@ type SchoolFilterValue = string | string[] | undefined
 type SchoolListPayload = { schools?: SchoolItem[] }
 type SchoolMarkerListPayload = { schools?: SchoolMarkerItem[] }
 type SchoolDetailPayload = { school?: SchoolItem | null }
-type SchoolQueryOptions = { forceRefresh?: boolean; province?: SchoolFilterValue; schoolType?: SchoolFilterValue; boardingType?: SchoolFilterValue; ageRange?: SchoolFilterValue; limit?: number }
+type SchoolQueryOptions = {
+  forceRefresh?: boolean
+  province?: SchoolFilterValue
+  provinces?: SchoolFilterValue
+  schoolType?: SchoolFilterValue
+  schoolTypes?: SchoolFilterValue
+  boardingType?: SchoolFilterValue
+  boardingTypes?: SchoolFilterValue
+  ageRange?: SchoolFilterValue
+  ageRanges?: SchoolFilterValue
+  limit?: number
+}
 
-type SchoolCacheShape = { province?: SchoolFilterValue; schoolType?: SchoolFilterValue; boardingType?: SchoolFilterValue; ageRange?: SchoolFilterValue; limit?: number }
+type SchoolCacheShape = Omit<SchoolQueryOptions, 'forceRefresh'>
 type SchoolPageParams = Record<string, unknown> & { limit: number; offset?: number }
 
 function okSchoolList(payload: SchoolListPayload): SchoolListResult {
@@ -79,10 +90,10 @@ function getRouteProvinceFilter() {
 function getSchoolListCacheKey(options: SchoolCacheShape = {}) {
   return [
     SCHOOL_LIST_CACHE_KEY_PREFIX,
-    normalizeFilterList(options.province).join('|') || 'all-province',
-    normalizeFilterList(options.schoolType).join('|') || 'all-type',
-    normalizeFilterList(options.boardingType).join('|') || 'all-boarding',
-    normalizeFilterList(options.ageRange).join('|') || 'all-age',
+    normalizeFilterList(options.province, options.provinces).join('|') || 'all-province',
+    normalizeFilterList(options.schoolType, options.schoolTypes).join('|') || 'all-type',
+    normalizeFilterList(options.boardingType, options.boardingTypes).join('|') || 'all-boarding',
+    normalizeFilterList(options.ageRange, options.ageRanges).join('|') || 'all-age',
     'auto',
     normalizePageSize(options.limit),
   ].join(':')
@@ -91,10 +102,10 @@ function getSchoolListCacheKey(options: SchoolCacheShape = {}) {
 function getSchoolMarkersCacheKey(options: SchoolCacheShape = {}) {
   return [
     SCHOOL_MARKERS_CACHE_KEY_PREFIX,
-    normalizeFilterList(options.province).join('|') || 'all-province',
-    normalizeFilterList(options.schoolType).join('|') || 'all-type',
-    normalizeFilterList(options.boardingType).join('|') || 'all-boarding',
-    normalizeFilterList(options.ageRange).join('|') || 'all-age',
+    normalizeFilterList(options.province, options.provinces).join('|') || 'all-province',
+    normalizeFilterList(options.schoolType, options.schoolTypes).join('|') || 'all-type',
+    normalizeFilterList(options.boardingType, options.boardingTypes).join('|') || 'all-boarding',
+    normalizeFilterList(options.ageRange, options.ageRanges).join('|') || 'all-age',
     'auto',
     normalizePageSize(options.limit),
   ].join(':')
@@ -107,9 +118,9 @@ function getSchoolDetailCacheKey(schoolId: number) {
 function buildSchoolListParams(options: SchoolCacheShape = {}) {
   const routeProvince = options.province || options.provinces ? '' : getRouteProvinceFilter()
   const provinces = normalizeFilterList(options.province || routeProvince, options.provinces)
-  const schoolTypes = normalizeFilterList(options.schoolType)
-  const boardingTypes = normalizeFilterList(options.boardingType)
-  const ageRanges = normalizeFilterList(options.ageRange)
+  const schoolTypes = normalizeFilterList(options.schoolType, options.schoolTypes)
+  const boardingTypes = normalizeFilterList(options.boardingType, options.boardingTypes)
+  const ageRanges = normalizeFilterList(options.ageRange, options.ageRanges)
   const limit = normalizePageSize(options.limit)
   return {
     limit,
