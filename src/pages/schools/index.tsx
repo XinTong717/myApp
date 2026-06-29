@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
-import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
+import Taro, { getCurrentInstance, useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getSchools } from '../../services/school'
 import { getFilterOptions, type AppFilterOptions } from '../../services/filterOptions'
 import { setDetailPreview } from '../../services/detailPreview'
@@ -338,6 +338,26 @@ function formatSelectedSummary(values: string[], label: string) {
   return `${label}${values.length}项`
 }
 
+function decodeRouteValue(value: unknown) {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (raw === undefined || raw === null) return ''
+  try {
+    return decodeURIComponent(String(raw || '')).trim()
+  } catch (_err) {
+    return String(raw || '').trim()
+  }
+}
+
+function getInitialRouteProvince() {
+  try {
+    const params = getCurrentInstance()?.router?.params || {}
+    const province = decodeRouteValue((params as Record<string, unknown>).province)
+    return province && province !== '全部' ? province : ''
+  } catch (_err) {
+    return ''
+  }
+}
+
 export default function SchoolsPage() {
   const [schools, setSchools] = useState<School[]>([])
   const [filterSourceSchools, setFilterSourceSchools] = useState<School[]>([])
@@ -345,7 +365,10 @@ export default function SchoolsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [keyword, setKeyword] = useState('')
-  const [selectedProvinces, setSelectedProvinces] = useState<string[]>([])
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>(() => {
+    const province = getInitialRouteProvince()
+    return province ? [province] : []
+  })
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedBoardingTypes, setSelectedBoardingTypes] = useState<string[]>([])
   const [ageRangeMin, setAgeRangeMin] = useState(AGE_RANGE_MIN)
@@ -407,6 +430,15 @@ export default function SchoolsPage() {
   useDidShow(() => {
     if (didInitRef.current) return
     didInitRef.current = true
+    if (hasActiveFilters()) {
+      Promise.all([
+        loadFilterOptions(false),
+        loadSchools({ useFilters: true, syncFilterSource: false }),
+      ]).catch((err) => {
+        console.error('load schools page init with filters error:', err)
+      })
+      return
+    }
     loadSchools({ useFilters: false, syncFilterSource: true }).catch((err) => {
       console.error('load schools page init error:', err)
     })
