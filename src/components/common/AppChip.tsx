@@ -44,6 +44,13 @@ function getSize(size: AppChipSize) {
   return { padding: `${space(1)} ${space(2)}`, textClass: 'text-micro' }
 }
 
+function getChipOrder(text: string, selected: boolean, interactive: boolean) {
+  if (!interactive) return undefined
+  const normalized = String(text || '').trim()
+  if (normalized === '全部' || normalized === '全国') return 0
+  return selected ? 1 : 2
+}
+
 export default function AppChip({
   text,
   tone = 'neutral',
@@ -58,6 +65,7 @@ export default function AppChip({
   const [pressed, setPressed] = useState(false)
   const colors = getTone(tone, selected, pressed && interactive)
   const sizeStyle = getSize(size)
+  const chipOrder = getChipOrder(text, selected, interactive)
   const chipStyle = {
     '--chip-padding': sizeStyle.padding,
     '--chip-bg': colors.bg,
@@ -66,7 +74,8 @@ export default function AppChip({
     '--chip-margin-bottom': marginBottom,
     '--chip-transform': pressed && interactive ? 'scale(0.97)' : 'scale(1)',
     '--chip-shadow': selected ? elevation.pressed : 'none',
-  } as Record<string, string>
+    ...(chipOrder === undefined ? {} : { order: chipOrder }),
+  } as Record<string, string | number>
 
   return (
     <View
