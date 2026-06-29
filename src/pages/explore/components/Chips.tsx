@@ -20,7 +20,7 @@ export function FilterChip(props: { active: boolean; tone?: ExploreChipTone; tex
 export function ProvinceChip(props: { active: boolean; text: string; onClick: () => void }) {
   const handleClick = () => {
     if (props.text === ONLINE_PROVINCE) {
-      Taro.navigateTo({ url: `/pages/schools/index?province=${encodeURIComponent(ONLINE_PROVINCE)}` })
+      Taro.reLaunch({ url: `/pages/schools/index?province=${encodeURIComponent(ONLINE_PROVINCE)}` })
       return
     }
     props.onClick()
