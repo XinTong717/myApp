@@ -8,6 +8,7 @@ const userHandlers = require('./handlers/userProfile')
 const mapUserHandlers = require('./handlers/mapUsers')
 const adminHandlers = require('./handlers/admin')
 const adminPublishHandlers = require('./handlers/adminPublish')
+const schoolSeedImportHandlers = require('./handlers/schoolSeedImport')
 const legalConsentHandlers = require('./handlers/legalConsent')
 const clientErrorLogHandlers = require('./handlers/clientErrorLog')
 const { hasCurrentConsent } = require('./lib/legalConsent')
@@ -104,6 +105,7 @@ const userActionHandlers = {
 const adminActionHandlers = {
   ...adminHandlers,
   ...adminPublishHandlers,
+  ...schoolSeedImportHandlers,
 }
 
 // Person-to-person request actions are intentionally not registered in the audit build.
@@ -143,10 +145,10 @@ exports.main = async (event = {}) => {
     if (limitConfig) {
       const limitRes = await rateLimit(wxContext.OPENID, action, limitConfig)
       if (!limitRes.ok) {
-        return fail(requestId, limitRes.code || 'RATE_LIMITED', limitRes.message || '操作过于频繁，请稍后再试')
+        return fail(requestId, limitRes.code || 'RATE_LIMITED', limitRes.message || '操作过于频繁，请稍后重试')
       }
       if (limitRes.degraded && FAIL_CLOSED_RATE_LIMIT_ACTIONS.has(action)) {
-        return fail(requestId, 'RATE_LIMIT_UNAVAILABLE', '风控校验暂时不可用，请稍后再试')
+        return fail(requestId, 'RATE_LIMIT_UNAVAILABLE', '风控校验暂时不可用，请稍后重试')
       }
     }
 
