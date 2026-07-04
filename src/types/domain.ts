@@ -92,14 +92,19 @@ export type SchoolLocationItem = {
   contact_note?: string
   status?: string
   source?: string
+  latitude?: number
+  longitude?: number
+  geocode_status?: string
+  coordinate_level?: string
 }
 
-export type SchoolMarkerLocationItem = Pick<SchoolLocationItem, 'school_id' | 'province' | 'city' | 'status'>
+export type SchoolMarkerLocationItem = Pick<SchoolLocationItem, 'school_id' | 'province' | 'city' | 'status' | 'latitude' | 'longitude' | 'geocode_status' | 'coordinate_level'>
 
 export type SchoolItem = {
   id: number
   name: string
   canonical_name?: string
+  aliases?: string[] | string
   description?: string
   province?: string
   city?: string
@@ -107,6 +112,7 @@ export type SchoolItem = {
   location_count?: number
   age_range?: string
   school_type?: string
+  boarding_type?: string
   has_xuji?: boolean
   xuji_note?: string
   residency_req?: string
