@@ -149,10 +149,12 @@ function getSchoolLocations(school: School): SchoolLocationItem[] {
 }
 
 function getLocationCoord(location: SchoolLocationItem): LocationCoord | null {
-  const hasLat = location.latitude !== undefined && location.latitude !== null && location.latitude !== ''
-  const hasLng = location.longitude !== undefined && location.longitude !== null && location.longitude !== ''
-  const lat = hasLat ? Number(location.latitude) : NaN
-  const lng = hasLng ? Number(location.longitude) : NaN
+  const latValue = location.latitude as unknown
+  const lngValue = location.longitude as unknown
+  const hasLat = latValue !== undefined && latValue !== null && latValue !== ''
+  const hasLng = lngValue !== undefined && lngValue !== null && lngValue !== ''
+  const lat = hasLat ? Number(latValue) : NaN
+  const lng = hasLng ? Number(lngValue) : NaN
   if (Number.isFinite(lat) && Number.isFinite(lng)) {
     return {
       lat,

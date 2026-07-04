@@ -32,6 +32,7 @@ function buildSchoolPublishPayload(submission) {
     name,
     canonical_name: name,
     school_type: getSchoolTypeText(submission),
+    boarding_type: normalizeString(submission.boardingType) || '待确认',
     age_range: getAgeRangeText(submission),
     official_url: normalizeString(submission.officialUrl || submission.publicAccountNote),
     xuji_note: normalizeString(submission.xujiNote),
@@ -60,7 +61,7 @@ function buildSchoolPublishPayload(submission) {
   if (!schoolPayload.name) warnings.push('缺少学习社区名称')
   if (!locationPayload.province || !locationPayload.city) warnings.push('缺少地点信息')
   if (!schoolPayload.official_url) warnings.push('缺少官方/说明链接，发布前建议补充可核验来源')
-  if (!schoolPayload.xuji_note && !schoolPayload.residency_req && !schoolPayload.admission_req) warnings.push('公开详情字段较少，发布前建议补充公开说明或参与方式')
+  if (!schoolPayload.xuji_note && !schoolPayload.residency_req && !schoolPayload.admission_req) warnings.push('公开详情字段较少，发布前建议补充学籍/资质说明或参与方式')
 
   return { schoolPayload, locationPayload, auditOnly, warnings }
 }
@@ -132,6 +133,7 @@ async function listSchoolSubmissions(event, wxContext) {
       city: item.city || '',
       schoolType: item.schoolType || stringifyLabels(item.schoolTypes || []),
       schoolTypes: item.schoolTypes || [],
+      boardingType: item.boardingType || '待确认',
       ageRange: item.ageRange || stringifyLabels(item.ageRanges || []),
       ageRanges: item.ageRanges || [],
       officialUrl: item.officialUrl || item.publicAccountNote || '',

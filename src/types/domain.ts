@@ -261,6 +261,7 @@ export type SchoolSubmissionItem = {
   city?: string
   schoolType?: string
   schoolTypes?: string[]
+  boardingType?: string
   ageRange?: string
   ageRanges?: string[]
   officialUrl?: string

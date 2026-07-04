@@ -1,5 +1,8 @@
+import Taro from '@tarojs/taro'
 import AppChip from '../../../components/common/AppChip'
 import { space } from '../../../theme/spacing'
+
+const ONLINE_PROVINCE = '线上'
 
 type ExploreChipTone = 'brand' | 'user' | 'educator' | 'neutral'
 
@@ -15,7 +18,15 @@ export function FilterChip(props: { active: boolean; tone?: ExploreChipTone; tex
 }
 
 export function ProvinceChip(props: { active: boolean; text: string; onClick: () => void }) {
-  return <AppChip text={props.text} tone='brand' size='md' selected={props.active} interactive marginBottom='0' onClick={props.onClick} />
+  const handleClick = () => {
+    if (props.text === ONLINE_PROVINCE) {
+      Taro.reLaunch({ url: `/pages/schools/index?province=${encodeURIComponent(ONLINE_PROVINCE)}` })
+      return
+    }
+    props.onClick()
+  }
+
+  return <AppChip text={props.text} tone='brand' size='md' selected={props.active} interactive marginBottom='0' onClick={handleClick} />
 }
 
 export function Tag(props: { text: string; tone?: 'brand' | 'user' | 'neutral' }) {
