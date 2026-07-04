@@ -1,13 +1,36 @@
 const { db, _ } = require('./cloud')
 
 const SCHOOL_LIST_DEFAULT_LIMIT = 100
-const SCHOOL_LIST_MAX_LIMIT = 1000
-const SCHOOL_LIST_SCAN_LIMIT = 1000
+const SCHOOL_LIST_MAX_LIMIT = 100
+const SCHOOL_LOCATION_QUERY_LIMIT = 1000
 const EVENT_LIST_DEFAULT_LIMIT = 100
 const EVENT_LIST_MAX_LIMIT = 200
 const EVENT_LIST_SCAN_LIMIT = 300
 const SCHOOL_LOCATION_COLLECTION = 'school_locations'
 const DELETED_STATUSES = new Set(['deleted', 'removed', 'archived'])
+
+const SCHOOL_LIST_FIELD_SELECTION = {
+  id: true,
+  name: true,
+  canonical_name: true,
+  aliases: true,
+  description: true,
+  age_range: true,
+  school_type: true,
+  boarding_type: true,
+  fee: true,
+  has_xuji: true,
+  official_url: true,
+  status: true,
+}
+
+const SCHOOL_DETAIL_FIELD_SELECTION = {
+  ...SCHOOL_LIST_FIELD_SELECTION,
+  xuji_note: true,
+  residency_req: true,
+  admission_req: true,
+  output_direction: true,
+}
 
 function normalizeLimit(value, fallback, max) {
   return Math.min(Math.max(Number(value || fallback), 1), max)
@@ -107,14 +130,25 @@ function hasLocationFilters(options = {}) {
 function buildSchoolWhere(options = {}) {
   const where = {}
   const schoolTypes = normalizeFilterList(options.schoolType || options.type, options.schoolTypes || options.types)
+  const boardingTypes = normalizeFilterList(options.boardingType, options.boardingTypes)
   const ageRanges = normalizeFilterList(options.ageRange, options.ageRanges)
   const schoolIds = uniqueNumbers(options.schoolIds || [])
 
   if (schoolIds.length > 0) where.id = _.in(schoolIds)
   if (schoolTypes.length === 1) where.school_type = containsRegExp(schoolTypes[0])
+  if (boardingTypes.length === 1) where.boarding_type = containsRegExp(boardingTypes[0])
   if (ageRanges.length === 1) where.age_range = containsRegExp(ageRanges[0])
 
   return where
+}
+
+function normalizeLocationCoord(location) {
+  const hasLat = location.latitude !== undefined && location.latitude !== null && location.latitude !== ''
+  const hasLng = location.longitude !== undefined && location.longitude !== null && location.longitude !== ''
+  const lat = hasLat ? Number(location.latitude) : NaN
+  const lng = hasLng ? Number(location.longitude) : NaN
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return {}
+  return { latitude: lat, longitude: lng }
 }
 
 async function listSchoolLocationsByIds(schoolIds) {
@@ -124,8 +158,8 @@ async function listSchoolLocationsByIds(schoolIds) {
   try {
     const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
       .where({ school_id: _.in(ids) })
-      .field({ school_id: true, province: true, city: true, address_note: true, contact_note: true, status: true, source: true })
-      .limit(Math.min(Math.max(ids.length * 3, SCHOOL_LIST_MAX_LIMIT * 3), SCHOOL_LIST_SCAN_LIMIT))
+      .field({ school_id: true, province: true, city: true, address_note: true, contact_note: true, status: true, source: true, latitude: true, longitude: true, geocode_status: true, coordinate_level: true })
+      .limit(SCHOOL_LOCATION_QUERY_LIMIT)
       .get()
 
     return (res.data || []).filter((item) => isReadableStatus(item.status))
@@ -149,10 +183,10 @@ async function listSchoolIdsByLocation(options = {}) {
     const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
       .where(where)
       .field({ school_id: true, status: true })
-      .limit(SCHOOL_LIST_SCAN_LIMIT)
+      .limit(SCHOOL_LOCATION_QUERY_LIMIT)
       .get()
 
-    return uniqueNumbers((res.data || []).filter((item) => isReadableStatus(item.status)).map((item) => item.school_id)).slice(0, SCHOOL_LIST_SCAN_LIMIT)
+    return uniqueNumbers((res.data || []).filter((item) => isReadableStatus(item.status)).map((item) => item.school_id)).slice(0, SCHOOL_LOCATION_QUERY_LIMIT)
   } catch (err) {
     console.warn('school_locations filter failed:', err && err.message ? err.message : err)
     return []
@@ -174,6 +208,9 @@ function attachSchoolLocations(schools, locations) {
         contact_note: normalizeString(location.contact_note),
         status: normalizeString(location.status || 'published'),
         source: normalizeString(location.source),
+        ...normalizeLocationCoord(location),
+        geocode_status: normalizeString(location.geocode_status),
+        coordinate_level: normalizeString(location.coordinate_level),
       })
     })
   }
@@ -209,6 +246,9 @@ function toSchoolMarker(school) {
       province: normalizeString(location.province),
       city: normalizeString(location.city),
       status: normalizeString(location.status || 'published'),
+      ...normalizeLocationCoord(location),
+      geocode_status: normalizeString(location.geocode_status),
+      coordinate_level: normalizeString(location.coordinate_level),
     })) : [],
     location_count: Number(school.location_count || 0),
   }
@@ -230,11 +270,13 @@ function filterSchoolsByLocation(schools, options = {}) {
 
 function filterSchoolsByFacets(schools, options = {}) {
   const schoolTypes = normalizeFilterList(options.schoolType || options.type, options.schoolTypes || options.types)
+  const boardingTypes = normalizeFilterList(options.boardingType, options.boardingTypes)
   const ageRanges = normalizeFilterList(options.ageRange, options.ageRanges)
-  if (schoolTypes.length === 0 && ageRanges.length === 0) return schools
+  if (schoolTypes.length === 0 && boardingTypes.length === 0 && ageRanges.length === 0) return schools
 
   return schools.filter((school) => {
     if (!matchesAnyText(school.school_type, schoolTypes)) return false
+    if (!matchesAnyText(school.boarding_type, boardingTypes)) return false
     if (!matchesAnyText(school.age_range, ageRanges)) return false
     return true
   })
@@ -281,17 +323,18 @@ async function querySchoolsWithLocations(options = {}) {
     : normalizedOptions
 
   const schoolTypeFilters = normalizeFilterList(queryOptions.schoolType || queryOptions.type, queryOptions.schoolTypes || queryOptions.types)
+  const boardingTypeFilters = normalizeFilterList(queryOptions.boardingType, queryOptions.boardingTypes)
   const ageRangeFilters = normalizeFilterList(queryOptions.ageRange, queryOptions.ageRanges)
-  const hasMultiFacetFilter = schoolTypeFilters.length > 1 || ageRangeFilters.length > 1
+  const hasMultiFacetFilter = schoolTypeFilters.length > 1 || boardingTypeFilters.length > 1 || ageRangeFilters.length > 1
   const needsPostFilterPaging = hasLocationFilter || hasMultiFacetFilter
   const where = buildSchoolWhere(queryOptions)
 
   if (needsPostFilterPaging) {
     const res = await db.collection('schools')
       .where(where)
-      .field({ id: true, name: true, canonical_name: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, official_url: true, status: true })
+      .field(SCHOOL_LIST_FIELD_SELECTION)
       .orderBy('id', 'asc')
-      .limit(SCHOOL_LIST_SCAN_LIMIT)
+      .limit(SCHOOL_LOCATION_QUERY_LIMIT)
       .get()
 
     const rawSchools = (res.data || []).filter((school) => isReadableStatus(school.status))
@@ -303,7 +346,7 @@ async function querySchoolsWithLocations(options = {}) {
 
   let query = db.collection('schools')
     .where(where)
-    .field({ id: true, name: true, canonical_name: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, official_url: true, status: true })
+    .field(SCHOOL_LIST_FIELD_SELECTION)
     .orderBy('id', 'asc')
 
   if (offset > 0) query = query.skip(offset)
@@ -331,6 +374,30 @@ async function querySchoolsWithLocations(options = {}) {
   }
 }
 
+async function querySchoolMarkersWithLocations(options = {}) {
+  const normalizedOptions = typeof options === 'object' && options !== null ? options : { limit: options }
+  const locationSchoolIds = await listSchoolIdsByLocation(normalizedOptions)
+  const hasLocationFilter = hasLocationFilters(normalizedOptions)
+
+  if (hasLocationFilter && (!Array.isArray(locationSchoolIds) || locationSchoolIds.length === 0)) return []
+
+  const queryOptions = Array.isArray(locationSchoolIds) && locationSchoolIds.length > 0
+    ? { ...normalizedOptions, schoolIds: locationSchoolIds }
+    : normalizedOptions
+
+  const res = await db.collection('schools')
+    .where(buildSchoolWhere(queryOptions))
+    .field(SCHOOL_LIST_FIELD_SELECTION)
+    .orderBy('id', 'asc')
+    .limit(SCHOOL_LOCATION_QUERY_LIMIT)
+    .get()
+
+  const rawSchools = (res.data || []).filter((school) => isReadableStatus(school.status))
+  const locations = await listSchoolLocationsByIds(rawSchools.map((school) => school.id))
+  const schoolsWithLocations = attachSchoolLocations(rawSchools, locations)
+  return filterSchoolsByFacets(filterSchoolsByLocation(schoolsWithLocations, normalizedOptions), normalizedOptions)
+}
+
 async function listSchoolPage(options = {}) {
   return querySchoolsWithLocations(options)
 }
@@ -340,7 +407,7 @@ async function listSchools(options = {}) {
 }
 
 async function listSchoolMarkers(options = {}) {
-  return (await listSchoolPage(options)).schools.map(toSchoolMarker)
+  return (await querySchoolMarkersWithLocations(options)).map(toSchoolMarker)
 }
 
 async function getSchoolById(schoolId) {
@@ -348,7 +415,7 @@ async function getSchoolById(schoolId) {
 
   const res = await db.collection('schools')
     .where({ id: Number(schoolId) })
-    .field({ id: true, name: true, canonical_name: true, description: true, age_range: true, school_type: true, fee: true, has_xuji: true, xuji_note: true, residency_req: true, admission_req: true, output_direction: true, official_url: true, status: true })
+    .field(SCHOOL_DETAIL_FIELD_SELECTION)
     .limit(1)
     .get()
 
@@ -416,6 +483,7 @@ async function getEventById(eventId) {
 module.exports = {
   SCHOOL_LIST_DEFAULT_LIMIT,
   SCHOOL_LIST_MAX_LIMIT,
+  SCHOOL_LOCATION_QUERY_LIMIT,
   EVENT_LIST_DEFAULT_LIMIT,
   EVENT_LIST_MAX_LIMIT,
   SCHOOL_LOCATION_COLLECTION,
