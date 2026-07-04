@@ -13,11 +13,12 @@ import type {
 } from '../types/domain'
 
 const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v3:'
-const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v3:'
+const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v4:'
 const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v1:'
 const SCHOOL_LIST_TTL_MS = 30 * 60 * 1000
 const SCHOOL_MARKERS_TTL_MS = 30 * 60 * 1000
 const SCHOOL_DETAIL_TTL_MS = 15 * 60 * 1000
+const SCHOOL_MARKERS_DEFAULT_LIMIT = 500
 
 type SchoolFilterValue = string | string[] | undefined
 type SchoolListPayload = {
@@ -136,7 +137,7 @@ function getSchoolMarkersCacheKey(options: { province?: SchoolFilterValue; schoo
     normalizeFilterList(options.province).join('|') || 'all-province',
     normalizeFilterList(options.schoolType).join('|') || 'all-type',
     normalizeFilterList(options.ageRange).join('|') || 'all-age',
-    Number(options.limit || 200),
+    Number(options.limit || SCHOOL_MARKERS_DEFAULT_LIMIT),
     normalizeOffset(options.offset),
   ].join(':')
 }
@@ -209,7 +210,8 @@ export async function getSchools(options: { forceRefresh?: boolean; province?: S
 }
 
 export async function getSchoolMarkers(options: { forceRefresh?: boolean; province?: SchoolFilterValue; schoolType?: SchoolFilterValue; ageRange?: SchoolFilterValue; limit?: number; offset?: number } = {}) {
-  const { params, cacheShape } = buildSchoolListParams({ ...options, limit: options.limit || 200 })
+  const markerLimit = Math.max(Number(options.limit || 0), SCHOOL_MARKERS_DEFAULT_LIMIT)
+  const { params, cacheShape } = buildSchoolListParams({ ...options, limit: markerLimit })
   const cacheKey = getSchoolMarkersCacheKey(cacheShape)
   const cached = options.forceRefresh ? null : await getScopedCachedValue<SchoolMarkerListPayload>(cacheKey)
   if (cached) return okSchoolMarkers(cached)
