@@ -134,22 +134,15 @@ export type SchoolMarkerItem = {
 
 export type SchoolListResult = CloudResponse<{
   schools?: SchoolItem[]
+  total?: number
   limit?: number
   offset?: number
   nextOffset?: number | null
   hasMore?: boolean
-  autoPaged?: boolean
-  loadedPages?: number
 }>
 
 export type SchoolMarkerListResult = CloudResponse<{
   schools?: SchoolMarkerItem[]
-  limit?: number
-  offset?: number
-  nextOffset?: number | null
-  hasMore?: boolean
-  autoPaged?: boolean
-  loadedPages?: number
 }>
 
 export type SchoolDetailResult = CloudResponse<{

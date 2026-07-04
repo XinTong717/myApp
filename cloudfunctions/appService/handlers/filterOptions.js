@@ -16,19 +16,17 @@ const EVENT_FILTER_OPTIONS = {
   },
 }
 
-const SCHOOL_TYPE_OPTIONS = ['学习成长社区', '民办学校', '公办学校', '华德福学校', '神经多样性', '营地/短期项目主体', '公益组织', '疗愈社区', '职业发展', '其他']
-const BOARDING_TYPE_OPTIONS = ['可寄宿', '不可寄宿', '待确认']
-
 const SCHOOL_FILTER_OPTIONS = {
   allOption: '全部',
-  listLimit: 200,
+  listLimit: 100,
   maxDynamicOptions: 80,
   provinces: [],
-  schoolTypes: SCHOOL_TYPE_OPTIONS,
-  boardingTypes: BOARDING_TYPE_OPTIONS,
+  provinceStats: [],
+  schoolTypes: [],
   ageRanges: [],
 }
 
+const SCHOOL_FILTER_SCAN_LIMIT = 1000
 const DELETED_STATUSES = new Set(['deleted', 'removed', 'archived'])
 
 function normalizeString(value) {
@@ -55,36 +53,46 @@ function uniqueSorted(values) {
   return Array.from(new Set((values || []).map(normalizeString).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-CN'))
 }
 
-function sortedKnownFirst(values, preferred) {
-  const valueSet = new Set(values || [])
-  const known = preferred.filter((item) => valueSet.has(item) || preferred.includes(item))
-  const extra = uniqueSorted(Array.from(valueSet).filter((item) => !preferred.includes(item)))
-  return [...known, ...extra]
+function buildProvinceStats(items) {
+  const provinceMap = new Map()
+  ;(items || []).forEach((item, index) => {
+    const schoolId = normalizeString(item.school_id || item.schoolId || item.id || '')
+    splitLabels(item.province).forEach((province) => {
+      if (!provinceMap.has(province)) provinceMap.set(province, new Set())
+      provinceMap.get(province).add(schoolId || `location-${index}`)
+    })
+  })
+
+  return Array.from(provinceMap.entries())
+    .map(([province, schoolIds]) => ({ province, count: schoolIds.size }))
+    .sort((a, b) => b.count - a.count || a.province.localeCompare(b.province, 'zh-CN'))
 }
 
 async function buildSchoolFilterOptions() {
   try {
     const [locationsRes, schoolsRes] = await Promise.all([
       db.collection('school_locations')
-        .field({ province: true, city: true, status: true })
-        .limit(1000)
+        .field({ school_id: true, province: true, city: true, status: true })
+        .limit(SCHOOL_FILTER_SCAN_LIMIT)
         .get(),
       db.collection('schools')
-        .field({ school_type: true, boarding_type: true, age_range: true, status: true })
-        .limit(SCHOOL_FILTER_OPTIONS.listLimit)
+        .field({ id: true, province: true, city: true, school_type: true, age_range: true, status: true })
+        .limit(SCHOOL_FILTER_SCAN_LIMIT)
         .get(),
     ])
 
     const readableLocations = (locationsRes.data || []).filter((item) => isReadableStatus(item.status))
     const readableSchools = (schoolsRes.data || []).filter((item) => isReadableStatus(item.status))
-    const schoolTypes = uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.school_type)))
-    const boardingTypes = uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.boarding_type)))
+    const legacySchoolLocations = readableSchools
+      .filter((item) => normalizeString(item.province))
+      .map((item) => ({ id: item.id, province: item.province, city: item.city, status: item.status }))
+    const provinceStats = buildProvinceStats([...readableLocations, ...legacySchoolLocations])
 
     return {
       ...SCHOOL_FILTER_OPTIONS,
-      provinces: uniqueSorted(readableLocations.map((item) => item.province)),
-      schoolTypes: sortedKnownFirst(schoolTypes, SCHOOL_TYPE_OPTIONS),
-      boardingTypes: sortedKnownFirst(boardingTypes, BOARDING_TYPE_OPTIONS),
+      provinces: provinceStats.length > 0 ? provinceStats.map((item) => item.province) : uniqueSorted([...readableLocations, ...legacySchoolLocations].map((item) => item.province)),
+      provinceStats,
+      schoolTypes: uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.school_type))),
       ageRanges: uniqueSorted(readableSchools.flatMap((item) => splitLabels(item.age_range))),
     }
   } catch (err) {

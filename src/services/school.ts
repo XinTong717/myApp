@@ -5,43 +5,95 @@ import type {
   SchoolDetailResult,
   SchoolItem,
   SchoolListResult,
+  SchoolLocationItem,
   SchoolMarkerItem,
   SchoolMarkerListResult,
   SubmitCorrectionResult,
   SubmitSchoolResult,
 } from '../types/domain'
 
-const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v6:'
-const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v6:'
-const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v6:'
+const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v3:'
+const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v7:'
+const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v1:'
 const SCHOOL_LIST_TTL_MS = 30 * 60 * 1000
 const SCHOOL_MARKERS_TTL_MS = 30 * 60 * 1000
 const SCHOOL_DETAIL_TTL_MS = 15 * 60 * 1000
-const SCHOOL_PAGE_SIZE = 100
-const SCHOOL_AUTO_PAGE_MAX = 20
 
 type SchoolFilterValue = string | string[] | undefined
-type SchoolListPayload = { schools?: SchoolItem[] }
+type SchoolListPayload = {
+  schools?: SchoolItem[]
+  total?: number
+  limit?: number
+  offset?: number
+  nextOffset?: number | null
+  hasMore?: boolean
+}
 type SchoolMarkerListPayload = { schools?: SchoolMarkerItem[] }
 type SchoolDetailPayload = { school?: SchoolItem | null }
-type SchoolQueryOptions = {
-  forceRefresh?: boolean
-  province?: SchoolFilterValue
-  provinces?: SchoolFilterValue
-  schoolType?: SchoolFilterValue
-  schoolTypes?: SchoolFilterValue
-  boardingType?: SchoolFilterValue
-  boardingTypes?: SchoolFilterValue
-  ageRange?: SchoolFilterValue
-  ageRanges?: SchoolFilterValue
-  limit?: number
+
+function splitLocationTokens(value?: string) {
+  return String(value || '')
+    .split(/[、,，/|｜\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
 
-type SchoolCacheShape = Omit<SchoolQueryOptions, 'forceRefresh'>
-type SchoolPageParams = Record<string, unknown> & { limit: number; offset?: number }
+function normalizeSchoolLocations(item: SchoolItem): SchoolItem {
+  const existingLocations = Array.isArray(item.locations)
+    ? item.locations
+      .filter((location) => location && location.status !== 'deleted')
+      .map((location) => ({
+        ...location,
+        province: String(location.province || '').trim(),
+        city: String(location.city || '').trim(),
+      }))
+      .filter((location) => location.province || location.city)
+    : []
+
+  if (existingLocations.length > 0) {
+    return { ...item, locations: existingLocations }
+  }
+
+  const provinces = splitLocationTokens(item.province)
+  const cities = splitLocationTokens(item.city)
+
+  if (cities.length > 0) {
+    return {
+      ...item,
+      locations: cities.map((city, index) => ({
+        school_id: Number(item.id),
+        province: provinces[index] || provinces[0] || '',
+        city,
+        status: 'legacy',
+      } as SchoolLocationItem)),
+    }
+  }
+
+  if (provinces.length > 0) {
+    return {
+      ...item,
+      locations: provinces.map((province) => ({
+        school_id: Number(item.id),
+        province,
+        city: '',
+        status: 'legacy',
+      } as SchoolLocationItem)),
+    }
+  }
+
+  return item
+}
 
 function okSchoolList(payload: SchoolListPayload): SchoolListResult {
-  return { ok: true, schools: Array.isArray(payload.schools) ? payload.schools : [] }
+  return {
+    ok: true,
+    schools: Array.isArray(payload.schools) ? payload.schools.map(normalizeSchoolLocations) : [],
+    total: Number.isFinite(Number(payload.total)) ? Number(payload.total) : undefined,
+    limit: Number.isFinite(Number(payload.limit)) ? Number(payload.limit) : undefined,
+    offset: Number.isFinite(Number(payload.offset)) ? Number(payload.offset) : undefined,
+    nextOffset: payload.nextOffset === null || payload.nextOffset === undefined ? null : Number(payload.nextOffset),
+    hasMore: !!payload.hasMore,
+  }
 }
 
 function okSchoolMarkers(payload: SchoolMarkerListPayload): SchoolMarkerListResult {
@@ -49,44 +101,43 @@ function okSchoolMarkers(payload: SchoolMarkerListPayload): SchoolMarkerListResu
 }
 
 function okSchoolDetail(payload: SchoolDetailPayload): SchoolDetailResult {
-  return { ok: true, school: payload.school || null }
+  return { ok: true, school: payload.school ? normalizeSchoolLocations(payload.school) : null }
 }
 
-function normalizeFilterList(...values: Array<SchoolFilterValue>) {
+function normalizeFilterList(value?: SchoolFilterValue) {
+  const list = Array.isArray(value) ? value : [value]
   return Array.from(new Set(
-    values
-      .flatMap((value) => Array.isArray(value) ? value : [value])
+    list
       .flatMap((item) => String(item || '').split(/[、,，/|｜]+/))
       .map((item) => item.trim())
       .filter((item) => item && item !== '全部')
   )).sort()
 }
 
-function normalizePageSize(value?: number) {
-  return Math.min(Math.max(Number(value || SCHOOL_PAGE_SIZE), 1), SCHOOL_PAGE_SIZE)
+function normalizeOffset(value?: number) {
+  const offset = Math.floor(Number(value || 0))
+  return Number.isFinite(offset) && offset > 0 ? offset : 0
 }
 
-function getSchoolListCacheKey(options: SchoolCacheShape = {}) {
+function getSchoolListCacheKey(options: { province?: SchoolFilterValue; schoolType?: SchoolFilterValue; ageRange?: SchoolFilterValue; limit?: number; offset?: number } = {}) {
   return [
     SCHOOL_LIST_CACHE_KEY_PREFIX,
-    normalizeFilterList(options.province, options.provinces).join('|') || 'all-province',
-    normalizeFilterList(options.schoolType, options.schoolTypes).join('|') || 'all-type',
-    normalizeFilterList(options.boardingType, options.boardingTypes).join('|') || 'all-boarding',
-    normalizeFilterList(options.ageRange, options.ageRanges).join('|') || 'all-age',
-    'auto',
-    normalizePageSize(options.limit),
+    normalizeFilterList(options.province).join('|') || 'all-province',
+    normalizeFilterList(options.schoolType).join('|') || 'all-type',
+    normalizeFilterList(options.ageRange).join('|') || 'all-age',
+    Number(options.limit || 100),
+    normalizeOffset(options.offset),
   ].join(':')
 }
 
-function getSchoolMarkersCacheKey(options: SchoolCacheShape = {}) {
+function getSchoolMarkersCacheKey(options: { province?: SchoolFilterValue; schoolType?: SchoolFilterValue; ageRange?: SchoolFilterValue; limit?: number; offset?: number } = {}) {
   return [
     SCHOOL_MARKERS_CACHE_KEY_PREFIX,
-    normalizeFilterList(options.province, options.provinces).join('|') || 'all-province',
-    normalizeFilterList(options.schoolType, options.schoolTypes).join('|') || 'all-type',
-    normalizeFilterList(options.boardingType, options.boardingTypes).join('|') || 'all-boarding',
-    normalizeFilterList(options.ageRange, options.ageRanges).join('|') || 'all-age',
-    'auto',
-    normalizePageSize(options.limit),
+    normalizeFilterList(options.province).join('|') || 'all-province',
+    normalizeFilterList(options.schoolType).join('|') || 'all-type',
+    normalizeFilterList(options.ageRange).join('|') || 'all-age',
+    Number(options.limit || 200),
+    normalizeOffset(options.offset),
   ].join(':')
 }
 
@@ -94,83 +145,54 @@ function getSchoolDetailCacheKey(schoolId: number) {
   return `${SCHOOL_DETAIL_CACHE_KEY_PREFIX}${schoolId}`
 }
 
-function buildSchoolListParams(options: SchoolCacheShape = {}) {
-  const provinces = normalizeFilterList(options.province, options.provinces)
-  const schoolTypes = normalizeFilterList(options.schoolType, options.schoolTypes)
-  const boardingTypes = normalizeFilterList(options.boardingType, options.boardingTypes)
-  const ageRanges = normalizeFilterList(options.ageRange, options.ageRanges)
-  const limit = normalizePageSize(options.limit)
+function buildSchoolListParams(options: { province?: SchoolFilterValue; schoolType?: SchoolFilterValue; ageRange?: SchoolFilterValue; limit?: number; offset?: number } = {}) {
+  const provinces = normalizeFilterList(options.province)
+  const schoolTypes = normalizeFilterList(options.schoolType)
+  const ageRanges = normalizeFilterList(options.ageRange)
+  const limit = Number(options.limit || 100)
+  const offset = normalizeOffset(options.offset)
   return {
     limit,
+    offset,
     params: {
       limit,
+      offset,
       ...(provinces.length === 1 ? { province: provinces[0] } : {}),
       ...(provinces.length > 1 ? { provinces } : {}),
       ...(schoolTypes.length === 1 ? { schoolType: schoolTypes[0] } : {}),
       ...(schoolTypes.length > 1 ? { schoolTypes } : {}),
-      ...(boardingTypes.length === 1 ? { boardingType: boardingTypes[0] } : {}),
-      ...(boardingTypes.length > 1 ? { boardingTypes } : {}),
       ...(ageRanges.length === 1 ? { ageRange: ageRanges[0] } : {}),
       ...(ageRanges.length > 1 ? { ageRanges } : {}),
-    } as SchoolPageParams,
-    cacheShape: { province: provinces, schoolType: schoolTypes, boardingType: boardingTypes, ageRange: ageRanges, limit },
+    },
+    cacheShape: { province: provinces, schoolType: schoolTypes, ageRange: ageRanges, limit, offset },
   }
 }
 
-function dedupeById<T extends { id?: number | string }>(items: T[]) {
-  const map = new Map<string, T>()
-  items.forEach((item, index) => {
-    const key = String(item.id || index)
-    if (!map.has(key)) map.set(key, item)
-  })
-  return Array.from(map.values())
-}
-
-async function fetchAllSchoolPages<T extends SchoolItem | SchoolMarkerItem>(cloudFnName: 'getSchools' | 'getSchoolMarkers', params: SchoolPageParams) {
-  const items: T[] = []
-  let offset = 0
-  let loadedPages = 0
-  let lastResult: SchoolListResult | SchoolMarkerListResult | null = null
-
-  while (loadedPages < SCHOOL_AUTO_PAGE_MAX) {
-    const result = await callCloud<SchoolListResult | SchoolMarkerListResult>(cloudFnName, { ...params, offset })
-    lastResult = result
-    if (!result.ok) return { result, items: dedupeById(items) }
-
-    const pageItems = Array.isArray(result.schools) ? result.schools as T[] : []
-    items.push(...pageItems)
-    loadedPages += 1
-
-    if (!result.hasMore || result.nextOffset === null || result.nextOffset === undefined) break
-    const nextOffset = Number(result.nextOffset)
-    if (!Number.isFinite(nextOffset) || nextOffset <= offset) break
-    offset = nextOffset
-  }
-
-  return {
-    result: {
-      ...(lastResult || { ok: true }),
-      ok: true,
-      schools: dedupeById(items),
-      hasMore: false,
-      nextOffset: null,
-      autoPaged: true,
-      loadedPages,
-    } as SchoolListResult | SchoolMarkerListResult,
-    items: dedupeById(items),
-  }
-}
-
-export async function getSchools(options: SchoolQueryOptions = {}) {
+export async function getSchools(options: { forceRefresh?: boolean; province?: SchoolFilterValue; schoolType?: SchoolFilterValue; ageRange?: SchoolFilterValue; limit?: number; offset?: number } = {}) {
   const { params, cacheShape } = buildSchoolListParams(options)
   const cacheKey = getSchoolListCacheKey(cacheShape)
   const cached = options.forceRefresh ? null : await getScopedCachedValue<SchoolListPayload>(cacheKey)
   if (cached) return okSchoolList(cached)
 
-  const { result, items } = await fetchAllSchoolPages<SchoolItem>('getSchools', params)
+  const result = await callCloud<SchoolListResult>('getSchools', params)
   if (result.ok) {
-    await setScopedCachedValue(cacheKey, { schools: items }, SCHOOL_LIST_TTL_MS)
-    return { ...result, schools: items } as SchoolListResult
+    const normalized = okSchoolList({
+      schools: result.schools || [],
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      nextOffset: result.nextOffset,
+      hasMore: result.hasMore,
+    })
+    await setScopedCachedValue(cacheKey, {
+      schools: normalized.schools || [],
+      total: normalized.total,
+      limit: normalized.limit,
+      offset: normalized.offset,
+      nextOffset: normalized.nextOffset,
+      hasMore: normalized.hasMore,
+    }, SCHOOL_LIST_TTL_MS)
+    return { ...result, ...normalized }
   }
 
   const staleCached = await getScopedCachedValue<SchoolListPayload>(cacheKey)
@@ -183,19 +205,19 @@ export async function getSchools(options: SchoolQueryOptions = {}) {
     }
   }
 
-  return result as SchoolListResult
+  return result
 }
 
-export async function getSchoolMarkers(options: SchoolQueryOptions = {}) {
-  const { params, cacheShape } = buildSchoolListParams({ ...options, limit: options.limit || SCHOOL_PAGE_SIZE })
+export async function getSchoolMarkers(options: { forceRefresh?: boolean; province?: SchoolFilterValue; schoolType?: SchoolFilterValue; ageRange?: SchoolFilterValue; limit?: number; offset?: number } = {}) {
+  const { params, cacheShape } = buildSchoolListParams({ ...options, limit: options.limit || 200 })
   const cacheKey = getSchoolMarkersCacheKey(cacheShape)
   const cached = options.forceRefresh ? null : await getScopedCachedValue<SchoolMarkerListPayload>(cacheKey)
   if (cached) return okSchoolMarkers(cached)
 
-  const { result, items } = await fetchAllSchoolPages<SchoolMarkerItem>('getSchoolMarkers', params)
+  const result = await callCloud<SchoolMarkerListResult>('getSchoolMarkers', params)
   if (result.ok) {
-    await setScopedCachedValue(cacheKey, { schools: items }, SCHOOL_MARKERS_TTL_MS)
-    return { ...result, schools: items } as SchoolMarkerListResult
+    await setScopedCachedValue(cacheKey, { schools: result.schools || [] }, SCHOOL_MARKERS_TTL_MS)
+    return result
   }
 
   const staleCached = await getScopedCachedValue<SchoolMarkerListPayload>(cacheKey)
@@ -208,7 +230,7 @@ export async function getSchoolMarkers(options: SchoolQueryOptions = {}) {
     }
   }
 
-  return result as SchoolMarkerListResult
+  return result
 }
 
 export async function getSchoolDetail(schoolId: number, options: { forceRefresh?: boolean } = {}) {
@@ -218,8 +240,9 @@ export async function getSchoolDetail(schoolId: number, options: { forceRefresh?
 
   const result = await callCloud<SchoolDetailResult>('getSchoolDetail', { schoolId })
   if (result.ok) {
-    await setScopedCachedValue(cacheKey, { school: result.school || null }, SCHOOL_DETAIL_TTL_MS)
-    return result
+    const normalized = okSchoolDetail({ school: result.school || null })
+    await setScopedCachedValue(cacheKey, { school: normalized.school || null }, SCHOOL_DETAIL_TTL_MS)
+    return { ...result, school: normalized.school }
   }
 
   const staleCached = await getScopedCachedValue<SchoolDetailPayload>(cacheKey)

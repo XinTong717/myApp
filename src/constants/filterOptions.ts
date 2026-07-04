@@ -1,8 +1,24 @@
 export const ALL_FILTER = '全部'
 export const EVENT_DEFAULT_STATUS_FILTER = 'recruiting'
 
-export const SCHOOL_TYPE_OPTIONS = ['学习成长社区', '民办学校', '公办学校', '华德福学校', '神经多样性', '营地/短期项目主体', '公益组织', '疗愈社区', '职业发展', '其他'] as const
-export const BOARDING_TYPE_OPTIONS = ['可寄宿', '不可寄宿', '待确认'] as const
+export const SCHOOL_TYPE_OPTIONS = [
+  '学习成长社区',
+  '学校',
+  '华德福学校',
+  '蒙台梭利学校',
+  '民主学校',
+  '自然教育',
+  '项目制学习',
+  '营地/游学',
+  '其他',
+]
+
+export const BOARDING_TYPE_OPTIONS = [
+  '走读',
+  '寄宿',
+  '混合',
+  '待确认',
+]
 
 export const EVENT_FILTER_FALLBACKS = {
   eventTypes: [ALL_FILTER, '工作坊', '项目招募', '圆桌讨论', '交友聚会', '一对一', '团体', '其他'],
@@ -19,13 +35,26 @@ export const EVENT_FILTER_FALLBACKS = {
   } as Record<string, string>,
 }
 
+export type SchoolProvinceStat = {
+  province: string
+  count: number
+}
+
+const SCHOOL_PROVINCE_FALLBACKS = [
+  '北京', '天津', '河北', '山西', '内蒙古', '辽宁', '吉林', '黑龙江',
+  '上海', '江苏', '浙江', '安徽', '福建', '江西', '山东', '河南',
+  '湖北', '湖南', '广东', '广西', '海南', '重庆', '四川', '贵州',
+  '云南', '西藏', '陕西', '甘肃', '青海', '宁夏', '新疆',
+  '香港', '澳门', '台湾',
+]
+
 export const SCHOOL_FILTER_FALLBACKS = {
   allOption: ALL_FILTER,
-  listLimit: 200,
+  listLimit: 100,
   maxDynamicOptions: 80,
-  provinces: [] as string[],
-  schoolTypes: [...SCHOOL_TYPE_OPTIONS] as string[],
-  boardingTypes: [...BOARDING_TYPE_OPTIONS] as string[],
+  provinces: SCHOOL_PROVINCE_FALLBACKS,
+  provinceStats: [] as SchoolProvinceStat[],
+  schoolTypes: [] as string[],
   ageRanges: [] as string[],
 }
 
