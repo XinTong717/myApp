@@ -13,7 +13,7 @@ import type {
 } from '../types/domain'
 
 const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v3:'
-const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v6:'
+const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v7:'
 const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v1:'
 const SCHOOL_LIST_TTL_MS = 30 * 60 * 1000
 const SCHOOL_MARKERS_TTL_MS = 30 * 60 * 1000
