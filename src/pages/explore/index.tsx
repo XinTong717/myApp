@@ -399,17 +399,17 @@ export default function ExplorePage() {
           borderRadius: 10,
           borderWidth: isUserCluster || isSchoolCluster ? 1 : 0,
           borderColor: isUserCluster
-            ? 'rgba(111,125,98,0.32)'
+            ? '#D6DED1'
             : isSchoolCluster
-              ? 'rgba(184,85,64,0.32)'
+              ? '#E8C8BE'
               : palette.card,
           bgColor: isUserCluster
-            ? 'rgba(246,250,244,0.96)'
+            ? '#F6FAF4'
             : isSchoolCluster
-              ? 'rgba(255,249,243,0.96)'
+              ? '#FFF9F3'
               : item.type === 'school'
-                ? 'rgba(255,255,255,0.92)'
-                : 'rgba(246,250,244,0.92)',
+                ? '#FFFFFF'
+                : '#F6FAF4',
           padding: 6,
           textAlign: 'center',
         },
