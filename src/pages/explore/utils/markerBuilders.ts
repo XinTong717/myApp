@@ -148,7 +148,14 @@ function getSchoolLocations(school: School): SchoolLocationItem[] {
   }))
 }
 
+function isOnlineLocation(location: SchoolLocationItem) {
+  const province = String(location.province || '').trim()
+  const city = String(location.city || '').trim()
+  return location.is_online === true || location.location_type === 'online' || province === '线上' || city === '线上'
+}
+
 function getLocationCoord(location: SchoolLocationItem): LocationCoord | null {
+  if (isOnlineLocation(location)) return null
   const latValue = location.latitude as unknown
   const lngValue = location.longitude as unknown
   const hasLat = latValue !== undefined && latValue !== null && latValue !== ''

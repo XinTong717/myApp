@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react'
 import { View, Text, Textarea, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { checkAdminAccess } from '../../../services/profile'
-import { listSchoolSubmissions, reviewSchoolSubmission } from '../../../services/admin'
-import type { SchoolSubmissionItem } from '../../../types/domain'
+import { getSchoolPublishPreview, listSchoolSubmissions, publishSchoolDirect, reviewSchoolSubmission } from '../../../services/admin'
+import { clearSchoolCaches } from '../../../services/school'
+import { STORAGE_FLAGS } from '../../../constants/storageFlags'
+import type { SchoolDuplicateCandidate, SchoolPublishPreviewResult, SchoolSubmissionItem } from '../../../types/domain'
 import AdminActionButton from '../../../components/admin/AdminActionButton'
 import AppCard from '../../../components/common/AppCard'
 import AppChip from '../../../components/common/AppChip'
@@ -12,9 +14,10 @@ import { palette } from '../../../theme/palette'
 import { radius, space } from '../../../theme/spacing'
 import { typography } from '../../../theme/typography'
 
-const STATUS_OPTIONS = ['pending', 'processed', 'duplicate', 'rejected'] as const
+const STATUS_OPTIONS = ['pending', 'merged', 'processed', 'duplicate', 'rejected'] as const
 const STATUS_LABELS: Record<string, string> = {
   pending: '待审核',
+  merged: '已发布',
   processed: '已处理',
   duplicate: '重复推荐',
   rejected: '已拒绝',
@@ -29,6 +32,7 @@ const SECURITY_STATUS_LABELS: Record<string, string> = {
 
 type StatusValue = typeof STATUS_OPTIONS[number]
 type ReviewAction = 'mark_processed' | 'reject' | 'duplicate' | 'reset_pending'
+type FocusField = 'adminNote' | ''
 
 function formatStatusLabel(status?: string) {
   const value = String(status || '').trim()
@@ -69,6 +73,23 @@ function getAgeRangeText(item: SchoolSubmissionItem) {
   return item.ageRange || (item.ageRanges || []).join('、') || ''
 }
 
+function formatJson(value: unknown) {
+  return JSON.stringify(value || {}, null, 2)
+}
+
+function getPreviewText(preview: SchoolPublishPreviewResult) {
+  return [
+    '【将写入 schools】',
+    formatJson(preview.schoolPayload),
+    '',
+    '【将写入 school_locations】',
+    formatJson(preview.locationPayload),
+    '',
+    '【仅供审核参考】',
+    formatJson(preview.auditOnly),
+  ].join('\n')
+}
+
 function formatSubmissionForClipboard(item: SchoolSubmissionItem, adminNote: string) {
   const officialUrl = normalizeText(item.officialUrl || item.publicAccountNote)
   const admissionReq = normalizeText(item.admissionReq || item.participationNote)
@@ -103,6 +124,16 @@ function formatSubmissionForClipboard(item: SchoolSubmissionItem, adminNote: str
   ].join('\n')
 }
 
+async function markSchoolDataDirty() {
+  clearSchoolCaches()
+  try {
+    Taro.setStorageSync(STORAGE_FLAGS.exploreForceRefresh, Date.now())
+    Taro.setStorageSync(STORAGE_FLAGS.schoolsForceRefresh, Date.now())
+  } catch (err) {
+    console.warn('markSchoolDataDirty skipped:', err)
+  }
+}
+
 export default function AdminSchoolSubmissionsPage() {
   const [checking, setChecking] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -112,14 +143,43 @@ export default function AdminSchoolSubmissionsPage() {
   const [selectedId, setSelectedId] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [detailLoading, setDetailLoading] = useState(false)
   const [reviewLoading, setReviewLoading] = useState(false)
   const [adminNote, setAdminNote] = useState('')
-  const [noteFocused, setNoteFocused] = useState(false)
+  const [focusedField, setFocusedField] = useState<FocusField>('')
+  const [publishPreview, setPublishPreview] = useState<SchoolPublishPreviewResult>({ ok: true })
+  const [duplicateCandidates, setDuplicateCandidates] = useState<SchoolDuplicateCandidate[]>([])
 
   const selectedSubmission = useMemo(
     () => submissions.find((item) => item._id === selectedId) || null,
     [submissions, selectedId]
   )
+
+  const previewText = useMemo(() => getPreviewText(publishPreview), [publishPreview])
+
+  const loadPublishPreview = async (submissionId: string) => {
+    if (!submissionId) return
+    try {
+      setDetailLoading(true)
+      setError('')
+      const result = await getSchoolPublishPreview(submissionId)
+      if (result?.ok) {
+        setPublishPreview(result)
+        setDuplicateCandidates(result.duplicateCandidates || [])
+      } else {
+        setPublishPreview({ ok: false, message: result?.message })
+        setDuplicateCandidates([])
+        setError(result?.message || '生成发布预览失败')
+      }
+    } catch (err) {
+      console.error('getSchoolPublishPreview error:', err)
+      setPublishPreview({ ok: false })
+      setDuplicateCandidates([])
+      setError('生成发布预览失败')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
 
   const loadSubmissions = async (status = statusFilter) => {
     try {
@@ -133,6 +193,9 @@ export default function AdminSchoolSubmissionsPage() {
           const first = nextList[0]
           setSelectedId(first?._id || '')
           setAdminNote(first?.adminNote || '')
+          setPublishPreview({ ok: true })
+          setDuplicateCandidates([])
+          if (first?._id) await loadPublishPreview(first._id)
         }
       } else {
         setError(result?.message || '读取学习社区推荐失败')
@@ -167,14 +230,68 @@ export default function AdminSchoolSubmissionsPage() {
     }
   }
 
-  const openItem = (item: SchoolSubmissionItem) => {
+  const openItem = async (item: SchoolSubmissionItem) => {
     setSelectedId(item._id)
     setAdminNote(item.adminNote || '')
+    setPublishPreview({ ok: true })
+    setDuplicateCandidates([])
+    await loadPublishPreview(item._id)
   }
 
   const handleCopy = () => {
     if (!selectedSubmission) return
     Taro.setClipboardData({ data: formatSubmissionForClipboard(selectedSubmission, adminNote) })
+  }
+
+  const handleCopyPreview = () => {
+    Taro.setClipboardData({ data: previewText })
+  }
+
+  const handlePublish = async (duplicateResolution?: 'continue' | 'merge', mergeSchoolId?: number) => {
+    if (!selectedSubmission || reviewLoading) return
+
+    try {
+      setReviewLoading(true)
+      const result = await publishSchoolDirect({
+        submissionId: selectedSubmission._id,
+        adminNote: adminNote.trim(),
+        duplicateResolution,
+        mergeSchoolId,
+      })
+
+      if (result?.ok) {
+        await markSchoolDataDirty()
+        Taro.showToast({ title: result.message || '已发布', icon: 'success' })
+        await loadSubmissions(statusFilter)
+        return
+      }
+
+      if (result?.code === 'DUPLICATE_CANDIDATES') {
+        setDuplicateCandidates(result.duplicateCandidates || [])
+        setPublishPreview({
+          ok: false,
+          message: result.message,
+          schoolPayload: result.school as any || publishPreview.schoolPayload,
+          locationPayload: result.location as any || publishPreview.locationPayload,
+          warnings: result.warnings || publishPreview.warnings || [],
+          duplicateCandidates: result.duplicateCandidates || [],
+        })
+        Taro.showModal({
+          title: '发现疑似重复',
+          content: result.message || '请人工验证后选择继续发布或合并。',
+          showCancel: false,
+          confirmText: '知道了',
+        })
+        return
+      }
+
+      Taro.showToast({ title: result?.message || '发布失败', icon: 'none' })
+    } catch (err) {
+      console.error('publishSchoolDirect error:', err)
+      Taro.showToast({ title: '发布失败，请稍后重试', icon: 'none' })
+    } finally {
+      setReviewLoading(false)
+    }
   }
 
   const handleReview = async (reviewAction: ReviewAction) => {
@@ -252,7 +369,7 @@ export default function AdminSchoolSubmissionsPage() {
           <Text style={{ ...typography.title, color: palette.text }}>学习社区推荐审核</Text>
           <View style={{ marginTop: space(2) }}>
             <Text style={{ ...typography.meta, color: palette.subtext }}>
-              推荐内容已按学习社区详情页字段整理：复制发布字段后，可更顺畅录入或合并到 schools / school_locations。
+              推荐内容可预览并一键发布到 schools / school_locations。疑似重复时会提示继续发布或合并到已有学习社区。
             </Text>
           </View>
           <View style={{ marginTop: space(3), backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: `${space(2)} ${space(3)}` }}>
@@ -270,6 +387,8 @@ export default function AdminSchoolSubmissionsPage() {
                 setStatusFilter(option)
                 setSelectedId('')
                 setAdminNote('')
+                setPublishPreview({ ok: true })
+                setDuplicateCandidates([])
                 await loadSubmissions(option)
               }}
             />
@@ -311,6 +430,7 @@ export default function AdminSchoolSubmissionsPage() {
                 </View>
                 <View style={{ marginTop: space(2), display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
                   <AppChip text={formatStatusLabel(item.status)} tone='brand' />
+                  {item.publishedSchoolId ? <AppChip text={`社区 #${item.publishedSchoolId}`} tone='accent' /> : null}
                   {item.contentSecurityStatus ? <AppChip text={formatSecurityStatus(item.contentSecurityStatus)} tone={getSecurityTone(item.contentSecurityStatus) as any} /> : null}
                 </View>
               </AppCard>
@@ -329,32 +449,69 @@ export default function AdminSchoolSubmissionsPage() {
             <Text style={{ ...typography.sectionTitle, color: palette.text, marginBottom: space(2) }}>处理详情</Text>
 
             <View style={{ marginBottom: space(3) }}>
-              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>发布字段与审核信息</Text>
+              <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>发布预览</Text>
               <View style={{ marginTop: space(2), backgroundColor: palette.cardSoft, borderRadius: radius.md, padding: space(3), border: `1px solid ${palette.line}` }}>
                 <Text style={{ ...typography.caption, color: palette.subtext, whiteSpace: 'pre-wrap' }}>
-                  {formatSubmissionForClipboard(selectedSubmission, adminNote)}
+                  {detailLoading ? '生成中...' : previewText}
                 </Text>
               </View>
               <View style={{ marginTop: space(2) }}>
-                <AdminActionButton text='复制发布字段' variant='secondary' onClick={handleCopy} />
+                <AdminActionButton text='复制发布预览 JSON' variant='secondary' onClick={handleCopyPreview} />
               </View>
             </View>
+
+            {(publishPreview.warnings || []).length > 0 ? (
+              <View style={{ marginBottom: space(3) }}>
+                <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>风险提示</Text>
+                <View style={{ marginTop: space(2), backgroundColor: palette.warningSoft, borderRadius: radius.md, padding: space(3), border: `1px solid ${palette.line}` }}>
+                  {(publishPreview.warnings || []).map((warning, idx) => (
+                    <View key={`${idx}-${warning}`} style={{ marginBottom: idx === (publishPreview.warnings || []).length - 1 ? '0' : space(2) }}>
+                      <Text style={{ ...typography.caption, color: palette.subtext }}>• {warning}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {duplicateCandidates.length > 0 ? (
+              <View style={{ marginBottom: space(3) }}>
+                <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>疑似重复，需要人工验证</Text>
+                <View style={{ marginTop: space(2), backgroundColor: palette.warningSoft, borderRadius: radius.md, padding: space(3), border: `1px solid ${palette.line}` }}>
+                  {duplicateCandidates.map((candidate) => (
+                    <View key={candidate.id} style={{ marginBottom: space(3) }}>
+                      <Text style={{ ...typography.caption, color: palette.text }}>
+                        #{candidate.id} {candidate.name}｜重合字：{(candidate.matchedChars || []).join('、') || '未知'}
+                      </Text>
+                      <View style={{ marginTop: space(2), display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
+                        <AdminActionButton text='合并到此' loading={reviewLoading} variant='secondary' onClick={() => handlePublish('merge', candidate.id)} />
+                      </View>
+                    </View>
+                  ))}
+                  <AdminActionButton text='确认不是重复，继续发布新社区' loading={reviewLoading} variant='success' onClick={() => handlePublish('continue')} marginRight='0' />
+                </View>
+              </View>
+            ) : null}
 
             <View style={{ marginBottom: space(3) }}>
               <Text style={{ ...typography.caption, color: palette.brand, fontWeight: '700' }}>审核备注</Text>
               <View style={{ marginTop: space(2) }}>
-                <FormInputBox focused={noteFocused} marginBottom='0'>
+                <FormInputBox focused={focusedField === 'adminNote'} marginBottom='0'>
                   <Textarea
                     value={adminNote}
-                    placeholder='例如：已录入为新社区；已合并为某社区新地点；重复；信息不足拒绝'
+                    placeholder='例如：一键发布为新社区；合并到已有社区；重复；信息不足拒绝'
                     maxlength={300}
-                    onFocus={() => setNoteFocused(true)}
-                    onBlur={() => setNoteFocused(false)}
+                    onFocus={() => setFocusedField('adminNote')}
+                    onBlur={() => setFocusedField('')}
                     onInput={(e) => setAdminNote(e.detail.value)}
                     style={{ width: '100%', minHeight: '80px', ...typography.body, color: palette.text }}
                   />
                 </FormInputBox>
               </View>
+            </View>
+
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: space(3) }}>
+              <AdminActionButton text='一键发布到社区库' loading={reviewLoading} variant='success' onClick={() => handlePublish()} />
+              <AdminActionButton text='复制旧版发布字段' variant='secondary' onClick={handleCopy} />
             </View>
 
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>

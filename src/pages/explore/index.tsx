@@ -93,6 +93,20 @@ function getSchoolProvinceLabels(school: School) {
   return Array.from(new Set(labels))
 }
 
+
+function isVisibleSchoolLocation(location: any) {
+  return location && location.status !== 'deleted' && location.status !== 'removed' && location.status !== 'archived' && location.status !== 'hidden'
+}
+
+function countSchoolLocationsForDisplay(schools: School[], selectedProvince: string) {
+  return schools.reduce((sum, school) => {
+    const locations = Array.isArray(school.locations) ? school.locations.filter(isVisibleSchoolLocation) : []
+    if (locations.length === 0) return sum + (!selectedProvince || school.province === selectedProvince ? 1 : 0)
+    if (!selectedProvince) return sum + locations.length
+    return sum + locations.filter((location) => String(location.province || '').trim() === selectedProvince).length
+  }, 0)
+}
+
 function countSchoolsByProvince(schools: School[]) {
   const provinceSchoolIds = new Map<string, Set<string>>()
   schools.forEach((school, index) => {
@@ -321,13 +335,7 @@ export default function ExplorePage() {
     return ids.size
   }, [schools, filteredMarkers, selectedProvince])
 
-  const schoolLocationCount = useMemo(() => {
-    return filteredMarkers.reduce((sum, marker) => {
-      if (marker.type === 'school') return sum + 1
-      if (marker.type === 'school_cluster') return sum + (marker.schoolPointCount || marker.clusterSchools?.length || 0)
-      return sum
-    }, 0)
-  }, [filteredMarkers])
+  const schoolLocationCount = useMemo(() => countSchoolLocationsForDisplay(schools, selectedProvince), [schools, selectedProvince])
 
   const schoolFilterText = schoolLocationCount === schoolCount
     ? `学习社区 ${schoolCount}`

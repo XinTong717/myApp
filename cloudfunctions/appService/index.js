@@ -8,6 +8,7 @@ const userHandlers = require('./handlers/userProfile')
 const mapUserHandlers = require('./handlers/mapUsers')
 const adminHandlers = require('./handlers/admin')
 const adminPublishHandlers = require('./handlers/adminPublish')
+const adminSchoolPublishHandlers = require('./handlers/adminSchoolPublish')
 const legalConsentHandlers = require('./handlers/legalConsent')
 const clientErrorLogHandlers = require('./handlers/clientErrorLog')
 const { hasCurrentConsent } = require('./lib/legalConsent')
@@ -22,6 +23,8 @@ const FAIL_CLOSED_RATE_LIMIT_ACTIONS = new Set([
   'toggleEventInterest',
   'getEventContactInfo',
   'publishEventDirect',
+  'publishSchoolDirect',
+  'hidePublishedSchool',
   'reviewEventSubmission',
 ])
 
@@ -104,6 +107,7 @@ const userActionHandlers = {
 const adminActionHandlers = {
   ...adminHandlers,
   ...adminPublishHandlers,
+  ...adminSchoolPublishHandlers,
 }
 
 // Person-to-person request actions are intentionally not registered in the audit build.

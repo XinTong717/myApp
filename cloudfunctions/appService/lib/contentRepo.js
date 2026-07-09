@@ -7,7 +7,7 @@ const EVENT_LIST_DEFAULT_LIMIT = 100
 const EVENT_LIST_MAX_LIMIT = 200
 const EVENT_LIST_SCAN_LIMIT = 300
 const SCHOOL_LOCATION_COLLECTION = 'school_locations'
-const DELETED_STATUSES = new Set(['deleted', 'removed', 'archived'])
+const DELETED_STATUSES = new Set(['deleted', 'removed', 'archived', 'hidden'])
 
 const SCHOOL_LIST_FIELD_SELECTION = {
   id: true,
@@ -166,7 +166,7 @@ async function listSchoolLocationsByIds(schoolIds) {
     try {
       const res = await db.collection(SCHOOL_LOCATION_COLLECTION)
         .where({ school_id: _.in(idChunk) })
-        .field({ school_id: true, province: true, city: true, address_note: true, contact_note: true, status: true, source: true, latitude: true, longitude: true, geocode_status: true, coordinate_level: true })
+        .field({ school_id: true, province: true, city: true, address_note: true, contact_note: true, status: true, source: true, latitude: true, longitude: true, geocode_status: true, coordinate_level: true, location_type: true, is_online: true })
         .limit(SCHOOL_LOCATION_QUERY_LIMIT)
         .get()
 
@@ -221,6 +221,8 @@ function attachSchoolLocations(schools, locations) {
         ...normalizeLocationCoord(location),
         geocode_status: normalizeString(location.geocode_status),
         coordinate_level: normalizeString(location.coordinate_level),
+        location_type: normalizeString(location.location_type || (location.is_online ? 'online' : 'offline')),
+        is_online: location.is_online === true || normalizeString(location.location_type) === 'online',
       })
     })
   }
@@ -259,6 +261,8 @@ function toSchoolMarker(school) {
       ...normalizeLocationCoord(location),
       geocode_status: normalizeString(location.geocode_status),
       coordinate_level: normalizeString(location.coordinate_level),
+      location_type: normalizeString(location.location_type || (location.is_online ? 'online' : 'offline')),
+      is_online: location.is_online === true || normalizeString(location.location_type) === 'online',
     })) : [],
     location_count: Number(school.location_count || 0),
   }
