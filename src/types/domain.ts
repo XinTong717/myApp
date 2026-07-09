@@ -96,9 +96,11 @@ export type SchoolLocationItem = {
   longitude?: number
   geocode_status?: string
   coordinate_level?: string
+  location_type?: 'online' | 'offline' | string
+  is_online?: boolean
 }
 
-export type SchoolMarkerLocationItem = Pick<SchoolLocationItem, 'school_id' | 'province' | 'city' | 'status' | 'latitude' | 'longitude' | 'geocode_status' | 'coordinate_level'>
+export type SchoolMarkerLocationItem = Pick<SchoolLocationItem, 'school_id' | 'province' | 'city' | 'status' | 'latitude' | 'longitude' | 'geocode_status' | 'coordinate_level' | 'location_type' | 'is_online'>
 
 export type SchoolItem = {
   id: number
@@ -281,6 +283,8 @@ export type SchoolSubmissionItem = {
   reviewedBy?: string
   adminNote?: string
   contentSecurityStatus?: string
+  isOnline?: boolean
+  publishedSchoolId?: number | null
 }
 
 export type ListEventSubmissionsResult = CloudResponse<{
@@ -308,6 +312,32 @@ export type EventPublishPayloadResult = CloudResponse<{
   suggestedReviewUpdate?: Record<string, unknown>
   warnings?: string[]
   admin?: { name?: string; role?: string }
+}>
+
+
+export type SchoolDuplicateCandidate = {
+  id: number
+  name: string
+  matchedChars?: string[]
+}
+
+export type SchoolPublishPreviewResult = CloudResponse<{
+  submissionId?: string
+  schoolPayload?: Record<string, unknown>
+  locationPayload?: Record<string, unknown>
+  auditOnly?: Record<string, unknown>
+  warnings?: string[]
+  duplicateCandidates?: SchoolDuplicateCandidate[]
+  admin?: { name?: string; role?: string }
+}>
+
+export type PublishSchoolDirectResult = CloudResponse<{
+  nextStatus?: string
+  publishedSchoolId?: number
+  duplicateCandidates?: SchoolDuplicateCandidate[]
+  warnings?: string[]
+  school?: Record<string, unknown>
+  location?: Record<string, unknown>
 }>
 
 export type SchoolPublishPayloadResult = CloudResponse<{

@@ -1,5 +1,5 @@
 import { callCloud } from './cloud'
-import { getScopedCachedValue, setScopedCachedValue } from './cache'
+import { clearCachedValuesByPrefix, getScopedCachedValue, setScopedCachedValue } from './cache'
 import { runExclusive } from './internal/runExclusive'
 import type {
   SchoolDetailResult,
@@ -13,7 +13,7 @@ import type {
 } from '../types/domain'
 
 const SCHOOL_LIST_CACHE_KEY_PREFIX = 'cloud-cache:schools:list:v3:'
-const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v7:'
+const SCHOOL_MARKERS_CACHE_KEY_PREFIX = 'cloud-cache:schools:markers:v8:'
 const SCHOOL_DETAIL_CACHE_KEY_PREFIX = 'cloud-cache:schools:detail:v1:'
 const SCHOOL_LIST_TTL_MS = 30 * 60 * 1000
 const SCHOOL_MARKERS_TTL_MS = 30 * 60 * 1000
@@ -266,4 +266,11 @@ export async function submitSchool(data: Record<string, unknown>) {
 
 export async function submitCorrection(schoolId: number, schoolName: string, content: string) {
   return runExclusive(`submitCorrection:school:${schoolId}`, () => callCloud<SubmitCorrectionResult>('submitCorrection', { targetType: 'school', targetId: schoolId, targetTitle: schoolName, content }))
+}
+
+
+export function clearSchoolCaches() {
+  clearCachedValuesByPrefix(SCHOOL_LIST_CACHE_KEY_PREFIX)
+  clearCachedValuesByPrefix(SCHOOL_MARKERS_CACHE_KEY_PREFIX)
+  clearCachedValuesByPrefix(SCHOOL_DETAIL_CACHE_KEY_PREFIX)
 }
