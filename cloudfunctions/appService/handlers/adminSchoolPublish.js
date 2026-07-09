@@ -303,8 +303,23 @@ async function enrichLocationPayload(locationPayload, schoolName) {
   }
 }
 
+const DUPLICATE_NAME_STOP_WORDS = [
+  '学校',
+  '学园',
+  '学堂',
+  '中心',
+]
+
+function normalizeNameForDuplicateCheck(value) {
+  let text = normalizeString(value).replace(/[\\s\\p{P}\\p{S}]/gu, '')
+  DUPLICATE_NAME_STOP_WORDS.forEach((word) => {
+    text = text.split(word).join('')
+  })
+  return text
+}
+
 function significantNameChars(value) {
-  return new Set(normalizeString(value).replace(/[\s\p{P}\p{S}]/gu, '').split('').filter(Boolean))
+  return new Set(normalizeNameForDuplicateCheck(value).split('').filter(Boolean))
 }
 
 function overlapChars(a, b) {
