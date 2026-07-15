@@ -1,0 +1,72 @@
+name: Polish event detail field fidelity
+
+on:
+  push:
+    branches:
+      - agent/event-early-bird-list-summary
+    paths:
+      - .github/workflows/agent-event-detail-polish.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/event-early-bird-list-summary
+          fetch-depth: 0
+
+      - name: Patch field fidelity
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected snippet not found in {path}: {old!r}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          replace_once(
+              'src/pkg/events/submit/index.tsx',
+              "    if (signupDeadlineDate && signupDeadlineDate > startDate) { Taro.showToast({ title: '报名截止日期不能晚于开始日期', icon: 'none' }); return }\n",
+              ''
+          )
+
+          replace_once(
+              'cloudfunctions/appService/lib/eventPublishPayload.js',
+              "function buildLocation(submission) {\n  const location = String(submission.location || '').trim()\n  const province = String(submission.province || '').trim()\n  const city = String(submission.city || '').trim()\n  if (submission.isOnline) return location || '线上'\n  return location || [province, city].filter(Boolean).join('') || '待定'\n}",
+              "function buildLocation(submission) {\n  return String(submission.location || '').trim()\n}"
+          )
+          replace_once(
+              'cloudfunctions/appService/lib/eventPublishPayload.js',
+              "线下活动未填写具体地点，当前会用省市兜底",
+              "线下活动未填写具体地点；列表会用所在城市兜底，详情页会显示未填写"
+          )
+
+          replace_once(
+              'src/pages/events/shared.ts',
+              "  if ((!minText || minText === '全年龄') && !maxText) return '全年龄'\n  if (!minText || minText === '全年龄') return maxText || '全年龄'",
+              "  if (!minText && !maxText) return '未注明'\n  if (minText === '全年龄' && !maxText) return '全年龄'\n  if (!minText || minText === '全年龄') return maxText || '全年龄'"
+          )
+          PY
+
+      - name: Verify source
+        run: |
+          npm ci
+          npm run typecheck
+          npm run check:actions
+
+      - name: Commit and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/agent-event-detail-polish.yml
+          git add src/pkg/events/submit/index.tsx cloudfunctions/appService/lib/eventPublishPayload.js src/pages/events/shared.ts
+          git commit -m "fix: preserve submitted event field meaning"
+          git push origin HEAD:agent/event-early-bird-list-summary
