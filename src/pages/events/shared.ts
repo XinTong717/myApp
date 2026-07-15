@@ -106,7 +106,8 @@ export function isEventEnded(event: Pick<EventItem, 'status' | 'start_time' | 'e
 export function formatEventAgeRange(event: Pick<EventItem, 'min_age_requirement' | 'max_age_requirement'>) {
   const minText = String(event.min_age_requirement || '').trim()
   const maxText = String(event.max_age_requirement || '').trim()
-  if ((!minText || minText === '全年龄') && !maxText) return '全年龄'
+  if (!minText && !maxText) return '未注明'
+  if (minText === '全年龄' && !maxText) return '全年龄'
   if (!minText || minText === '全年龄') return maxText || '全年龄'
   if (!maxText) return minText
   const minMatch = minText.match(/\d+(?:\.\d+)?/)

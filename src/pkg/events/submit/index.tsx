@@ -234,7 +234,6 @@ export default function SubmitEventPage() {
     if (audienceWho.includes('其他') && !audienceWhoOther.trim()) { Taro.showToast({ title: '请补充参与对象中的“其他”', icon: 'none' }); return }
     if (!startDate) { Taro.showToast({ title: '请选择开始日期', icon: 'none' }); return }
     if (endDate && endDate < startDate) { Taro.showToast({ title: '结束日期不能早于开始日期', icon: 'none' }); return }
-    if (signupDeadlineDate && signupDeadlineDate > startDate) { Taro.showToast({ title: '报名截止日期不能晚于开始日期', icon: 'none' }); return }
     if (isRecurring && !recurrencePattern) { Taro.showToast({ title: '请选择周期时间', icon: 'none' }); return }
     if (isRecurring && recurrencePattern === '其他' && !recurrenceOther.trim()) { Taro.showToast({ title: '请填写其他周期时间', icon: 'none' }); return }
     if (!fee) { Taro.showToast({ title: '请选择费用情况', icon: 'none' }); return }

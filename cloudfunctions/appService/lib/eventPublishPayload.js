@@ -52,11 +52,7 @@ function buildEventStatus(submission) {
 }
 
 function buildLocation(submission) {
-  const location = String(submission.location || '').trim()
-  const province = String(submission.province || '').trim()
-  const city = String(submission.city || '').trim()
-  if (submission.isOnline) return location || '线上'
-  return location || [province, city].filter(Boolean).join('') || '待定'
+  return String(submission.location || '').trim()
 }
 
 function buildFee(submission) {
@@ -134,7 +130,7 @@ function buildWarnings(submission, payload) {
   const organizerContact = String(submission.organizerContact || '').trim()
   const contentSecurityStatus = readContentSecurityStatus(submission)
   if (!officialUrl && !signupNote && !organizerContact) warnings.push('未提供公开链接、报名说明或组织者联系方式，发布前请确认活动可被用户实际联系到')
-  if (!submission.location && !submission.isOnline) warnings.push('线下活动未填写具体地点，当前会用省市兜底')
+  if (!submission.location && !submission.isOnline) warnings.push('线下活动未填写具体地点；列表会用所在城市兜底，详情页会显示未填写')
   if (!submission.endTime) warnings.push('未填写结束日期，前端会按单日活动展示')
   if (payload.status === 'ended') warnings.push('该活动报名已截止，通常不建议作为招募中活动发布')
   if (!start) warnings.push('开始日期格式异常，发布前需人工修正')
