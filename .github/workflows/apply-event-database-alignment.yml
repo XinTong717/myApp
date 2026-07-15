@@ -25,6 +25,20 @@ jobs:
           cache: npm
       - name: Apply alignment patch
         run: |
+          node <<'NODE'
+          const fs = require('fs')
+          const path = 'scripts/apply-event-database-alignment.cjs'
+          let text = fs.readFileSync(path, 'utf8')
+          const alreadyAppliedStatusBlock = `  text = replaceOnce(text,
+          \`  status: [ALL_FILTER, 'recruiting', 'recurring', 'ended'],\`,
+          \`  status: [ALL_FILTER, 'recruiting', 'ended'],\`,
+          'frontend status options')
+          `
+          if (!text.includes(alreadyAppliedStatusBlock)) throw new Error('Could not find frontend status compatibility block')
+          text = text.replace(alreadyAppliedStatusBlock, '')
+          fs.writeFileSync(path, text)
+          NODE
+
           set +e
           node scripts/apply-event-database-alignment.cjs > /tmp/event-alignment.log 2>&1
           code=$?
@@ -34,10 +48,20 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add scripts/event-alignment-error.txt
-            git commit -m "chore: capture event alignment patch error"
+            git diff --cached --quiet || git commit -m "chore: capture event alignment patch error"
             git push origin HEAD:agent/event-early-bird-list-summary
             exit "$code"
           fi
+
+          node <<'NODE'
+          const fs = require('fs')
+          const path = 'src/pages/events/index.tsx'
+          let text = fs.readFileSync(path, 'utf8')
+          const unusedImport = '  EVENT_TYPE_LABELS,\n'
+          if (!text.includes(unusedImport)) throw new Error('Could not find legacy event type import')
+          text = text.replace(unusedImport, '')
+          fs.writeFileSync(path, text)
+          NODE
       - name: Install dependencies
         run: npm ci
       - name: Validate
