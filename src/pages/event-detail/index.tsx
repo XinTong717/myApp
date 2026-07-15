@@ -21,27 +21,11 @@ import CorrectionCard from '../../components/common/CorrectionCard'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import type { EventItem } from '../events/shared'
-import { EVENT_TYPE_LABELS, formatEventAgeRange, formatEventDate, getEventIconBg, getEventStatusInfo } from '../events/shared'
+import { formatEventAgeRange, formatEventAudience, formatEventDate, formatEventTypeLabels, getEventIconBg, getEventStatusInfo } from '../events/shared'
 
 const EVENT_DETAIL_REFRESH_TTL_MS = 45 * 1000
 
 type PublicSignupInfo = { officialUrl?: string; signupNote?: string }
-
-function normalizeLabels(value: unknown) {
-  const list = Array.isArray(value) ? value : String(value || '').split(/[、,，/|｜]+/)
-  return Array.from(new Set(list.map((item) => String(item || '').trim()).filter(Boolean)))
-}
-
-function formatEventTypes(event: EventItem) {
-  const labels = normalizeLabels(event.event_types)
-  if (labels.length > 0) return labels.join('、')
-  return EVENT_TYPE_LABELS[event.event_type] || event.event_type || '未注明'
-}
-
-function formatAudience(event: EventItem) {
-  const labels = normalizeLabels(event.audience_who)
-  return labels.length > 0 ? labels.join('、') : '未注明'
-}
 
 function formatRegion(event: EventItem) {
   const parts = [event.province, event.city].map((item) => String(item || '').trim()).filter((item) => item && item !== '线上')
@@ -129,7 +113,7 @@ function EventContent(props: {
           </View>
         </View>
         <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
-          <AppTag text={EVENT_TYPE_LABELS[event.event_type] || event.event_type} tone='brand' />
+          <AppTag text={formatEventTypeLabels(event)} tone='brand' />
           {statusInfo ? <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} /> : null}
           <AppTag text={event.is_online ? '线上' : '线下'} tone='green' />
           {interestCount > 0 ? <AppTag text={`${interestCount} 人感兴趣`} backgroundColor={palette.surfaceWarm} textColor={palette.brand} /> : null}
@@ -149,8 +133,8 @@ function EventContent(props: {
 
       <AppInfoRow label='线上活动' value={event.is_online ? '是，主要在线上进行' : '否，主要线下进行'} />
       {!event.is_online ? <AppInfoRow label='所在城市' value={formatRegion(event)} /> : null}
-      <AppInfoRow label='活动类型' value={formatEventTypes(event)} />
-      <AppInfoRow label='参与对象' value={formatAudience(event)} />
+      <AppInfoRow label='活动类型' value={formatEventTypeLabels(event)} />
+      <AppInfoRow label='参与对象' value={formatEventAudience(event)} />
       <AppInfoRow label='年龄区间' value={formatEventAgeRange(event)} />
       <AppInfoRow label='开始日期' value={formatEventDate(event.start_time) || '待定'} />
       {event.end_time ? <AppInfoRow label='结束日期' value={formatEventDate(event.end_time)} /> : null}

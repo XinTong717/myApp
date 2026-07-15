@@ -1,5 +1,6 @@
 const EVENT_TYPE_MAP = {
   '工作坊': 'workshop',
+  '营期/短期营': 'camp',
   '线下聚会': 'meetup',
   '交友聚会': 'meetup',
   '线上活动': 'online',
@@ -9,7 +10,7 @@ const EVENT_TYPE_MAP = {
   '一对一': 'one_on_one',
   '团体': 'group',
   '夜聊/讨论': 'discussion',
-  '其他': 'meetup',
+  '其他': 'other',
 }
 
 const SECURITY_RECHECK_REQUIRED_STATUSES = new Set(['check_failed', 'failed', 'error', 'unchecked'])
@@ -41,7 +42,9 @@ function firstEventType(submission) {
 }
 
 function normalizeEventType(submission) {
-  return EVENT_TYPE_MAP[firstEventType(submission)] || 'meetup'
+  const eventType = firstEventType(submission)
+  if (String(eventType).startsWith('其他：')) return 'other'
+  return EVENT_TYPE_MAP[eventType] || 'other'
 }
 
 function buildEventStatus(submission) {

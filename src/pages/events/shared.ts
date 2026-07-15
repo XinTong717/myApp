@@ -31,6 +31,7 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   night_chat: '夜聊',
   parent_observer: '家长观察',
   community_program: '项目招募',
+  camp: '营期/短期营',
   workshop: '工作坊',
   meetup: '交友聚会',
   discussion: '圆桌讨论',
@@ -38,6 +39,7 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   online: '线上活动',
   one_on_one: '一对一',
   group: '团体',
+  other: '其他',
 }
 
 export const EVENT_STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
@@ -49,6 +51,7 @@ const EVENT_TYPE_ICON_BG: Record<string, string> = {
   night_chat: palette.brandSoft,
   parent_observer: palette.accent2Soft,
   community_program: palette.brandSoft,
+  camp: palette.greenSoft,
   workshop: palette.accent2Soft,
   meetup: palette.greenSoft,
   discussion: palette.iconBgAlt,
@@ -56,9 +59,30 @@ const EVENT_TYPE_ICON_BG: Record<string, string> = {
   online: palette.accent2Soft,
   one_on_one: palette.iconBgAlt,
   group: palette.greenSoft,
+  other: palette.iconBg,
 }
 
 const EVENT_TIMEZONE = 'Asia/Shanghai'
+
+export function normalizeEventLabels(value: unknown): string[] {
+  const list = Array.isArray(value) ? value : String(value || '').split(/[、,，/|｜]+/)
+  return Array.from(new Set(list.map((item) => String(item || '').trim()).filter(Boolean)))
+}
+
+export function formatEventTypeLabels(event: Pick<EventItem, 'event_type' | 'event_types'>) {
+  const databaseLabels = normalizeEventLabels(event.event_types)
+  if (databaseLabels.length > 0) return databaseLabels.join('、')
+  return EVENT_TYPE_LABELS[event.event_type] || String(event.event_type || '').trim() || '未注明'
+}
+
+export function formatEventAudience(event: Pick<EventItem, 'audience_who'>) {
+  const databaseLabels = normalizeEventLabels(event.audience_who)
+  return databaseLabels.length > 0 ? databaseLabels.join('、') : '未注明'
+}
+
+export function isEventAgeUnspecified(event: Pick<EventItem, 'min_age_requirement' | 'max_age_requirement'>) {
+  return !String(event.min_age_requirement || '').trim() && !String(event.max_age_requirement || '').trim()
+}
 
 export function getEventIconBg(eventType: string) {
   return EVENT_TYPE_ICON_BG[eventType] || palette.iconBg

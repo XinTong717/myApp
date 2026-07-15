@@ -14,7 +14,7 @@ import AppPromptBanner from '../../../components/common/AppPromptBanner'
 import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
 import FormInputBox from '../../../components/common/FormInputBox'
 
-const EVENT_TYPE_OPTIONS = ['工作坊', '营期/短期营', '项目招募', '圆桌讨论', '交友聚会', '一对一', '团体', '其他']
+const EVENT_TYPE_OPTIONS = ['工作坊', '营期/短期营', '项目招募', '圆桌讨论', '交友聚会', '家庭活动', '一对一', '团体', '其他']
 const AUDIENCE_WHO_OPTIONS = ['家长', '教育工作者', '儿童/青少年（需家长陪同）', '儿童/青少年（独立参加）', '开放给所有人', '其他']
 const FEE_OPTIONS = ['免费', '付费', '公益随喜', '费用待确认']
 const RECURRENCE_OPTIONS = ['每周', '每月', '每季度', '其他']
@@ -150,6 +150,7 @@ export default function SubmitEventPage() {
   const [eventTypeOther, setEventTypeOther] = useState('')
   const [audienceWho, setAudienceWho] = useState<string[]>([])
   const [audienceWhoOther, setAudienceWhoOther] = useState('')
+  const [hasAgeRequirement, setHasAgeRequirement] = useState(false)
   const [ageRangeMin, setAgeRangeMin] = useState(0)
   const [ageRangeMax, setAgeRangeMax] = useState(30)
   const [startDate, setStartDate] = useState('')
@@ -173,7 +174,7 @@ export default function SubmitEventPage() {
   const resolvedRecurrencePattern = recurrencePattern === '其他' ? `其他：${recurrenceOther.trim()}` : recurrencePattern
   const hasUnsavedContent = !!(
     title.trim() || isOnline || province || cityOption || customCity.trim() || eventTypes.length > 0 || eventTypeOther.trim() ||
-    audienceWho.length > 0 || audienceWhoOther.trim() || ageRangeMin !== AGE_RANGE_MIN || ageRangeMax !== AGE_RANGE_MAX || startDate || endDate ||
+    audienceWho.length > 0 || audienceWhoOther.trim() || hasAgeRequirement || ageRangeMin !== AGE_RANGE_MIN || ageRangeMax !== AGE_RANGE_MAX || startDate || endDate ||
     signupDeadlineDate || isRecurring || recurrencePattern || recurrenceOther.trim() || location.trim() || fee || feeDetail.trim() || earlyBirdPrice.trim() || earlyBirdDeadline || organizer.trim() || organizerContact.trim() || officialUrl.trim() ||
     signupNote.trim() || description.trim()
   )
@@ -261,7 +262,7 @@ export default function SubmitEventPage() {
         title: title.trim(), province: isOnline ? '线上' : province, city: isOnline ? '线上' : currentCity, eventTypes,
         eventTypeOther: eventTypes.includes('其他') ? eventTypeOther.trim() : '',
         audienceWho, audienceWhoOther: audienceWho.includes('其他') ? audienceWhoOther.trim() : '',
-        minAgeRequirement: getMinAgeRequirement(ageRangeMin), maxAgeRequirement: getMaxAgeRequirement(ageRangeMax),
+        minAgeRequirement: hasAgeRequirement ? getMinAgeRequirement(ageRangeMin) : '', maxAgeRequirement: hasAgeRequirement ? getMaxAgeRequirement(ageRangeMax) : '',
         startTime: startDate,
         endTime: endDate,
         signupDeadline: toEndOfDay(signupDeadlineDate),
@@ -309,7 +310,8 @@ export default function SubmitEventPage() {
         {eventTypes.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充活动类型中的“其他”。</Text></View><FormInputBox focused={focusedField === 'eventTypeOther'} marginBottom='0'><Input value={eventTypeOther} placeholder='例如：展览 / 沙龙 / 读书会' onFocus={() => setFocusedField('eventTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setEventTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
         <SectionTitle text='参与对象（可多选）' /><MultiPillSelect options={AUDIENCE_WHO_OPTIONS} selected={audienceWho} onChange={setAudienceWho} />
         {audienceWho.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充参与对象中的“其他”。</Text></View><FormInputBox focused={focusedField === 'audienceWhoOther'} marginBottom='0'><Input value={audienceWhoOther} placeholder='例如：大学生 / 创作者 / 社区志愿者' onFocus={() => setFocusedField('audienceWhoOther')} onBlur={() => setFocusedField('')} onInput={(e) => setAudienceWhoOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
-        <SectionTitle text='年龄区间' /><AgeRangeSlider minValue={ageRangeMin} maxValue={ageRangeMax} onChange={(minValue, maxValue) => { setAgeRangeMin(minValue); setAgeRangeMax(maxValue) }} />
+        <SectionTitle text='参与年龄（选填）' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{hasAgeRequirement ? '填写年龄区间' : '未注明 / 不适用'}</Text><Switch checked={hasAgeRequirement} color={palette.accentDeep} onChange={(e) => setHasAgeRequirement(!!e.detail.value)} /></View></FormInputBox>
+        {hasAgeRequirement ? <AgeRangeSlider minValue={ageRangeMin} maxValue={ageRangeMax} onChange={(minValue, maxValue) => { setAgeRangeMin(minValue); setAgeRangeMax(maxValue) }} /> : null}
         <SectionTitle text='开始日期' /><Picker mode='date' value={startDate} onChange={(e) => setStartDate(e.detail.value)}><FormInputBox><Text style={{ ...typography.body, color: startDate ? palette.text : palette.muted }}>{startDate || '选择日期'}</Text></FormInputBox></Picker>
         <SectionTitle text='结束日期（选填）' /><Picker mode='date' value={endDate} onChange={(e) => setEndDate(e.detail.value)}><FormInputBox><Text style={{ ...typography.body, color: endDate ? palette.text : palette.muted }}>{endDate || '选择日期'}</Text></FormInputBox></Picker>
         <SectionTitle text='报名截止日期（选填）' /><Picker mode='date' value={signupDeadlineDate} onChange={(e) => setSignupDeadlineDate(e.detail.value)}><FormInputBox><Text style={{ ...typography.body, color: signupDeadlineDate ? palette.text : palette.muted }}>{signupDeadlineDate || '选择日期'}</Text></FormInputBox></Picker>
