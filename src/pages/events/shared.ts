@@ -14,6 +14,8 @@ export type EventItem = {
   is_recurring?: boolean
   recurrence_pattern?: string
   fee_category?: string
+  early_bird_price?: string
+  early_bird_deadline?: string
   description?: string
   start_time?: string
   end_time?: string
@@ -95,6 +97,33 @@ export function getEventStatusInfo(event: Pick<EventItem, 'status' | 'start_time
 
 export function isEventEnded(event: Pick<EventItem, 'status' | 'start_time' | 'end_time' | 'signup_deadline' | 'is_recurring'>) {
   return getEventStatusKey(event) === 'ended'
+}
+
+export function formatEventAgeRange(event: Pick<EventItem, 'min_age_requirement' | 'max_age_requirement'>) {
+  const minText = String(event.min_age_requirement || '').trim()
+  const maxText = String(event.max_age_requirement || '').trim()
+  if ((!minText || minText === '全年龄') && !maxText) return '全年龄'
+  if (!minText || minText === '全年龄') return maxText || '全年龄'
+  if (!maxText) return minText
+  const minMatch = minText.match(/\d+(?:\.\d+)?/)
+  const maxMatch = maxText.match(/\d+(?:\.\d+)?/)
+  if (minMatch && maxMatch) return `${minMatch[0]}-${maxMatch[0]}岁`
+  return `${minText} - ${maxText}`
+}
+
+function formatEarlyBirdDeadline(value?: string) {
+  const date = parseEventDate(value)
+  if (!date) return ''
+  return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', timeZone: EVENT_TIMEZONE })
+}
+
+export function formatEventFee(event: Pick<EventItem, 'fee' | 'early_bird_price' | 'early_bird_deadline'>) {
+  const regularFee = String(event.fee || '').trim() || '免费'
+  const earlyBirdPrice = String(event.early_bird_price || '').trim()
+  const deadline = parseEventDate(event.early_bird_deadline)
+  if (!earlyBirdPrice || !deadline || deadline.getTime() < Date.now()) return regularFee
+  const deadlineText = formatEarlyBirdDeadline(event.early_bird_deadline)
+  return `早鸟 ${earlyBirdPrice}${deadlineText ? `（至 ${deadlineText}）` : ''}｜常规 ${regularFee}`
 }
 
 export function formatEventTime(event: Pick<EventItem, 'event_type' | 'start_time' | 'end_time' | 'is_recurring' | 'recurrence_pattern'>) {

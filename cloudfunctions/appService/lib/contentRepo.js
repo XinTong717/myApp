@@ -474,6 +474,8 @@ const EVENT_FIELD_SELECTION = {
   is_recurring: true,
   recurrence_pattern: true,
   fee_category: true,
+  early_bird_price: true,
+  early_bird_deadline: true,
   description: true,
   start_time: true,
   end_time: true,

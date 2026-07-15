@@ -23,6 +23,8 @@ export type EventItem = {
   is_recurring?: boolean
   recurrence_pattern?: string
   fee_category?: string
+  early_bird_price?: string
+  early_bird_deadline?: string
   description?: string
   start_time?: string
   end_time?: string

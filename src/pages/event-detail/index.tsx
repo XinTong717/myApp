@@ -21,7 +21,7 @@ import CorrectionCard from '../../components/common/CorrectionCard'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import type { EventItem } from '../events/shared'
-import { EVENT_TYPE_LABELS, formatEventTime, getEventIconBg, getEventStatusInfo } from '../events/shared'
+import { EVENT_TYPE_LABELS, formatEventAgeRange, formatEventFee, formatEventTime, getEventIconBg, getEventStatusInfo } from '../events/shared'
 
 const EVENT_DETAIL_REFRESH_TTL_MS = 45 * 1000
 
@@ -111,7 +111,8 @@ function EventContent(props: {
 
       <AppInfoRow label='时间' value={formatEventTime(event)} />
       <AppInfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />
-      <AppInfoRow label='费用' value={event.fee || '免费'} />
+      <AppInfoRow label='费用' value={formatEventFee(event)} />
+      <AppInfoRow label='参与年龄' value={formatEventAgeRange(event)} />
       <AppInfoRow label='组织者' value={event.organizer} />
       {!preview && publicSignupText ? <AppInfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}
 

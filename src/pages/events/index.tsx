@@ -23,6 +23,9 @@ import type { EventItem } from './shared'
 import {
   EVENT_STATUS_LABELS,
   EVENT_TYPE_LABELS,
+  formatEventAgeRange,
+  formatEventFee,
+  formatEventTime,
   getEventIconBg,
   getEventStatusInfo,
   getEventStatusKey,
@@ -350,8 +353,8 @@ export default function EventsPage() {
         const typeLabel = EVENT_TYPE_LABELS[item.event_type] || item.event_type
         const statusInfo = getEventStatusInfo(item)
         const interestedCount = interestCounts[item.id] || 0
-        const firstLine = (item.description || '').split('\n').find((line) => line.trim()) || ''
-        const summary = firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine
+        const locationText = item.is_online ? (item.location || '线上') : (item.location || getEventCity(item) || '待定')
+        const ageRangeText = formatEventAgeRange(item)
         return (
           <AppCard key={item.id} onClick={() => goToDetail(item)}>
             <View className='app-list-card__header'>
@@ -361,13 +364,13 @@ export default function EventsPage() {
             <View className='app-list-card__tags'>
               <AppTag text={typeLabel} />
               {statusInfo ? <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} /> : null}
-              <AppTag text={item.is_online ? '线上' : (getEventCity(item) || '线下')} />
-              {item.min_age_requirement ? <AppTag text={item.min_age_requirement} /> : null}
               {interestedCount > 0 ? <AppTag text={`${interestedCount} 人感兴趣`} tone='accent' /> : null}
             </View>
             <View className='app-list-card__meta-box'>
-              {summary ? <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>{summary}</Text></View> : null}
-              <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>费用：{item.fee || '免费'}</Text></View>
+              <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>时间：{formatEventTime(item)}</Text></View>
+              <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>地点：{locationText}</Text></View>
+              <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>费用：{formatEventFee(item)}</Text></View>
+              <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>参与年龄：{ageRangeText}</Text></View>
             </View>
           </AppCard>
         )

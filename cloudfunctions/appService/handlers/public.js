@@ -33,6 +33,8 @@ const EVENT_FIELD_SELECTION = {
   is_recurring: true,
   recurrence_pattern: true,
   fee_category: true,
+  early_bird_price: true,
+  early_bird_deadline: true,
   description: true,
   start_time: true,
   end_time: true,
@@ -223,7 +225,7 @@ async function submitSchool(event, wxContext) {
 async function submitEvent(event, wxContext) {
   const requestId = resolveRequestId('submit-event', event)
   const openid = wxContext.OPENID
-  const cleanData = pickStringFields(event, ['title', 'province', 'city', 'eventTypes', 'eventTypeOther', 'audienceWho', 'audienceWhoOther', 'minAgeRequirement', 'maxAgeRequirement', 'startTime', 'endTime', 'signupDeadline', 'isRecurring', 'recurrencePattern', 'isOnline', 'location', 'fee', 'feeDetail', 'organizer', 'organizerContact', 'officialUrl', 'signupNote', 'description'])
+  const cleanData = pickStringFields(event, ['title', 'province', 'city', 'eventTypes', 'eventTypeOther', 'audienceWho', 'audienceWhoOther', 'minAgeRequirement', 'maxAgeRequirement', 'startTime', 'endTime', 'signupDeadline', 'isRecurring', 'recurrencePattern', 'isOnline', 'location', 'fee', 'feeDetail', 'earlyBirdPrice', 'earlyBirdDeadline', 'organizer', 'organizerContact', 'officialUrl', 'signupNote', 'description'])
   cleanData.eventTypes = mergeOtherOption(cleanData.eventTypes || [], cleanData.eventTypeOther)
   cleanData.audienceWho = mergeOtherOption(cleanData.audienceWho || [], cleanData.audienceWhoOther)
   cleanData.eventType = (cleanData.eventTypes || []).find((item) => !String(item).startsWith('其他：')) || (cleanData.eventTypes || [])[0] || ''
@@ -235,7 +237,7 @@ async function submitEvent(event, wxContext) {
   if (!cleanData.fee) return fail(requestId, 'FEE_REQUIRED', '请填写费用信息')
   if (cleanData.isRecurring && !cleanData.recurrencePattern) return fail(requestId, 'RECURRENCE_REQUIRED', '请选择周期时间')
   const over = (v, m) => String(v || '').length > m
-  const lengthError = over(cleanData.title, 80) && '活动标题不能超过80字' || over(cleanData.city, 30) && '城市不能超过30字' || over(cleanData.location, 120) && '地点不能超过120字' || over(cleanData.fee, 80) && '费用说明不能超过80字' || over(cleanData.feeDetail, 200) && '费用补充说明不能超过200字' || over(cleanData.organizer, 80) && '组织者不能超过80字' || over(cleanData.organizerContact, 200) && '组织者联系方式不能超过200字' || over(cleanData.officialUrl, 300) && '公开链接不能超过300字' || over(cleanData.signupNote, 300) && '报名方式补充说明不能超过300字' || over(cleanData.description, 2000) && '活动简介不能超过2000字'
+  const lengthError = over(cleanData.title, 80) && '活动标题不能超过80字' || over(cleanData.city, 30) && '城市不能超过30字' || over(cleanData.location, 120) && '地点不能超过120字' || over(cleanData.fee, 80) && '费用说明不能超过80字' || over(cleanData.feeDetail, 200) && '费用补充说明不能超过200字' || over(cleanData.earlyBirdPrice, 120) && '早鸟价格不能超过120字' || over(cleanData.organizer, 80) && '组织者不能超过80字' || over(cleanData.organizerContact, 200) && '组织者联系方式不能超过200字' || over(cleanData.officialUrl, 300) && '公开链接不能超过300字' || over(cleanData.signupNote, 300) && '报名方式补充说明不能超过300字' || over(cleanData.description, 2000) && '活动简介不能超过2000字'
   if (lengthError) return fail(requestId, 'INVALID_LENGTH', lengthError)
   const startDate = new Date(cleanData.startTime)
   if (Number.isNaN(startDate.getTime())) return fail(requestId, 'INVALID_START_TIME', '开始时间格式不正确')
@@ -248,17 +250,21 @@ async function submitEvent(event, wxContext) {
     const deadlineDate = new Date(cleanData.signupDeadline)
     if (Number.isNaN(deadlineDate.getTime())) return fail(requestId, 'INVALID_SIGNUP_DEADLINE', '报名截止时间格式不正确')
   }
+  const hasEarlyBirdPrice = !!cleanData.earlyBirdPrice
+  const hasEarlyBirdDeadline = !!cleanData.earlyBirdDeadline
+  if (hasEarlyBirdPrice !== hasEarlyBirdDeadline) return fail(requestId, 'EARLY_BIRD_PAIR_REQUIRED', '早鸟价格和截止日期请一起填写')
+  if (hasEarlyBirdDeadline && Number.isNaN(new Date(cleanData.earlyBirdDeadline).getTime())) return fail(requestId, 'INVALID_EARLY_BIRD_DEADLINE', '早鸟截止日期格式不正确')
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const recentCountRes = await db.collection('event_submissions').where({ openid, createdAt: _.gte(since) }).count()
   if ((recentCountRes?.total || 0) >= DAILY_SUBMISSION_LIMIT) return fail(requestId, 'DAILY_LIMIT_REACHED', '24小时内最多可提交5次活动，请稍后再试')
-  const sec = await runMsgSecCheck({ content: [cleanData.title, stringifyLabels(cleanData.eventTypes || []), stringifyLabels(cleanData.audienceWho || []), cleanData.minAgeRequirement, cleanData.maxAgeRequirement, cleanData.signupDeadline, cleanData.recurrencePattern, cleanData.location, cleanData.fee, cleanData.feeDetail, cleanData.organizer, cleanData.organizerContact, cleanData.officialUrl, cleanData.signupNote, cleanData.description].filter(Boolean).join('\n'), openid, scene: 2 })
+  const sec = await runMsgSecCheck({ content: [cleanData.title, stringifyLabels(cleanData.eventTypes || []), stringifyLabels(cleanData.audienceWho || []), cleanData.minAgeRequirement, cleanData.maxAgeRequirement, cleanData.signupDeadline, cleanData.recurrencePattern, cleanData.location, cleanData.fee, cleanData.feeDetail, cleanData.earlyBirdPrice, cleanData.earlyBirdDeadline, cleanData.organizer, cleanData.organizerContact, cleanData.officialUrl, cleanData.signupNote, cleanData.description].filter(Boolean).join('\n'), openid, scene: 2 })
   if (!sec.ok) return fail(requestId, sec.code || 'CONTENT_SECURITY_BLOCKED', sec.message)
   const normalizedKey = [cleanData.title, cleanData.province, cleanData.city, cleanData.startTime].map((item) => String(item || '').trim().toLowerCase()).join('::')
   const existing = await db.collection('event_submissions').where({ normalizedKey, status: _.in(ACTIVE_SUBMISSION_STATUSES) }).limit(1).get()
   if (existing.data.length > 0) return fail(requestId, 'DUPLICATE_SUBMISSION', '这个活动已在审核队列或已收录，无需重复提交')
   const submitter = await getUserProfileByOpenid(openid, ['displayName', 'roles', 'city']) || {}
   try {
-    await db.collection('event_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, title: cleanData.title, province: cleanData.province, city: cleanData.city, eventType: cleanData.eventType || '', eventTypes: cleanData.eventTypes || [], audienceWho: stringifyLabels(cleanData.audienceWho || []), audienceWhoTags: cleanData.audienceWho || [], minAgeRequirement: cleanData.minAgeRequirement || '', maxAgeRequirement: cleanData.maxAgeRequirement || '', startTime: cleanData.startTime, endTime: cleanData.endTime || '', signupDeadline: cleanData.signupDeadline || '', isRecurring: !!cleanData.isRecurring, recurrencePattern: cleanData.isRecurring ? cleanData.recurrencePattern || '' : '', isOnline: !!cleanData.isOnline, location: cleanData.location || '', fee: cleanData.fee || '', feeDetail: cleanData.feeDetail || '', organizer: cleanData.organizer || '', organizerContact: cleanData.organizerContact || '', officialUrl: cleanData.officialUrl || '', signupNote: cleanData.signupNote || '', description: cleanData.description || '', ...buildContentSecurityFields(sec), status: 'pending', adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
+    await db.collection('event_submissions').add({ data: { openid, submitterDisplayName: submitter.displayName || '', submitterRoles: submitter.roles || [], submitterCity: submitter.city || '', normalizedKey, title: cleanData.title, province: cleanData.province, city: cleanData.city, eventType: cleanData.eventType || '', eventTypes: cleanData.eventTypes || [], audienceWho: stringifyLabels(cleanData.audienceWho || []), audienceWhoTags: cleanData.audienceWho || [], minAgeRequirement: cleanData.minAgeRequirement || '', maxAgeRequirement: cleanData.maxAgeRequirement || '', startTime: cleanData.startTime, endTime: cleanData.endTime || '', signupDeadline: cleanData.signupDeadline || '', isRecurring: !!cleanData.isRecurring, recurrencePattern: cleanData.isRecurring ? cleanData.recurrencePattern || '' : '', isOnline: !!cleanData.isOnline, location: cleanData.location || '', fee: cleanData.fee || '', feeDetail: cleanData.feeDetail || '', earlyBirdPrice: cleanData.earlyBirdPrice || '', earlyBirdDeadline: cleanData.earlyBirdDeadline || '', organizer: cleanData.organizer || '', organizerContact: cleanData.organizerContact || '', officialUrl: cleanData.officialUrl || '', signupNote: cleanData.signupNote || '', description: cleanData.description || '', ...buildContentSecurityFields(sec), status: 'pending', adminNote: '', reviewedAt: null, reviewedBy: '', createdAt: db.serverDate(), updatedAt: db.serverDate() } })
     return ok(requestId, { message: '提交成功，已进入审核队列' })
   } catch (err) {
     console.error('appService submitEvent error:', err)

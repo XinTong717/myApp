@@ -30,6 +30,7 @@ type FocusField =
   | 'recurrenceOther'
   | 'location'
   | 'feeDetail'
+  | 'earlyBirdPrice'
   | 'organizer'
   | 'organizerContact'
   | 'officialUrl'
@@ -163,6 +164,8 @@ export default function SubmitEventPage() {
   const [location, setLocation] = useState('')
   const [fee, setFee] = useState('')
   const [feeDetail, setFeeDetail] = useState('')
+  const [earlyBirdPrice, setEarlyBirdPrice] = useState('')
+  const [earlyBirdDeadline, setEarlyBirdDeadline] = useState('')
   const [organizer, setOrganizer] = useState('')
   const [organizerContact, setOrganizerContact] = useState('')
   const [officialUrl, setOfficialUrl] = useState('')
@@ -174,7 +177,7 @@ export default function SubmitEventPage() {
   const hasUnsavedContent = !!(
     title.trim() || isOnline || province || cityOption || customCity.trim() || eventTypes.length > 0 || eventTypeOther.trim() ||
     audienceWho.length > 0 || audienceWhoOther.trim() || ageRangeMin !== AGE_RANGE_MIN || ageRangeMax !== AGE_RANGE_MAX || startDate || startTime || endDate || endTime ||
-    signupDeadlineDate || signupDeadlineTime || isRecurring || recurrencePattern || recurrenceOther.trim() || location.trim() || fee || feeDetail.trim() || organizer.trim() || organizerContact.trim() || officialUrl.trim() ||
+    signupDeadlineDate || signupDeadlineTime || isRecurring || recurrencePattern || recurrenceOther.trim() || location.trim() || fee || feeDetail.trim() || earlyBirdPrice.trim() || earlyBirdDeadline || organizer.trim() || organizerContact.trim() || officialUrl.trim() ||
     signupNote.trim() || description.trim()
   )
 
@@ -239,6 +242,7 @@ export default function SubmitEventPage() {
     if (isRecurring && recurrencePattern === '其他' && !recurrenceOther.trim()) { Taro.showToast({ title: '请填写其他周期时间', icon: 'none' }); return }
     if (!fee) { Taro.showToast({ title: '请选择费用情况', icon: 'none' }); return }
     if (fee === '付费' && !feeDetail.trim()) { Taro.showToast({ title: '请补充付费说明', icon: 'none' }); return }
+    if (!!earlyBirdPrice.trim() !== !!earlyBirdDeadline) { Taro.showToast({ title: '早鸟价格和截止日期请一起填写', icon: 'none' }); return }
     if (!organizer.trim()) { Taro.showToast({ title: '请填写组织者', icon: 'none' }); return }
     if (!description.trim()) { Taro.showToast({ title: '请填写活动简介', icon: 'none' }); return }
 
@@ -267,6 +271,8 @@ export default function SubmitEventPage() {
         signupDeadline: signupDeadlineDate && signupDeadlineTime ? combineDateTime(signupDeadlineDate, signupDeadlineTime) : '',
         isRecurring, recurrencePattern: isRecurring ? resolvedRecurrencePattern : '',
         isOnline, location: location.trim(), fee, feeDetail: fee === '付费' ? feeDetail.trim() : '',
+        earlyBirdPrice: fee === '付费' ? earlyBirdPrice.trim() : '',
+        earlyBirdDeadline: fee === '付费' && earlyBirdDeadline ? `${earlyBirdDeadline}T23:59:00${CHINA_TIMEZONE_OFFSET}` : '',
         organizer: organizer.trim(), organizerContact: organizerContact.trim(), officialUrl: officialUrl.trim(),
         signupNote: signupNote.trim(), description: description.trim(),
       })
@@ -315,8 +321,15 @@ export default function SubmitEventPage() {
         <SectionTitle text='是否周期性进行' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isRecurring ? '是，周期性进行' : '否，单次或暂未确认'}</Text><Switch checked={isRecurring} color={palette.accentDeep} onChange={(e) => { const next = !!e.detail.value; setIsRecurring(next); if (!next) { setRecurrencePattern(''); setRecurrenceOther('') } }} /></View></FormInputBox>
         {isRecurring && <><SectionTitle text='周期时间' /><SinglePillSelect options={RECURRENCE_OPTIONS} selected={recurrencePattern} onChange={(value) => { setRecurrencePattern(value); if (value !== '其他') setRecurrenceOther('') }} />{recurrencePattern === '其他' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>请补充周期时间。</Text></View><FormInputBox focused={focusedField === 'recurrenceOther'} marginBottom='0'><Input value={recurrenceOther} placeholder='例如：寒暑假集中进行 / 不定期滚动招募' onFocus={() => setFocusedField('recurrenceOther')} onBlur={() => setFocusedField('')} onInput={(e) => setRecurrenceOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}</>}
         <SectionTitle text={isOnline ? '平台 / 线上说明（选填）' : '地点说明（选填）'} /><FormInputBox focused={focusedField === 'location'}><Input value={location} placeholder={isOnline ? '例如：腾讯会议' : '例如：杭州西湖区某空间'} onFocus={() => setFocusedField('location')} onBlur={() => setFocusedField('')} onInput={(e) => setLocation(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
-        <SectionTitle text='费用' /><SinglePillSelect options={FEE_OPTIONS} selected={fee} onChange={(value) => { setFee(value); if (value !== '付费') setFeeDetail('') }} />
-        {fee === '付费' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充费用说明</Text></View><FormInputBox focused={focusedField === 'feeDetail'} marginBottom='0'><Input value={feeDetail} placeholder='例如：单次 99 元 / 四次 199 元。' onFocus={() => setFocusedField('feeDetail')} onBlur={() => setFocusedField('')} onInput={(e) => setFeeDetail(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
+        <SectionTitle text='费用' /><SinglePillSelect options={FEE_OPTIONS} selected={fee} onChange={(value) => { setFee(value); if (value !== '付费') { setFeeDetail(''); setEarlyBirdPrice(''); setEarlyBirdDeadline('') } }} />
+        {fee === '付费' && <>
+          <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充常规费用说明</Text></View><FormInputBox focused={focusedField === 'feeDetail'} marginBottom='0'><Input value={feeDetail} placeholder='例如：单次 99 元 / 四次 199 元。' onFocus={() => setFocusedField('feeDetail')} onBlur={() => setFocusedField('')} onInput={(e) => setFeeDetail(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>
+          <SectionTitle text='早鸟价格（选填）' />
+          <FormInputBox focused={focusedField === 'earlyBirdPrice'}><Input value={earlyBirdPrice} placeholder='例如：79 元 / 家庭 299 元' onFocus={() => setFocusedField('earlyBirdPrice')} onBlur={() => setFocusedField('')} onInput={(e) => setEarlyBirdPrice(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
+          <SectionTitle text='早鸟截止日期（选填）' />
+          <Picker mode='date' value={earlyBirdDeadline} onChange={(e) => setEarlyBirdDeadline(e.detail.value)}><FormInputBox marginBottom={space(2)}><Text style={{ ...typography.body, color: earlyBirdDeadline ? palette.text : palette.muted }}>{earlyBirdDeadline || '选择日期'}</Text></FormInputBox></Picker>
+          <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.micro, color: palette.muted }}>早鸟价格和截止日期需同时填写；截止后活动列表自动显示常规费用。</Text></View>
+        </>}
         <SectionTitle text='组织者' /><FormInputBox focused={focusedField === 'organizer'}><Input value={organizer} placeholder='例如：某教育团队 / 个人发起者名字' onFocus={() => setFocusedField('organizer')} onBlur={() => setFocusedField('')} onInput={(e) => setOrganizer(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
         <SectionTitle text='组织者微信号（选填）' /><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>如果你是这个活动的组织者，可以填写你的微信号。仅对填写过资料的可雀用户可见。</Text></View><FormInputBox focused={focusedField === 'organizerContact'}><Input value={organizerContact} placeholder='例如：微信号' onFocus={() => setFocusedField('organizerContact')} onBlur={() => setFocusedField('')} onInput={(e) => setOrganizerContact(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
         <SectionTitle text='公开链接（选填）' /><FormInputBox focused={focusedField === 'officialUrl'} marginBottom={space(3)}><Input value={officialUrl} placeholder='例如：活动详情链接 / 公众号名' onFocus={() => setFocusedField('officialUrl')} onBlur={() => setFocusedField('')} onInput={(e) => setOfficialUrl(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
