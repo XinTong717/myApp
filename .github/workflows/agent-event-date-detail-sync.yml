@@ -1,0 +1,144 @@
+name: Apply date-only event details
+
+on:
+  push:
+    branches:
+      - agent/event-early-bird-list-summary
+    paths:
+      - .github/workflows/agent-event-date-detail-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/event-early-bird-list-summary
+          fetch-depth: 0
+
+      - name: Patch event date and detail fields
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected snippet not found in {path}: {old[:140]!r}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          def regex_once(path, pattern, replacement):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f'Expected one regex match in {path}, got {count}: {pattern[:120]!r}')
+              p.write_text(updated, encoding='utf-8')
+
+          # Submission form: collect dates only. Deadline dates retain end-of-day semantics.
+          path = 'src/pkg/events/submit/index.tsx'
+          replace_once(path,
+              "function combineDateTime(date: string, time: string) {\n  if (!date || !time) return ''\n  return `${date}T${time}:00${CHINA_TIMEZONE_OFFSET}`\n}",
+              "function toEndOfDay(date: string) {\n  if (!date) return ''\n  return `${date}T23:59:00${CHINA_TIMEZONE_OFFSET}`\n}")
+          replace_once(path,
+              "  const [startDate, setStartDate] = useState('')\n  const [startTime, setStartTime] = useState('')\n  const [endDate, setEndDate] = useState('')\n  const [endTime, setEndTime] = useState('')\n  const [signupDeadlineDate, setSignupDeadlineDate] = useState('')\n  const [signupDeadlineTime, setSignupDeadlineTime] = useState('')",
+              "  const [startDate, setStartDate] = useState('')\n  const [endDate, setEndDate] = useState('')\n  const [signupDeadlineDate, setSignupDeadlineDate] = useState('')")
+          replace_once(path,
+              "    audienceWho.length > 0 || audienceWhoOther.trim() || ageRangeMin !== AGE_RANGE_MIN || ageRangeMax !== AGE_RANGE_MAX || startDate || startTime || endDate || endTime ||\n    signupDeadlineDate || signupDeadlineTime || isRecurring",
+              "    audienceWho.length > 0 || audienceWhoOther.trim() || ageRangeMin !== AGE_RANGE_MIN || ageRangeMax !== AGE_RANGE_MAX || startDate || endDate ||\n    signupDeadlineDate || isRecurring")
+          replace_once(path,
+              "    if (!startDate || !startTime) { Taro.showToast({ title: '请完整填写开始时间', icon: 'none' }); return }\n    if ((endDate && !endTime) || (!endDate && endTime)) { Taro.showToast({ title: '结束日期和时间请一起填写', icon: 'none' }); return }\n    if ((signupDeadlineDate && !signupDeadlineTime) || (!signupDeadlineDate && signupDeadlineTime)) { Taro.showToast({ title: '报名截止日期和时间请一起填写', icon: 'none' }); return }",
+              "    if (!startDate) { Taro.showToast({ title: '请选择开始日期', icon: 'none' }); return }\n    if (endDate && endDate < startDate) { Taro.showToast({ title: '结束日期不能早于开始日期', icon: 'none' }); return }\n    if (signupDeadlineDate && signupDeadlineDate > startDate) { Taro.showToast({ title: '报名截止日期不能晚于开始日期', icon: 'none' }); return }")
+          replace_once(path,
+              "        startTime: combineDateTime(startDate, startTime),\n        endTime: endDate && endTime ? combineDateTime(endDate, endTime) : '',\n        signupDeadline: signupDeadlineDate && signupDeadlineTime ? combineDateTime(signupDeadlineDate, signupDeadlineTime) : '',",
+              "        startTime: startDate,\n        endTime: endDate,\n        signupDeadline: toEndOfDay(signupDeadlineDate),")
+          replace_once(path,
+              "        earlyBirdDeadline: fee === '付费' && earlyBirdDeadline ? `${earlyBirdDeadline}T23:59:00${CHINA_TIMEZONE_OFFSET}` : '',",
+              "        earlyBirdDeadline: fee === '付费' ? toEndOfDay(earlyBirdDeadline) : '',")
+          regex_once(path,
+              r"        <SectionTitle text='开始时间' />.*?        <SectionTitle text='是否周期性进行' />",
+              "        <SectionTitle text='开始日期' /><Picker mode='date' value={startDate} onChange={(e) => setStartDate(e.detail.value)}><FormInputBox><Text style={{ ...typography.body, color: startDate ? palette.text : palette.muted }}>{startDate || '选择日期'}</Text></FormInputBox></Picker>\n        <SectionTitle text='结束日期（选填）' /><Picker mode='date' value={endDate} onChange={(e) => setEndDate(e.detail.value)}><FormInputBox><Text style={{ ...typography.body, color: endDate ? palette.text : palette.muted }}>{endDate || '选择日期'}</Text></FormInputBox></Picker>\n        <SectionTitle text='报名截止日期（选填）' /><Picker mode='date' value={signupDeadlineDate} onChange={(e) => setSignupDeadlineDate(e.detail.value)}><FormInputBox><Text style={{ ...typography.body, color: signupDeadlineDate ? palette.text : palette.muted }}>{signupDeadlineDate || '选择日期'}</Text></FormInputBox></Picker>\n        <SectionTitle text='是否周期性进行' />")
+
+          # Shared formatting: all event dates display at day precision, including legacy timestamps.
+          path = 'src/pages/events/shared.ts'
+          replace_once(path,
+              "function formatDateTime(value?: string) {\n  const date = parseEventDate(value)\n  return date ? date.toLocaleString('zh-CN', { hour12: false, timeZone: EVENT_TIMEZONE }) : ''\n}",
+              "export function formatEventDate(value?: string) {\n  const text = String(value || '').trim()\n  if (!text) return ''\n  const literal = text.match(/^(\\d{4})-(\\d{2})-(\\d{2})/)\n  if (literal) return `${literal[1]}年${Number(literal[2])}月${Number(literal[3])}日`\n  const date = parseEventDate(value)\n  return date ? date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: EVENT_TIMEZONE }) : ''\n}")
+          replace_once(path,
+              "    return '每周六 20:30 - 21:30'",
+              "    return '每周六'")
+          replace_once(path,
+              "  const startText = formatDateTime(event.start_time)\n  const endText = formatDateTime(event.end_time)\n\n  if (startText && endText) {\n    return `${startText} - ${endText}`\n  }",
+              "  const startText = formatEventDate(event.start_time)\n  const endText = formatEventDate(event.end_time)\n\n  if (startText && endText) {\n    return startText === endText ? startText : `${startText} - ${endText}`\n  }")
+
+          # Canonical description should hold only the submitted introduction, not duplicated structured fields.
+          path = 'cloudfunctions/appService/lib/eventPublishPayload.js'
+          regex_once(path,
+              r"function buildDescription\(submission\) \{.*?\n\}\n\nfunction buildEventPayload",
+              "function buildDescription(submission) {\n  return String(submission.description || '').trim() || '暂无详细介绍'\n}\n\nfunction buildEventPayload")
+          replace_once(path, "未填写结束时间，前端会按单点开始时间展示", "未填写结束日期，前端会按单日活动展示")
+          replace_once(path, "开始时间格式异常，发布前需人工修正", "开始日期格式异常，发布前需人工修正")
+          replace_once(path, "结束时间格式异常，发布前需人工修正", "结束日期格式异常，发布前需人工修正")
+          replace_once(path, "报名截止时间格式异常，发布前需人工修正", "报名截止日期格式异常，发布前需人工修正")
+          replace_once(path, "开始时间格式异常", "开始日期格式异常")
+          replace_once(path, "结束时间格式异常", "结束日期格式异常")
+          replace_once(path, "结束时间早于开始时间", "结束日期早于开始日期")
+          replace_once(path, "报名截止时间格式异常", "报名截止日期格式异常")
+
+          # Submission API copy follows date-only UI language.
+          path = 'cloudfunctions/appService/handlers/public.js'
+          replace_once(path, "请填写开始时间", "请填写开始日期")
+          replace_once(path, "开始时间格式不正确", "开始日期格式不正确")
+          replace_once(path, "结束时间格式不正确", "结束日期格式不正确")
+          replace_once(path, "结束时间不能早于开始时间", "结束日期不能早于开始日期")
+          replace_once(path, "报名截止时间格式不正确", "报名截止日期格式不正确")
+
+          # Detail page: mirror every structured field from the submission form.
+          path = 'src/pages/event-detail/index.tsx'
+          replace_once(path,
+              "import { EVENT_TYPE_LABELS, formatEventAgeRange, formatEventFee, formatEventTime, getEventIconBg, getEventStatusInfo } from '../events/shared'",
+              "import { EVENT_TYPE_LABELS, formatEventAgeRange, formatEventDate, getEventIconBg, getEventStatusInfo } from '../events/shared'")
+          replace_once(path,
+              "const EVENT_DETAIL_REFRESH_TTL_MS = 45 * 1000\n",
+              "const EVENT_DETAIL_REFRESH_TTL_MS = 45 * 1000\n\ntype PublicSignupInfo = { officialUrl?: string; signupNote?: string }\n\nfunction normalizeLabels(value: unknown) {\n  const list = Array.isArray(value) ? value : String(value || '').split(/[、,，/|｜]+/)\n  return Array.from(new Set(list.map((item) => String(item || '').trim()).filter(Boolean)))\n}\n\nfunction formatEventTypes(event: EventItem) {\n  const labels = normalizeLabels(event.event_types)\n  if (labels.length > 0) return labels.join('、')\n  return EVENT_TYPE_LABELS[event.event_type] || event.event_type || '未注明'\n}\n\nfunction formatAudience(event: EventItem) {\n  const labels = normalizeLabels(event.audience_who)\n  return labels.length > 0 ? labels.join('、') : '未注明'\n}\n\nfunction formatRegion(event: EventItem) {\n  const parts = [event.province, event.city].map((item) => String(item || '').trim()).filter((item) => item && item !== '线上')\n  return Array.from(new Set(parts)).join(' · ') || '未填写'\n}\n\nfunction extractActivityDescription(value?: string) {\n  const text = String(value || '').trim()\n  if (!text) return '暂无详细介绍'\n  const marker = '\\n活动简介：\\n'\n  const markerIndex = text.indexOf(marker)\n  if (markerIndex < 0) return text\n  const after = text.slice(markerIndex + marker.length)\n  const signupMarker = '\\n报名方式补充说明：\\n'\n  const signupIndex = after.indexOf(signupMarker)\n  return (signupIndex >= 0 ? after.slice(0, signupIndex) : after).trim() || '暂无详细介绍'\n}\n")
+          replace_once(path, "  publicSignupText: string", "  publicSignupInfo: PublicSignupInfo")
+          replace_once(path,
+              "  const { event, preview, previewError, interestCount, hasInterested, interestLoading, hasProfile, contactInfo, contactMessage, contactLoading, publicSignupText, correction, onToggleInterest, onRetryDetail } = props\n  const statusInfo = getEventStatusInfo(event)",
+              "  const { event, preview, previewError, interestCount, hasInterested, interestLoading, hasProfile, contactInfo, contactMessage, contactLoading, publicSignupInfo, correction, onToggleInterest, onRetryDetail } = props\n  const statusInfo = getEventStatusInfo(event)\n  const feeCategory = String(event.fee_category || '').trim()\n  const feeDetail = String(event.fee || '').trim()\n  const showSeparateFeeDetail = !!feeCategory && !!feeDetail && feeDetail !== feeCategory")
+          replace_once(path,
+              "      <AppInfoRow label='时间' value={formatEventTime(event)} />\n      <AppInfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />\n      <AppInfoRow label='费用' value={formatEventFee(event)} />\n      <AppInfoRow label='参与年龄' value={formatEventAgeRange(event)} />\n      <AppInfoRow label='组织者' value={event.organizer} />\n      {!preview && publicSignupText ? <AppInfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}",
+              "      <AppInfoRow label='线上活动' value={event.is_online ? '是，主要在线上进行' : '否，主要线下进行'} />\n      {!event.is_online ? <AppInfoRow label='所在城市' value={formatRegion(event)} /> : null}\n      <AppInfoRow label='活动类型' value={formatEventTypes(event)} />\n      <AppInfoRow label='参与对象' value={formatAudience(event)} />\n      <AppInfoRow label='年龄区间' value={formatEventAgeRange(event)} />\n      <AppInfoRow label='开始日期' value={formatEventDate(event.start_time) || '待定'} />\n      {event.end_time ? <AppInfoRow label='结束日期' value={formatEventDate(event.end_time)} /> : null}\n      {event.signup_deadline ? <AppInfoRow label='报名截止日期' value={formatEventDate(event.signup_deadline)} /> : null}\n      <AppInfoRow label='是否周期性进行' value={event.is_recurring ? '是' : '否'} />\n      {event.is_recurring ? <AppInfoRow label='周期时间' value={event.recurrence_pattern || '未填写'} /> : null}\n      <AppInfoRow label={event.is_online ? '平台 / 线上说明' : '地点说明'} value={event.location || '未填写'} />\n      <AppInfoRow label='费用' value={feeCategory || feeDetail || '费用待确认'} />\n      {showSeparateFeeDetail ? <AppInfoRow label='常规费用说明' value={feeDetail} /> : null}\n      {event.early_bird_price ? <AppInfoRow label='早鸟价格' value={event.early_bird_price} /> : null}\n      {event.early_bird_deadline ? <AppInfoRow label='早鸟截止日期' value={formatEventDate(event.early_bird_deadline)} /> : null}\n      <AppInfoRow label='组织者' value={event.organizer || '未填写'} />\n      {!preview && publicSignupInfo.officialUrl ? <AppInfoRow label='公开链接' value={publicSignupInfo.officialUrl} copyable /> : null}\n      {!preview && publicSignupInfo.signupNote ? <AppInfoRow label='报名方式补充说明' value={publicSignupInfo.signupNote} /> : null}")
+          replace_once(path, ">详细介绍</Text>", ">活动简介</Text>")
+          replace_once(path,
+              "{event.description || '暂无详细介绍'}</Text>",
+              "{extractActivityDescription(event.description)}</Text>")
+          replace_once(path,
+              "  const [publicSignupText, setPublicSignupText] = useState('')",
+              "  const [publicSignupInfo, setPublicSignupInfo] = useState<PublicSignupInfo>({})")
+          replace_once(path, "      setPublicSignupText('')", "      setPublicSignupInfo({})")
+          replace_once(path,
+              "        const publicParts = [\n          result?.publicSignupInfo?.officialUrl ? `公开主页或报名链接：${result.publicSignupInfo.officialUrl}` : '',\n          result?.publicSignupInfo?.signupNote ? `报名方式补充说明：${result.publicSignupInfo.signupNote}` : '',\n        ].filter(Boolean)\n        setPublicSignupText(publicParts.join('\\n'))",
+              "        setPublicSignupInfo({\n          officialUrl: result?.publicSignupInfo?.officialUrl || '',\n          signupNote: result?.publicSignupInfo?.signupNote || '',\n        })")
+          replace_once(path, "      publicSignupText={publicSignupText}", "      publicSignupInfo={publicSignupInfo}")
+          PY
+
+      - name: Verify source
+        run: |
+          npm ci
+          npm run typecheck
+          npm run check:actions
+
+      - name: Commit changes and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/agent-event-date-detail-sync.yml
+          git add src/pkg/events/submit/index.tsx src/pages/events/shared.ts src/pages/event-detail/index.tsx cloudfunctions/appService/lib/eventPublishPayload.js cloudfunctions/appService/handlers/public.js
+          git commit -m "fix: align event dates and detail fields"
+          git push origin HEAD:agent/event-early-bird-list-summary
