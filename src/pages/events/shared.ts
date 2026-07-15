@@ -41,7 +41,6 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
 }
 
 export const EVENT_STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
-  recurring: { text: '周期性', color: palette.tagText, bg: palette.tag },
   recruiting: { text: '招募中', color: palette.brand, bg: palette.brandSoft },
   ended: { text: '已结束报名', color: palette.muted, bg: palette.surfaceSoft },
 }
@@ -81,7 +80,6 @@ export function formatEventDate(value?: string) {
 }
 
 export function getEventStatusKey(event: Pick<EventItem, 'status' | 'start_time' | 'end_time' | 'signup_deadline' | 'is_recurring'>) {
-  if (event.is_recurring || event.status === 'recurring') return 'recurring'
   const signupDeadline = parseEventDate(event.signup_deadline)
   if (signupDeadline && signupDeadline.getTime() < Date.now()) return 'ended'
   if (event.status === 'ended') return 'ended'
@@ -132,15 +130,7 @@ export function formatEventFee(event: Pick<EventItem, 'fee' | 'early_bird_price'
 }
 
 export function formatEventTime(event: Pick<EventItem, 'event_type' | 'start_time' | 'end_time' | 'is_recurring' | 'recurrence_pattern'>) {
-  if (event.is_recurring && event.recurrence_pattern) return event.recurrence_pattern
-
-  if (event.event_type === 'night_chat' || event.event_type === 'parent_observer') {
-    return '每周六'
-  }
-
-  if (event.event_type === 'community_program') {
-    return '持续进行'
-  }
+  if (event.is_recurring) return event.recurrence_pattern || '周期性进行'
 
   const startText = formatEventDate(event.start_time)
   const endText = formatEventDate(event.end_time)
