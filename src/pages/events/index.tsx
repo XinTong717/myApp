@@ -22,10 +22,15 @@ import { ALL_FILTER, EVENT_DEFAULT_STATUS_FILTER, EVENT_FILTER_FALLBACKS } from 
 import type { EventItem } from './shared'
 import {
   EVENT_STATUS_LABELS,
-  EVENT_TYPE_LABELS,
+  formatEventAgeRange,
+  formatEventAudience,
+  formatEventFee,
+  formatEventTime,
+  formatEventTypeLabels,
   getEventIconBg,
   getEventStatusInfo,
   getEventStatusKey,
+  isEventAgeUnspecified,
   isEventEnded,
 } from './shared'
 
@@ -88,7 +93,7 @@ function eventMatchesType(item: EventItemWithInterest, filters: string[], valueM
 }
 
 function eventMatchesAudience(item: EventItemWithInterest, filters: string[]) {
-  return eventMatchesAny(filters, (filter) => itemHasLabel(item.audience_who, filter) || (String(item.description || '').includes('参与对象：') && String(item.description || '').includes(filter)))
+  return eventMatchesAny(filters, (filter) => itemHasLabel(item.audience_who, filter))
 }
 
 function parseAgeValue(value?: string, fallback?: number) {
@@ -347,11 +352,13 @@ export default function EventsPage() {
       {!loading && !error && visibleEvents.length === 0 ? <EmptyCard text={events.length > 0 ? '当前筛选下没有可显示的活动。' : '暂时还没有活动。'} actionText={events.length > 0 ? '重置筛选' : '提交活动'} onAction={events.length > 0 ? resetFilters : goToSubmit} /> : null}
 
       {!loading && !error && visibleEvents.map((item) => {
-        const typeLabel = EVENT_TYPE_LABELS[item.event_type] || item.event_type
+        const typeLabel = formatEventTypeLabels(item)
         const statusInfo = getEventStatusInfo(item)
         const interestedCount = interestCounts[item.id] || 0
-        const firstLine = (item.description || '').split('\n').find((line) => line.trim()) || ''
-        const summary = firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine
+        const locationText = item.is_online ? (item.location || '线上') : (item.location || getEventCity(item) || '待定')
+        const ageRangeText = formatEventAgeRange(item)
+        const audienceText = formatEventAudience(item)
+        const ageIsUnspecified = isEventAgeUnspecified(item)
         return (
           <AppCard key={item.id} onClick={() => goToDetail(item)}>
             <View className='app-list-card__header'>
@@ -361,13 +368,15 @@ export default function EventsPage() {
             <View className='app-list-card__tags'>
               <AppTag text={typeLabel} />
               {statusInfo ? <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} /> : null}
-              <AppTag text={item.is_online ? '线上' : (getEventCity(item) || '线下')} />
-              {item.min_age_requirement ? <AppTag text={item.min_age_requirement} /> : null}
               {interestedCount > 0 ? <AppTag text={`${interestedCount} 人感兴趣`} tone='accent' /> : null}
             </View>
             <View className='app-list-card__meta-box'>
-              {summary ? <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>{summary}</Text></View> : null}
-              <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>费用：{item.fee || '免费'}</Text></View>
+              <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>时间：{formatEventTime(item)}</Text></View>
+              <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>地点：{locationText}</Text></View>
+              <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>费用：{formatEventFee(item)}</Text></View>
+              {ageIsUnspecified
+                ? <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>参与对象：{audienceText}</Text></View>
+                : <View className='app-list-card__meta-line'><Text className='text-meta text-color-sub'>参与年龄：{ageRangeText}</Text></View>}
             </View>
           </AppCard>
         )

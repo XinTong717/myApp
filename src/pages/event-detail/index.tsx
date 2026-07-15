@@ -21,9 +21,28 @@ import CorrectionCard from '../../components/common/CorrectionCard'
 import { DetailSkeleton } from '../../components/common/Skeleton'
 import { EmptyCard, ErrorRetryCard } from '../../components/common/StateCards'
 import type { EventItem } from '../events/shared'
-import { EVENT_TYPE_LABELS, formatEventTime, getEventIconBg, getEventStatusInfo } from '../events/shared'
+import { formatEventAgeRange, formatEventAudience, formatEventDate, formatEventTypeLabels, getEventIconBg, getEventStatusInfo } from '../events/shared'
 
 const EVENT_DETAIL_REFRESH_TTL_MS = 45 * 1000
+
+type PublicSignupInfo = { officialUrl?: string; signupNote?: string }
+
+function formatRegion(event: EventItem) {
+  const parts = [event.province, event.city].map((item) => String(item || '').trim()).filter((item) => item && item !== '线上')
+  return Array.from(new Set(parts)).join(' · ') || '未填写'
+}
+
+function extractActivityDescription(value?: string) {
+  const text = String(value || '').trim()
+  if (!text) return '暂无详细介绍'
+  const marker = '\n活动简介：\n'
+  const markerIndex = text.indexOf(marker)
+  if (markerIndex < 0) return text
+  const after = text.slice(markerIndex + marker.length)
+  const signupMarker = '\n报名方式补充说明：\n'
+  const signupIndex = after.indexOf(signupMarker)
+  return (signupIndex >= 0 ? after.slice(0, signupIndex) : after).trim() || '暂无详细介绍'
+}
 
 function buildEventShare(event?: EventItem | null, eventId?: number) {
   const id = Number(event?.id || eventId || 0)
@@ -60,7 +79,7 @@ function EventContent(props: {
   contactInfo: string
   contactMessage: string
   contactLoading: boolean
-  publicSignupText: string
+  publicSignupInfo: PublicSignupInfo
   correction: {
     showForm: boolean
     value: string
@@ -74,8 +93,11 @@ function EventContent(props: {
   onToggleInterest: () => void
   onRetryDetail?: () => void
 }) {
-  const { event, preview, previewError, interestCount, hasInterested, interestLoading, hasProfile, contactInfo, contactMessage, contactLoading, publicSignupText, correction, onToggleInterest, onRetryDetail } = props
+  const { event, preview, previewError, interestCount, hasInterested, interestLoading, hasProfile, contactInfo, contactMessage, contactLoading, publicSignupInfo, correction, onToggleInterest, onRetryDetail } = props
   const statusInfo = getEventStatusInfo(event)
+  const feeCategory = String(event.fee_category || '').trim()
+  const feeDetail = String(event.fee || '').trim()
+  const showSeparateFeeDetail = !!feeCategory && !!feeDetail && feeDetail !== feeCategory
 
   return (
     <>
@@ -91,7 +113,7 @@ function EventContent(props: {
           </View>
         </View>
         <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
-          <AppTag text={EVENT_TYPE_LABELS[event.event_type] || event.event_type} tone='brand' />
+          <AppTag text={formatEventTypeLabels(event)} tone='brand' />
           {statusInfo ? <AppTag text={statusInfo.text} backgroundColor={statusInfo.bg} textColor={statusInfo.color} /> : null}
           <AppTag text={event.is_online ? '线上' : '线下'} tone='green' />
           {interestCount > 0 ? <AppTag text={`${interestCount} 人感兴趣`} backgroundColor={palette.surfaceWarm} textColor={palette.brand} /> : null}
@@ -109,11 +131,24 @@ function EventContent(props: {
         onClick={onToggleInterest}
       />
 
-      <AppInfoRow label='时间' value={formatEventTime(event)} />
-      <AppInfoRow label='地点' value={event.is_online ? (event.location || '线上') : (event.location || '待定')} />
-      <AppInfoRow label='费用' value={event.fee || '免费'} />
-      <AppInfoRow label='组织者' value={event.organizer} />
-      {!preview && publicSignupText ? <AppInfoRow label='公开报名信息' value={publicSignupText} copyable /> : null}
+      <AppInfoRow label='线上活动' value={event.is_online ? '是，主要在线上进行' : '否，主要线下进行'} />
+      {!event.is_online ? <AppInfoRow label='所在城市' value={formatRegion(event)} /> : null}
+      <AppInfoRow label='活动类型' value={formatEventTypeLabels(event)} />
+      <AppInfoRow label='参与对象' value={formatEventAudience(event)} />
+      <AppInfoRow label='年龄区间' value={formatEventAgeRange(event)} />
+      <AppInfoRow label='开始日期' value={formatEventDate(event.start_time) || '待定'} />
+      {event.end_time ? <AppInfoRow label='结束日期' value={formatEventDate(event.end_time)} /> : null}
+      {event.signup_deadline ? <AppInfoRow label='报名截止日期' value={formatEventDate(event.signup_deadline)} /> : null}
+      <AppInfoRow label='是否周期性进行' value={event.is_recurring ? '是' : '否'} />
+      {event.is_recurring ? <AppInfoRow label='周期时间' value={event.recurrence_pattern || '未填写'} /> : null}
+      <AppInfoRow label={event.is_online ? '平台 / 线上说明' : '地点说明'} value={event.location || '未填写'} />
+      <AppInfoRow label='费用' value={feeCategory || feeDetail || '费用待确认'} />
+      {showSeparateFeeDetail ? <AppInfoRow label='常规费用说明' value={feeDetail} /> : null}
+      {event.early_bird_price ? <AppInfoRow label='早鸟价格' value={event.early_bird_price} /> : null}
+      {event.early_bird_deadline ? <AppInfoRow label='早鸟截止日期' value={formatEventDate(event.early_bird_deadline)} /> : null}
+      <AppInfoRow label='组织者' value={event.organizer || '未填写'} />
+      {!preview && publicSignupInfo.officialUrl ? <AppInfoRow label='公开链接' value={publicSignupInfo.officialUrl} copyable /> : null}
+      {!preview && publicSignupInfo.signupNote ? <AppInfoRow label='报名方式补充说明' value={publicSignupInfo.signupNote} /> : null}
 
       {!preview && (contactLoading ? (
         <AppCard backgroundColor={palette.cardSoft} radius={radius.md} padding={space(3)} marginBottom={space(3)} borderColor={palette.line}>
@@ -130,9 +165,9 @@ function EventContent(props: {
 
       <AppCard radius={radius.md}>
         <View style={{ marginBottom: space(2) }}>
-          <Text style={{ ...typography.cardTitle, color: palette.text }}>详细介绍</Text>
+          <Text style={{ ...typography.cardTitle, color: palette.text }}>活动简介</Text>
         </View>
-        <Text style={{ ...typography.body, color: palette.text, whiteSpace: 'pre-wrap' }}>{event.description || '暂无详细介绍'}</Text>
+        <Text style={{ ...typography.body, color: palette.text, whiteSpace: 'pre-wrap' }}>{extractActivityDescription(event.description)}</Text>
       </AppCard>
 
       {!preview ? (
@@ -168,7 +203,7 @@ export default function EventDetailPage() {
   const [contactInfo, setContactInfo] = useState('')
   const [contactMessage, setContactMessage] = useState('')
   const [contactLoading, setContactLoading] = useState(false)
-  const [publicSignupText, setPublicSignupText] = useState('')
+  const [publicSignupInfo, setPublicSignupInfo] = useState<PublicSignupInfo>({})
   const [showCorrectionForm, setShowCorrectionForm] = useState(false)
   const [correctionText, setCorrectionText] = useState('')
   const [correctionSubmitting, setCorrectionSubmitting] = useState(false)
@@ -208,16 +243,15 @@ export default function EventDetailPage() {
       setContactLoading(true)
       setContactInfo('')
       setContactMessage('')
-      setPublicSignupText('')
+      setPublicSignupInfo({})
       const result = await getEventContactInfo(eventId, options)
       if (result?.ok) {
         setContactInfo(result.contactInfo || '')
         setContactMessage(result.message || '')
-        const publicParts = [
-          result?.publicSignupInfo?.officialUrl ? `公开主页或报名链接：${result.publicSignupInfo.officialUrl}` : '',
-          result?.publicSignupInfo?.signupNote ? `报名方式补充说明：${result.publicSignupInfo.signupNote}` : '',
-        ].filter(Boolean)
-        setPublicSignupText(publicParts.join('\n'))
+        setPublicSignupInfo({
+          officialUrl: result?.publicSignupInfo?.officialUrl || '',
+          signupNote: result?.publicSignupInfo?.signupNote || '',
+        })
       } else {
         setContactMessage(result?.message || '')
         logCloudFailure('getEventContactInfo', result)
@@ -362,7 +396,7 @@ export default function EventDetailPage() {
       contactInfo={contactInfo}
       contactMessage={contactMessage}
       contactLoading={contactLoading}
-      publicSignupText={publicSignupText}
+      publicSignupInfo={publicSignupInfo}
       correction={correction}
       onToggleInterest={handleToggleInterest}
       onRetryDetail={() => loadDetail({ forceRefresh: true })}

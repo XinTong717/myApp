@@ -83,6 +83,8 @@ function normalizeEvent(row) {
     end_time: cleanText(row.end_time),
     location: cleanText(row.location),
     fee: cleanText(row.fee),
+    early_bird_price: cleanText(row.early_bird_price),
+    early_bird_deadline: cleanText(row.early_bird_deadline),
     status: cleanText(row.status) || 'upcoming',
     organizer: cleanText(row.organizer),
     is_online: toBoolean(row.is_online),

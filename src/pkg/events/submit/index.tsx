@@ -14,7 +14,7 @@ import AppPromptBanner from '../../../components/common/AppPromptBanner'
 import AppPrimaryButton from '../../../components/common/AppPrimaryButton'
 import FormInputBox from '../../../components/common/FormInputBox'
 
-const EVENT_TYPE_OPTIONS = ['工作坊', '营期/短期营', '项目招募', '圆桌讨论', '交友聚会', '一对一', '团体', '其他']
+const EVENT_TYPE_OPTIONS = ['工作坊', '营期/短期营', '项目招募', '圆桌讨论', '交友聚会', '家庭活动', '一对一', '团体', '其他']
 const AUDIENCE_WHO_OPTIONS = ['家长', '教育工作者', '儿童/青少年（需家长陪同）', '儿童/青少年（独立参加）', '开放给所有人', '其他']
 const FEE_OPTIONS = ['免费', '付费', '公益随喜', '费用待确认']
 const RECURRENCE_OPTIONS = ['每周', '每月', '每季度', '其他']
@@ -30,6 +30,7 @@ type FocusField =
   | 'recurrenceOther'
   | 'location'
   | 'feeDetail'
+  | 'earlyBirdPrice'
   | 'organizer'
   | 'organizerContact'
   | 'officialUrl'
@@ -40,9 +41,9 @@ type FocusField =
 type PickerMultiChangeEvent = { detail: { value: number[] } }
 type PickerColumnChangeEvent = { detail: { column: number; value: number } }
 
-function combineDateTime(date: string, time: string) {
-  if (!date || !time) return ''
-  return `${date}T${time}:00${CHINA_TIMEZONE_OFFSET}`
+function toEndOfDay(date: string) {
+  if (!date) return ''
+  return `${date}T23:59:00${CHINA_TIMEZONE_OFFSET}`
 }
 
 function setBeforeUnloadAlert(_enabled: boolean, _message: string) {
@@ -149,20 +150,20 @@ export default function SubmitEventPage() {
   const [eventTypeOther, setEventTypeOther] = useState('')
   const [audienceWho, setAudienceWho] = useState<string[]>([])
   const [audienceWhoOther, setAudienceWhoOther] = useState('')
+  const [hasAgeRequirement, setHasAgeRequirement] = useState(false)
   const [ageRangeMin, setAgeRangeMin] = useState(0)
   const [ageRangeMax, setAgeRangeMax] = useState(30)
   const [startDate, setStartDate] = useState('')
-  const [startTime, setStartTime] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [endTime, setEndTime] = useState('')
   const [signupDeadlineDate, setSignupDeadlineDate] = useState('')
-  const [signupDeadlineTime, setSignupDeadlineTime] = useState('')
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrencePattern, setRecurrencePattern] = useState('')
   const [recurrenceOther, setRecurrenceOther] = useState('')
   const [location, setLocation] = useState('')
   const [fee, setFee] = useState('')
   const [feeDetail, setFeeDetail] = useState('')
+  const [earlyBirdPrice, setEarlyBirdPrice] = useState('')
+  const [earlyBirdDeadline, setEarlyBirdDeadline] = useState('')
   const [organizer, setOrganizer] = useState('')
   const [organizerContact, setOrganizerContact] = useState('')
   const [officialUrl, setOfficialUrl] = useState('')
@@ -173,8 +174,8 @@ export default function SubmitEventPage() {
   const resolvedRecurrencePattern = recurrencePattern === '其他' ? `其他：${recurrenceOther.trim()}` : recurrencePattern
   const hasUnsavedContent = !!(
     title.trim() || isOnline || province || cityOption || customCity.trim() || eventTypes.length > 0 || eventTypeOther.trim() ||
-    audienceWho.length > 0 || audienceWhoOther.trim() || ageRangeMin !== AGE_RANGE_MIN || ageRangeMax !== AGE_RANGE_MAX || startDate || startTime || endDate || endTime ||
-    signupDeadlineDate || signupDeadlineTime || isRecurring || recurrencePattern || recurrenceOther.trim() || location.trim() || fee || feeDetail.trim() || organizer.trim() || organizerContact.trim() || officialUrl.trim() ||
+    audienceWho.length > 0 || audienceWhoOther.trim() || hasAgeRequirement || ageRangeMin !== AGE_RANGE_MIN || ageRangeMax !== AGE_RANGE_MAX || startDate || endDate ||
+    signupDeadlineDate || isRecurring || recurrencePattern || recurrenceOther.trim() || location.trim() || fee || feeDetail.trim() || earlyBirdPrice.trim() || earlyBirdDeadline || organizer.trim() || organizerContact.trim() || officialUrl.trim() ||
     signupNote.trim() || description.trim()
   )
 
@@ -232,13 +233,13 @@ export default function SubmitEventPage() {
     if (!isOnline && cityOption === '其他' && !customCity.trim()) { Taro.showToast({ title: '请输入真实城市名', icon: 'none' }); return }
     if (eventTypes.includes('其他') && !eventTypeOther.trim()) { Taro.showToast({ title: '请补充活动类型中的“其他”', icon: 'none' }); return }
     if (audienceWho.includes('其他') && !audienceWhoOther.trim()) { Taro.showToast({ title: '请补充参与对象中的“其他”', icon: 'none' }); return }
-    if (!startDate || !startTime) { Taro.showToast({ title: '请完整填写开始时间', icon: 'none' }); return }
-    if ((endDate && !endTime) || (!endDate && endTime)) { Taro.showToast({ title: '结束日期和时间请一起填写', icon: 'none' }); return }
-    if ((signupDeadlineDate && !signupDeadlineTime) || (!signupDeadlineDate && signupDeadlineTime)) { Taro.showToast({ title: '报名截止日期和时间请一起填写', icon: 'none' }); return }
+    if (!startDate) { Taro.showToast({ title: '请选择开始日期', icon: 'none' }); return }
+    if (endDate && endDate < startDate) { Taro.showToast({ title: '结束日期不能早于开始日期', icon: 'none' }); return }
     if (isRecurring && !recurrencePattern) { Taro.showToast({ title: '请选择周期时间', icon: 'none' }); return }
     if (isRecurring && recurrencePattern === '其他' && !recurrenceOther.trim()) { Taro.showToast({ title: '请填写其他周期时间', icon: 'none' }); return }
     if (!fee) { Taro.showToast({ title: '请选择费用情况', icon: 'none' }); return }
     if (fee === '付费' && !feeDetail.trim()) { Taro.showToast({ title: '请补充付费说明', icon: 'none' }); return }
+    if (!!earlyBirdPrice.trim() !== !!earlyBirdDeadline) { Taro.showToast({ title: '早鸟价格和截止日期请一起填写', icon: 'none' }); return }
     if (!organizer.trim()) { Taro.showToast({ title: '请填写组织者', icon: 'none' }); return }
     if (!description.trim()) { Taro.showToast({ title: '请填写活动简介', icon: 'none' }); return }
 
@@ -261,12 +262,14 @@ export default function SubmitEventPage() {
         title: title.trim(), province: isOnline ? '线上' : province, city: isOnline ? '线上' : currentCity, eventTypes,
         eventTypeOther: eventTypes.includes('其他') ? eventTypeOther.trim() : '',
         audienceWho, audienceWhoOther: audienceWho.includes('其他') ? audienceWhoOther.trim() : '',
-        minAgeRequirement: getMinAgeRequirement(ageRangeMin), maxAgeRequirement: getMaxAgeRequirement(ageRangeMax),
-        startTime: combineDateTime(startDate, startTime),
-        endTime: endDate && endTime ? combineDateTime(endDate, endTime) : '',
-        signupDeadline: signupDeadlineDate && signupDeadlineTime ? combineDateTime(signupDeadlineDate, signupDeadlineTime) : '',
+        minAgeRequirement: hasAgeRequirement ? getMinAgeRequirement(ageRangeMin) : '', maxAgeRequirement: hasAgeRequirement ? getMaxAgeRequirement(ageRangeMax) : '',
+        startTime: startDate,
+        endTime: endDate,
+        signupDeadline: toEndOfDay(signupDeadlineDate),
         isRecurring, recurrencePattern: isRecurring ? resolvedRecurrencePattern : '',
         isOnline, location: location.trim(), fee, feeDetail: fee === '付费' ? feeDetail.trim() : '',
+        earlyBirdPrice: fee === '付费' ? earlyBirdPrice.trim() : '',
+        earlyBirdDeadline: fee === '付费' ? toEndOfDay(earlyBirdDeadline) : '',
         organizer: organizer.trim(), organizerContact: organizerContact.trim(), officialUrl: officialUrl.trim(),
         signupNote: signupNote.trim(), description: description.trim(),
       })
@@ -307,16 +310,23 @@ export default function SubmitEventPage() {
         {eventTypes.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充活动类型中的“其他”。</Text></View><FormInputBox focused={focusedField === 'eventTypeOther'} marginBottom='0'><Input value={eventTypeOther} placeholder='例如：展览 / 沙龙 / 读书会' onFocus={() => setFocusedField('eventTypeOther')} onBlur={() => setFocusedField('')} onInput={(e) => setEventTypeOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
         <SectionTitle text='参与对象（可多选）' /><MultiPillSelect options={AUDIENCE_WHO_OPTIONS} selected={audienceWho} onChange={setAudienceWho} />
         {audienceWho.includes('其他') && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充参与对象中的“其他”。</Text></View><FormInputBox focused={focusedField === 'audienceWhoOther'} marginBottom='0'><Input value={audienceWhoOther} placeholder='例如：大学生 / 创作者 / 社区志愿者' onFocus={() => setFocusedField('audienceWhoOther')} onBlur={() => setFocusedField('')} onInput={(e) => setAudienceWhoOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
-        <SectionTitle text='年龄区间' /><AgeRangeSlider minValue={ageRangeMin} maxValue={ageRangeMax} onChange={(minValue, maxValue) => { setAgeRangeMin(minValue); setAgeRangeMax(maxValue) }} />
-        <SectionTitle text='开始时间' /><View style={{ display: 'flex', flexDirection: 'row', marginBottom: space(3) }}><Picker mode='date' value={startDate} onChange={(e) => setStartDate(e.detail.value)}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: startDate ? palette.text : palette.muted }}>{startDate || '选择日期'}</Text></FormInputBox></Picker><Picker mode='time' value={startTime} onChange={(e) => setStartTime(e.detail.value)}><View style={{ width: '120px', marginLeft: space(2) }}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: startTime ? palette.text : palette.muted }}>{startTime || '选择时间'}</Text></FormInputBox></View></Picker></View>
-        <View style={{ marginTop: '-6px', marginBottom: space(3) }}><Text style={{ ...typography.micro, color: palette.muted }}>时间按中国标准时间 UTC+8 保存。</Text></View>
-        <SectionTitle text='结束时间（选填）' /><View style={{ display: 'flex', flexDirection: 'row', marginBottom: space(4) }}><Picker mode='date' value={endDate} onChange={(e) => setEndDate(e.detail.value)}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: endDate ? palette.text : palette.muted }}>{endDate || '选择日期'}</Text></FormInputBox></Picker><Picker mode='time' value={endTime} onChange={(e) => setEndTime(e.detail.value)}><View style={{ width: '120px', marginLeft: space(2) }}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: endTime ? palette.text : palette.muted }}>{endTime || '选择时间'}</Text></FormInputBox></View></Picker></View>
-        <SectionTitle text='报名截止时间（选填）' /><View style={{ display: 'flex', flexDirection: 'row', marginBottom: space(4) }}><Picker mode='date' value={signupDeadlineDate} onChange={(e) => setSignupDeadlineDate(e.detail.value)}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: signupDeadlineDate ? palette.text : palette.muted }}>{signupDeadlineDate || '选择日期'}</Text></FormInputBox></Picker><Picker mode='time' value={signupDeadlineTime} onChange={(e) => setSignupDeadlineTime(e.detail.value)}><View style={{ width: '120px', marginLeft: space(2) }}><FormInputBox marginBottom='0'><Text style={{ ...typography.body, color: signupDeadlineTime ? palette.text : palette.muted }}>{signupDeadlineTime || '选择时间'}</Text></FormInputBox></View></Picker></View>
+        <SectionTitle text='参与年龄（选填）' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{hasAgeRequirement ? '填写年龄区间' : '未注明 / 不适用'}</Text><Switch checked={hasAgeRequirement} color={palette.accentDeep} onChange={(e) => setHasAgeRequirement(!!e.detail.value)} /></View></FormInputBox>
+        {hasAgeRequirement ? <AgeRangeSlider minValue={ageRangeMin} maxValue={ageRangeMax} onChange={(minValue, maxValue) => { setAgeRangeMin(minValue); setAgeRangeMax(maxValue) }} /> : null}
+        <SectionTitle text='开始日期' /><Picker mode='date' value={startDate} onChange={(e) => setStartDate(e.detail.value)}><FormInputBox><Text style={{ ...typography.body, color: startDate ? palette.text : palette.muted }}>{startDate || '选择日期'}</Text></FormInputBox></Picker>
+        <SectionTitle text='结束日期（选填）' /><Picker mode='date' value={endDate} onChange={(e) => setEndDate(e.detail.value)}><FormInputBox><Text style={{ ...typography.body, color: endDate ? palette.text : palette.muted }}>{endDate || '选择日期'}</Text></FormInputBox></Picker>
+        <SectionTitle text='报名截止日期（选填）' /><Picker mode='date' value={signupDeadlineDate} onChange={(e) => setSignupDeadlineDate(e.detail.value)}><FormInputBox><Text style={{ ...typography.body, color: signupDeadlineDate ? palette.text : palette.muted }}>{signupDeadlineDate || '选择日期'}</Text></FormInputBox></Picker>
         <SectionTitle text='是否周期性进行' /><FormInputBox><View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, ...typography.body, color: palette.text }}>{isRecurring ? '是，周期性进行' : '否，单次或暂未确认'}</Text><Switch checked={isRecurring} color={palette.accentDeep} onChange={(e) => { const next = !!e.detail.value; setIsRecurring(next); if (!next) { setRecurrencePattern(''); setRecurrenceOther('') } }} /></View></FormInputBox>
         {isRecurring && <><SectionTitle text='周期时间' /><SinglePillSelect options={RECURRENCE_OPTIONS} selected={recurrencePattern} onChange={(value) => { setRecurrencePattern(value); if (value !== '其他') setRecurrenceOther('') }} />{recurrencePattern === '其他' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>请补充周期时间。</Text></View><FormInputBox focused={focusedField === 'recurrenceOther'} marginBottom='0'><Input value={recurrenceOther} placeholder='例如：寒暑假集中进行 / 不定期滚动招募' onFocus={() => setFocusedField('recurrenceOther')} onBlur={() => setFocusedField('')} onInput={(e) => setRecurrenceOther(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}</>}
         <SectionTitle text={isOnline ? '平台 / 线上说明（选填）' : '地点说明（选填）'} /><FormInputBox focused={focusedField === 'location'}><Input value={location} placeholder={isOnline ? '例如：腾讯会议' : '例如：杭州西湖区某空间'} onFocus={() => setFocusedField('location')} onBlur={() => setFocusedField('')} onInput={(e) => setLocation(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
-        <SectionTitle text='费用' /><SinglePillSelect options={FEE_OPTIONS} selected={fee} onChange={(value) => { setFee(value); if (value !== '付费') setFeeDetail('') }} />
-        {fee === '付费' && <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充费用说明</Text></View><FormInputBox focused={focusedField === 'feeDetail'} marginBottom='0'><Input value={feeDetail} placeholder='例如：单次 99 元 / 四次 199 元。' onFocus={() => setFocusedField('feeDetail')} onBlur={() => setFocusedField('')} onInput={(e) => setFeeDetail(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>}
+        <SectionTitle text='费用' /><SinglePillSelect options={FEE_OPTIONS} selected={fee} onChange={(value) => { setFee(value); if (value !== '付费') { setFeeDetail(''); setEarlyBirdPrice(''); setEarlyBirdDeadline('') } }} />
+        {fee === '付费' && <>
+          <View style={{ marginBottom: space(4) }}><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>补充常规费用说明</Text></View><FormInputBox focused={focusedField === 'feeDetail'} marginBottom='0'><Input value={feeDetail} placeholder='例如：单次 99 元 / 四次 199 元。' onFocus={() => setFocusedField('feeDetail')} onBlur={() => setFocusedField('')} onInput={(e) => setFeeDetail(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox></View>
+          <SectionTitle text='早鸟价格（选填）' />
+          <FormInputBox focused={focusedField === 'earlyBirdPrice'}><Input value={earlyBirdPrice} placeholder='例如：79 元 / 家庭 299 元' onFocus={() => setFocusedField('earlyBirdPrice')} onBlur={() => setFocusedField('')} onInput={(e) => setEarlyBirdPrice(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
+          <SectionTitle text='早鸟截止日期（选填）' />
+          <Picker mode='date' value={earlyBirdDeadline} onChange={(e) => setEarlyBirdDeadline(e.detail.value)}><FormInputBox marginBottom={space(2)}><Text style={{ ...typography.body, color: earlyBirdDeadline ? palette.text : palette.muted }}>{earlyBirdDeadline || '选择日期'}</Text></FormInputBox></Picker>
+          <View style={{ marginBottom: space(4) }}><Text style={{ ...typography.micro, color: palette.muted }}>早鸟价格和截止日期需同时填写；截止后活动列表自动显示常规费用。</Text></View>
+        </>}
         <SectionTitle text='组织者' /><FormInputBox focused={focusedField === 'organizer'}><Input value={organizer} placeholder='例如：某教育团队 / 个人发起者名字' onFocus={() => setFocusedField('organizer')} onBlur={() => setFocusedField('')} onInput={(e) => setOrganizer(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
         <SectionTitle text='组织者微信号（选填）' /><View style={{ marginBottom: space(2) }}><Text style={{ ...typography.caption, color: palette.subtext }}>如果你是这个活动的组织者，可以填写你的微信号。仅对填写过资料的可雀用户可见。</Text></View><FormInputBox focused={focusedField === 'organizerContact'}><Input value={organizerContact} placeholder='例如：微信号' onFocus={() => setFocusedField('organizerContact')} onBlur={() => setFocusedField('')} onInput={(e) => setOrganizerContact(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>
         <SectionTitle text='公开链接（选填）' /><FormInputBox focused={focusedField === 'officialUrl'} marginBottom={space(3)}><Input value={officialUrl} placeholder='例如：活动详情链接 / 公众号名' onFocus={() => setFocusedField('officialUrl')} onBlur={() => setFocusedField('')} onInput={(e) => setOfficialUrl(e.detail.value)} style={{ ...typography.body, color: palette.text }} /></FormInputBox>

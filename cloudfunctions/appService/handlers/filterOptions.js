@@ -2,15 +2,17 @@ const { db } = require('../lib/cloud')
 const { ok, resolveRequestId } = require('../lib/response')
 
 const EVENT_FILTER_OPTIONS = {
-  eventTypes: ['全部', '工作坊', '项目招募', '圆桌讨论', '交友聚会', '一对一', '团体', '其他'],
+  eventTypes: ['全部', '工作坊', '营期/短期营', '项目招募', '圆桌讨论', '交友聚会', '家庭活动', '一对一', '团体', '其他'],
   audience: ['全部', '家长', '教育工作者', '儿童/青少年（需家长陪同）', '儿童/青少年（独立参加）', '其他'],
   fee: ['全部', '免费', '付费', '公益随喜', '费用待确认'],
-  status: ['全部', 'recruiting', 'recurring', 'ended'],
+  status: ['全部', 'recruiting', 'ended'],
   eventTypeValueMap: {
     工作坊: 'workshop',
+    '营期/短期营': 'camp',
     项目招募: 'community_program',
     圆桌讨论: 'discussion',
     交友聚会: 'meetup',
+    家庭活动: 'family',
     一对一: 'one_on_one',
     团体: 'group',
   },
