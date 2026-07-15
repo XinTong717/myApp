@@ -24,7 +24,7 @@ export const EVENT_FILTER_FALLBACKS = {
   eventTypes: [ALL_FILTER, '工作坊', '项目招募', '圆桌讨论', '交友聚会', '一对一', '团体', '其他'],
   audience: [ALL_FILTER, '家长', '教育工作者', '儿童/青少年（需家长陪同）', '儿童/青少年（独立参加）', '其他'],
   fee: [ALL_FILTER, '免费', '付费', '公益随喜', '费用待确认'],
-  status: [ALL_FILTER, 'recruiting', 'recurring', 'ended'],
+  status: [ALL_FILTER, 'recruiting', 'ended'],
   eventTypeValueMap: {
     工作坊: 'workshop',
     项目招募: 'community_program',
