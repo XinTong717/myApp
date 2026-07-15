@@ -79,32 +79,7 @@ function buildContactInfo(submission) {
 }
 
 function buildDescription(submission) {
-  const audienceWho = stringifyLabels(submission.audienceWhoTags || submission.audienceWho) || '未注明'
-  const minAge = String(submission.minAgeRequirement || '').trim() || '未注明'
-  const maxAge = String(submission.maxAgeRequirement || '').trim()
-  const eventTypes = stringifyLabels(submission.eventTypes || submission.eventType)
-  const description = String(submission.description || '').trim() || '暂无详细介绍'
-  const signupNote = String(submission.signupNote || '').trim() || '请查看公开链接或活动说明'
-  const officialUrl = String(submission.officialUrl || '').trim() || '未提供'
-  const signupDeadline = String(submission.signupDeadline || '').trim()
-  const recurrencePattern = submission.isRecurring ? String(submission.recurrencePattern || '').trim() : ''
-  return [
-    eventTypes ? `活动类型：${eventTypes}` : '',
-    `参与对象：${audienceWho}`,
-    `最低年龄要求：${minAge}`,
-    maxAge ? `最高年龄限制：${maxAge}` : '',
-    signupDeadline ? `报名截止时间：${signupDeadline}` : '',
-    recurrencePattern ? `周期时间：${recurrencePattern}` : '',
-    '',
-    '活动简介：',
-    description,
-    '',
-    '报名方式补充说明：',
-    signupNote,
-    '',
-    '公开链接：',
-    officialUrl,
-  ].filter(Boolean).join('\n')
+  return String(submission.description || '').trim() || '暂无详细介绍'
 }
 
 function buildEventPayload(submission) {
@@ -160,11 +135,11 @@ function buildWarnings(submission, payload) {
   const contentSecurityStatus = readContentSecurityStatus(submission)
   if (!officialUrl && !signupNote && !organizerContact) warnings.push('未提供公开链接、报名说明或组织者联系方式，发布前请确认活动可被用户实际联系到')
   if (!submission.location && !submission.isOnline) warnings.push('线下活动未填写具体地点，当前会用省市兜底')
-  if (!submission.endTime) warnings.push('未填写结束时间，前端会按单点开始时间展示')
+  if (!submission.endTime) warnings.push('未填写结束日期，前端会按单日活动展示')
   if (payload.status === 'ended') warnings.push('该活动报名已截止，通常不建议作为招募中活动发布')
-  if (!start) warnings.push('开始时间格式异常，发布前需人工修正')
-  if (submission.endTime && !end) warnings.push('结束时间格式异常，发布前需人工修正')
-  if (submission.signupDeadline && !signupDeadline) warnings.push('报名截止时间格式异常，发布前需人工修正')
+  if (!start) warnings.push('开始日期格式异常，发布前需人工修正')
+  if (submission.endTime && !end) warnings.push('结束日期格式异常，发布前需人工修正')
+  if (submission.signupDeadline && !signupDeadline) warnings.push('报名截止日期格式异常，发布前需人工修正')
   if (!!earlyBirdPrice !== !!String(submission.earlyBirdDeadline || '').trim()) warnings.push('早鸟价格和截止日期没有成对填写')
   if (submission.earlyBirdDeadline && !earlyBirdDeadline) warnings.push('早鸟截止日期格式异常，发布前需人工修正')
   if (earlyBirdDeadline && earlyBirdDeadline.getTime() < Date.now()) warnings.push('早鸟截止日期已过，列表将只显示常规费用')
@@ -185,10 +160,10 @@ function buildBlockingErrors(submission, payload, options = {}) {
   const allowSecurityForce = !!options.allowSecurityForce
   if (!payload.title) errors.push('缺少活动标题')
   if (!payload.organizer) errors.push('缺少组织者')
-  if (!start) errors.push('开始时间格式异常')
-  if (payload.end_time && !end) errors.push('结束时间格式异常')
-  if (start && end && end.getTime() < start.getTime()) errors.push('结束时间早于开始时间')
-  if (payload.signup_deadline && !signupDeadline) errors.push('报名截止时间格式异常')
+  if (!start) errors.push('开始日期格式异常')
+  if (payload.end_time && !end) errors.push('结束日期格式异常')
+  if (start && end && end.getTime() < start.getTime()) errors.push('结束日期早于开始日期')
+  if (payload.signup_deadline && !signupDeadline) errors.push('报名截止日期格式异常')
   if (!!payload.early_bird_price !== !!payload.early_bird_deadline) errors.push('早鸟价格和截止日期需成对填写')
   if (payload.early_bird_deadline && !earlyBirdDeadline) errors.push('早鸟截止日期格式异常')
   if (!String(submission.officialUrl || submission.signupNote || submission.organizerContact || '').trim()) errors.push('缺少公开链接、报名说明或组织者联系方式')

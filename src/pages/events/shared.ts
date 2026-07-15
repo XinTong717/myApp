@@ -71,9 +71,13 @@ function parseEventDate(value?: string) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-function formatDateTime(value?: string) {
+export function formatEventDate(value?: string) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  const literal = text.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (literal) return `${literal[1]}年${Number(literal[2])}月${Number(literal[3])}日`
   const date = parseEventDate(value)
-  return date ? date.toLocaleString('zh-CN', { hour12: false, timeZone: EVENT_TIMEZONE }) : ''
+  return date ? date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: EVENT_TIMEZONE }) : ''
 }
 
 export function getEventStatusKey(event: Pick<EventItem, 'status' | 'start_time' | 'end_time' | 'signup_deadline' | 'is_recurring'>) {
@@ -130,18 +134,18 @@ export function formatEventTime(event: Pick<EventItem, 'event_type' | 'start_tim
   if (event.is_recurring && event.recurrence_pattern) return event.recurrence_pattern
 
   if (event.event_type === 'night_chat' || event.event_type === 'parent_observer') {
-    return '每周六 20:30 - 21:30'
+    return '每周六'
   }
 
   if (event.event_type === 'community_program') {
     return '持续进行'
   }
 
-  const startText = formatDateTime(event.start_time)
-  const endText = formatDateTime(event.end_time)
+  const startText = formatEventDate(event.start_time)
+  const endText = formatEventDate(event.end_time)
 
   if (startText && endText) {
-    return `${startText} - ${endText}`
+    return startText === endText ? startText : `${startText} - ${endText}`
   }
 
   return startText || endText || '待定'

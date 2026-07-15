@@ -231,7 +231,7 @@ async function submitEvent(event, wxContext) {
   cleanData.eventType = (cleanData.eventTypes || []).find((item) => !String(item).startsWith('其他：')) || (cleanData.eventTypes || [])[0] || ''
   if (!cleanData.title) return fail(requestId, 'TITLE_REQUIRED', '请填写活动标题')
   if (!cleanData.province || !cleanData.city) return fail(requestId, 'CITY_REQUIRED', '请选择所在城市')
-  if (!cleanData.startTime) return fail(requestId, 'START_TIME_REQUIRED', '请填写开始时间')
+  if (!cleanData.startTime) return fail(requestId, 'START_TIME_REQUIRED', '请填写开始日期')
   if (!cleanData.description) return fail(requestId, 'DESCRIPTION_REQUIRED', '请填写活动简介')
   if (!cleanData.organizer) return fail(requestId, 'ORGANIZER_REQUIRED', '请填写组织者')
   if (!cleanData.fee) return fail(requestId, 'FEE_REQUIRED', '请填写费用信息')
@@ -240,15 +240,15 @@ async function submitEvent(event, wxContext) {
   const lengthError = over(cleanData.title, 80) && '活动标题不能超过80字' || over(cleanData.city, 30) && '城市不能超过30字' || over(cleanData.location, 120) && '地点不能超过120字' || over(cleanData.fee, 80) && '费用说明不能超过80字' || over(cleanData.feeDetail, 200) && '费用补充说明不能超过200字' || over(cleanData.earlyBirdPrice, 120) && '早鸟价格不能超过120字' || over(cleanData.organizer, 80) && '组织者不能超过80字' || over(cleanData.organizerContact, 200) && '组织者联系方式不能超过200字' || over(cleanData.officialUrl, 300) && '公开链接不能超过300字' || over(cleanData.signupNote, 300) && '报名方式补充说明不能超过300字' || over(cleanData.description, 2000) && '活动简介不能超过2000字'
   if (lengthError) return fail(requestId, 'INVALID_LENGTH', lengthError)
   const startDate = new Date(cleanData.startTime)
-  if (Number.isNaN(startDate.getTime())) return fail(requestId, 'INVALID_START_TIME', '开始时间格式不正确')
+  if (Number.isNaN(startDate.getTime())) return fail(requestId, 'INVALID_START_TIME', '开始日期格式不正确')
   if (cleanData.endTime) {
     const endDate = new Date(cleanData.endTime)
-    if (Number.isNaN(endDate.getTime())) return fail(requestId, 'INVALID_END_TIME', '结束时间格式不正确')
-    if (endDate.getTime() < startDate.getTime()) return fail(requestId, 'END_BEFORE_START', '结束时间不能早于开始时间')
+    if (Number.isNaN(endDate.getTime())) return fail(requestId, 'INVALID_END_TIME', '结束日期格式不正确')
+    if (endDate.getTime() < startDate.getTime()) return fail(requestId, 'END_BEFORE_START', '结束日期不能早于开始日期')
   }
   if (cleanData.signupDeadline) {
     const deadlineDate = new Date(cleanData.signupDeadline)
-    if (Number.isNaN(deadlineDate.getTime())) return fail(requestId, 'INVALID_SIGNUP_DEADLINE', '报名截止时间格式不正确')
+    if (Number.isNaN(deadlineDate.getTime())) return fail(requestId, 'INVALID_SIGNUP_DEADLINE', '报名截止日期格式不正确')
   }
   const hasEarlyBirdPrice = !!cleanData.earlyBirdPrice
   const hasEarlyBirdDeadline = !!cleanData.earlyBirdDeadline
