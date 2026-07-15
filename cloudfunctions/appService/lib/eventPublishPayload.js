@@ -45,7 +45,6 @@ function normalizeEventType(submission) {
 }
 
 function buildEventStatus(submission) {
-  if (submission.isRecurring) return 'recurring'
   const signupDeadline = parseDate(submission.signupDeadline)
   if (signupDeadline && signupDeadline.getTime() < Date.now()) return 'ended'
   return 'recruiting'
