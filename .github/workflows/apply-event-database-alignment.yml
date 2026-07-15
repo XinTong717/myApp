@@ -1,0 +1,41 @@
+name: Apply event database alignment
+
+on:
+  push:
+    branches:
+      - agent/event-early-bird-list-summary
+    paths:
+      - .github/workflows/apply-event-database-alignment.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/event-early-bird-list-summary
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Apply alignment patch
+        run: node scripts/apply-event-database-alignment.cjs
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate
+        run: |
+          npm run typecheck
+          npm run check:actions
+      - name: Commit changes and remove temporary runner
+        run: |
+          rm scripts/apply-event-database-alignment.cjs
+          rm .github/workflows/apply-event-database-alignment.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/events/shared.ts src/pages/events/index.tsx src/pages/event-detail/index.tsx src/pkg/events/submit/index.tsx src/constants/filterOptions.ts cloudfunctions/appService/lib/eventPublishPayload.js cloudfunctions/appService/handlers/filterOptions.js docs/EVENT_DATA_CONTRACT.md scripts/apply-event-database-alignment.cjs .github/workflows/apply-event-database-alignment.yml
+          git commit -m "fix: align event displays with database fields"
+          git push origin HEAD:agent/event-early-bird-list-summary
